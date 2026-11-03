@@ -1,0 +1,46 @@
+# OpenCode mapping (plan §11.4): translates the neutral fields of core/agents/*.md into OpenCode files.
+# Generated output: opencode/ (committed; regenerate with tools/generate.sh).
+platform: opencode
+agent:
+  dir: .opencode/agents
+  file: "{name}.md"
+  emitName: false                    # OpenCode names agents after the file
+  invocableField: null
+  notInvocableFields: { hidden: true }
+  subagentsField: null               # expressed through permission.task instead
+models:
+  # provider/model-id, picked by the P0a evals. null = OpenCode's configured default model.
+  reasoning: null
+  standard: null
+profiles:
+  orchestrator:
+    mode: primary
+    permission:
+      edit: deny
+      bash: { "*": deny, "./gtaw *": allow, ".\\gtaw.cmd *": allow }
+      task: { "*": deny, "gta-*": allow }
+  spec-writer:
+    mode: subagent
+    permission:
+      edit: { "*": deny, ".gta/specs/**": allow }
+      bash: { "*": deny, "./gtaw *": allow, ".\\gtaw.cmd *": allow }
+      task: deny
+  test-writer:
+    mode: subagent
+    steps: 40
+    permission:
+      edit: allow
+      bash: { "*": deny, "./gtaw *": allow, ".\\gtaw.cmd *": allow }
+      task: deny
+  read-only:
+    mode: subagent
+    permission:
+      edit: deny
+      bash: deny
+      task: deny
+command:
+  path: .opencode/commands/gta.md
+  template: gta.md.tmpl
+  args: "$ARGUMENTS"
+files:
+  - { template: opencode.json.tmpl, path: opencode.json }

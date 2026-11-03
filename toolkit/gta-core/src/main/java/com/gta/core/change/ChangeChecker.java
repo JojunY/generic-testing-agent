@@ -1,0 +1,146 @@
+package com.gta.core.change;
+
+import com.gta.core.config.GtaPaths;
+import com.gta.core.state.WorkState;
+import com.gta.core.util.Git;
+import com.gta.core.util.Hashes;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.PathMatcher;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+/**
+ * The authoritative scope check (plan §5.8): everything an agent changed since dispatch must lie inside the node's
+ * allowed paths. It does not depend on IDE permissions or hooks. Out-of-scope files are backed up, then restored.
+ */
+public final class ChangeChecker {
+    /** Paths no agent may change (plan §13, single list). */
+    public static final List<String> PROTECTED = List.of("gtaw", "gtaw.cmd", "**/.gta/wrapper/**", "**/.gta/config.json",
+            "**/.gta/waivers.json", "**/.gta/managed-files.json", "**/.gta/specs/**/*.oracles.json", "**/.gta/skills/**",
+            ".gta/wrapper/**", ".gta/config.json", ".gta/waivers.json", ".gta/managed-files.json", ".gta/specs/*/*.oracles.json",
+            ".gta/skills/**", ".github/agents/gta-*", ".github/prompts/gta*", ".vscode/settings.json", ".opencode/**",
+            "opencode.json");
+    /** Never considered agent changes: build output and gtaw's own working area. */
+    private static final List<String> IGNORED = List.of("target/**", "**/target/**", ".gta/work/**", "**/.gta/work/**");
+
+    public record Result(List<String> changed, List<String> outOfScope, List<String> restored, List<String> unrestorable) {
+        public boolean ok() {
+            return outOfScope.isEmpty();
+        }
+    }
+
+    private final GtaPaths paths;
+    private final Git git;
+
+    public ChangeChecker(GtaPaths paths) {
+        this.paths = paths;
+        this.git = new Git(paths.root());
+    }
+
+    public WorkState.Baseline capture() {
+        WorkState.Baseline b = new WorkState.Baseline();
+        b.head = git.head();
+        for (String p : git.dirtyPaths()) {
+            if (!matchesAny(p, IGNORED)) {
+                b.dirty.put(p, contentHash(p));
+            }
+        }
+        return b;
+    }
+
+    /** Files changed since the baseline (excluding pre-existing dirty files that are byte-identical). */
+    public List<String> changedSince(WorkState.Baseline baseline) {
+        Set<String> changed = new LinkedHashSet<>();
+        for (String p : git.dirtyPaths()) {
+            if (matchesAny(p, IGNORED)) {
+                continue;
+            }
+            String before = baseline.dirty.get(p);
+            if (before == null || !before.equals(contentHash(p))) {
+                changed.add(p);
+            }
+        }
+        for (String p : baseline.dirty.keySet()) {
+            if (!git.dirtyPaths().contains(p)) {
+                changed.add(p); // a pre-existing change was reverted
+            }
+        }
+        return new ArrayList<>(changed);
+    }
+
+    public Result check(WorkState.Baseline baseline, List<String> allowed, Path backupDir, boolean restore) {
+        List<String> changed = changedSince(baseline);
+        List<String> out = new ArrayList<>();
+        for (String p : changed) {
+            boolean allowedPath = matchesAny(p, allowed);
+            if (!allowedPath || matchesAny(p, PROTECTED)) {
+                out.add(p);
+            }
+        }
+        List<String> restored = new ArrayList<>();
+        List<String> unrestorable = new ArrayList<>();
+        if (restore) {
+            for (String p : out) {
+                if (baseline.dirty.containsKey(p)) {
+                    unrestorable.add(p); // we never overwrite a developer's own uncommitted change
+                    continue;
+                }
+                backup(p, backupDir);
+                Path file = paths.root().resolve(p);
+                if (git.isTracked(p)) {
+                    git.restoreFromHead(p);
+                } else {
+                    try {
+                        Files.deleteIfExists(file);
+                    } catch (IOException e) {
+                        unrestorable.add(p);
+                        continue;
+                    }
+                }
+                restored.add(p);
+            }
+        }
+        return new Result(changed, out, restored, unrestorable);
+    }
+
+    public void backup(String rel, Path backupDir) {
+        Path src = paths.root().resolve(rel);
+        if (!Files.exists(src)) {
+            return;
+        }
+        try {
+            Path dst = backupDir.resolve(rel);
+            Files.createDirectories(dst.getParent());
+            Files.copy(src, dst, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private String contentHash(String rel) {
+        Path f = paths.root().resolve(rel);
+        return Files.isRegularFile(f) ? Hashes.sha256(f) : "<deleted>";
+    }
+
+    public static boolean matchesAny(String rel, List<String> globs) {
+        Path p = Path.of(rel);
+        for (String g : globs) {
+            if (g.equals(rel)) {
+                return true;
+            }
+            PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + g);
+            if (m.matches(p)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}

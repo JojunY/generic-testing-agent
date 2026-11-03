@@ -1,0 +1,38 @@
+#!/bin/sh
+# gtaw — gta wrapper (like mvnw). Downloads the pinned gta-cli jar from the company Nexus, verifies its sha256
+# before every run, then runs it. Managed by gta: do not edit (./gtaw upgrade rewrites it).
+set -e
+DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+PROPS="$DIR/.gta/wrapper/gta-wrapper.properties"
+
+prop() { sed -n "s/^$1=//p" "$PROPS" 2>/dev/null | tail -n 1; }
+
+if [ -n "$GTA_CLI_JAR" ]; then
+  JAR="$GTA_CLI_JAR"
+else
+  VERSION=$(prop version)
+  URL=$(prop distributionUrl)
+  SHA=$(prop distributionSha256Sum)
+  [ -n "$VERSION" ] || { echo '{"error":{"code":"CONFIG_NOT_INITIALIZED","category":"config","message":"missing .gta/wrapper/gta-wrapper.properties","hint":"run gta-cli init --platform copilot|opencode","retryable":false}}'; exit 21; }
+  CACHE="${GTA_HOME:-$HOME/.gta}/wrapper/dists"
+  JAR="$CACHE/gta-cli-$VERSION.jar"
+  if [ ! -f "$JAR" ]; then
+    mkdir -p "$CACHE"
+    TMP="$JAR.part"
+    if command -v curl >/dev/null 2>&1; then
+      if [ -n "$GTA_NEXUS_USER" ]; then curl -fsSL -u "$GTA_NEXUS_USER:$GTA_NEXUS_PASSWORD" -o "$TMP" "$URL"; else curl -fsSL -o "$TMP" "$URL"; fi
+    else
+      wget -q -O "$TMP" "$URL"
+    fi
+    mv "$TMP" "$JAR"
+  fi
+  if [ -n "$SHA" ]; then
+    if command -v sha256sum >/dev/null 2>&1; then ACTUAL=$(sha256sum "$JAR" | cut -d' ' -f1); else ACTUAL=$(shasum -a 256 "$JAR" | cut -d' ' -f1); fi
+    if [ "$ACTUAL" != "$SHA" ]; then
+      rm -f "$JAR"
+      echo '{"error":{"code":"ENV_WRAPPER_CHECKSUM_MISMATCH","category":"environment","message":"gta-cli jar checksum mismatch","hint":"check distributionUrl/distributionSha256Sum in .gta/wrapper/gta-wrapper.properties","retryable":false}}'
+      exit 30
+    fi
+  fi
+fi
+exec java ${GTA_JAVA_OPTS} -jar "$JAR" --root "$DIR" "$@"
