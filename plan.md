@@ -1,6 +1,6 @@
 # Generic Testing Agent (GTA) — 设计方案
 
-> 状态：设计阶段（未实现）· 版本：plan v6 · 日期：2026-11
+> 状态：设计阶段（未实现）· 版本：plan v6.1 · 日期：2026-11
 > 范围：面向 Java（以 Spring 为主）服务的通用测试 harness
 > 使用面：**VS Code Copilot、IntelliJ IDEA Copilot**（主），OpenCode（次）
 > 命名空间：所有对外资产统一使用前缀 `gta`。修订记录见附录 B
@@ -16,7 +16,7 @@
    - 回答问题和批准规格分两步：回答后 gtaw 生成新的规格修订号，批准时必须引用这个修订号（§3）。
 3. **期望值保护**
    - 断言失败不进入修复流程，先由 gtaw 确定性分流，再由 reviewer 对照规格判定。
-   - oracle lock 锁定断言、期望值和测试输入。
+   - oracle lock 单调锁定 THEN 推出的期望值：已锁定的断言只能保留，不能修改或删除；输入和 fixture 的变动交给 reviewer。
    - 每次运行都确定性地检查：规格 THEN 里的期望值是否真的出现在断言中。
    - `passed` 状态只能由 gtaw 设置。
    - 已确认的缺陷用 `@KnownDefect`（strict xfail）固定。
@@ -54,7 +54,7 @@
 | Scenario 验证率（按来源分开统计） | 已批准 scenario 中有 verified 测试的比例；`confirmed`/`documented` 与 `observed`/`defaulted` 分开统计 | 规格 ↔ JUnit/Karate tag |
 | Spec findings | 不同来源之间的不一致，分为 `behavior-suspect`（代码可疑）和 `doc-drift`（文档过时） | analyst 发现，人工确认 |
 | 测试强度（变更代码） | 被覆盖的 mutant 中有多少被杀死（killed / covered） | `gtaw mutate`（PIT，只统计 diff 涉及的行） |
-| 能失败证据 | unit/slice 测试至少杀死 1 个针对其实现方法的 mutant | `gtaw verify` |
+| 能失败证据（P2） | unit/slice 测试至少杀死 1 个针对其实现方法的 mutant | `gtaw verify` |
 | Catching 命中 | PR 中为抓 bug 而生成的测试，失败后被确认为真实缺陷的数量 | PR 模式（P3） |
 | Oracle 强度 | 断言是否验证了业务结果，而不只是"不为空" | `gtaw submit` 的反模式检查 + reviewer |
 | 契约覆盖 | OpenAPI operation × status code、消息 schema 的覆盖情况 | Schemathesis / Pact / SCC |
@@ -164,16 +164,20 @@
 | 来源（`source`） | 含义 | 生成的测试意图 |
 |---|---|---|
 | `observed` | 从代码中看到的行为，附 `ref` | `characterization` |
-| `documented` | 来自 OpenAPI、README、ADR、人写的已有测试、PR 描述、工单验收标准 | `hardening` |
+| `documented` | 来自 OpenAPI、README、ADR、人写的已有测试、PR 描述、工单验收标准；必须写成 `doc:<path>#<anchor>` 并附原文引用，gtaw 逐字核对，核对不上就降级为 `observed` | `hardening` |
 | `confirmed` | 人明确回答过（§3.5） | `hardening` |
 | `defaulted` | 用"其余默认"接受的值，按规则这个值就是代码现状 | `characterization` |
 | `assumed` | agent 的推断，没有依据 | 必须作为问题提出；回答之前不生成测试 |
 
 - `source` 标在 Scenario 上；THEN 中的某个子句来源不同时，可以单独标注。
+- `confirmed` 和 `defaulted` **只能由 gtaw 写入**，而且必须有对应的 gtaw 答案记录，否则 lint 拒绝。analyst 能写的来源只有 `observed`、`documented`、`assumed`。
 - 每个 Scenario 默认继承它所属 Requirement 的来源。
 
 **判定规则**（由 gtaw 强制执行）
-1. `observed` 或 `defaulted` 的 oracle 第一次运行就失败，说明观察有误。gtaw 用实际值自动修正规格中的 THEN，并在报告中列出，不需要人工处理。
+1. `observed` 或 `defaulted` 的 oracle 失败时，先经过 reviewer 分流。如果排除了 `test-defect`、判定为 `spec-error`，就说明观察有误。gtaw 会做以下几件事：
+   - 用实际值修正规格中的 THEN，并提升修订号；
+   - 按新值重新上锁，条目保持有效，不会因为修订而取消（这是例外）；
+   - 把这项变更列入报告的"待复核"清单，等人批量复核。
 2. `confirmed` 或 `documented` 的 oracle 失败，并且被判定为 `product-defect` 时，**必须由人确认**（§5.5），之后才会用 `@KnownDefect` 固定。
 3. `documented` 与 `observed` 冲突时，转成问题，并标注是 `doc-drift` 还是 `behavior-suspect`，因为文档也常常是过时的一方。
 4. 可疑的现状要转成问题，而不是直接写进规格。例如：异常被吞掉、状态码不一致、缺少所有权或租户检查。
@@ -230,9 +234,9 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
 #### Scenario: 网关 3 秒未响应
 <!-- gta: id=order.create/s03 source=observed hint.layer=component hint.oracle=state -->
 - **WHEN** the gateway does not respond within 3s
-- **THEN** the response is 503 with a ProblemDetail body
-- **AND** orders.status is PENDING_PAYMENT
-- **AND** no message is published to order-created
+- **THEN** the response status is `503` with a ProblemDetail body
+- **AND** orders.status is `PENDING_PAYMENT`
+- **AND** no message is published to `order-created`
 
 ## Invariants
 - For any 两次使用相同 `Idempotency-Key` 的提交，THE order service SHALL 只创建一个订单 <!-- gta: id=order.create/i01 source=assumed hint.oracle=property → 见 q03 -->
@@ -262,7 +266,8 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
 
 **规格 lint**（由 next/submit 在内部执行）：
 - Requirement 必须使用 EARS 句式（ubiquitous / WHEN / IF…THEN / WHILE / WHERE），并且至少有一个 Scenario。
-- 每个 THEN 都必须可观察。
+- 每个 THEN 都必须可观察，并且至少包含一个用反引号标出的期望值字面量；确实无法写成字面量的，标注 `check=reviewer`，改由 reviewer 检查。
+- `confirmed` 和 `defaulted` 必须有对应的答案记录；`documented` 必须带 `doc:` 引用，并且原文能逐字核对。
 - 每个 `ref` 都能解析，并且哈希一致。
 - 有外部入口的 flow 必须有 `## Access` 段。
 - `risk` = 概率（1–3）× 影响（1–3）。9 → p0，6 → p1，3–4 → p2，1–2 → p3。
@@ -288,7 +293,7 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
 1. **gtaw 生成问题块**，带轮次号，例如 `R3`。orchestrator 必须原样展示这个问题块。
 2. **回答**有三种渠道，都会在规格中记录原话、轮次和渠道：
    - `verified`：用户在 Chat 中回复，例如 "R3: 1A 2A 其余默认"。orchestrator 调用 `./gtaw answer "<原话>"`，gtaw 把它和 `userPromptSubmitted` hook 捕获到的人类输入比对，一致才记为 `verified`。
-   - `unverified`：同样走 `gtaw answer`，但宿主没有 hook，或者没有捕获到这条输入。
+   - `unverified`：同样走 `gtaw answer`，但宿主没有 hook。如果 hook 是正常工作的（doctor 自检通过，近期也捕获过输入），而这次没有捕获到对应的输入，就拒绝这次回答，返回 `POLICY_ANSWER_MISMATCH`。
    - `editor`：人直接在编辑器中勾选选项，然后再执行 `/gta`。
 3. **默认值**：高影响问题不能用默认值。"其余默认"一律选"= 代码现状"，对应的结论记为 `defaulted`。
 4. **批准**：
@@ -351,8 +356,11 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
 3. 执行者有两种：
    - **subagent 模式**（默认）：派给对应的子 agent。
    - **inline 模式**：平台不支持子 agent，或子 agent 不稳定时，由 orchestrator 自己按 brief 执行（`config.dispatch`）。
+     - 生成器会为 orchestrator 额外生成带 edit 权限的配置。
+     - 改动检查按**节点**来限定范围，而不是按 agent。
+     - inline 模式下的 oracle review 属于自审，在报告中记为 concerns。
 4. test-author 可以多次运行 `./gtaw check --item <id> --token <t>`，每次编译并运行一遍，**不消耗修复次数**。完成后运行 `./gtaw submit --item <id> --token <t>`，只输出一行结果。
-5. 会话结束时，gtaw 在 `next` 内部对本会话新写的测试批量执行 `verify`：稳定性、能失败检查、期望值复核。
+5. 会话结束时，gtaw 在 `next` 内部对本会话新写的测试批量执行 `verify`：稳定性、期望值复核，从 P2 起还有能失败检查。
 
 ### 4.3 Agent 清单
 
@@ -361,7 +369,7 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
 | `gta-orchestrator` | 入口；循环执行 next/派发；原样展示问题块和结果；把用户原话交给 `gtaw answer`；把 reviewer 的结论交给 gtaw | 是 | reasoning | `orchestrator` |
 | `gta-analyst` | 每次处理一个 flow：写规格、画图、列问题；PR 模式下更新受影响的规格 | 否 | reasoning | `spec-writer` |
 | `gta-test-author` | 每次处理一个条目：按 brief 写测试、修复机械问题 | 否 | standard | `test-writer` |
-| `gta-reviewer` | 只读：oracle review、失败分流、catching 判定、找补测缺口；**没有 shell 权限**，结论由 orchestrator 转交 | 否 | reasoning | `read-only` |
+| `gta-reviewer` | 只读：oracle review、失败分流、catching 判定；**没有 shell 权限**，结论由 orchestrator 转交 | 否 | reasoning | `read-only` |
 | `gta-system-tester`（P4） | 处理所有 `layer=system` 的条目 | 否 | standard | `env-operator` |
 
 - **测试计划**由 gtaw 根据已批准的规格确定性生成：scenario 的 hint 加上 registry，就能得到条目、层级、工具和 `ownsFiles`。不需要 planner agent。
@@ -468,30 +476,22 @@ routing:
 | `preToolUse` | `.github/hooks/gta-guardrails.json`；另外支持写在 agent frontmatter 里的 agent 级 hooks | `.github/hooks/*.json` | plugin `tool.execute.before` | 拦截 |
 | `userPromptSubmitted` | 同上 | 同上 | plugin `chat.message` | 捕获人类输入，用于把答案标记为 `verified` |
 
-**规则分两层**
+**规则只有一层**，对仓库中所有 Copilot 会话生效，并且尽量少：
+- 禁止 agent 写入受保护路径（§13 的唯一清单）；
+- 禁止读取密钥文件；
+- 禁止 `git push --force`；
+- **禁止 agent 调用 gtaw 的特权子命令**：`hook`、`gate waive`、`relock`、`env`、`abort`、`next --takeover`。
 
-1. **全局规则**（对仓库中所有 Copilot 会话生效，尽量少）：
-   - 禁止 agent 写入受保护路径（§13 的唯一清单）；
-   - 禁止读取密钥文件；
-   - 禁止 `git push --force`；
-   - **禁止 agent 调用 gtaw 的特权子命令**：`hook`、`gate waive`、`relock`、`env`。
-2. **gta 专属规则**（只对 gta 的 agent 生效）：
-   - shell 采用**白名单**：只允许 `./gtaw <next|check|submit|answer|status>` 和只读命令（`git status`、`git diff`、`git log`、`ls`、`cat`）。
-   - 禁止写入 `**/src/main/**`。
-   - 禁止在规格中改动 gtaw 专属字段。
-   - **作用范围如何确定**，按优先级依次尝试：
-     1. VS Code 的 agent 级 hooks；
-     2. hook payload 中的 `sessionId`/`agentId` 与 `gtaw next` 记录的会话匹配；
-     3. 都不可用时，这一层不在 IDE 中执行。
-
-     由于 §5.8 的改动检查本身就是权威的，缺少这一层并不会失去保护。
+**不再设 IDE 侧的 shell 白名单和"gta 专属"规则**，原因有两个：
+- 不在自动批准范围内的命令，本来就需要人点击确认；
+- §5.8 的改动检查是权威的：越界改动会先被备份，再还原到基线。
 
 **实现**
 - 入口是一段 sh/pwsh 预过滤脚本：
   - 先用字符串匹配受保护路径和特权子命令。
   - 再判断是否需要 gtaw：工具名未知或不确定时，交给 gtaw 判断。
   - gtaw 无法启动时，**放行并记录日志**。如果脚本崩溃，Copilot 会默认拒绝，那样会挡住所有编辑。
-- 调用格式为 `gtaw hook pre-tool|prompt --host vscode|jetbrains|cli|opencode`，因为各宿主的工具名和字段大小写不同。
+- 调用格式为 `gtaw hook pre-tool|prompt --host vscode|jetbrains|opencode`，因为各宿主的工具名和字段大小写不同。
 - gtaw 按宿主各自的协议应答，**不使用 §5.6 的退出码**。
 - `gtaw doctor` 会做一次 hook 自检。
 
@@ -567,21 +567,21 @@ routing:
    - 重跑结果不一致的，预判为 `flaky`。
    - 被跳过或中止的测试不算通过。
 2. **期望值复核**：每次 check 和 submit 都确定性地检查，THEN 中的期望值（例如 `503`、`PENDING_PAYMENT`）是否出现在解析后的断言期望位置上。缺失时返回 `POLICY_ORACLE_MISMATCH`。
-3. **Oracle lock**
-   - **上锁时机**：第一次运行到被测代码时上锁（以 JaCoCo 探针为准；无法确定时视为已到达）。在提交之前，锁只记录在 `state.json` 中。
-   - **指纹包含**：
-     - 规范化后的断言 AST；
-     - 测试方法、参数源、`@BeforeEach`/`@BeforeAll`、字段中的字面量；
-     - 通过符号解析找到的常量；
-     - 一层 helper 方法；
-     - 被引用的 fixture/golden/stub/`@Sql`/测试 properties 文件的哈希。
-   - **不包含**：Awaitility 和超时相关的时长字面量，这样修复 flaky 时可以调整等待时间。
-   - **违反锁的后果**：期望值、输入或 fixture 变了，返回 `POLICY_ORACLE_MODIFIED`；只有结构变了，交给 reviewer 判断。
-   - **共享文件**：submit 时，会重新检查同一文件中所有已上锁的条目。
-   - **规格修订**：只有内容变了的 scenario 才会重新上锁，其余 scenario 的锁保持不变。
-   - **解锁**：`oracle-defect` 必须由人确认。如果新的期望值恰好等于上次的实际值，gtaw 会明确提示风险。人确认后可以用 `gtaw relock --item <id> --reason`，这条命令只允许人使用，改动在 PR 中可见。
+3. **Oracle lock（单调锁定）**
+   - **锁什么**：只硬锁从 THEN 推出的期望值字面量，以及承载这些字面量的断言。
+   - **单调**：已锁定的断言不能修改或删除，可以新增断言。所以正常的修复（setup、导入、等待逻辑、补充断言）都不受影响。
+   - **上锁时机**：第一次运行到被测代码时上锁（以 JaCoCo 探针为准；无法确定时视为已到达）。提交前，锁记录在 `state.json`。`abort` 和 `--takeover` 只允许人使用，所以 agent 无法丢弃锁。
+   - **受监视、但不硬锁的内容**：
+     - 测试输入、setup、字段、通过符号解析找到的常量、一层 helper；
+     - fixture、golden、stub、`@Sql`、测试 properties 文件的哈希。
+
+     断言失败之后，如果这些内容又有变动，交给 reviewer 判断是否属于"为了让测试通过而改输入"。
+   - **不纳入指纹**：Awaitility 和超时的时长字面量、`@KnownDefect` 注解。
+   - **共享文件**：submit 时会重新检查同一文件中所有已上锁的条目。
+   - **规格修订**：只有内容变了的 scenario 才会按新的 THEN 重新上锁。
+   - **解锁**：`oracle-defect` 必须由人确认。如果新的期望值等于上次的实际值，会明确提示风险。人确认后执行 `gtaw relock --item <id> --reason`（只允许人使用），它会把 `relockedBy` 和 `reason` 写入 oracle 分片。
 4. **Oracle review**：submit 运行通过后，条目进入 `reviewing`。reviewer 对照规格检查测试，给出 `accept` 或 `reject`。由 `qualityGates.oracleReview` 控制是否启用。
-5. **能失败检查**：在 verify 中执行，只针对 unit/slice 测试。对 scenario 的 `ref` 方法注入 1–3 个 PIT mutant，一个都没被杀死，就退回 `repairing`。以下情况记为 `n/a`：没有可用的 mutant、foundation 条目、contract consumer 测试、system 层测试。
+5. **能失败检查（P2，和 `mutate` 共用 PIT 集成）**：在 verify 中执行，只针对 unit/slice 测试。对 scenario 的 `ref` 方法注入 1–3 个 PIT mutant，一个都没被杀死，就退回 `repairing`。以下情况记为 `n/a`：没有可用的 mutant、foundation 条目、contract consumer 测试、system 层测试。
 6. **`passed` 只能由 gtaw 设置**，并且必须有 runId 作为证据。
 7. **已确认缺陷**
    - 人确认后，测试加上 `gta-junit` 提供的 `@KnownDefect(id = "<findingId>", failure = "<失败指纹>")` 再提交。失败指纹的格式是：异常类型 + 规范化后的消息 + 第一个非框架帧。
@@ -611,6 +611,8 @@ stateDiagram-v2
   done --> stale : ref 哈希变化
   stale --> in_review : PR 模式重新确认
   in_review --> withdrawn
+  approved --> withdrawn
+  stale --> withdrawn
   testing --> withdrawn
   done --> withdrawn
   done --> [*]
@@ -629,11 +631,13 @@ Mermaid 的状态名不能含连字符，所以图中用 `in_review` 表示 `in-
 | `verifying` | `POLICY_*`（范围、锁、期望值复核） | `repairing`（计入 attempts） |
 | `verifying` | `ENV_` / `TRANSIENT_` | 保持原状态，返回 `escalate` 节点 |
 | `verifying` | `TEST_SUT_ERROR` / `TEST_ASSERTION_FAILED` / `TEST_TIMEOUT`（已重跑 2 次） | `triaging` |
-| `verifying` | 通过 | `reviewing`（未启用 oracle review 时直接到 `passed`） |
+| `verifying` | 通过（intent ≠ `reproducing`） | `reviewing`（未启用 oracle review 时直接到 `passed`） |
 | `verifying` | intent=`reproducing`，并以正确的原因失败 | `needs-human`（等待人确认缺陷） |
-| `reviewing` | `accept` / `reject` | `passed` / `repairing` |
+| `verifying` | intent=`reproducing`，但测试通过了 | `repairing`（复现测试没有复现缺陷） |
+| `reviewing` | `accept` / `reject` | `passed` / `repairing`（`reject` 计入 attempts） |
 | `triaging` | `test-defect` / `flaky` | `repairing`（oracle 保持锁定；`flaky` 只能修改同步和等待逻辑） |
-| `triaging` | `product-defect` / `oracle-defect` / `spec-error` / `spec-gap` / `environment` / `expected-change` | `needs-human`（每种情况见 §5.5） |
+| `triaging` | `spec-error`，且 oracle 来源是 `observed` 或 `defaulted` | `repairing`（gtaw 用实际值修正 THEN、提升修订号、按新值重新上锁；变更列入待复核清单，见 §3.2） |
+| `triaging` | `product-defect` / `oracle-defect` / `spec-error`（来源是 `confirmed` 或 `documented`）/ `spec-gap` / `environment` / `expected-change` | `needs-human`（每种情况见 §5.5） |
 | `needs-human` | 人确认缺陷 | `defect-found` |
 | `needs-human` | 人判定规格有误或需要修改 | `cancelled`；规格退回 `in-review` |
 | `needs-human` | 人处理后重试 | `pending` |
@@ -682,7 +686,7 @@ Mermaid 的状态名不能含连字符，所以图中用 `in_review` 表示 `in-
 | 30 | environment | `ENV_` | `ENV_DOCKER_UNAVAILABLE`、`ENV_WRAPPER_CHECKSUM_MISMATCH` | 暂停，给出 hint |
 | 31 | transient | `TRANSIENT_` | `TRANSIENT_REGISTRY_TIMEOUT` | 内部按指数退避重试 3 次后暂停（只用于下载和网络） |
 | 40 | build | `BUILD_` | `BUILD_COMPILE_ERROR` | 见 §5.4 |
-| 50 | policy | `POLICY_` | `POLICY_PROTECTED_PATH`、`POLICY_ORACLE_MODIFIED`、`POLICY_ORACLE_MISMATCH`、`POLICY_OUT_OF_SCOPE_CHANGE` | 修复（计入 attempts） |
+| 50 | policy | `POLICY_` | `POLICY_PROTECTED_PATH`、`POLICY_ORACLE_MODIFIED`、`POLICY_ORACLE_MISMATCH`、`POLICY_OUT_OF_SCOPE_CHANGE`、`POLICY_ANSWER_MISMATCH` | 修复（计入 attempts） |
 | 60 | state | `STATE_` | `STATE_ILLEGAL_TRANSITION`、`STATE_LOCKED`、`STATE_STALE_SESSION` | 重新执行 `next` |
 | 70 | internal | `INTERNAL_` | `INTERNAL_ERROR` | 中止，保留现场 |
 
@@ -701,7 +705,6 @@ Mermaid 的状态名不能含连字符，所以图中用 `in_review` 表示 `in-
 | `maxConsecutiveFailures` | 3 | 连续 3 个条目进入 `needs-human`，就暂停并升级 |
 | `maxItemsPerSession` | 5 | 达到后先执行 verify 并输出摘要，下一次 `/gta` 再继续 |
 | `maxClarifyRounds` | 2 | 超过后仍未决的问题记为 `assumed` |
-| `maxReviewRounds` | 1 | 补测缺口最多一轮 |
 
 OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 
@@ -711,11 +714,14 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 
   | 节点 | 允许改动 |
   |---|---|
-  | analyst | 只能改自己负责的规格文件，且不能改 gtaw 专属字段 |
-  | test-author | 只能改条目的 `ownsFiles` |
-  | reviewer / orchestrator | 不能改任何文件 |
+  | `analyze` | 只能改对应 flow 的规格文件，且不能改 gtaw 专属字段（`status`、`rev`、答案、批准、`confirmed`/`defaulted`） |
+  | `author` | 只能改条目的 `ownsFiles` |
+  | `answer` | 只允许勾选 Open questions 中的选项，记为 `editor` 渠道 |
+  | `review` / 其他 | 不能改任何文件 |
 
-  越界时返回 `POLICY_OUT_OF_SCOPE_CHANGE`。**这项检查不依赖 IDE 的权限设置或 hooks。**
+  - 越界时返回 `POLICY_OUT_OF_SCOPE_CHANGE`。gtaw 先把越界的文件备份到 `.gta/work/recover/`，再把它们还原到基线。
+  - 检查按节点而不是按 agent 来做，所以 inline 模式下同样适用。
+  - **这项检查不依赖 IDE 的权限设置或 hooks。**
 - **串行**：运行和提交都在 `.lock` 下串行执行。
 - **Foundation 条目**
   - 每个 domain 的第一个条目是 **seed 测试**（`gtaw run --smoke` 的基线），只验证上下文和容器能启动。
@@ -827,7 +833,7 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 
 ### 7.7 部署态（P4）
 
-- **Cloud Run tag**：只能通过 tag URL 访问；Pub/Sub push、Eventarc、Scheduler 仍然打到主 revision，而且共用同一个数据库。要测这些场景，需要单独部署 `gta-<shortRunId>` 服务，或者创建临时订阅。
+- **Cloud Run tag**：只能通过 tag URL 访问；Pub/Sub push、Eventarc、Scheduler 仍然打到主 revision，而且共用同一个数据库。要测这些场景，需要单独部署 `gta-<shortRunId>-<purpose>` 服务，或者创建临时订阅。
 - **Cloud Run Jobs**：任务会重试，并按 `CLOUD_RUN_TASK_INDEX` 分片，需要测幂等。
 - **GKE**：每次运行建一个独立的 namespace。
 - **外部服务**：WireMock 从 sandbox 录制 stub，并检测漂移，再加上契约测试。
@@ -994,7 +1000,7 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
   "intent": "characterization",
   "agent": "gta-test-author",
   "skills": [".gta/skills/gta-testing-spring-apis", ".gta/skills/gta-stubbing-with-wiremock"],
-  "oracle": { "type": "state", "source": "observed", "then": ["503 ProblemDetail", "orders.status=PENDING_PAYMENT", "no message on order-created"] },
+  "oracle": { "type": "state", "source": "observed", "then": ["503", "PENDING_PAYMENT", "order-created"] },
   "ownsFiles": ["src/test/java/com/acme/order/api/OrderCreateIT.java"],
   "dependsOn": ["order#foundation-01"],
   "priority": "p1",
@@ -1039,6 +1045,11 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | `triageVerdict` | 见 §6 |
 | `finding.kind` | `behavior-suspect` · `doc-drift` |
 | `gateDecision` | `pass` · `concerns` · `fail` · `waived` |
+| `canFail` | `killed` · `survived` · `n/a` |
+| `dispatch` | `subagent` · `inline` |
+| `spec.source` | `gta` · `openspec` · `speckit` |
+| `mutation.mode` | `advisory` · `enforced` |
+| `modelTier` | `reasoning` · `standard` |
 
 ### 10.4 `config.json`（所有字段都可选）
 
@@ -1050,7 +1061,7 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
   "spec": { "source": "gta", "maxQuestionsPerRound": 5, "maxClarifyRounds": 2 },
   "environments": { "allowCloud": false, "gcpProject": null, "region": "asia-east1" },
   "budgets": { "maxChecksPerItem": 8, "maxAttemptsPerItem": 2, "maxConsecutiveFailures": 3,
-               "maxItemsPerSession": 5, "maxReviewRounds": 1, "nodeTimeoutMinutes": 15 },
+               "maxItemsPerSession": 5, "nodeTimeoutMinutes": 15 },
   "qualityGates": { "stabilityRepeat": 3, "oracleReview": true,
                     "mutation": { "mode": "advisory", "minStrength": 0.7 },
                     "concernsCharacterizationRatio": 0.5 }
@@ -1067,9 +1078,9 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 
 | 结果 | 条件 |
 |---|---|
-| `fail` | 只要存在以下任一项（且没有有效豁免），即为 fail：<br>① 受影响 flow 中，在 base 里已经 verified 的 `confirmed`/`documented` scenario 现在失败或缺失；<br>② 本 PR 新改动的 scenario 没有 verified 测试；<br>③ gta 测试的指纹与 base 不同，而该 scenario 的规格在本 PR 中没有改动（`GATE_ORACLE_CHANGED_WITHOUT_SPEC`）；<br>④ 新测试在 pass^k 下不稳定；<br>⑤ `@KnownDefect` 以其他原因失败，或测试已经通过；<br>⑥ `mutation.mode=enforced` 且测试强度低于阈值 |
+| `fail` | 只要存在以下任一项（且没有有效豁免），即为 fail：<br>① **base 的任一 oracle 分片中**、已经 verified 的 `confirmed`/`documented` scenario，现在失败、缺失或被禁用（本 PR 规格 diff 修改或撤销的 scenario 除外）；<br>② 受影响 flow 中，本 PR 新改动的 scenario 没有 verified 测试；<br>③ 任一 gta 测试的指纹与 base 不同，而该 scenario 的规格在本 PR 中没有改动，并且分片中也没有 `relock` 记录（`GATE_ORACLE_CHANGED_WITHOUT_SPEC`）；<br>④ 新测试在 pass^k 下不稳定；<br>⑤ `@KnownDefect` 以其他原因失败，或者测试已经通过；<br>⑥ `mutation.mode=enforced` 并且测试强度低于阈值 |
 | `waived` | 所有不满足的硬性条件都有有效豁免：从 base 读取、未过期、由 CODEOWNERS 审批 |
-| `concerns` | 硬性条件都满足，但存在以下任一情况：<br>- 有 `assumed` 或 `defaulted` 结论；<br>- characterization 测试占比过高；<br>- mutation 处于 advisory 模式且测试强度低于阈值；<br>- base 中已批准但还没有测试的 scenario；<br>- `GATE_UNMAPPED_CHANGE`；<br>- 本 PR 新增了确认项（同时列在 PR 评论中） |
+| `concerns` | 硬性条件都满足，但存在以下任一情况：<br>- 有 `assumed` 或 `defaulted` 结论；<br>- characterization 测试占比过高；<br>- mutation 处于 advisory 模式且测试强度低于阈值；<br>- base 中已批准但还没有测试的 scenario；<br>- `GATE_UNMAPPED_CHANGE`；<br>- 本 PR 新增了确认项或 `relock` 记录（同时列在 PR 评论中）；<br>- 有 inline 自审 |
 | `pass` | 其余情况 |
 
 - 优先级：`fail` > `waived` > `concerns` > `pass`。
@@ -1098,14 +1109,14 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 |---|---|---|
 | `gtaw init [--platform copilot,opencode]` · `gtaw upgrade` | 人 | 写入 harness、`.gta/skills`、AGENTS.md 段落、`.vscode` 设置、`.gitignore`、`managed-files.json`；打印 CODEOWNERS 和分支保护的建议 |
 | `gtaw doctor` | 人 | 检查 JDK、容器运行时（Docker/Podman/Rancher/Testcontainers Cloud）、构建、受管文件、hook 自检、IDE 设置（IntelliJ 给出自动批准的配置步骤） |
-| `gtaw next [--mode explain\|flow\|pr\|incident] [--target <flowId\|path>] [--base <ref>] [--takeover]` | orchestrator | 在内部执行确定性步骤，返回下一个节点 |
+| `gtaw next [--mode explain\|flow\|pr\|incident] [--target <flowId\|path>] [--base <ref>]` · `gtaw next --takeover` | orchestrator · `--takeover` **仅限人** | 在内部执行确定性步骤，返回下一个节点 |
 | `gtaw check --item <id> --token <t>` | test-author | 编译并运行一次；不计入修复次数 |
 | `gtaw submit --item <id> --token <t>` · `--spec <flowId> --token <t>` · `--review <id> --verdict <v> --reason "<text>"` | 对应的 agent / orchestrator | 正式提交条目、规格或评审结论 |
 | `gtaw answer "<原话>"` | orchestrator | 记录用户的回答或批准（§3.5） |
 | `gtaw status` | 任何人 | 每个 flow 的阶段、待回答的问题、待处理事项 |
-| `gtaw abort [--flow <flowId>]` | 人 / orchestrator | 丢弃工作状态 |
+| `gtaw abort [--flow <flowId>]` | **仅限人** | 丢弃工作状态 |
 | `gtaw run --item <id> \| --layer <layer> \| --smoke` | gtaw 内部 / CI | 运行指定测试 |
-| `gtaw verify [--new]` | gtaw 内部 / CI | 稳定性、能失败检查、期望值复核 |
+| `gtaw verify [--new]` | gtaw 内部 / CI | 稳定性、期望值复核；从 P2 起加上能失败检查 |
 | `gtaw mutate --changed` | CI / 人 | 对变更的类跑 PIT，结果按 diff 行过滤，只使用 unit 和 slice 测试 |
 | `gtaw gate --base <ref> --reports <dir>` · `gtaw gate waive …` | CI / 人 | 门禁；登记豁免（**仅限人**） |
 | `gtaw relock --item <id> --reason "<text>"` | **仅限人** | 在规格没有变化的情况下重新上锁 |
@@ -1226,17 +1237,17 @@ GTA：共生成 6 个条目，本次会话先处理 5 个……
 
 **受保护路径（唯一清单，其他章节都引用这里）**：
 - `gtaw`、`gtaw.cmd`
-- `.gta/wrapper/**`、`.gta/config.json`、`.gta/waivers.json`、`.gta/managed-files.json`
-- `.gta/specs/**/*.oracles.json`、`.gta/work/**`、`.gta/skills/**`
+- `**/.gta/wrapper/**`、`**/.gta/config.json`、`**/.gta/waivers.json`、`**/.gta/managed-files.json`
+- `**/.gta/specs/**/*.oracles.json`、`**/.gta/work/**`、`**/.gta/skills/**`
 - `.github/hooks/**`、`.github/agents/gta-*`、`.github/prompts/gta*`
 - `.vscode/settings.json`、`.opencode/**`
 
-agent 不能写入以上路径。除 `.gta/work/**` 之外，其余路径都由 CODEOWNERS 管辖。
+agent 不能写入以上路径。除 `.gta/work/**` 之外，其余路径都由 CODEOWNERS 管辖（使用 `**/` 前缀，以便覆盖 monorepo 中的各个模块）。
 
 | 主题 | 措施 |
 |---|---|
 | 权威裁决 | §5.8 的改动检查，加上以 base 为基准的门禁（§10.5）、CODEOWNERS 和分支保护。IDE 的权限设置和 hooks 只做早期拦截 |
-| 特权命令 | `hook`、`gate waive`、`relock`、`env` 禁止 agent 调用；自动批准只覆盖 next/check/submit/answer/status |
+| 特权命令 | `hook`、`gate waive`、`relock`、`env`、`abort`、`next --takeover` 禁止 agent 调用；自动批准只覆盖 next/check/submit/answer/status |
 | 生产代码 | v1 的任何模式都不修改 |
 | 人工确认 | 可审计（§5.5）；以 CODEOWNERS 审批为准 |
 | 测试完整性 | 禁止削弱断言、删除测试、加 `@Disabled`、把期望值改成实际值；由分流、期望值复核、oracle lock 和门禁共同强制执行 |
@@ -1282,9 +1293,9 @@ agent 不能写入以上路径。除 `.gta/work/**` 之外，其余路径都由 
 | 阶段 | 范围 | 退出标准 |
 |---|---|---|
 | **P0a 平台验证（1 周）** | 在两个 IDE 中验证：agent 可见性；子 agent 派发与 inline 模式；prompt 文件的 `agent:` 字段；hook payload 中的 `sessionId`/`agentId`；agent 级 hooks；子 agent 的 prompt 和 prompt 文件展开是否触发 `userPromptSubmitted`；终端自动批准；请求上限；长时间运行的终端命令（check/submit 的耗时） | 得到实测版的 §11.4 |
-| **P0 核心** | gtaw：`init`/`doctor`/`next`/`check`/`submit`/`answer`/`status`/`abort`/`run`/`verify`（稳定性 + 能失败检查，PIT 只做最小集成）/`report`/`hook`；`gta-junit`；schemas；生成器和 lint；4 个 agent；skills：mapping-flows、writing-behavior-specs、designing-test-oracles、writing-tests、testing-spring-apis、stubbing-with-wiremock、using-testcontainers、reviewing-test-quality；`/gta explain` 和 flow 模式；1 个 REST fixture，20 个 eval task | 在 1 个真实 REST 服务上跑通 explain → 回答 → 批准 → 至少 5 个 verified 测试；植入的 bug 被判定为缺陷，而不是被修绿；对抗 eval 的指标 3、4 达标；故障注入后能恢复 |
-| **P1 PR 模式** | impact（方法、配置、bean 图）、`gate --base`、PR 评论、contract/impact 相关 skills；grpc 和 graphql；OpenCode 端到端 | 在真实 PR 上产出行为变更摘要，门禁上线（mutation 为 advisory） |
-| **P2 Job 与质量** | scheduler、batch、db-migration；`mutate`；学习回路；先规则后 LLM 的修复；`spec.source=openspec\|speckit` | mutation 在试点仓库校准后切换为 enforced |
+| **P0 核心** | gtaw：`init`/`doctor`/`next`/`check`/`submit`/`answer`/`status`/`abort`/`run`/`verify`（稳定性 + 期望值复核）/`report`/`hook`；`gta-junit`；schemas；生成器和 lint；4 个 agent；skills：mapping-flows、writing-behavior-specs、designing-test-oracles、writing-tests、testing-spring-apis、stubbing-with-wiremock、testing-api-contracts、using-testcontainers、reviewing-test-quality；`/gta explain` 和 flow 模式；1 个 REST fixture，20 个 eval task | 在 1 个真实 REST 服务上跑通 explain → 回答 → 批准 → 至少 5 个 verified 测试；植入的 bug 被判定为缺陷，而不是被修绿；对抗 eval 的指标 3、4 达标；故障注入后能恢复 |
+| **P1 PR 与 incident 模式** | impact（方法、配置、bean 图）、`gate --base`、PR 评论、analyzing-change-impact；incident 模式；grpc 和 graphql；OpenCode 端到端 | 在真实 PR 上产出行为变更摘要，门禁上线（mutation 为 advisory） |
+| **P2 Job 与质量** | scheduler、batch、db-migration；`mutate` 和能失败检查（共用 PIT 集成）；学习回路；先规则后 LLM 的修复；`spec.source=openspec\|speckit` | mutation 在试点仓库校准后切换为 enforced |
 | **P3 数据、事件、catching** | beam、event、workflow；catching 测试与 assessor | 每类各试点 1 个服务 |
 | **P4 部署态** | `gta-system-tester`、`gtaw env`、Karate、云隔离 | 夜间 regression |
 | **P5** | 插件分发、SARIF、record-replay、性能测试、native-image、并行编写、其他语言的适配器 | 按需 |
@@ -1326,3 +1337,4 @@ agent 不能写入以上路径。除 `.gta/work/**` 之外，其余路径都由 
 | v4 | 失败分流、oracle lock、借鉴开源 repo |
 | v5 | 第一轮四路评审（架构 / 鲁棒性 / 测试领域 / 反方）之后：agent 从 9 个精简到 4 个、确定性生成计划、next/submit 协议、可推导状态、`defaulted` 来源、按原因链分流、`gta-junit`、PR 范围门禁、修正技术事实、explain 模式、PR 模式提前 |
 | v6 | 第二轮评审（逐项核查 + 新视角红队）之后：<br>- 信任锚点移到 gtaw 和 CI：每个节点做改动检查，门禁以 base 为基准，`stale` 不再豁免；<br>- 人工确认改为可审计：记录原话、轮次、渠道和修订号，回答与批准分两步，缺陷需要人确认；<br>- 禁止 agent 调用特权子命令，shell 改用白名单；<br>- 新增 check/submit/verify 分层、JaCoCo 到达探针、期望值复核，扩大指纹范围；<br>- oracle 分片在条目的 commit 中写入；升级记录提交到 git，加入会话令牌；<br>- `ref` 支持配置项和 bean；skills 移到 `.gta/skills/`；<br>- 修正凭证隔离；修复约 20 处一致性问题 |
+| v6.1 | 第三轮收敛评审（结论：架构已收敛）之后，做了局部修正：<br>- oracle lock 改为单调锁定 THEN 期望值，输入变动交给 reviewer；<br>- `abort` 和 `--takeover` 只允许人使用；<br>- 门禁 ①③ 覆盖 base 的全部分片，`relock` 有了合入路径；<br>- `confirmed` 和 `defaulted` 只能由 gtaw 写入，`documented` 必须附引用；<br>- THEN 必须带字面量；<br>- 改动检查按节点来做，inline 模式因此可用；<br>- 删去 IDE 侧的 shell 白名单和 reviewer 补缺口；能失败检查推迟到 P2 |
