@@ -1,6 +1,6 @@
 # Generic Testing Agent (GTA) — 设计方案
 
-> 状态：设计阶段（未实现） · 版本：plan v3 · 日期：2026-11
+> 状态：设计阶段（未实现） · 版本：plan v4 · 日期：2026-11
 > 范围：面向 Java（Spring 为主）服务的通用测试 harness
 > 使用面：**VS Code Copilot、IntelliJ IDEA Copilot**（主），OpenCode（次）
 > 命名空间：所有对外资产统一使用前缀 `gta`
@@ -14,6 +14,7 @@
    - agent 先读代码，生成**行为规格**（behavior spec）：格式兼容 OpenSpec，配 Mermaid 图，并标注每一条结论的来源。
    - 再用结构化问题和用户确认边界与不确定点；用户按 flow 逐个批准后，才开始写测试。
    - 这样做是为了解决 LLM 写测试最大的问题：只会把代码"现状"写成期望值。人工确认过的规格提供了独立的 oracle（判定期望结果的依据）（§3）。
+   - 规格确认之后还有一道保险：**oracle lock**。期望值一旦根据规格写下，修复阶段就不能改；断言失败先分流判定，绝不会被修绿（§5.2）。
 3. **Blueprint 架构**：
    - 流程推进、状态、构建执行、解析、门禁全部交给确定性 CLI `gta`（Java 实现，通过 `gtaw` wrapper 运行）。
    - LLM 只负责需要判断的环节：分析、写规格、写测试、评审（§4）。
@@ -58,7 +59,24 @@
 | **Microsoft code-testing-generator**（2026-07） | 以 plugin 形式提供 agent + skills：研究 → 计划 → 编写 → 验证；不改生产代码；同模型下比原生 Copilot 高约 13 个百分点 | 专用 agent + skills；禁止改生产代码 |
 | **Diffblue Testing Agent** | 只交付编译通过且运行通过的 "verified tests" | 只有通过确定性验证的测试才会被提交 |
 
-### 2.2 指南、平台与规格化开发
+### 2.2 开源 repo 的做法
+
+| Repo | 做法 | 借鉴 | 不借鉴 |
+|---|---|---|---|
+| [Playwright Test Agents](https://playwright.dev/docs/test-agents) | planner 产出 Markdown 测试计划 → generator 生成测试 → healer 修复失败；healer 判断功能本身坏了时标记 `test.fixme`，而不是改期望 | 人可读的计划；修复只修机械问题；用 seed 测试做启动基线 | 让 healer 自动修到通过（本设计用 oracle lock 禁止） |
+| [github/spec-kit](https://github.com/github/spec-kit) | specify → clarify（追问回写 spec）→ plan → tasks → analyze（跨产物一致性检查） | clarify 回写规格；analyze → 报告中的追踪矩阵与孤儿检查 | 完整的开发流程（本项目只做测试） |
+| [Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec) | Requirement + Scenario；变更用 delta | 规格格式 | 依赖它的 CLI |
+| [Kiro](https://kiro.dev/docs/specs/correctness/)（AWS） | 需求用 EARS 句式；从需求中抽取 property，用 PBT 找反例 | EARS 句式；`For any …` 形式的不变量 → jqwik property 测试 | — |
+| [BMAD TEA](https://github.com/bmad-code-org/bmad-method-test-architecture-enterprise) / QA gate | 风险 = 概率 × 影响；requirement → test 追踪；gate 取值 PASS / CONCERNS / FAIL / WAIVED；实现者不能批准自己的工作 | 风险评分；四值 gate + waiver | 拟人化的 agent persona |
+| [obra/superpowers](https://github.com/obra/superpowers) | verification-before-completion（没有运行证据不得宣称完成）；每个任务派新的子 agent，先做规格合规评审 | `passed` 只能由 `gtaw run` 设置；每个条目用全新上下文的子 agent | — |
+| [ChatUniTest](https://github.com/ZJU-ACES-ISE/ChatUniTest) / [TestART](https://github.com/sikygu/TestART) | 生成 → 验证 → 修复；先用规则修简单的编译错误，再交给 LLM | 先规则后 LLM（P2） | 以 coverage 为目标 |
+| [qodo-ai/qodo-cover](https://github.com/qodo-ai/qodo-cover) | 只保留能编译、能通过、能提升覆盖率的测试 | verified 过滤 | 把 coverage 作为接受标准 |
+| [Specmatic](https://specmatic.io/) | OpenAPI 即可执行契约（JVM、JUnit），同时提供 stub | contract 层的 JVM 原生选项 | — |
+| [Keploy](https://github.com/keploy/keploy) | 录制流量后回放 | P5 的 characterization 基线 | — |
+
+**研究佐证**：[Konstantinou 等（2024）](https://arxiv.org/abs/2410.21136) 发现，LLM 生成的测试 oracle 主要反映代码的**实际**行为而不是**期望**行为，因此很难发现缺陷。这正是本设计坚持 Spec-first 和 oracle lock 的原因。
+
+### 2.3 指南、平台与规格化开发
 
 | 来源 | 要点 |
 |---|---|
@@ -74,12 +92,12 @@
 | Example Mapping（BDD 实践） | Rule（规则）→ Examples（例子）→ Questions（问题）。用很轻量的方式和业务方确认边界 |
 | Copilot（[VS Code hooks](https://code.visualstudio.com/docs/copilot/customization/hooks)、[JetBrains 2026-03](https://github.blog/changelog/2026-03-11-major-agentic-capabilities-improvements-in-github-copilot-for-jetbrains-ides/)、[JetBrains 2026-06](https://github.blog/changelog/2026-06-02-introducing-copilot-cli-and-agentic-capabilities-enhancements-in-jetbrains-ides/)） | 见 §11.4 平台能力矩阵 |
 
-### 2.3 设计原则
+### 2.4 设计原则
 
 | # | 原则 |
 |---|---|
 | P1 | **确定性优先**：凡是能写成代码的步骤都交给 `gtaw` |
-| P2 | **Oracle 独立于实现**：期望行为来自人工确认的规格，而不是代码现状 |
+| P2 | **Oracle 独立于实现**：期望行为来自人工确认的规格，而不是代码现状；oracle lock 保证修复阶段不能改期望 |
 | P3 | **验证独立于作者**：写测试的 agent 不能判定"通过" |
 | P4 | **质量不等于覆盖率**：门禁看 scenario 覆盖、mutation、catching、pass^k |
 | P5 | **Agent 少，Skill 多**：专业化通过 skills 实现；新增服务类型 = 新增 registry 条目 + skills |
@@ -90,7 +108,7 @@
 | P10 | **CI 不依赖 LLM**：regression 和门禁全部是确定性的 |
 | P11 | **Eval 驱动**：harness 本身的每次改动都要跑 evals |
 
-### 2.4 v1 明确不做的事
+### 2.5 v1 明确不做的事
 
 - 不自建编排运行时，也不做 MCP server。Copilot / OpenCode 本身就是运行时；`gtaw` 通过 shell 调用。
 - 不用 Gliffy。理由：格式私有，无法在 git 中 diff，LLM 难以可靠生成，而且只能在 Confluence 中渲染。统一使用 Mermaid（§3.4）。
@@ -108,12 +126,12 @@
 
 | 维度 | 评价 |
 |---|---|
-| ✅ 解决 oracle 问题 | 只从代码推出来的测试是同义反复：代码有 bug，测试就把 bug 当成期望值。只有人工确认的期望行为才能让测试真正验证正确性。这是本方案最关键的一环 |
+| ✅ 解决 oracle 问题 | 只从代码推出来的测试是同义反复：代码有 bug，测试就把 bug 当成期望值。只有人工确认的期望行为才能让测试真正验证正确性（[Konstantinou 等 2024](https://arxiv.org/abs/2410.21136) 的研究也证实，LLM 生成的 oracle 主要反映实际行为）。这是本方案最关键的一环 |
 | ✅ 前置澄清 | 不确定的地方在写测试之前就问清楚，比事后返工便宜得多（Spec Kit 的 clarify 也是同样的思路） |
 | ✅ 图帮助快速 review | 一张时序图或状态图比几百行代码更快让人确认边界 |
 | ✅ 规格成为长期资产 | 规格提交进仓库，作为 regression 基线；PR 中规格的 diff 就是"本次行为变更"，对 code review 很有价值 |
 | ⚠️ 调整 1 | 写的是**行为规格**，不是完整的 develop/design 文档。文档太大没人看，而且会与代码漂移。只写测试需要的内容：边界、行为、状态、不变量、问题 |
-| ⚠️ 调整 2 | **用 Mermaid，不用 Gliffy**（理由见 §2.4），并且按 flow 类型限定图的种类和大小（§3.4） |
+| ⚠️ 调整 2 | **用 Mermaid，不用 Gliffy**（理由见 §2.5），并且按 flow 类型限定图的种类和大小（§3.4） |
 | ⚠️ 调整 3 | **每一条结论都要标来源**（`observed` / `documented` / `confirmed` / `assumed`），并附带代码位置，方便在 IDE 中点击核对。代码现状与文档或人工确认不一致时，直接记为 **spec finding**（候选缺陷），这在写任何测试之前就有价值 |
 | ⚠️ 调整 4 | **问题必须结构化**：每轮最多 5 个问题，按影响排序，每个问题都给出选项、推荐默认值和受影响的 scenario。用户可以回答 "1A 2B 其余默认"。最多 2 轮，未解决的记为 `assumed` 并在报告中标出 |
 | ⚠️ 调整 5 | **按 flow 增量批准，并且流水线推进**：不要求一次审完整份文档。按风险每批处理 3 个 flow，批准一个就开始写这个 flow 的测试 |
@@ -136,13 +154,15 @@
 - 只有 `observed`（未确认）→ characterization 测试，即锁定当前行为。这类测试打上 `characterization` 标记，在报告中单独统计。
 - `observed` 与 `confirmed` 冲突 → spec finding。写一个 `reproducing` 测试，交给开发确认。
 
+**Scenario 的完整性不靠 LLM 发挥**：analyst 对每个 Requirement 系统地使用经典测试设计技术，包括等价类、边界值、决策表、状态迁移，以及按风险推测错误（见 `gta-writing-behavior-specs/references/test-design-techniques.md`）。
+
 ### 3.3 规格文件格式（与 OpenSpec 格式兼容）
 
 文件路径：`.gta/specs/<domain>/<flow-name>.spec.md`。元数据放在 HTML 注释中，这样既不影响渲染，又能被机器解析。
 
 ````markdown
 # order.create — 创建订单
-<!-- gta: flowId=order.create capability=rest-api risk=high status=in-review
+<!-- gta: flowId=order.create capability=rest-api risk=6 status=in-review
      sources=src/main/java/com/acme/order/api/OrderController.java,src/main/resources/openapi.yaml -->
 
 ## Boundary
@@ -169,7 +189,7 @@ sequenceDiagram
 
 ### Requirement: 支付网关超时
 <!-- gta: id=order.create/r02 source=observed ref=src/main/java/com/acme/order/OrderService.java#L88 -->
-The service SHALL respond 503 and keep the order in PENDING_PAYMENT when the payment gateway times out.
+WHEN the payment gateway does not respond within 3s, THE order service SHALL respond 503 and keep the order in PENDING_PAYMENT.
 
 #### Scenario: 网关 3 秒未响应
 <!-- gta: id=order.create/s03 -->
@@ -179,7 +199,7 @@ The service SHALL respond 503 and keep the order in PENDING_PAYMENT when the pay
 - **AND** no message is published to order-created
 
 ## Invariants
-- 同一 `Idempotency-Key` 重复提交，只会产生一个订单 <!-- gta: id=order.create/i01 source=assumed -->
+- For any 两次使用相同 `Idempotency-Key` 的提交，THE order service SHALL 只创建一个订单 <!-- gta: id=order.create/i01 source=assumed oracle=property -->
 
 ## Open questions
 <!-- gta: id=order.create/q01 impact=high affects=order.create/s03 status=open -->
@@ -188,6 +208,13 @@ The service SHALL respond 503 and keep the order in PENDING_PAYMENT when the pay
 ````
 
 **规格状态**：`draft` → `in-review` → `approved`。当规格的 `sources` 在后续 diff 中被改动时，状态变为 `stale`，由 PR 模式重新确认。
+
+**规格 lint（`gtaw spec lint`）**
+- 每个 Requirement 使用 EARS 句式（`WHEN` / `IF` / `WHILE` … `SHALL` …），并且至少有一个 Scenario。
+- 每个 `THEN` 都指向可观察的结果：响应、持久化状态、消息或指标。
+- 每条 `observed` 结论的 `ref` 都指向存在的文件和行。
+- `risk` = 概率（1–3）× 影响（1–3），用来决定优先级：9 → p0，6 → p1，3–4 → p2，1–2 → p3。
+- Mermaid 图通过基础的语法和规模检查。
 
 ### 3.4 图的选择规则（`gta-drawing-mermaid-diagrams`）
 
@@ -370,7 +397,7 @@ always:
 
 ## 5. Harness 工程机制
 
-### 5.1 对 plan v2 的工程 review 结论
+### 5.1 工程 review 结论
 
 | 维度 | v2 现状 | 缺口 | v3 的补齐方式 |
 |---|---|---|---|
@@ -382,6 +409,7 @@ always:
 | Agent 循环 | 重试 2 次、评审 1 轮 | 无法识别重复出现的同一错误、没有"无进展"熔断、没有单个 session 的条目上限 | §5.6：错误指纹、熔断、会话批量上限 |
 | Human in the loop | 计划审批 | 没有问题协议，回答后如何恢复不明确，没有升级资料包，非交互模式没有定义 | §5.7：四类 checkpoint、回答方式、恢复、升级资料包、CI 模式 |
 | 并发 | 最多并行 3 个 | 多个 agent 可能修改同一个文件 | §5.8：条目声明 `ownsFiles`；共享基础设施先由 foundation 条目完成 |
+| Oracle 完整性（v3 自查） | 任何失败都进入修复 | 修复时可能把期望值改成代码现状，规格确认就白做了 | §5.2：失败分流 + oracle lock + `passed` 只能由 `gtaw run` 设置 |
 | 可复现 | 无 | 工具版本和随机性不可控 | wrapper 锁定版本；`run.json` 记录版本和模型；property 测试记录 seed；时间相关测试用固定时钟 |
 
 ### 5.2 状态机
@@ -417,20 +445,37 @@ stateDiagram-v2
 ```mermaid
 stateDiagram-v2
   state "needs-human" as needs_human
+  state "defect-found" as defect_found
   [*] --> pending
   pending --> claimed : gtaw state claim（获取租约）
   claimed --> verifying : 测试已写入
-  verifying --> passed : 验证通过 + 能失败检查通过
-  verifying --> repairing : 失败（attempts < 2）
+  verifying --> passed : gtaw run 通过 + 能失败检查通过
+  verifying --> repairing : 编译或准备阶段失败（attempts < 2）
+  verifying --> triaging : 断言失败
   repairing --> verifying
+  triaging --> repairing : test-defect（oracle 仍锁定）
+  triaging --> defect_found : product-defect
+  triaging --> needs_human : spec-gap（回到 clarify）
   verifying --> needs_human : 修复次数用尽 / 同一错误出现两次
   claimed --> pending : 租约过期（恢复）
-  passed --> [*]
   needs_human --> pending : 人工处理后
   pending --> cancelled : 规格被撤销
+  passed --> [*]
+  defect_found --> [*]
 ```
 
 所有迁移都由 `gtaw state` 校验，非法迁移返回错误 `STATE_ILLEGAL_TRANSITION`（退出码 60）。
+
+**失败分流与 oracle lock**（v4 新增，防止把 bug 写成期望值）
+1. **确定性分流**：`gtaw run --item` 按失败发生的位置分类：
+   - `BUILD_COMPILE_ERROR`：编译失败；
+   - `TEST_SETUP_ERROR`：在断言之前就失败，例如上下文无法启动、容器起不来、fixture 缺失；
+   - `TEST_ASSERTION_FAILED`：断言失败，即 `AssertionError` 或 Karate `match` 失败。
+
+   前两类进入 `repairing`；第三类**不允许直接修复**，先进入 `triaging`，由 `gta-reviewer` 对照规格判定。
+2. **Oracle lock**：第一次验证时，`gtaw` 解析测试（JUnit 用 JavaParser，Karate 解析 `match` 语句），为每个 scenario 记录**断言指纹**（断言语句及其期望值）。之后每次运行都重新比对，指纹变化时拒绝，返回 `POLICY_ORACLE_MODIFIED`。只有 reviewer 判定"测试误读了规格"，并通过 `gtaw checkpoint` 记录理由后，才能解锁。
+3. **`passed` 只能由 `gtaw run` 设置**：agent 不能宣称测试通过，必须有本次运行的证据（runId）。
+4. **已确认缺陷（`defect-found`）**：测试照常提交，打上 `known-defect` 和 `defect:<findingId>` tag，同时生成 issue 草稿。`gtaw gate` 期望这类测试**失败**：失败时不阻断合入，只在报告中统计；一旦它变成通过，说明缺陷已修复，gate 会提示去掉 tag（返回 `KNOWN_DEFECT_RESOLVED`）。这与 pytest 中 `xfail(strict=True)` 的思路相同。
 
 ### 5.3 持久化
 
@@ -459,13 +504,13 @@ stateDiagram-v2
 | 退出码 | 类别 | 示例错误码 | 处理者 | 策略 |
 |---|---|---|---|---|
 | 0 | ok | — | — | — |
-| 10 | test-failure | `TEST_ASSERTION_FAILED` | specialist / reviewer | 修复循环或失败分类 |
+| 10 | test-failure | `TEST_ASSERTION_FAILED`、`TEST_SETUP_ERROR` | specialist / reviewer | 按 §5.2 分流 |
 | 11 | gate-failed | `GATE_MUTATION_BELOW_MIN` | 人 / CI | 阻断合入 |
 | 20 | usage / config | `CONFIG_INVALID` | 人 | 不重试，按 hint 修复 |
 | 30 | environment | `ENV_DOCKER_UNAVAILABLE` | 人 | 进入 `paused`，给出 hint |
 | 31 | transient-exhausted | `NET_REGISTRY_TIMEOUT` | toolkit | 内部已用指数退避重试 3 次，仍失败则 `paused` |
 | 40 | build | `BUILD_COMPILE_ERROR` | specialist | 计入修复次数 |
-| 50 | policy-denied | `POLICY_PROTECTED_PATH` | agent | 必须换方案；同一操作被拒两次则 `needs-human` |
+| 50 | policy-denied | `POLICY_PROTECTED_PATH`、`POLICY_ORACLE_MODIFIED` | agent | 必须换方案；同一操作被拒两次则 `needs-human` |
 | 60 | state-conflict | `STATE_ILLEGAL_TRANSITION`、`STATE_LOCKED` | orchestrator | 重新读取状态后再调用 `gtaw next` |
 | 70 | internal | `INTERNAL_ERROR` | 平台团队 | 中止，保留现场，提示上报 |
 
@@ -518,7 +563,7 @@ OpenCode 的 `doom_loop` 权限设置为 `ask`。
 ### 5.8 并发与文件归属
 
 - 计划条目声明 `ownsFiles`（glob），`gtaw next --parallel` 只会同时派发 `ownsFiles` 互不相交的条目。
-- 共享的测试基础设施（基类、Testcontainers 配置、WireMock 公共 stub）由 `kind=foundation` 的条目负责，排在最前并串行执行。
+- 共享的测试基础设施（基类、Testcontainers 配置、WireMock 公共 stub）由 `kind=foundation` 的条目负责，排在最前并串行执行。第一个 foundation 条目是 **seed 测试**，只验证应用上下文和依赖容器能启动，同时作为 `--smoke` 的基线。
 - **越界改动检查**：执行 `gtaw state set` 时，会用 `git status` 比对本节点允许改动的路径（specify 节点只能改 `.gta/specs/**`，author 节点只能改条目的 `ownsFiles`），越界时拒绝并返回 `POLICY_OUT_OF_SCOPE_CHANGE`。这一检查不依赖平台：hook 拿不到调用者是哪个 agent，所以按 agent 限制路径只能放在这里做。
 
 ### 5.9 配置优先级
@@ -541,7 +586,7 @@ OpenCode 的 `doom_loop` 权限设置为 `ask`。
 | 4 | D | `gtaw spec lint`：校验格式、ID、`ref` 是否存在、图的语法与规模 |
 | 5 | H | `clarify` → A：analyst 更新规格（≤2 轮）→ H：`approve`（按 flow） |
 | 6 | A | `gta-planner`：已批准的 scenario → 计划条目（foundation 条目排在最前）→ D `gtaw plan validate` |
-| 7 | D/A | 循环：`gtaw next` → `claim` → A specialist 写测试 → D `gtaw run --item`（编译、执行、能失败检查）→ 失败时 A 修复（≤2 次）→ D commit + `gtaw state set` |
+| 7 | D/A | 循环：`gtaw next` → `claim` → A specialist 写测试 → D `gtaw run --item`（编译、执行、能失败检查）→ 失败按 §5.2 分流：编译或准备失败交给 A 修复（≤2 次），断言失败交给 A reviewer 判定 → D commit |
 | 8 | D | `gtaw run --repeat 3 --new` + `gtaw mutate --changed` + `gtaw lint-tests` |
 | 9 | A | `gta-reviewer`：oracle 审查、对照规格 judge、缺口转成新条目（≤1 轮） |
 | 10 | D | `gtaw gate` + `gtaw report`，报告包含 scenario 覆盖和 spec findings |
@@ -675,6 +720,7 @@ OpenCode 的 `doom_loop` 权限设置为 `ask`。
 | 异步消息 | component | 容器化 broker + Awaitility | 终态 + DLQ + 重复投递 |
 | 编排 | component + system | 状态机路径测试 + 临时环境执行 | 执行历史 + 终态 |
 | 跨服务链路 | system | Karate + 临时环境 | 业务终态 |
+| 不变量（`For any …`） | unit + component | jqwik property-based | 性质成立；反例经 shrink 后作为 spec finding 报告 |
 
 ---
 
@@ -686,7 +732,7 @@ OpenCode 的 `doom_loop` 权限设置为 `ask`。
 |---|---|---|
 | `gta-profiling-services` | analyst | 如何解读 `gtaw profile` 的输出、识别自研入口 |
 | `gta-mapping-flows` | analyst | 从入口追踪到副作用；风险评级 |
-| `gta-writing-behavior-specs` | analyst | §3.2–3.3 的格式、来源标注、ID 规则、问题写法（`example-mapping.md`、`openspec-compat.md`） |
+| `gta-writing-behavior-specs` | analyst | §3.2–3.3 的格式、来源标注、ID 规则、问题写法（`ears.md`、`test-design-techniques.md`、`example-mapping.md`、`openspec-compat.md`） |
 | `gta-drawing-mermaid-diagrams` | analyst | §3.4 的选图规则与语法约束（`sequence.md`、`state.md`、`er.md`） |
 | `gta-analyzing-change-impact` | analyst、planner | diff → 意图 → 风险 → hardening/catching |
 | `gta-planning-tests` | planner | §7.8 选择矩阵、条目写法、`ownsFiles`、foundation 条目 |
@@ -696,7 +742,7 @@ OpenCode 的 `doom_loop` 权限设置为 `ask`。
 | `gta-testing-spring-web-slices` | api | MockMvcTester、WebFlux、JsonTest、安全测试 |
 | `gta-testing-spring-components` | api | SpringBootTest + REST Assured（`grpc.md`） |
 | `gta-stubbing-with-wiremock` | api、system | stub、故障注入、录制、漂移检测（`external-services.md`） |
-| `gta-testing-api-contracts` | api | `pact.md`、`spring-cloud-contract.md`、`oasdiff.md`、`schemathesis.md` |
+| `gta-testing-api-contracts` | api | `pact.md`、`spring-cloud-contract.md`、`oasdiff.md`、`schemathesis.md`、`specmatic.md` |
 | `gta-using-testcontainers` | 多个 | `gcp-emulators.md`、`kafka.md`、`databases.md` |
 | `gta-testing-scheduled-jobs` | job | §7.2 |
 | `gta-testing-spring-batch-jobs` | job | §7.3（`batch5-vs-batch6.md`） |
@@ -758,7 +804,7 @@ OpenCode 的 `doom_loop` 权限设置为 `ask`。
 | component / contract 测试类 | `<Subject>IT`（Failsafe） |
 | 包结构 | 与被测类同包；共享支撑代码放在 `<basePackage>.support` |
 | 测试方法 | `should<Outcome>When<Condition>()`，配合 `@DisplayName("[<scenarioId>] …")` |
-| JUnit tag | 层级（`unit` / `slice` / `component` / `contract` / `system`）+ `flow:<flowId>` + `scenario:<scenarioId>` + `gta`；characterization 测试额外加 `characterization` |
+| JUnit tag | 层级（`unit` / `slice` / `component` / `contract` / `system`）+ `flow:<flowId>` + `scenario:<scenarioId>` + `gta`；characterization 测试额外加 `characterization`；已确认缺陷加 `known-defect` 和 `defect:<findingId>` |
 | Karate | 路径 `src/test/resources/karate/<domain>/<flow-name>.feature`；tag 为 `@system @flow=<flowId> @scenario=<scenarioId>`；runner 为 `<basePackage>.system.KarateSystemIT` |
 | Fixtures / Golden | `src/test/resources/fixtures/<flowId>/<case>.json`；`src/test/resources/golden/<flowId>/<case>.approved.json` |
 
@@ -767,7 +813,7 @@ OpenCode 的 `doom_loop` 权限设置为 `ask`。
 | 对象 | 格式 | 示例 |
 |---|---|---|
 | flowId | `<domain>.<flow-name>`，正则 `^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)+$` | `order.create` |
-| requirementId / scenarioId / questionId / invariantId | `<flowId>/r<nn>`、`/s<nn>`、`/q<nn>`、`/i<nn>` | `order.create/s03` |
+| requirementId / scenarioId / questionId / invariantId / findingId | `<flowId>/r<nn>`、`/s<nn>`、`/q<nn>`、`/i<nn>`、`/f<nn>` | `order.create/s03` |
 | planItemId | `<scenarioId>#<layer>`；foundation 条目为 `<domain>.foundation#<nn>` | `order.create/s03#component` |
 | sessionId | `s<yyyymmddhhmmss>-<rand4>` | `s20261103120000-k3f9` |
 | runId | `r<yyyymmddhhmmss>-<sha7>` | `r20261103120000-a1b2c3d` |
@@ -791,6 +837,7 @@ OpenCode 的 `doom_loop` 权限设置为 `ask`。
 └── .gta/
     ├── config.json                 # 可选（缺省时自动检测）              [长期]
     ├── lock.json                   # 已安装版本与受管文件校验和           [长期]
+    ├── waivers.json                # gate 豁免：谁、原因、到期时间         [长期]
     ├── wrapper/gta-wrapper.properties  # 锁定的 gta-cli 版本与制品库地址  [长期]
     ├── specs/
     │   ├── service-overview.md                                          [长期]
@@ -836,14 +883,16 @@ OpenCode 的 `doom_loop` 权限设置为 `ask`。
 { "id": "order.create/s03#component", "status": "verifying", "attempts": 1,
   "lease": { "sessionId": "s20261103120000-k3f9", "acquiredAt": "…", "heartbeatAt": "…" },
   "lastError": { "code": "TEST_ASSERTION_FAILED", "fingerprint": "9c1e…" },
+  "oracle": { "fingerprint": "5be2…", "locked": true },
   "evidence": { "runId": "r20261103121500-a1b2c3d", "commit": "a1b2c3d" } }
 ```
 
 各枚举的取值：
 - `kind`：`foundation` | `test`
 - `intent`：`hardening` | `catching` | `reproducing` | `characterization`
-- `status`：`pending` | `claimed` | `verifying` | `repairing` | `passed` | `needs-human` | `cancelled`
+- `status`：`pending` | `claimed` | `verifying` | `repairing` | `triaging` | `passed` | `defect-found` | `needs-human` | `cancelled`
 - `phase`：见 §5.2
+- `gateDecision`：`pass` | `concerns` | `fail` | `waived`（见 §10.5）
 
 ### 10.4 `config.json`（全部可选）
 
@@ -860,6 +909,17 @@ OpenCode 的 `doom_loop` 权限设置为 `ask`。
   "qualityGates": { "newTestsPassRepeat": 3, "changedCodeMutationScoreMin": 0.7, "requireOracleReview": true }
 }
 ```
+
+### 10.5 质量门禁（`gtaw gate`）
+
+| 结果 | 条件 |
+|---|---|
+| `fail` | 任一硬性条件不满足：新测试 pass^3；已批准的 p0/p1 scenario 全部有 verified 测试；变更代码的 mutation score 达到阈值；没有 oracle lock 违规；没有护栏违规 |
+| `concerns` | 硬性条件都满足，但存在需要知会的情况：有 `assumed` 结论、有 `known-defect`、characterization 测试占比过高、有 `KNOWN_DEFECT_RESOLVED` 提示 |
+| `waived` | 结果本来是 `fail`，但 `.gta/waivers.json` 中有针对该条件的有效豁免（记录谁、原因、到期时间，过期自动失效，由 CODEOWNERS 审批） |
+| `pass` | 其余情况 |
+
+CI 中 `fail` 阻断合入；`concerns` 和 `waived` 放行，但会写进 PR 报告。
 
 ---
 
@@ -893,7 +953,7 @@ OpenCode 的 `doom_loop` 权限设置为 `ask`。
 | `gtaw migrate` | 升级 `.gta/` 中文件的 schema 版本 |
 | `gtaw run [--item | --changed | --new | --suite] [--repeat k] [--smoke]` | 构建、执行、解析，并做能失败检查 |
 | `gtaw mutate --changed` · `gtaw lint-tests` | PIT 增量 mutation；反模式检测 |
-| `gtaw gate` · `gtaw report [--finalize]` | 质量门禁（CI 权威裁决）与报告 |
+| `gtaw gate [waive]` · `gtaw report [--finalize]` | 质量门禁（§10.5）、登记豁免、生成报告（报告包含 requirement → scenario → test 追踪矩阵和孤儿检查） |
 | `gtaw status` | 用人能读懂的方式显示当前 phase、进度、等待我处理的事项 |
 | `gtaw env up | down | gc` | 临时环境的创建、销毁与清理 |
 | `gtaw hook pre-tool` | 供平台 hook 调用 |
@@ -1016,7 +1076,7 @@ GTA：order.create 生成 5 个测试条目，开始编写……（之后进度�
 | 最小权限 | 按 §11.4 的权限档案授权；planner 和 reviewer 只读，analyst 只能写规格；只有 `gta-system-tester` 能接触云 |
 | 双层护栏 | hooks 快速拦截，CI 中的 `gtaw gate` 做权威裁决，再加分支保护 |
 | 生产代码 | 默认禁止修改；incident 修复必须经过 `confirm` checkpoint |
-| 测试完整性 | 禁止削弱断言、删除测试、加 `@Disabled`、把期望值改成实际值；`expected-change` 必须由 reviewer 判定并写进报告 |
+| 测试完整性 | 禁止削弱断言、删除测试、加 `@Disabled`、把期望值改成实际值；`expected-change` 必须由 reviewer 判定并写进报告；以上规则由失败分流和 oracle lock 强制执行（§5.2） |
 | 规格可信度 | 每条结论都标注来源；只有人工批准后才进入 `confirmed`；`assumed` 在报告中单独列出 |
 | 云成本 | `allowCloud` 默认为 false；有预算上限；资源带 TTL label；`gtaw env gc` 兜底清理 |
 | 密钥与数据 | 凭证只从环境注入；hook 拦截读取密钥文件；禁止使用生产 PII |
@@ -1031,7 +1091,7 @@ GTA：order.create 生成 5 个测试条目，开始编写……（之后进度�
 - **Task**（`evals/tasks/<task-id>.task.json`）：包含 fixture、模式、输入、植入的缺陷、植入的**规格不一致**、期望提出的问题、grader 配置和参考解。
 - **Fixtures**：3 个服务（API、Scheduler + Batch、Beam），每个植入 10–20 个缺陷和 3–5 处文档与代码的不一致。
 - **Grader**：
-  - code（主要）：缺陷被抓到（fail-to-pass）；`gtaw gate` 的结果；没有违反护栏；`gtaw recover` 恢复正确。恢复正确性通过注入故障来测：在条目执行中途终止进程，然后检查恢复结果。
+  - code（主要）：缺陷被抓到（fail-to-pass）；`gtaw gate` 的结果；没有违反护栏；`gtaw recover` 恢复正确。恢复正确性通过注入故障来测：在条目执行中途终止进程，然后检查恢复结果；植入的缺陷没有被修绿（oracle lock 有效）。
   - model：用评分 rubric 评价规格质量、问题是否相关、oracle 质量。
   - human：抽检。
 - **指标**：
@@ -1052,9 +1112,9 @@ GTA：order.create 生成 5 个测试条目，开始编写……（之后进度�
 
 | 阶段 | 范围 | 退出标准 |
 |---|---|---|
-| **P0 骨架** | `gta-core`（状态机、持久化、事件、锁、恢复、错误）；wrapper、`init`、`doctor`、`profile`、`spec lint`、`checkpoint`、`next`、`state`、`run`、`report`、`hook`；schemas；生成器与 lint；5 个手写 agent 与 specialist 模板；API fixture 与 10 个 eval task | 在 API fixture 上，VS Code 和 IntelliJ 都能完成：`/gta` → 规格和问题 → 批准 → 至少 1 个 verified 测试；故障注入恢复测试通过 |
+| **P0 骨架** | `gta-core`（状态机、持久化、事件、锁、恢复、错误、失败分流、oracle lock）；wrapper、`init`、`doctor`、`profile`、`spec lint`、`checkpoint`、`next`、`state`、`run`、`report`、`hook`；schemas；生成器与 lint；5 个手写 agent 与 specialist 模板；API fixture 与 10 个 eval task | 在 API fixture 上，VS Code 和 IntelliJ 都能完成：`/gta` → 规格和问题 → 批准 → 至少 1 个 verified 测试；故障注入恢复测试通过；植入的缺陷被判定为 `defect-found` 而不是被修绿 |
 | **P1 API** | `gta-api-tester` 的全部 skills；OpenCode 端到端验证 | 在 1 个真实 API 服务上试点；缺陷和 spec finding 的检出率达标 |
-| **P2 Job + 质量** | `gta-job-tester`；`mutate`、`lint-tests`、`gate`；完善 reviewer | mutation 补测循环跑通；CI 门禁上线 |
+| **P2 Job + 质量** | `gta-job-tester`；`mutate`、`lint-tests`、`gate`；完善 reviewer；先规则后 LLM 的确定性预修复（如缺失 import） | mutation 补测循环跑通；CI 门禁上线 |
 | **P3 数据与事件** | `gta-pipeline-tester`、`gta-event-tester` | 各试点 1 个服务 |
 | **P4 PR + 部署态** | `impact`、规格 diff、catching 流程；`gta-system-tester`、`env`；incident 模式 | PR 中自动输出行为变更摘要和确认的 catch；夜间 regression |
 | **P5 进阶** | Copilot 插件分发、record-replay、Karate-Gatling、native-image | 按需推进 |
@@ -1080,7 +1140,9 @@ GTA：order.create 生成 5 个测试条目，开始编写……（之后进度�
 | 类别 | 链接 |
 |---|---|
 | 业界案例 | [Meta ACH](https://arxiv.org/abs/2501.12862) · [Meta JiTTests](https://engineering.fb.com/2026/02/11/developer-tools/the-death-of-traditional-testing-agentic-development-jit-testing-revival/) · [JiTTests 规模化](https://engineering.fb.com/2026/10/29/security/catching-bugs-before-they-land-jittestings-human-on-the-loop-approach-at-full-scale/) · [Uber AutoCover](https://homes.cs.washington.edu/~rjust/publ/auto_cover_icse_2026.pdf) · [Spotify Honk](https://engineering.atspotify.com/2025/12/feedback-loops-background-coding-agents-part-3) · [Stripe Minions（解读）](https://blog.bytebytego.com/p/how-stripes-minions-ship-1300-prs) · [Airbnb 测试迁移](https://www.infoq.com/news/2025/03/airbnb-llm-test-migration/) · [Microsoft code-testing-generator](https://devblogs.microsoft.com/dotnet/polyglot-unit-testing-agent/) · [Diffblue](https://diffblue.com) |
-| 规格化开发 | [OpenSpec](https://github.com/Fission-AI/OpenSpec) · [GitHub Spec Kit](https://github.com/github/spec-kit) |
+| 规格化开发 | [OpenSpec](https://github.com/Fission-AI/OpenSpec) · [GitHub Spec Kit](https://github.com/github/spec-kit) · [Kiro correctness / PBT](https://kiro.dev/docs/specs/correctness/) |
+| 开源 agent | [Playwright Test Agents](https://playwright.dev/docs/test-agents) · [BMAD TEA](https://github.com/bmad-code-org/bmad-method-test-architecture-enterprise) · [obra/superpowers](https://github.com/obra/superpowers) · [ChatUniTest](https://github.com/ZJU-ACES-ISE/ChatUniTest) · [TestART](https://github.com/sikygu/TestART) · [qodo-cover](https://github.com/qodo-ai/qodo-cover) · [Specmatic](https://specmatic.io/) |
+| 研究 | [LLM oracle 反映实际还是期望行为（Konstantinou 等 2024）](https://arxiv.org/abs/2410.21136) · [TestART](https://arxiv.org/abs/2408.03095) |
 | Agent / 平台 | [Agent Skills 规范](https://agentskills.io/specification) · [Copilot custom agents](https://docs.github.com/en/copilot/reference/custom-agents-configuration) · [Copilot hooks](https://docs.github.com/en/copilot/reference/hooks-reference) · [VS Code hooks](https://code.visualstudio.com/docs/copilot/customization/hooks) · [VS Code subagents](https://code.visualstudio.com/docs/copilot/agents/subagents) · [JetBrains Copilot 2026-03](https://github.blog/changelog/2026-03-11-major-agentic-capabilities-improvements-in-github-copilot-for-jetbrains-ides/) · [JetBrains Copilot 2026-06](https://github.blog/changelog/2026-06-02-introducing-copilot-cli-and-agentic-capabilities-enhancements-in-jetbrains-ides/) · [OpenCode agents](https://opencode.ai/docs/agents) · [OpenCode plugins](https://opencode.ai/docs/plugins) |
 | 测试工具 | [Karate](https://github.com/karatelabs/karate) · [Testcontainers GCloud](https://java.testcontainers.org/modules/gcloud) · [WireMock](https://wiremock.org/) · [Pact 对比 SCC](https://docs.pact.io/getting_started/comparisons) · [Schemathesis](https://schemathesis.readthedocs.io/) · [Microcks](https://microcks.io/) · [oasdiff](https://github.com/oasdiff/oasdiff) · [PIT](https://pitest.org/) · [Awaitility](https://github.com/awaitility/awaitility) · [ShedLock](https://github.com/lukas-krecan/ShedLock) · [jqwik](https://jqwik.net/) · [ApprovalTests.Java](https://github.com/approvals/ApprovalTests.Java) · [Instancio](https://github.com/instancio/instancio) · [fake-gcs-server](https://github.com/fsouza/fake-gcs-server) · [Keploy](https://github.com/keploy/keploy) · [picocli](https://picocli.info/) |
 | Spring / Beam | [Spring Batch testing](https://docs.spring.io/spring-batch/reference/testing.html) · [JobOperatorTestUtils](https://docs.spring.io/spring-batch/docs/6.0.x/api/org/springframework/batch/test/JobOperatorTestUtils.html) · [Spring Modulith testing](https://docs.spring.io/spring-modulith/reference/testing.html) · [Beam PAssert](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/testing/PAssert.html) |
