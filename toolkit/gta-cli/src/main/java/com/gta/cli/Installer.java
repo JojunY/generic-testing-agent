@@ -53,6 +53,7 @@ public final class Installer {
         Map<String, String> files = new LinkedHashMap<>();
         List<String> written = new ArrayList<>();
         List<String> conflicts = new ArrayList<>();
+        int skillFiles = 0;
 
         for (String rel : manifest(platform)) {
             String content = resource("gta/platform/" + platform + "/" + rel);
@@ -79,9 +80,16 @@ public final class Installer {
                     }
                     write(target, content);
                     files.put(rel, newHash);
-                    written.add(rel);
+                    if (rel.startsWith(".gta/skills/")) {
+                        skillFiles++;
+                    } else {
+                        written.add(rel);
+                    }
                 }
             }
+        }
+        if (skillFiles > 0) {
+            written.add(".gta/skills/** (" + skillFiles + " files)");
         }
         // wrapper
         for (String w : List.of("gtaw", "gtaw.cmd")) {

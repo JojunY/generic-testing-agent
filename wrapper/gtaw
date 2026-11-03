@@ -35,4 +35,9 @@ else
     fi
   fi
 fi
+# The JVM decodes arguments with the locale; make sure replies such as "批准 order.create@R2" arrive intact.
+case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
+  *UTF-8*|*utf-8*|*UTF8*|*utf8*) ;;
+  *) if [ "$(uname -s)" = Darwin ]; then export LC_CTYPE=UTF-8; else export LC_ALL=C.UTF-8; fi ;;
+esac
 exec java ${GTA_JAVA_OPTS} -jar "$JAR" --root "$DIR" "$@"

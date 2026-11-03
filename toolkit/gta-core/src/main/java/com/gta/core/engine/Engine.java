@@ -765,8 +765,10 @@ public final class Engine {
         List<TestCase> failures = run.failures();
         if ("known-defect".equals(s.intentOverride) && !run.cases.isEmpty() && run.cases.stream().allMatch(c -> "known-defect".equals(c.outcome))) {
             st.move(s, ItemStatus.DEFECT_FOUND);
-            commitItem(st, item, s, runId, "pin known defect");
-            st.itemsThisSession++;
+            commitItem(st, item, s, runId, "pin known defect " + item.ref);
+            writeEscalation(item, s, "Confirmed product defect, pinned with @KnownDefect (fingerprint "
+                    + (s.lastError == null ? "-" : s.lastError.defectFingerprint) + ").");
+            // not counted against the session budget: the item was already counted when it reached the human
             return result("defect-found: " + item.id + " pinned with @KnownDefect (build stays green)", Map.of("runId", runId));
         }
         if (failures.isEmpty()) {
@@ -854,7 +856,9 @@ public final class Engine {
                             "The oracle of " + item.id + " is " + item.oracle.source + "; it cannot prove a product defect",
                             "Use spec-error (observation was wrong) or test-defect");
                 }
-                return needsHuman(st, item, s, "defect: " + reason);
+                Map<String, Object> out = needsHuman(st, item, s, "defect: " + reason);
+                st.consecutiveFailures = 0; // a suspected product defect is a finding, not an authoring failure
+                return out;
             }
             case "spec-error" -> {
                 if (!humanBacked) {
@@ -1005,11 +1009,20 @@ public final class Engine {
             b.append("- Last failure: `").append(s.lastError.code).append("`\n\n```\n").append(firstLines(s.lastError.message, 20)).append("\n```\n");
         }
         b.append("\n## Suggested next step\n\n");
-        b.append(reason.startsWith("defect:") || reason.startsWith("Confirmed")
-                ? "Confirm or reject the defect in chat (`/gta`), then file an issue with the scenario, expected and actual values.\n"
-                : "Look at the last failure and the brief, fix the cause (environment, spec or test), then answer 'A' to retry in `/gta`.\n");
+        if (s.status == ItemStatus.DEFECT_FOUND) {
+            b.append("File an issue with the scenario, the expected and the actual values. The test is pinned with `@KnownDefect`:"
+                    + " the build stays green while the defect exists, and the test fails with \"known defect now passes\" once the"
+                    + " code is fixed - then remove the annotation and run `/gta`.\n");
+        } else if (reason.startsWith("Confirmed")) {
+            b.append("File an issue with the scenario, the expected and the actual values. The next `/gta` run pins the test with `@KnownDefect`.\n");
+        } else if (reason.startsWith("defect:")) {
+            b.append("Confirm or reject the defect in chat (`/gta`).\n");
+        } else {
+            b.append("Look at the last failure and the brief, fix the cause (environment, spec or test), then answer 'A' to retry in `/gta`.\n");
+        }
         Json.writeStringAtomic(f, b.toString());
-        git.commit(List.of(paths.rel(f)), "docs(gta): escalate " + item.id + "\n\nGta-Item: " + item.id);
+        String verb = s.status == ItemStatus.DEFECT_FOUND ? "record known defect " : "escalate ";
+        git.commit(List.of(paths.rel(f)), "docs(gta): " + verb + item.id + "\n\nGta-Item: " + item.id);
     }
 
     // ------------------------------------------------------------------ session end, verify, gate, report
@@ -1174,13 +1187,28 @@ public final class Engine {
         return out;
     }
 
+    private static void deleteTree(Path dir) throws IOException {
+        if (!Files.exists(dir)) {
+            return;
+        }
+        try (Stream<Path> walk = Files.walk(dir)) {
+            for (Path p : walk.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                Files.delete(p);
+            }
+        }
+    }
+
     public Map<String, Object> abort(String flowId) {
         try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
             WorkState st = store.load();
             if (flowId == null) {
                 store.save(new WorkState());
                 Files.deleteIfExists(paths.plan());
-                return result("working state discarded; specs, shards and committed tests are kept", null);
+                // brief numbers restart with the new state; stale briefs, snapshots and backups would be misleading
+                for (Path dir : List.of(paths.briefs(), paths.work().resolve("snapshots"), paths.recover())) {
+                    deleteTree(dir);
+                }
+                return result("working state discarded; specs, shards, committed tests and run evidence are kept", null);
             }
             List<PlanItem> plan = store.loadPlan();
             plan.stream().filter(i -> i.flowId.equals(flowId)).forEach(i -> st.items.remove(i.id));
@@ -1337,6 +1365,13 @@ public final class Engine {
         for (PlanItem i : result) {
             WorkState.ItemState s = st.items.get(i.id);
             Path test = paths.root().resolve("src/test/java").resolve(i.testClass.replace('.', '/') + ".java");
+            if (i.isFoundation() && s.status == ItemStatus.PENDING && s.attempts == 0 && Files.exists(test)
+                    && git.isTracked(paths.rel(test))) {
+                // the committed seed test is adopted after one verification run instead of being written again
+                s.baseline = new ChangeChecker(paths).capture();
+                s.status = ItemStatus.VERIFYING;
+                continue;
+            }
             Map<String, OracleShard.Entry> shard = OracleShard.read(paths.oracleShard(i.flowId));
             if (s.status == ItemStatus.PENDING && s.attempts == 0 && Files.exists(test) && shard.containsKey(i.id)
                     && i.scenarioRevision.equals(shard.get(i.id).scenarioRevision)) {

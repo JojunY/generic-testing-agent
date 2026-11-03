@@ -83,9 +83,12 @@ public final class Planner {
             f.oracle.type = "state";
             f.oracle.source = "observed";
             f.oracle.reviewerChecked = true;
-            f.testClass = pkg.isEmpty() ? seed : pkg + "." + seed;
-            f.ownsFiles.add("src/test/java/" + pkgPath + seed + ".java");
-            f.ownsFiles.add("src/test/java/" + pkgPath + "support/**");
+            // the seed boots the whole application, so it lives next to the @SpringBootApplication class
+            String basePkg = profile.basePackage == null || profile.basePackage.isEmpty() ? pkg : profile.basePackage;
+            String basePath = basePkg.isEmpty() ? "" : basePkg.replace('.', '/') + "/";
+            f.testClass = basePkg.isEmpty() ? seed : basePkg + "." + seed;
+            f.ownsFiles.add("src/test/java/" + basePath + seed + ".java");
+            f.ownsFiles.add("src/test/java/" + basePath + "support/**");
             f.ownsFiles.add("src/test/resources/**");
             f.ownsFiles.add("pom.xml");
             f.priority = "p0";

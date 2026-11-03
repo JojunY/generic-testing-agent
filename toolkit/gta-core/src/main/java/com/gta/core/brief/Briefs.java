@@ -27,6 +27,13 @@ public final class Briefs {
         this.paths = paths;
     }
 
+    /** First clause with its keyword, the rest as AND - the way the spec writes them. */
+    private static void clauses(StringBuilder b, String keyword, List<String> clauses) {
+        for (int i = 0; i < clauses.size(); i++) {
+            b.append("- **").append(i == 0 ? keyword : "AND").append("** ").append(clauses.get(i)).append('\n');
+        }
+    }
+
     private Path file(int seq) {
         return paths.briefs().resolve(String.format("%04d.md", seq));
     }
@@ -96,15 +103,21 @@ public final class Briefs {
                     .append("shared test support classes and test resources. Make sure `com.gta:gta-junit` is a test dependency.\n\n");
         } else {
             Spec.Scenario s = spec.scenario(item.ref).orElse(null);
-            b.append("## Goal\n\nWrite a `").append(item.layer).append("` test for scenario `").append(item.ref).append("` — ")
-                    .append(item.title).append(". ");
+            if ("known-defect".equals(state.intentOverride)) {
+                b.append("## Goal\n\nThe test for scenario `").append(item.ref).append("` — ").append(item.title)
+                        .append(" — already exists and fails because of a confirmed product defect. Pin it (see *Confirmed defect* below); ")
+                        .append("do not change anything else. ");
+            } else {
+                b.append("## Goal\n\nWrite a `").append(item.layer).append("` test for scenario `").append(item.ref).append("` — ")
+                        .append(item.title).append(". ");
+            }
             b.append("characterization".equals(item.intent)
                     ? "The expectation was observed in code (not confirmed by a human): the test locks current behaviour.\n\n"
                     : "The expectation is confirmed/documented: the test checks correctness.\n\n");
             if (s != null) {
                 spec.requirementOf(s).ifPresent(r -> b.append("**Requirement:** ").append(r.text()).append("\n\n"));
-                s.whens.forEach(w -> b.append("- **WHEN** ").append(w).append('\n'));
-                s.thens.forEach(t -> b.append("- **THEN** ").append(t).append('\n'));
+                clauses(b, "WHEN", s.whens);
+                clauses(b, "THEN", s.thens);
                 b.append('\n');
             }
             b.append("## Oracle (locked)\n\nEvery value below must appear in an assertion of a test method tagged `scenario:")
@@ -141,11 +154,13 @@ public final class Briefs {
         }
         appendSkills(b, item.skills);
         b.append("## Code slice\n\n");
+        java.util.Set<String> slice = new java.util.LinkedHashSet<>();
         for (Spec.Requirement r : spec.requirements) {
             if (item.isFoundation() || r.scenarios.stream().anyMatch(s -> item.ref.equals(s.id()))) {
-                r.refs().forEach(ref -> b.append("- `").append(ref).append("`").append(fileHint(ref)).append('\n'));
+                slice.addAll(r.refs());
             }
         }
+        slice.forEach(ref -> b.append("- `").append(ref).append("`").append(fileHint(ref)).append('\n'));
         b.append('\n');
         List<String> siblings = siblingTests(item.testClass);
         if (!siblings.isEmpty()) {
@@ -176,8 +191,8 @@ public final class Briefs {
                 .append("`\n- Oracle source: `").append(item.oracle.source).append("`\n\n");
         spec.scenario(item.ref).ifPresent(s -> {
             b.append("## Scenario `").append(s.id()).append("`\n\n");
-            s.whens.forEach(w -> b.append("- **WHEN** ").append(w).append('\n'));
-            s.thens.forEach(t -> b.append("- **THEN** ").append(t).append('\n'));
+            clauses(b, "WHEN", s.whens);
+            clauses(b, "THEN", s.thens);
             b.append('\n');
         });
         b.append("## What to judge\n\n").append(details).append("\n\n");

@@ -56,6 +56,8 @@ public final class MavenRunner {
         return new ArrayList<>(List.of("mvn"));
     }
 
+    static final String ALL_TESTS = "**/*Test,**/*Tests,**/*TestCase,**/Test*,**/*IT";
+
     public RunResult run(String runId, String itemId, Options options, Set<String> productionClasses, Set<String> testClasses) {
         Path root = paths.root();
         Path surefire = root.resolve("target/surefire-reports");
@@ -68,6 +70,9 @@ public final class MavenRunner {
                 "-Djacoco.skip=true", "-Dgta.results.dir=" + gtaResults));
         if (options.testClass() != null) {
             cmd.add("-Dtest=" + options.testClass());
+        } else {
+            // Surefire's default includes skip *IT; gtaw runs component tests through Surefire too (no Failsafe needed)
+            cmd.add("-Dtest=" + ALL_TESTS);
         }
         if (options.scenarioTag() != null) {
             cmd.add("-Dgroups=" + options.scenarioTag());

@@ -40,6 +40,9 @@ public final class GtaCli implements Callable<Integer> {
     String format = "concise";
 
     public static void main(String[] args) {
+        // JSON and prompts are UTF-8 regardless of the console code page (Windows cp1252/cp936), so agents read them intact.
+        System.setOut(new java.io.PrintStream(new java.io.FileOutputStream(java.io.FileDescriptor.out), true, java.nio.charset.StandardCharsets.UTF_8));
+        System.setErr(new java.io.PrintStream(new java.io.FileOutputStream(java.io.FileDescriptor.err), true, java.nio.charset.StandardCharsets.UTF_8));
         CommandLine cli = new CommandLine(new GtaCli());
         cli.setExecutionExceptionHandler((ex, cmd, parsed) -> {
             GtaException ge = ex instanceof GtaException g ? g
@@ -67,8 +70,13 @@ public final class GtaCli implements Callable<Integer> {
                 Object v = e.getValue();
                 if (v instanceof String s && s.contains("\n")) {
                     System.out.println(e.getKey() + ":\n" + s);
+                } else if (v instanceof List<?> list) {
+                    System.out.println(e.getKey() + ":" + (list.isEmpty() ? " none" : ""));
+                    for (Object x : list) {
+                        System.out.println("  - " + human(x));
+                    }
                 } else {
-                    System.out.println(e.getKey() + ": " + (v instanceof String ? v : Json.write(v).replace("\n", "")));
+                    System.out.println(e.getKey() + ": " + human(v));
                 }
             }
         } else if (value instanceof String s) {
@@ -77,6 +85,32 @@ public final class GtaCli implements Callable<Integer> {
             System.out.println(Json.write(value));
         }
         return 0;
+    }
+
+    /** One line per object: "id  status  key=value ..." for maps, plain text otherwise. */
+    static String human(Object v) {
+        if (v instanceof Map<?, ?> m) {
+            StringBuilder sb = new StringBuilder();
+            for (String lead : List.of("id", "flowId", "itemId")) {
+                if (m.get(lead) != null) {
+                    sb.append(m.get(lead));
+                    break;
+                }
+            }
+            if (m.get("status") != null) {
+                sb.append(sb.length() > 0 ? "  " : "").append(m.get("status"));
+            }
+            for (Map.Entry<?, ?> e : m.entrySet()) {
+                String k = String.valueOf(e.getKey());
+                if (List.of("id", "flowId", "itemId", "status").contains(k) || e.getValue() == null) {
+                    continue;
+                }
+                sb.append(sb.length() > 0 ? "  " : "").append(k).append('=')
+                        .append(e.getValue() instanceof String str ? str : Json.write(e.getValue()).replace("\n", "").replaceAll("\\s+", " "));
+            }
+            return sb.toString();
+        }
+        return v instanceof String str ? str : Json.write(v).replace("\n", "").replaceAll("\\s+", " ");
     }
 
     static Engine engine(GtaCli parent) {
@@ -224,12 +258,22 @@ public final class GtaCli implements Callable<Integer> {
     static final class Answer implements Callable<Integer> {
         @CommandLine.ParentCommand
         GtaCli parent;
-        @Parameters(arity = "1..*", description = "The human's reply, verbatim")
+        @Parameters(arity = "0..*", description = "The human's reply, verbatim")
         List<String> words;
+        @Option(names = "--file", description = "Read the reply from a UTF-8 file (use when the terminal mangles non-ASCII text)")
+        Path file;
 
         @Override
-        public Integer call() {
-            return print(parent, engine(parent).answer(String.join(" ", words)));
+        public Integer call() throws java.io.IOException {
+            String reply;
+            if (file != null) {
+                reply = java.nio.file.Files.readString(file, java.nio.charset.StandardCharsets.UTF_8).strip();
+            } else if (words != null && !words.isEmpty()) {
+                reply = String.join(" ", words);
+            } else {
+                throw new GtaException(ErrorCode.USAGE_INVALID_ARGUMENT, "No reply given", "Run ./gtaw answer \"<reply>\" or ./gtaw answer --file <path>");
+            }
+            return print(parent, engine(parent).answer(reply));
         }
     }
 

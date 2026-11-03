@@ -2,6 +2,7 @@ package com.gta.core.oracle;
 
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
@@ -28,6 +29,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -54,6 +56,11 @@ public final class AssertionScanner {
             Map.entry("isForbidden", "403"), Map.entry("isNotFound", "404"), Map.entry("isConflict", "409"),
             Map.entry("isUnprocessableEntity", "422"), Map.entry("isInternalServerError", "500"),
             Map.entry("isServiceUnavailable", "503"), Map.entry("isGatewayTimeout", "504"));
+
+    private static final Set<String> STIMULUS_CALLS = Set.of("perform", "post", "get", "put", "patch", "delete", "head",
+            "options", "request", "multipart", "content", "contentType", "accept", "header", "headers", "param", "params",
+            "queryParam", "cookie", "uri", "body", "bodyValue", "exchange", "postForEntity", "postForObject", "getForEntity",
+            "getForObject", "send", "convertAndSend", "publish", "launchJob", "launchStep", "given", "when");
 
     /** Oracle view of one scenario's tests. */
     public record ScenarioOracle(int methods, List<String> assertionStatements, Set<String> tokens, String watchedHash) {
@@ -91,7 +98,16 @@ public final class AssertionScanner {
             methods++;
             for (ExpressionStmt stmt : m.findAll(ExpressionStmt.class)) {
                 if (isAssertion(stmt)) {
-                    statements.add(normalize(stmt));
+                    // a MockMvc/RestTestClient chain mixes the stimulus and the expectations in one statement:
+                    // only the assertion fragments are locked; the rest of the statement is an input (watched)
+                    String rest = normalize(stmt);
+                    for (MethodCallExpr fragment : assertionFragments(stmt)) {
+                        String f = fragment.getNameAsString() + "(" + fragment.getArguments().stream()
+                                .map(AssertionScanner::normalize).reduce((a, b) -> a + "," + b).orElse("") + ")";
+                        statements.add(f);
+                        rest = rest.replace(f, "");
+                    }
+                    watched.append(rest);
                     collectTokens(stmt, constants, tokens);
                 } else {
                     watched.append(normalize(stmt));
@@ -133,15 +149,69 @@ public final class AssertionScanner {
         return tags;
     }
 
+    static boolean isAssertionCall(MethodCallExpr c) {
+        String n = c.getNameAsString();
+        return n.startsWith("assert") || n.startsWith("verify") || ASSERTION_CALLS.contains(n) || STATUS_MATCHERS.containsKey(n);
+    }
+
     static boolean isAssertion(Statement stmt) {
-        return stmt.findAll(MethodCallExpr.class).stream().anyMatch(c -> {
-            String n = c.getNameAsString();
-            return n.startsWith("assert") || n.startsWith("verify") || ASSERTION_CALLS.contains(n) || STATUS_MATCHERS.containsKey(n);
-        });
+        return stmt.findAll(MethodCallExpr.class).stream().anyMatch(AssertionScanner::isAssertionCall);
+    }
+
+    /** Outermost assertion calls of a statement (an assertion nested in another one's arguments belongs to it). */
+    static List<MethodCallExpr> assertionFragments(Statement stmt) {
+        List<MethodCallExpr> out = new ArrayList<>();
+        for (MethodCallExpr c : stmt.findAll(MethodCallExpr.class)) {
+            if (isAssertionCall(c) && !inArgumentsOf(c, AssertionScanner::isAssertionCall)) {
+                out.add(c);
+            }
+        }
+        return out;
+    }
+
+    /** True when the node sits inside the arguments (not the scope) of an enclosing call matching the predicate. */
+    static boolean inArgumentsOf(Node node, java.util.function.Predicate<MethodCallExpr> predicate) {
+        Node child = node;
+        Optional<Node> parent = node.getParentNode();
+        while (parent.isPresent() && !(parent.get() instanceof Statement)) {
+            if (parent.get() instanceof MethodCallExpr call && predicate.test(call)) {
+                Node c = child;
+                if (call.getArguments().stream().anyMatch(a -> a == c)) {
+                    return true;
+                }
+            }
+            child = parent.get();
+            parent = child.getParentNode();
+        }
+        return false;
+    }
+
+    /** Request-building calls: their arguments are inputs (stimulus), not expected values. */
+    static boolean inStimulus(Node node) {
+        Node child = node;
+        Optional<Node> parent = node.getParentNode();
+        while (parent.isPresent() && !(parent.get() instanceof Statement)) {
+            if (parent.get() instanceof MethodCallExpr call) {
+                Node c = child;
+                boolean inArgs = call.getArguments().stream().anyMatch(a -> a == c);
+                if (inArgs && isAssertionCall(call)) {
+                    return false; // expected side wins, e.g. andExpect(content().string("x"))
+                }
+                if (inArgs && STIMULUS_CALLS.contains(call.getNameAsString())) {
+                    return true;
+                }
+            }
+            child = parent.get();
+            parent = child.getParentNode();
+        }
+        return false;
     }
 
     static void collectTokens(Statement stmt, Map<String, String> constants, Set<String> tokens) {
         for (LiteralExpr lit : stmt.findAll(LiteralExpr.class)) {
+            if (inStimulus(lit)) {
+                continue;
+            }
             if (lit instanceof StringLiteralExpr s) {
                 tokens.add(s.getValue());
             } else if (lit instanceof TextBlockLiteralExpr t) {
@@ -151,13 +221,17 @@ public final class AssertionScanner {
             }
         }
         for (NameExpr n : stmt.findAll(NameExpr.class)) {
-            addSymbol(n.getNameAsString(), constants, tokens);
+            if (!inStimulus(n)) {
+                addSymbol(n.getNameAsString(), constants, tokens);
+            }
         }
         for (FieldAccessExpr f : stmt.findAll(FieldAccessExpr.class)) {
-            addSymbol(f.getNameAsString(), constants, tokens);
+            if (!inStimulus(f)) {
+                addSymbol(f.getNameAsString(), constants, tokens);
+            }
         }
         for (MethodCallExpr c : stmt.findAll(MethodCallExpr.class)) {
-            String code = STATUS_MATCHERS.get(c.getNameAsString());
+            String code = inStimulus(c) ? null : STATUS_MATCHERS.get(c.getNameAsString());
             if (code != null) {
                 tokens.add(code);
             }

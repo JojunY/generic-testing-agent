@@ -62,8 +62,12 @@ public final class AnswerParser {
         }
         boolean rest = REST_DEFAULT.matcher(body).find();
         if (picks.isEmpty() && !rest) {
+            boolean garbled = text.indexOf('\uFFFD') >= 0 || text.matches(".*\\?{2,}.*");
             throw new GtaException(ErrorCode.USAGE_UNPARSEABLE_ANSWER, "Cannot understand the answer: " + text,
-                    "Answer like 'R3: 1A 2B 其余默认', approve like '批准 order.create@R4', or pick an option letter like 'A'");
+                    garbled
+                            ? "The terminal passed non-ASCII text in another encoding. Use the ASCII forms ('approve order.create@R4',"
+                              + " 'R3: 1A 2B rest default') or write the reply to a UTF-8 file and run ./gtaw answer --file <path>"
+                            : "Answer like 'R3: 1A 2B 其余默认', approve like '批准 order.create@R4', or pick an option letter like 'A'");
         }
         return new Answers(round, picks, rest);
     }

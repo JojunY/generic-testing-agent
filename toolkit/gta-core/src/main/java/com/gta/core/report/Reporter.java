@@ -89,6 +89,14 @@ public final class Reporter {
             escalations.forEach(e -> b.append("- ").append(e).append('\n'));
             b.append('\n');
         }
+        List<String> defects = state.items.values().stream().filter(i -> i.status.id().equals("defect-found"))
+                .map(i -> "`" + i.id + "` — pinned with `@KnownDefect`; details in `.gta/escalations/"
+                        + com.gta.core.util.Ids.itemKey(i.id) + ".md`").toList();
+        if (!defects.isEmpty()) {
+            b.append("### Product defects found\n\n");
+            defects.forEach(d -> b.append("- ").append(d).append('\n'));
+            b.append('\n');
+        }
         if (!state.pendingReview.isEmpty()) {
             b.append("### Spec corrections to re-confirm (observed values corrected from actual behaviour)\n\n");
             state.pendingReview.forEach(p -> b.append("- ").append(p).append('\n'));

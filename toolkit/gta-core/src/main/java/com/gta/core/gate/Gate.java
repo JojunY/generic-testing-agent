@@ -154,10 +154,13 @@ public final class Gate {
             r.failures.add(new Condition(ErrorCode.GATE_UNSTABLE_TEST.name(), item, "failed under pass^k / timezone / locale variation"));
         }
 
-        // concerns
+        // concerns: only about flows whose spec changed in this PR (a repo-wide ratio would show on every PR)
         int characterization = 0;
         int total = 0;
         for (Spec spec : currentSpecs.values()) {
+            if (!changedSpecFlows.contains(spec.flowId())) {
+                continue;
+            }
             for (Spec.Scenario s : spec.scenarios()) {
                 total++;
                 if ("observed".equals(s.source()) || "defaulted".equals(s.source())) {
