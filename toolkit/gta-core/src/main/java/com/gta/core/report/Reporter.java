@@ -60,8 +60,13 @@ public final class Reporter {
                 for (Spec.Scenario s : r.scenarios) {
                     List<PlanItem> items = plan.stream().filter(i -> s.id() != null && s.id().equals(i.ref)).toList();
                     if (items.isEmpty()) {
+                        // no working state (e.g. in CI): fall back to the committed oracle shard
+                        String locked = com.gta.core.oracle.OracleShard.read(paths.oracleShard(spec.flowId())).keySet().stream()
+                                .filter(k -> s.id() != null && k.startsWith(s.id() + "#")).findFirst().orElse(null);
                         b.append("| ").append(spec.flowId()).append(" | ").append(r.title).append(" | ").append(s.id()).append(' ')
-                                .append(s.title).append(" | ").append(s.source()).append(" | — | ").append(spec.status()).append(" |\n");
+                                .append(s.title).append(" | ").append(s.source()).append(" | ")
+                                .append(locked == null ? "—" : "`" + locked + "`").append(" | ")
+                                .append(locked == null ? spec.status() : "locked").append(" |\n");
                     }
                     for (PlanItem i : items) {
                         WorkState.ItemState st = state.items.get(i.id);

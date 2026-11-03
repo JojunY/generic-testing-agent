@@ -1185,7 +1185,7 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | `gtaw mutate --changed` | CI / 人 | 对变更的类跑 PIT，结果按 diff 行过滤，只使用 unit 和 slice 测试 |
 | `gtaw gate --base <ref> --reports <dir>` · `gtaw gate waive …` | CI / 人 | 门禁；登记豁免（**仅限人**） |
 | `gtaw relock --item <id> --reason "<text>"` | **仅限人** | 在规格没有变化的情况下重新上锁 |
-| `gtaw report [--format md\|pr-comment]` | gtaw 内部 / CI | 追踪矩阵、孤儿检查、新增确认项 |
+| `gtaw report [--kind md\|pr-comment]` | gtaw 内部 / CI | 追踪矩阵、孤儿检查、新增确认项 |
 | `gtaw env up\|down\|gc`（P4） | **仅限人** / system 条目 | 临时环境 |
 
 ### 11.3 本仓库结构
@@ -1199,7 +1199,7 @@ generic-testing-agent/
 │   ├── commands/    gta.md
 │   ├── rules/       gta-guardrails.md           # AGENTS.md 段落，以及各 agent Rules 的公共部分
 │   ├── skills/      gta-<gerund>-<object>/{SKILL.md, references/, assets/}
-│   ├── templates/   spec.md.tmpl · service-overview.md.tmpl · brief.md.tmpl · report.md.tmpl · pr-comment.md.tmpl
+│   ├── templates/   spec.md.tmpl（brief、报告与 PR 评论由 gta-core 直接渲染；service-overview 模板 P1 加入）
 │   ├── registry/    capabilities.yaml
 │   └── schemas/     <artifact>.v1.schema.json
 ├── platforms/

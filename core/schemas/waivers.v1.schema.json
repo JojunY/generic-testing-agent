@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:gta:schema:waivers:v1",
+  "title": "gta gate waivers (.gta/waivers.json)",
+  "description": "Read from the base branch only, so a waiver needs its own reviewed PR. Written by ./gtaw gate waive.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["code", "target", "reason", "expires", "by"],
+    "additionalProperties": false,
+    "properties": {
+      "code": { "type": "string", "pattern": "^GATE_[A-Z_]+$" },
+      "target": { "type": "string", "description": "scenario id or *" },
+      "reason": { "type": "string", "minLength": 10 },
+      "expires": { "type": "string", "format": "date", "description": "at most 90 days after creation" },
+      "by": { "type": "string" }
+    }
+  }
+}

@@ -79,15 +79,18 @@ public final class FailureClassifier {
         return dollar > 0 ? cls.substring(0, dollar) : cls;
     }
 
+    /** Same as com.gta.junit.Fingerprint.VOLATILE (gta-core does not depend on gta-junit). */
+    static final String VOLATILE = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?|0x[0-9a-fA-F]+|@[0-9a-fA-F]{4,}\\b|\\b[0-9a-f]{8,}\\b|\\b\\d{6,}\\b";
+
     /** Same algorithm as com.gta.junit.Fingerprint, so @KnownDefect(failure=...) can be compared at test time. */
     public static String knownDefectFingerprint(String exceptionType, String message) {
-        String m = message == null ? "" : message.replaceAll("0x[0-9a-fA-F]+|[0-9a-f]{8,}|\\d+", "#").replaceAll("\\s+", " ").trim();
+        String m = message == null ? "" : message.replaceAll(VOLATILE, "#").replaceAll("\\s+", " ").trim();
         return Hashes.sha256((exceptionType == null ? "" : exceptionType) + "|" + m).substring(0, 12);
     }
 
-    /** Stable fingerprint of a failure: code + message with numbers and hex ids normalised. */
+    /** Stable fingerprint of a failure: code + message with volatile parts normalised. */
     public static String fingerprint(String code, String message) {
-        String m = message == null ? "" : message.replaceAll("0x[0-9a-fA-F]+|[0-9a-f]{8,}|\\d+", "#");
+        String m = message == null ? "" : message.replaceAll(VOLATILE, "#").replaceAll("\\s+", " ").trim();
         return Hashes.shortSha(code + "|" + m);
     }
 }

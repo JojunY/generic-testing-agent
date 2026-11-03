@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:gta:schema:config:v1",
+  "title": "gta configuration (.gta/config.json)",
+  "description": "Optional overrides of gta defaults. Only the keys you set are used.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": "1.0" },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tool": { "enum": ["maven"] },
+        "basePackage": { "type": "string", "description": "\"auto\" = package of the @SpringBootApplication class" },
+        "maven": { "type": "string", "description": "\"auto\" = mvnw if present, else mvn" }
+      }
+    },
+    "dispatch": { "enum": ["subagent", "inline"] },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source": { "enum": ["gta"] },
+        "maxQuestionsPerRound": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "maxClarifyRounds": { "type": "integer", "minimum": 1, "maximum": 5 }
+      }
+    },
+    "environments": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allowCloud": { "type": "boolean" },
+        "gcpProject": { "type": "string" },
+        "region": { "type": "string" },
+        "oracle": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "testUrl": { "type": "string", "pattern": "^jdbc:oracle:" },
+            "userEnv": { "type": "string" },
+            "passwordEnv": { "type": "string" }
+          }
+        }
+      }
+    },
+    "distribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "toolsUrl": { "type": "string", "format": "uri" } }
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Lower values are allowed; values below the floors are raised to them.",
+      "properties": {
+        "maxChecksPerItem": { "type": "integer", "minimum": 1 },
+        "maxAttemptsPerItem": { "type": "integer", "minimum": 1 },
+        "maxConsecutiveFailures": { "type": "integer", "minimum": 1 },
+        "maxItemsPerSession": { "type": "integer", "minimum": 1 },
+        "nodeTimeoutMinutes": { "type": "integer", "minimum": 1 },
+        "sessionIdleMinutes": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "qualityGates": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stabilityRepeat": { "type": "integer", "minimum": 1 },
+        "oracleReview": { "type": "boolean" },
+        "concernsCharacterizationRatio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "mutation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": { "enum": ["off", "advisory", "required"] },
+            "minStrength": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      }
+    }
+  }
+}

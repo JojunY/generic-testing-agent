@@ -262,6 +262,25 @@ public class Linter {
                 }
             }
         }
+        Path schemas = repo.resolve("core/schemas");
+        if (Files.isDirectory(schemas)) {
+            for (Path p : Generator.list(schemas, ".json")) {
+                Matcher m = Pattern.compile("^([a-z0-9-]+)\\.v(\\d+)\\.schema\\.json$").matcher(p.getFileName().toString());
+                if (!m.matches()) {
+                    errors.add(rel(p) + ": schema names follow <artifact>.v<major>.schema.json");
+                    continue;
+                }
+                try {
+                    Object id = Json.MAPPER.readValue(p.toFile(), Map.class).get("$id");
+                    String expected = "urn:gta:schema:" + m.group(1) + ":v" + m.group(2);
+                    if (!expected.equals(id)) {
+                        errors.add(rel(p) + ": $id must be " + expected);
+                    }
+                } catch (IOException e) {
+                    errors.add(rel(p) + ": invalid JSON: " + e.getMessage());
+                }
+            }
+        }
         try (Stream<Path> s = Files.list(repo.resolve("core/templates"))) {
             for (Path t : s.toList()) {
                 if (!t.getFileName().toString().matches("^[a-z0-9-]+\\.[a-z]+\\.tmpl$")) {

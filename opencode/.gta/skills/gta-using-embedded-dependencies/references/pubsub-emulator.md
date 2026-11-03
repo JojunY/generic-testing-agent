@@ -1,5 +1,7 @@
 # Pub/Sub emulator
 
+> Phase: the emulator download through `distribution.toolsUrl` arrives with the messaging capability (P3). Until then, P0 items that touch Pub/Sub use the fake bean described at the end (`fidelity: low`).
+
 The official emulator is a Java program. The platform team uploads it to the Nexus raw repository; `distribution.toolsUrl` points there and the foundation support class starts it on a free port with the local JDK.
 
 ```java
