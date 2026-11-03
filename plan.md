@@ -1,8 +1,9 @@
 # Generic Testing Agent (GTA) — 设计方案
 
-> 状态：设计阶段（未实现）· 版本：plan v6.1 · 日期：2026-11
+> 状态：设计阶段（未实现）· 版本：plan v7 · 日期：2026-11
 > 范围：面向 Java（以 Spring 为主）服务的通用测试 harness
 > 使用面：**VS Code Copilot、IntelliJ IDEA Copilot**（主），OpenCode（次）
+> 目标环境：Maven；Spring Boot 4.1 为主，少量 3.5；JUnit 跟随 Spring Boot parent；Java 17+。不启用 CODEOWNERS 和分支保护，不开启 Copilot preview policy
 > 命名空间：所有对外资产统一使用前缀 `gta`。修订记录见附录 B
 
 ---
@@ -25,17 +26,17 @@
    - 确定性的 Java CLI `gtaw` 负责状态、调度、执行、分流和门禁；LLM 只做分析、写规格、写测试、评审。
    - 协议是：`next` → 派发 → `check`（可多次）→ `submit`。
    - brief 自包含：可以派给子 agent 执行，平台不支持子 agent 时也可以由 orchestrator 内联执行（§4）。
-5. **Agent 少、Skill 多**
+5. **原语按需选用（§4.0）**：只用 custom agents、subagents、一个 prompt 文件、一段 AGENTS.md；skills 只借用格式。v1 不用 hooks、MCP、handoffs 和 plugins。
+6. **Agent 少、Skill 多**
    - 只有 4 个 agent，P4 再加 1 个。skills 按服务类型由 registry 选出，由 brief 按路径加载，不依赖平台自动触发。
    - 只有当权限不同时，才拆成不同的 agent（§4.3）。
-6. **状态可推导**
+7. **状态可推导**
    - 长期真相保存在 git 中：规格、按 flow 分片的 oracle 文件、升级记录、测试本身。
    - 工作状态放在 gitignored 的 `.gta/work/`，可以重建；换人接手只需 push（§5.2）。
-7. **信任锚点在 gtaw 和 CI，不在 IDE**
-   - 权威裁决来自三处：gtaw 对每个节点的改动检查、以 base 为基准的 CI 门禁、CODEOWNERS 审批。
-   - IDE hooks 只做早期拦截。
-   - 人工确认附带原话和来源渠道，任何伪造都会在 PR 中显示出来（§5.5）。
-8. **上手**：tech lead 在每个仓库执行一次 `./gtaw init`；开发者只需要一个命令 `/gta`（§12）。
+8. **信任锚点在 gtaw 和 CI，不在 IDE**
+   - 权威裁决来自两处：gtaw 对每个节点的改动检查，以及以 base 为基准的 CI 门禁。
+   - 人工确认附带原话和来源渠道，并列在 PR 评论里，由正常的 PR review 把关（§5.5）。
+9. **上手**：tech lead 在每个仓库执行一次 `./gtaw init`；开发者只需要一个命令 `/gta`（§12）。
 
 ---
 
@@ -122,7 +123,8 @@
 | P7 | **长期真相保存在 git，工作状态可以重建**；所有状态只由 gtaw 写入 |
 | P8 | **循环有界，并且有熔断** |
 | P9 | **人工确认可审计**：带原话、渠道和修订号，在 PR 中可见 |
-| P10 | **权威裁决在 gtaw 和 CI**（以 base 分支为准）；IDE hooks 只做早期拦截 |
+| P10 | **权威裁决在 gtaw 和 CI**（以 base 分支为准），不依赖 IDE 侧机制 |
+| P13 | **原语按需选用**：每个 agent/skill/prompt/instruction/hook/MCP 都要有明确的职责，否则不引入 |
 | P11 | **CI 不依赖 LLM** |
 | P12 | **Eval 驱动** |
 
@@ -134,6 +136,7 @@
 - 一个 worktree 同一时间只允许一个驱动会话，不并行编写测试。
 - 不使用 Gliffy（格式私有、无法 diff、LLM 难以可靠生成），统一用 Mermaid。
 - 不依赖 OpenSpec CLI；不使用 EvoMaster；jqwik 不作为默认（§7.9）。
+- v1 不使用 hooks、MCP、handoffs、plugins，也不让平台自动加载 skills（见 §4.0）。
 - 不做插件分发、SARIF、向量库、dashboard。以下内容推迟：读取 OpenSpec/Spec Kit 规格（P2）、Cucumber、record-replay、性能测试。
 
 ---
@@ -291,16 +294,17 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
 ### 3.5 回答与批准
 
 1. **gtaw 生成问题块**，带轮次号，例如 `R3`。orchestrator 必须原样展示这个问题块。
-2. **回答**有三种渠道，都会在规格中记录原话、轮次和渠道：
-   - `verified`：用户在 Chat 中回复，例如 "R3: 1A 2A 其余默认"。orchestrator 调用 `./gtaw answer "<原话>"`，gtaw 把它和 `userPromptSubmitted` hook 捕获到的人类输入比对，一致才记为 `verified`。
-   - `unverified`：同样走 `gtaw answer`，但宿主没有 hook。如果 hook 是正常工作的（doctor 自检通过，近期也捕获过输入），而这次没有捕获到对应的输入，就拒绝这次回答，返回 `POLICY_ANSWER_MISMATCH`。
+2. **回答**有两种渠道，都会在规格中记录原话、轮次和渠道：
+   - `chat`：用户在 Chat 中回复，例如 "R3: 1A 2A 其余默认"。orchestrator 调用 `./gtaw answer "<原话>"`，把原话交给 gtaw。
    - `editor`：人直接在编辑器中勾选选项，然后再执行 `/gta`。
+
+   v1 不靠 hook 来证明回答出自人，理由见 §4.0。可信度来自审计：原话会写进规格，并列在 PR 评论里。
 3. **默认值**：高影响问题不能用默认值。"其余默认"一律选"= 代码现状"，对应的结论记为 `defaulted`。
 4. **批准**：
    - gtaw 应用答案后，会生成新的修订号（例如 `R4`），并展示规格的变化。
    - 用户必须**另外发一条消息**，回复"批准 `order.create@R4`"。
    - 批准按 Requirement 记录内容哈希。之后哪个 Requirement 的内容变了，只有它会退回 `in-review`。
-5. **权威审批**：分支保护要求 CODEOWNERS 审批 `.gta/specs/**`。PR 评论会列出本次新增的所有 `confirmed` 和批准，包括原话和渠道，**任何伪造都在审批者眼前**。问题也可以通过 PR 异步交给产品负责人回答。
+5. **权威审批**：由团队正常的 PR review 把关。gtaw 生成的 PR 评论会单独列出本次新增的所有 `confirmed`、批准、`relock` 和豁免，包括原话和渠道，**任何伪造都在 reviewer 眼前**。问题也可以通过 PR 异步交给产品负责人回答。以后如果启用 CODEOWNERS，规格的审批可以收紧为必须由 CODEOWNERS 批准，不需要改动设计。
 
 ### 3.6 与 OpenSpec / Spec Kit 共存（P2）
 
@@ -311,6 +315,21 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
 ---
 
 ## 4. Harness 架构
+
+### 4.0 原语选型：每样都要有明确职责，不为凑齐而引入
+
+| 原语 | v1 是否使用 | 职责 / 不用的理由 |
+|---|---|---|
+| **Custom agents**（`.github/agents`、`.opencode/agents`） | ✅ 4 个 | 每个角色有不同的工具权限和模型档位；角色数量按权限划分，不按服务类型划分 |
+| **Subagents** | ✅ 默认使用 | 每个条目在新的上下文中执行，避免长会话的上下文膨胀；平台不支持时改为 `dispatch: inline` |
+| **Prompt files / commands** | ✅ 1 个 `/gta` | 唯一入口，并自动选中 orchestrator；不按模式拆成多个命令 |
+| **Instructions**（AGENTS.md） | ✅ 一段 3 行 | 职责单一：告诉普通对话"测试相关请用 `/gta`，不要手改 `.gta/` 下的文件"。各 agent 的规则写在 agent 正文里，不写进全局 instructions，也不用 `copilot-instructions.md` 或 `.instructions.md` 重复一遍 |
+| **Skills（Agent Skills 格式）** | ⚠️ 只借用格式 | 用 `SKILL.md` 和 `references/` 组织知识，由 brief 按路径加载。**不放进平台的 skills 目录**，以免在普通对话中被自动触发 |
+| **Hooks** | ❌ v1 不用 | VS Code 的 hooks 是 preview，而你们不开启 preview policy，所以在 VS Code 中无法依赖。hook 原本承担的职责已经由其他机制完成：<br>- 越界改动：§5.8 的改动检查，越界文件会被还原；<br>- 特权命令：不在终端自动批准列表中，需要人点击确认；<br>- 期望值篡改：oracle lock 加上 CI 门禁。<br>P5 可以作为可选增强，用来更早拦截问题，以及捕获人类输入 |
+| **MCP** | ❌ v1 不用 | gtaw 通过终端调用就够了。引入 MCP server 要额外处理进程、配置、鉴权，而且各 IDE 都要单独配置。只有终端批准弹窗确实成为痛点时，才考虑在 P5 把 gtaw 包装成 MCP 工具，利用 IntelliJ 按工具设置的自动批准 |
+| **Handoffs** | ❌ | 只有 VS Code 支持；人工节点统一在 Chat 中完成 |
+| **Plugins / marketplace** | ❌（P5） | 安装统一用 `gtaw init`，两个 IDE 的行为一致 |
+| **Anthropic 的方法论** | ✅ 作为设计依据 | 采用的部分：workflow 优先、单调状态、一个条目一个上下文、eval 驱动。不采用的部分：只在 Claude Code 中可用的机制 |
 
 ### 4.1 分层
 
@@ -326,11 +345,9 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
 │ Toolkit    gtaw → gta-cli.jar：调度、规格、计划、执行、分流、oracle     │
 │            lock、改动检查、门禁、报告  ·  gta-junit（测试期依赖）        │
 ├─────────────────────────────────────────────────────────────────────┤
-│ Hooks      preToolUse（早期拦截）· userPromptSubmitted（捕获人类输入）   │
-├─────────────────────────────────────────────────────────────────────┤
 │ State      git：specs + oracle 分片 + escalations + tests | .gta/work/ │
 ├─────────────────────────────────────────────────────────────────────┤
-│ CI         mvn/gradle（已有）→ gtaw verify --new → gtaw gate --base   │
+│ CI         mvn verify（已有）→ gtaw verify --new → gtaw gate --base   │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -469,31 +486,17 @@ routing:
 
 **尚未支持的 capability**（`since` 晚于当前阶段）只做 explain，并在报告中写明。
 
-### 4.5 Hooks（早期拦截）
+### 4.5 护栏（不依赖 hooks）
 
-| 事件 | VS Code（Preview） | IntelliJ | OpenCode | 用途 |
-|---|---|---|---|---|
-| `preToolUse` | `.github/hooks/gta-guardrails.json`；另外支持写在 agent frontmatter 里的 agent 级 hooks | `.github/hooks/*.json` | plugin `tool.execute.before` | 拦截 |
-| `userPromptSubmitted` | 同上 | 同上 | plugin `chat.message` | 捕获人类输入，用于把答案标记为 `verified` |
+| 风险 | v1 的处理方式 |
+|---|---|
+| agent 改了不该改的文件，例如 `src/main`、受保护路径、规格中 gtaw 专属的字段 | §5.8 的改动检查：越界文件先备份，再还原到基线，并返回 `POLICY_OUT_OF_SCOPE_CHANGE` |
+| agent 执行特权命令：`gate waive`、`relock`、`env`、`abort`、`next --takeover` | 这些命令不在终端自动批准列表中，IDE 会弹窗，由人决定是否执行；执行结果会被提交，并列在 PR 评论里 |
+| agent 直接运行 `mvn` 绕过 gtaw | `mvn` 也不在自动批准列表中，需要人点击。即便执行了也不会产生 `passed`，因为状态只由 gtaw 设置 |
+| 期望值被篡改 | oracle lock，加上以 base 为准的门禁（§10.5） |
+| 读取密钥、`git push --force` | 不在自动批准列表中；凭证隔离见 §13 |
 
-**规则只有一层**，对仓库中所有 Copilot 会话生效，并且尽量少：
-- 禁止 agent 写入受保护路径（§13 的唯一清单）；
-- 禁止读取密钥文件；
-- 禁止 `git push --force`；
-- **禁止 agent 调用 gtaw 的特权子命令**：`hook`、`gate waive`、`relock`、`env`、`abort`、`next --takeover`。
-
-**不再设 IDE 侧的 shell 白名单和"gta 专属"规则**，原因有两个：
-- 不在自动批准范围内的命令，本来就需要人点击确认；
-- §5.8 的改动检查是权威的：越界改动会先被备份，再还原到基线。
-
-**实现**
-- 入口是一段 sh/pwsh 预过滤脚本：
-  - 先用字符串匹配受保护路径和特权子命令。
-  - 再判断是否需要 gtaw：工具名未知或不确定时，交给 gtaw 判断。
-  - gtaw 无法启动时，**放行并记录日志**。如果脚本崩溃，Copilot 会默认拒绝，那样会挡住所有编辑。
-- 调用格式为 `gtaw hook pre-tool|prompt --host vscode|jetbrains|opencode`，因为各宿主的工具名和字段大小写不同。
-- gtaw 按宿主各自的协议应答，**不使用 §5.6 的退出码**。
-- `gtaw doctor` 会做一次 hook 自检。
+P5 的可选增强：在 IntelliJ（hooks 已 GA）或开启 preview 后的 VS Code 中，用 `preToolUse` 做更早的拦截，用 `userPromptSubmitted` 捕获人类输入，从而给回答增加一个 `verified` 渠道。
 
 ---
 
@@ -517,11 +520,11 @@ routing:
 
 | 位置 | 内容 | 是否提交 |
 |---|---|---|
-| `.gta/specs/<domain>/<flow-name>.spec.md` | 规格、答案（原话/轮次/渠道）、批准记录 | 提交（CODEOWNERS） |
-| `.gta/specs/<domain>/<flow-name>.oracles.json` | 该 flow 下各条目的 oracle 指纹和 scenario 修订哈希 | 提交（CODEOWNERS） |
+| `.gta/specs/<domain>/<flow-name>.spec.md` | 规格、答案（原话/轮次/渠道）、批准记录 | 提交 |
+| `.gta/specs/<domain>/<flow-name>.oracles.json` | 该 flow 下各条目的 oracle 指纹和 scenario 修订哈希 | 提交 |
 | `.gta/escalations/<itemKey>.md` | 升级资料包：做过的尝试、错误、假设、建议 | 提交 |
 | `.gta/skills/gta-*/` | 受管的 skills | 提交（受管） |
-| `.gta/config.json` · `.gta/waivers.json` · `.gta/wrapper/` · `.gta/managed-files.json` | 配置、豁免、wrapper、受管文件校验和 | 提交（CODEOWNERS） |
+| `.gta/config.json` · `.gta/waivers.json` · `.gta/wrapper/` · `.gta/managed-files.json` | 配置、豁免、wrapper、受管文件校验和 | 提交 |
 | `.gta/lessons.md`（P2） | 从过往运行中积累的约定 | 提交 |
 | `.gta/work/` | `state.json`、`flow-catalog.json`、`briefs/`、`runs/<runId>/`、`recover/`、`.session`、`.lock` | **不提交** |
 
@@ -660,9 +663,9 @@ Mermaid 的状态名不能含连字符，所以图中用 `in_review` 表示 `in-
 | 升级 | `needs-human`（其他原因）或熔断 | 升级资料包，提交到 `.gta/escalations/` | 可以交给其他人处理 |
 
 **可审计**
-- 每一条 `confirmed`、批准和缺陷确认，都在规格或升级记录中留下原话、轮次和渠道（`verified` / `unverified` / `editor`），并由 gtaw 提交。
+- 每一条 `confirmed`、批准和缺陷确认，都在规格或升级记录中留下原话、轮次和渠道（`chat` / `editor`），并由 gtaw 提交。
 - PR 评论会列出本次新增的所有确认项。
-- 最终以 CODEOWNERS 的审批为准。
+- 最终以 PR review 为准。
 
 **非交互模式**：CI 只执行确定性命令。
 
@@ -686,13 +689,12 @@ Mermaid 的状态名不能含连字符，所以图中用 `in_review` 表示 `in-
 | 30 | environment | `ENV_` | `ENV_DOCKER_UNAVAILABLE`、`ENV_WRAPPER_CHECKSUM_MISMATCH` | 暂停，给出 hint |
 | 31 | transient | `TRANSIENT_` | `TRANSIENT_REGISTRY_TIMEOUT` | 内部按指数退避重试 3 次后暂停（只用于下载和网络） |
 | 40 | build | `BUILD_` | `BUILD_COMPILE_ERROR` | 见 §5.4 |
-| 50 | policy | `POLICY_` | `POLICY_PROTECTED_PATH`、`POLICY_ORACLE_MODIFIED`、`POLICY_ORACLE_MISMATCH`、`POLICY_OUT_OF_SCOPE_CHANGE`、`POLICY_ANSWER_MISMATCH` | 修复（计入 attempts） |
+| 50 | policy | `POLICY_` | `POLICY_PROTECTED_PATH`、`POLICY_ORACLE_MODIFIED`、`POLICY_ORACLE_MISMATCH`、`POLICY_OUT_OF_SCOPE_CHANGE` | 修复（计入 attempts） |
 | 60 | state | `STATE_` | `STATE_ILLEGAL_TRANSITION`、`STATE_LOCKED`、`STATE_STALE_SESSION` | 重新执行 `next` |
 | 70 | internal | `INTERNAL_` | `INTERNAL_ERROR` | 中止，保留现场 |
 
 - 警告使用同一套前缀，例如 `GATE_UNMAPPED_CHANGE`。
 - 覆盖 picocli 的默认退出码。
-- `gtaw hook` 不使用本表的退出码（见 §4.5）。
 - 子 agent 的返回不符合契约时，重问一次；仍不符合，进入 `needs-human`。
 
 ### 5.7 循环控制
@@ -721,11 +723,11 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 
   - 越界时返回 `POLICY_OUT_OF_SCOPE_CHANGE`。gtaw 先把越界的文件备份到 `.gta/work/recover/`，再把它们还原到基线。
   - 检查按节点而不是按 agent 来做，所以 inline 模式下同样适用。
-  - **这项检查不依赖 IDE 的权限设置或 hooks。**
+  - **这项检查不依赖 IDE 的权限设置。**
 - **串行**：运行和提交都在 `.lock` 下串行执行。
 - **Foundation 条目**
   - 每个 domain 的第一个条目是 **seed 测试**（`gtaw run --smoke` 的基线），只验证上下文和容器能启动。
-  - foundation 条目负责测试基础设施，并且是**唯一允许改构建文件的条目**：只能加 test scope 的依赖，或白名单内的插件（Failsafe、PIT）。对于 Gradle，它会加一个 `integrationTest` test suite，并排除 system 层测试。
+  - foundation 条目负责测试基础设施，并且是**唯一允许改构建文件的条目**：只能在 `pom.xml` 中加 test scope 的依赖，或白名单内的插件（Failsafe、PIT、JaCoCo）。版本由 Spring Boot parent 管理的依赖，不写版本号。
 - **生产代码缺少测试接缝时**（例如没有注入 `Clock`、逻辑写在 `DoFn` 里）：利用现有的接缝，比如 `@MockitoBean` 替换已有的 bean，或者改在更高层测试；同时报告"建议重构"。
 - **建议**：在独立的 git worktree 中运行 gta。
 
@@ -747,7 +749,7 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | `explain <flowId\|path>` | D profile → A analyst | 全景图、时序图、规格草稿、问题；只读。回答并批准后自动转为 flow 模式 |
 | 默认（flow） | D → A analyst → H 回答 → H 批准 → D 计划 → 循环（A test-author ⇄ D check → D submit → A reviewer）→ D verify → D 报告 | 测试、oracle 分片、报告 |
 | `pr` | D impact：diff → 受影响的方法、配置项、bean（沿着注入关系追踪）→ flow，标为 `stale`<br>→ A analyst：把 PR 描述作为 `documented` 意图，只在意图不清时提问<br>→ H 批准（也可以在 PR 中进行）→ 后续同上 | 测试、PR 评论（行为变更摘要、findings、新增确认项、未映射的改动） |
-| `regression`（CI） | 已有的 `mvn verify` / `gradle check` → D `verify --new` → D `gate --base <ref> --reports <dir>` → D `report` | 报告 |
+| `regression`（CI） | 已有的 `mvn verify` → D `verify --new` → D `gate --base <ref> --reports <dir>` → D `report` | 报告 |
 | `incident <描述>` | A analyst 写最小规格 → H 确认期望 → A test-author 写 `reproducing` 测试 → D 验证它以正确的原因失败 → H 确认缺陷 | 复现测试；修复交给开发者 |
 | `status` | D | 每个 flow 的阶段、待回答的问题、待处理事项 |
 
@@ -759,7 +761,11 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 ## 7. 各类服务的测试方法
 
 > 测试层级：`unit` → `slice` → `component`（单服务 + 真实依赖容器）→ `contract` → `system`（部署态黑盒）。
-> 版本基线：Spring Boot 3.4+/4、JUnit 5/6、Testcontainers 2、Spring Batch 5/6、Karate 2.x。各版本差异写在对应 skill 的 references 中。
+> 版本基线：Maven；Java 17+。
+> - **Spring Boot 4.1（主）**：JUnit 6、Testcontainers 2、Spring Batch 6，版本由 parent 管理。
+> - **Spring Boot 3.5（少数）**：JUnit 5、Spring Batch 5。
+>
+> 两者的差异放在 `boot3-vs-boot4.md` 和 `batch5-vs-batch6.md` 中。gtaw 读取 parent 版本，自动选择对应写法。
 
 ### 7.1 API（Spring MVC / WebFlux / gRPC / GraphQL）
 
@@ -776,7 +782,7 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
   - `@SpringBootTest` 需要显式加 `@AutoConfigureMockMvc` 或 `@AutoConfigureTestRestTemplate`；
   - test slice 按技术拆成了独立模块。
 - **Testcontainers 2**：artifact 改为 `testcontainers-gcloud`。GCP emulator 没有 `@ServiceConnection` 支持，需要用 `@DynamicPropertySource`。
-- **Karate**：使用 `karate-junit6`。从 2.1 起，mock 默认关闭 Java interop。
+- **Karate**：按 JUnit 版本选择 Karate 的 JUnit 模块，Boot 4.1 用 `karate-junit6`。从 2.1 起，mock 默认关闭 Java interop。
 
 ### 7.2 Scheduler
 
@@ -924,7 +930,6 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | Agent | `gta-<role>`，role 用名词；正则 `^gta-[a-z]+(-[a-z]+)*$` | `gta-test-author` |
 | Skill | `gta-<gerund>-<object>`；正则 `^gta-[a-z0-9]+(-[a-z0-9]+)*$`；不超过 64 字符；与目录同名 | `gta-writing-behavior-specs` |
 | Command | 只有 `gta` 一个 | `/gta pr` |
-| Hook / plugin | `gta-guardrails` | `gta-guardrails.json`、`gta-guardrails.ts` |
 | Capability id | 名词，kebab-case | `db-migration` |
 | 权限档案 | `orchestrator`、`spec-writer`、`test-writer`、`read-only`、`env-operator` | — |
 | Schema | `<artifact>.v<major>.schema.json`；`$id` 为 `urn:gta:schema:<artifact>:v<major>` | `oracles.v1.schema.json` |
@@ -945,8 +950,8 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | 对象 | 规则 |
 |---|---|
 | 规格 / oracle 分片 | `.gta/specs/<domain>/<flow-name>.spec.md` / `.oracles.json`；服务全景为 `.gta/specs/service-overview.md`。monorepo 中每个服务模块各有一个 `.gta/` |
-| unit / slice 测试类 | `<Subject>Test`（Surefire / Gradle `test`） |
-| component / contract 测试类 | `<Subject>IT`（Failsafe / Gradle `integrationTest`） |
+| unit / slice 测试类 | `<Subject>Test`（Surefire） |
+| component / contract 测试类 | `<Subject>IT`（Failsafe） |
 | 测试方法 | `should<Outcome>When<Condition>()`，加 `@DisplayName("[<scenarioId>] …")` |
 | JUnit tag | 层级 + `flow:<flowId>` + `scenario:<scenarioId>` + `gta`；characterization 测试另加 `characterization` |
 | 已知缺陷 | `@KnownDefect(id = "<findingId>", failure = "<指纹>")` |
@@ -980,9 +985,8 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 ├── .github/
 │   ├── agents/gta-*.agent.md
 │   ├── prompts/gta.prompt.md                # agent: gta-orchestrator
-│   └── hooks/gta-guardrails.json
 ├── .vscode/settings.json · extensions.json  # 合并写入：只对 gtaw 的指定子命令自动批准；Mermaid 预览
-├── .opencode/agents|commands|plugins/…      # 仅在选择 OpenCode 时生成
+├── .opencode/agents|commands/…              # 仅在选择 OpenCode 时生成
 └── .gta/                                    # 结构见 §5.2
 ```
 
@@ -1030,7 +1034,7 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | 枚举 | 取值 |
 |---|---|
 | `source` | `observed` · `documented` · `confirmed` · `defaulted` · `assumed` |
-| 答案 `channel` | `verified` · `unverified` · `editor` |
+| 答案 `channel` | `chat` · `editor` |
 | 规格 `status` | `draft` · `in-review` · `approved` · `stale` · `withdrawn` |
 | flow `phase` | `discovered` · `drafted` · `in-review` · `approved` · `testing` · `done` · `stale` · `withdrawn` |
 | 问题 `impact` | `high` · `normal` |
@@ -1079,7 +1083,7 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | 结果 | 条件 |
 |---|---|
 | `fail` | 只要存在以下任一项（且没有有效豁免），即为 fail：<br>① **base 的任一 oracle 分片中**、已经 verified 的 `confirmed`/`documented` scenario，现在失败、缺失或被禁用（本 PR 规格 diff 修改或撤销的 scenario 除外）；<br>② 受影响 flow 中，本 PR 新改动的 scenario 没有 verified 测试；<br>③ 任一 gta 测试的指纹与 base 不同，而该 scenario 的规格在本 PR 中没有改动，并且分片中也没有 `relock` 记录（`GATE_ORACLE_CHANGED_WITHOUT_SPEC`）；<br>④ 新测试在 pass^k 下不稳定；<br>⑤ `@KnownDefect` 以其他原因失败，或者测试已经通过；<br>⑥ `mutation.mode=enforced` 并且测试强度低于阈值 |
-| `waived` | 所有不满足的硬性条件都有有效豁免：从 base 读取、未过期、由 CODEOWNERS 审批 |
+| `waived` | 所有不满足的硬性条件都有有效豁免：从 base 读取、未过期，并且豁免本身是经过 PR review 合入 base 的 |
 | `concerns` | 硬性条件都满足，但存在以下任一情况：<br>- 有 `assumed` 或 `defaulted` 结论；<br>- characterization 测试占比过高；<br>- mutation 处于 advisory 模式且测试强度低于阈值；<br>- base 中已批准但还没有测试的 scenario；<br>- `GATE_UNMAPPED_CHANGE`；<br>- 本 PR 新增了确认项或 `relock` 记录（同时列在 PR 评论中）；<br>- 有 inline 自审 |
 | `pass` | 其余情况 |
 
@@ -1095,8 +1099,8 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 
 | 候选 | 结论 |
 |---|---|
-| **Java 17+** | **选用**。用户都是 Java 开发者，本地都有 JDK；可以用 Gradle Tooling API 和 Maven 模型读取构建信息；JavaParser 负责切片、指纹和期望值复核；JaCoCo 负责到达探针；可以发布到内部 Maven 仓库；团队自己能维护。JVM 启动慢的问题，由 hook 预过滤脚本缓解，后续可以用 native-image |
-| Go / Python / Node | 不选。Node 只用来写 OpenCode plugin 的薄壳 |
+| **Java 17+** | **选用**。用户都是 Java 开发者，本地都有 JDK；用 Maven 模型（含 parent 和 BOM 解析）读取构建信息，v1 只支持 Maven；JavaParser 负责切片、指纹和期望值复核；JaCoCo 负责到达探针；可以发布到内部 Maven 仓库；团队自己能维护。v1 不在 hook 中调用 gtaw，所以 JVM 启动时间不是问题 |
+| Go / Python / Node | 不选 |
 
 **分发**
 - `gta-cli`、`gta-junit` 发布到内部 Maven 仓库。
@@ -1107,8 +1111,8 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 
 | 命令 | 调用者 | 作用 |
 |---|---|---|
-| `gtaw init [--platform copilot,opencode]` · `gtaw upgrade` | 人 | 写入 harness、`.gta/skills`、AGENTS.md 段落、`.vscode` 设置、`.gitignore`、`managed-files.json`；打印 CODEOWNERS 和分支保护的建议 |
-| `gtaw doctor` | 人 | 检查 JDK、容器运行时（Docker/Podman/Rancher/Testcontainers Cloud）、构建、受管文件、hook 自检、IDE 设置（IntelliJ 给出自动批准的配置步骤） |
+| `gtaw init [--platform copilot,opencode]` · `gtaw upgrade` | 人 | 写入 harness、`.gta/skills`、AGENTS.md 段落、`.vscode` 设置、`.gitignore`、`managed-files.json`；打印可选的 CODEOWNERS 和分支保护建议 |
+| `gtaw doctor` | 人 | 检查 JDK、容器运行时（Docker/Podman/Rancher/Testcontainers Cloud）、Maven 和 parent 版本、受管文件、IDE 设置（IntelliJ 给出自动批准的配置步骤） |
 | `gtaw next [--mode explain\|flow\|pr\|incident] [--target <flowId\|path>] [--base <ref>]` · `gtaw next --takeover` | orchestrator · `--takeover` **仅限人** | 在内部执行确定性步骤，返回下一个节点 |
 | `gtaw check --item <id> --token <t>` | test-author | 编译并运行一次；不计入修复次数 |
 | `gtaw submit --item <id> --token <t>` · `--spec <flowId> --token <t>` · `--review <id> --verdict <v> --reason "<text>"` | 对应的 agent / orchestrator | 正式提交条目、规格或评审结论 |
@@ -1122,7 +1126,6 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | `gtaw relock --item <id> --reason "<text>"` | **仅限人** | 在规格没有变化的情况下重新上锁 |
 | `gtaw report [--format md\|pr-comment]` | gtaw 内部 / CI | 追踪矩阵、孤儿检查、新增确认项 |
 | `gtaw env up\|down\|gc`（P4） | **仅限人** / system 条目 | 临时环境 |
-| `gtaw hook pre-tool\|prompt --host <h>` | 平台 hook | 见 §4.5 |
 
 ### 11.3 本仓库结构
 
@@ -1139,14 +1142,14 @@ generic-testing-agent/
 │   ├── registry/    capabilities.yaml
 │   └── schemas/     <artifact>.v1.schema.json
 ├── platforms/
-│   ├── copilot/     mapping.yaml · gta-guardrails.json.tmpl · gta.prompt.md.tmpl · settings.json.tmpl
-│   └── opencode/    mapping.yaml · opencode.json.tmpl · gta-guardrails.ts.tmpl · gta.md.tmpl
+│   ├── copilot/     mapping.yaml · gta.prompt.md.tmpl · settings.json.tmpl
+│   └── opencode/    mapping.yaml · opencode.json.tmpl · gta.md.tmpl
 ├── toolkit/
 │   ├── gta-core/            # 状态、规格、计划、分流、指纹、改动检查、门禁、错误
 │   ├── gta-cli/             # picocli；打包 harness 资源
 │   ├── gta-junit/           # @KnownDefect、scenario 结果 listener
 │   └── gta-harness-gen/     # core + platforms → dist；lint
-├── wrapper/                 # gtaw · gtaw.cmd · hook 预过滤脚本
+├── wrapper/                 # gtaw · gtaw.cmd
 ├── dist/                    # 生成物，同时提交到 git，供审阅和手工安装；CI 检查它与 core 同步
 │   ├── copilot/   .github/… · .vscode/… · .gta/skills/…
 │   └── opencode/  .opencode/… · opencode.json · .gta/skills/…
@@ -1162,12 +1165,13 @@ generic-testing-agent/
 | Custom agents | `.github/agents/*.agent.md` | GA（2026-03） | `.opencode/agents/*.md` | 4 个 agent |
 | Subagents | 支持，有 `agents` 白名单 | GA | `permission.task` | 默认使用；不可用时改用 `dispatch: inline` |
 | Prompt / commands | `.github/prompts/*.prompt.md`，用 `agent:` 指定 agent | GA（2026-06） | `.opencode/commands/*.md` | 只有 `/gta`，自动选中 orchestrator |
-| Hooks | Preview，支持 agent 级 hooks | `preToolUse`、`postToolUse`、`userPromptSubmitted`、`errorOccurred` | plugin | 早期拦截 + 捕获人类输入（§4.5） |
+| Hooks | Preview（不开启） | GA | plugin | **v1 不使用**（§4.0、§4.5） |
+| MCP | 支持 | 支持 | 支持 | **v1 不使用**（§4.0） |
 | 终端自动批准 | `chat.tools.terminal.autoApprove`（工作区设置） | Settings > GitHub Copilot > Chat > Auto Approve（用户级） | `permission.bash` | 只批准 `./gtaw next\|check\|submit\|answer\|status` |
 | 单轮请求上限 | `chat.agent.maxRequests` | 有 | `steps` | `maxItemsPerSession` = 5 |
 | Skills | `.github/skills/` | GA | `.opencode/skills/` | **不使用**（改用 `.gta/skills/` 按路径加载） |
 | Handoffs / Plugins | 支持 | 未确认 | — | 不使用 |
-| 企业策略 | preview 功能可能需要开启 "Editor preview features" | 同左 | — | `gtaw doctor` 中给出提示 |
+| 企业策略 | 不开启 preview | 同左 | — | v1 只依赖 GA 能力 |
 
 | 中立字段 | Copilot（`.agent.md`） | OpenCode（`.md`） |
 |---|---|---|
@@ -1199,7 +1203,7 @@ generic-testing-agent/
 | 角色 | 一次性动作 | 日常动作 |
 |---|---|---|
 | 平台团队 | 维护本仓库，发布 `gta-cli`、`gta-junit` | 处理反馈、跑 evals、发版 |
-| Tech lead（每个仓库约 5 分钟） | 复制 `gtaw` → `./gtaw init` → 配置 CODEOWNERS 和分支保护 → 提交 | 在 PR 中审批规格 |
+| Tech lead（每个仓库约 5 分钟） | 复制 `gtaw` → `./gtaw init` → 在 CI 中加上 `gtaw gate` → 提交 | 在 PR 中审查规格 |
 | 开发者 | **无** | 在 Copilot Chat 中输入 `/gta …` |
 | Code reviewer | 无 | 阅读 PR 评论中的行为变更摘要、findings 和新增确认项 |
 
@@ -1239,17 +1243,17 @@ GTA：共生成 6 个条目，本次会话先处理 5 个……
 - `gtaw`、`gtaw.cmd`
 - `**/.gta/wrapper/**`、`**/.gta/config.json`、`**/.gta/waivers.json`、`**/.gta/managed-files.json`
 - `**/.gta/specs/**/*.oracles.json`、`**/.gta/work/**`、`**/.gta/skills/**`
-- `.github/hooks/**`、`.github/agents/gta-*`、`.github/prompts/gta*`
+- `.github/agents/gta-*`、`.github/prompts/gta*`
 - `.vscode/settings.json`、`.opencode/**`
 
-agent 不能写入以上路径。除 `.gta/work/**` 之外，其余路径都由 CODEOWNERS 管辖（使用 `**/` 前缀，以便覆盖 monorepo 中的各个模块）。
+agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/work/**` 之外，这些路径在 PR 中的改动都会被 PR 评论单独列出。路径使用 `**/` 前缀，以便覆盖 monorepo 中的各个模块。以后启用 CODEOWNERS 时，直接用这份清单。
 
 | 主题 | 措施 |
 |---|---|
-| 权威裁决 | §5.8 的改动检查，加上以 base 为基准的门禁（§10.5）、CODEOWNERS 和分支保护。IDE 的权限设置和 hooks 只做早期拦截 |
-| 特权命令 | `hook`、`gate waive`、`relock`、`env`、`abort`、`next --takeover` 禁止 agent 调用；自动批准只覆盖 next/check/submit/answer/status |
+| 权威裁决 | §5.8 的改动检查，加上以 base 为基准的门禁（§10.5），以及 PR review。**没有分支保护时，gate 只是一个红色的 status check，不能强制阻断合入**，所以建议以后至少把 gate 设为 required check |
+| 特权命令 | `gate waive`、`relock`、`env`、`abort`、`next --takeover` 不在终端自动批准列表中，需要人点击确认；自动批准只覆盖 next/check/submit/answer/status |
 | 生产代码 | v1 的任何模式都不修改 |
-| 人工确认 | 可审计（§5.5）；以 CODEOWNERS 审批为准 |
+| 人工确认 | 可审计（§5.5）；以 PR review 为准 |
 | 测试完整性 | 禁止削弱断言、删除测试、加 `@Disabled`、把期望值改成实际值；由分流、期望值复核、oracle lock 和门禁共同强制执行 |
 | 供应链 | wrapper 校验 sha256；`doctor` 校验各受管文件的校验和 |
 | 云与凭证 | 非 system 层的运行：<br>- 把 `CLOUDSDK_CONFIG` 指向空的临时目录，并 unset `GOOGLE_APPLICATION_CREDENTIALS` 和 `KUBECONFIG`；<br>- 设置 `NO_GCE_CHECK=true`，把 `GCE_METADATA_HOST` 指向不可达的地址，以防 ADC 和 Workload Identity 回落到真实凭证；<br>- 结果中的密钥做脱敏。<br>`gtaw env` 只能用于 system 条目，并且要求 `allowCloud=true` |
@@ -1266,7 +1270,7 @@ agent 不能写入以上路径。除 `.gta/work/**` 之外，其余路径都由 
 | GitBug-Java | 199 个 2023 年的可复现 Java bug，用于 incident 模式的 fail-to-pass 评测 |
 | Defects4J | 只作冒烟测试（很可能已进入训练数据，且以库为主） |
 | 语义植入 | 植入权限、时区、幂等、事务边界类的 bug，同时放入"文档过时但代码正确"的诱饵 |
-| 平台 eval | 在两个 IDE 中验证：agent 可见性、子 agent 派发、inline 模式、hook payload（`sessionId`/`agentId`）、子 agent 的 prompt 是否会误触发 `userPromptSubmitted`、终端自动批准 |
+| 平台 eval | 在两个 IDE 中验证：agent 可见性、子 agent 派发、inline 模式、终端自动批准 |
 | 对抗 eval | 让 agent 尝试伪造确认、篡改期望值、越界改动、调用特权子命令 |
 
 **指标**（按优先级排列）
@@ -1292,27 +1296,31 @@ agent 不能写入以上路径。除 `.gta/work/**` 之外，其余路径都由 
 
 | 阶段 | 范围 | 退出标准 |
 |---|---|---|
-| **P0a 平台验证（1 周）** | 在两个 IDE 中验证：agent 可见性；子 agent 派发与 inline 模式；prompt 文件的 `agent:` 字段；hook payload 中的 `sessionId`/`agentId`；agent 级 hooks；子 agent 的 prompt 和 prompt 文件展开是否触发 `userPromptSubmitted`；终端自动批准；请求上限；长时间运行的终端命令（check/submit 的耗时） | 得到实测版的 §11.4 |
-| **P0 核心** | gtaw：`init`/`doctor`/`next`/`check`/`submit`/`answer`/`status`/`abort`/`run`/`verify`（稳定性 + 期望值复核）/`report`/`hook`；`gta-junit`；schemas；生成器和 lint；4 个 agent；skills：mapping-flows、writing-behavior-specs、designing-test-oracles、writing-tests、testing-spring-apis、stubbing-with-wiremock、testing-api-contracts、using-testcontainers、reviewing-test-quality；`/gta explain` 和 flow 模式；1 个 REST fixture，20 个 eval task | 在 1 个真实 REST 服务上跑通 explain → 回答 → 批准 → 至少 5 个 verified 测试；植入的 bug 被判定为缺陷，而不是被修绿；对抗 eval 的指标 3、4 达标；故障注入后能恢复 |
+| **P0a 平台验证（1 周）** | 在两个 IDE 中验证：agent 可见性；子 agent 派发与 inline 模式；prompt 文件的 `agent:` 字段；终端自动批准（含 Windows）；特权命令是否确实会弹出确认；请求上限；长时间运行的终端命令（check/submit 的耗时） | 得到实测版的 §11.4 |
+| **P0 核心** | gtaw：`init`/`doctor`/`next`/`check`/`submit`/`answer`/`status`/`abort`/`run`/`verify`（稳定性 + 期望值复核）/`report`；`gta-junit`；schemas；生成器和 lint；4 个 agent；skills：mapping-flows、writing-behavior-specs、designing-test-oracles、writing-tests、testing-spring-apis、stubbing-with-wiremock、testing-api-contracts、using-testcontainers、reviewing-test-quality；`/gta explain` 和 flow 模式；1 个 REST fixture，20 个 eval task | 在 1 个真实 REST 服务上跑通 explain → 回答 → 批准 → 至少 5 个 verified 测试；植入的 bug 被判定为缺陷，而不是被修绿；对抗 eval 的指标 3、4 达标；故障注入后能恢复 |
 | **P1 PR 与 incident 模式** | impact（方法、配置、bean 图）、`gate --base`、PR 评论、analyzing-change-impact；incident 模式；grpc 和 graphql；OpenCode 端到端 | 在真实 PR 上产出行为变更摘要，门禁上线（mutation 为 advisory） |
 | **P2 Job 与质量** | scheduler、batch、db-migration；`mutate` 和能失败检查（共用 PIT 集成）；学习回路；先规则后 LLM 的修复；`spec.source=openspec\|speckit` | mutation 在试点仓库校准后切换为 enforced |
 | **P3 数据、事件、catching** | beam、event、workflow；catching 测试与 assessor | 每类各试点 1 个服务 |
 | **P4 部署态** | `gta-system-tester`、`gtaw env`、Karate、云隔离 | 夜间 regression |
-| **P5** | 插件分发、SARIF、record-replay、性能测试、native-image、并行编写、其他语言的适配器 | 按需 |
+| **P5** | 可选的 hooks（早期拦截、`verified` 回答渠道）、MCP 包装、插件分发、SARIF、record-replay、性能测试、native-image、并行编写、其他语言的适配器 | 按需 |
 
 ---
 
 ## 16. 待确认问题
 
-1. 被测服务用 Maven 还是 Gradle？Spring Boot 3 还是 4？Spring Batch 5 还是 6？JUnit 5 还是 6？最低 JDK 版本是多少？
-2. 有没有内部 Artifactory 或 Nexus 可以用来发布 jar？
-3. Copilot 是 Business 还是 Enterprise 版？能否开启 preview policy 和 hooks？
-4. 能否启用 CODEOWNERS 和分支保护？（规格审批的权威来源依赖它。）
-5. 开发机能否使用 Docker Desktop？如果不能，要改用 Podman、Rancher 还是 Testcontainers Cloud？
-6. OpenCode 的优先级如何？（当前计划在 P1 验证。）
-7. 是否已有 OpenSpec、Spec Kit、OpenAPI 或 Jira 验收标准？
-8. P4 需要测试专用的 GCP project，是否有？
-9. 企业内可以使用哪些模型？（需要映射到 reasoning 和 standard 两档。）
+已确认：
+- 全部使用 Maven；Spring Boot 4.1 为主，少量 3.5；JUnit 跟随 parent；Java 17+。
+- 暂不启用 CODEOWNERS 和分支保护。
+- 不开启 Copilot preview policy。
+
+还需要确认：
+1. **CI 平台**：GitHub Actions 还是其他平台？能否把 `gtaw gate` 加进 PR 的 CI？即使不设为 required check，也能显示状态和 PR 评论。
+2. **制品库**：有没有内部 Artifactory 或 Nexus 可以用来发布 `gta-cli` 和 `gta-junit`？如果没有，P0 先把 jar 放在 GitHub Releases。
+3. **容器运行时**：开发机能否使用 Docker Desktop？如果不能，要改用 Podman、Rancher 还是 Testcontainers Cloud？
+4. **OpenCode**：优先级如何？当前计划在 P1 验证；如果不需要，可以推迟。
+5. **已有资产**：是否有 OpenAPI 文档、README/ADR、Jira 验收标准？这些可以作为 `documented` 来源。
+6. **模型**：Copilot 中可以使用哪些模型？需要映射到 reasoning 和 standard 两档。
+7. **GCP 测试项目**：P4 才需要，现在不必回答。
 
 ---
 
@@ -1338,3 +1346,4 @@ agent 不能写入以上路径。除 `.gta/work/**` 之外，其余路径都由 
 | v5 | 第一轮四路评审（架构 / 鲁棒性 / 测试领域 / 反方）之后：agent 从 9 个精简到 4 个、确定性生成计划、next/submit 协议、可推导状态、`defaulted` 来源、按原因链分流、`gta-junit`、PR 范围门禁、修正技术事实、explain 模式、PR 模式提前 |
 | v6 | 第二轮评审（逐项核查 + 新视角红队）之后：<br>- 信任锚点移到 gtaw 和 CI：每个节点做改动检查，门禁以 base 为基准，`stale` 不再豁免；<br>- 人工确认改为可审计：记录原话、轮次、渠道和修订号，回答与批准分两步，缺陷需要人确认；<br>- 禁止 agent 调用特权子命令，shell 改用白名单；<br>- 新增 check/submit/verify 分层、JaCoCo 到达探针、期望值复核，扩大指纹范围；<br>- oracle 分片在条目的 commit 中写入；升级记录提交到 git，加入会话令牌；<br>- `ref` 支持配置项和 bean；skills 移到 `.gta/skills/`；<br>- 修正凭证隔离；修复约 20 处一致性问题 |
 | v6.1 | 第三轮收敛评审（结论：架构已收敛）之后，做了局部修正：<br>- oracle lock 改为单调锁定 THEN 期望值，输入变动交给 reviewer；<br>- `abort` 和 `--takeover` 只允许人使用；<br>- 门禁 ①③ 覆盖 base 的全部分片，`relock` 有了合入路径；<br>- `confirmed` 和 `defaulted` 只能由 gtaw 写入，`documented` 必须附引用；<br>- THEN 必须带字面量；<br>- 改动检查按节点来做，inline 模式因此可用；<br>- 删去 IDE 侧的 shell 白名单和 reviewer 补缺口；能失败检查推迟到 P2 |
+| v7 | 根据已确认的环境调整：<br>- 只支持 Maven，Boot 4.1 和 3.5 双基线，Java 17+；<br>- 新增 §4.0 原语选型：v1 不用 hooks 和 MCP，护栏改为 gtaw 改动检查加终端批准；<br>- 回答渠道简化为 `chat` 和 `editor`；<br>- 没有 CODEOWNERS 时，以 PR review 加上 PR 评论清单为准；<br>- 更新待确认问题 |
