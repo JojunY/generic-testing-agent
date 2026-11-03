@@ -50,7 +50,8 @@ class ChangeCheckerTest {
 
         assertFalse(r.ok());
         assertEquals(List.of("src/main/java/App.java"), r.outOfScope());
-        assertEquals("class App {}\n", Files.readString(root.resolve("src/main/java/App.java")));
+        // git may check files out with CRLF on Windows (autocrlf); the content is what matters
+        assertEquals("class App {}", Files.readString(root.resolve("src/main/java/App.java")).strip());
         assertTrue(Files.exists(root.resolve("src/test/java/AppIT.java")));
     }
 
