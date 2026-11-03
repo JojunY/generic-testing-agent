@@ -1,0 +1,41 @@
+# {{flowId}} — <one-line title>
+<!-- gta: flowId={{flowId}} capability={{capability}} risk={{risk}} status=draft -->
+
+## Boundary
+- In scope: <entry point> → <main effects>
+- Out of scope: <neighbouring flows>
+- External: <databases, queues, downstream services>
+
+```mermaid
+sequenceDiagram
+  participant C as Client
+  participant S as Service
+  C->>S: request
+  S-->>C: response
+```
+
+## Access
+| Role | Operation | Ownership constraint | Source |
+|---|---|---|---|
+| <role> | <operation> | <constraint> | observed |
+
+## Requirements
+
+### Requirement: <name>
+<!-- gta: id={{flowId}}/r01 ref={{entryRef}} -->
+WHEN <trigger>, THE <system> SHALL <response>.
+
+#### Scenario: <name>
+<!-- gta: id={{flowId}}/s01 source=observed hint.layer=component hint.oracle=response -->
+- **WHEN** <stimulus>
+- **THEN** <observable result with the expected value in backticks, e.g. `201`>
+
+## Invariants
+
+## Open questions
+<!-- gta: id={{flowId}}/q01 impact=high affects={{flowId}}/s01 -->
+1. [high impact] <question about uncertain or suspicious behaviour>
+   - [ ] A) <option> (= 代码现状)
+   - [ ] B) <option> → s01 THEN <how THEN changes>
+
+## Findings

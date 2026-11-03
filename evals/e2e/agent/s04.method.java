@@ -1,0 +1,10 @@
+
+    @Test
+    @Tag("scenario:order.create-order/s04")
+    @Tag("characterization")
+    @DisplayName("[order.create-order/s04] blank customer id")
+    void shouldRejectOrderWhenCustomerIdIsBlank() throws Exception {
+        mvc.perform(post("/api/orders").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customerId\":\"\",\"subtotal\":50.00}"))
+                .andExpect(status().isBadRequest());
+    }

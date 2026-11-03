@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:gta:schema:oracles:v1",
+  "title": "gta oracle shard (.gta/specs/<domain>/<flow>.oracles.json)",
+  "description": "Locked expectations per item, written by gtaw when an item passes. The gate compares them with the base branch.",
+  "type": "object",
+  "propertyNames": { "pattern": "^[a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*/s[0-9]{2}#[a-z]+-[0-9]{2}$" },
+  "additionalProperties": {
+    "type": "object",
+    "required": ["scenarioRevision", "fingerprint", "tokens", "testClass"],
+    "additionalProperties": false,
+    "properties": {
+      "scenarioRevision": { "type": "string", "pattern": "^[0-9a-f]{12}$" },
+      "fingerprint": { "type": "string", "pattern": "^[0-9a-f]{12}$" },
+      "tokens": { "type": "array", "items": { "type": "string" } },
+      "testClass": { "type": "string" },
+      "intent": { "enum": ["characterization", "hardening", "reproducing"] },
+      "source": { "enum": ["observed", "documented", "confirmed", "defaulted"] },
+      "relockedBy": { "type": "string" },
+      "reason": { "type": "string" }
+    }
+  }
+}

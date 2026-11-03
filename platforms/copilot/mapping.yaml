@@ -1,0 +1,32 @@
+# Copilot mapping (plan §11.4): translates the neutral fields of core/agents/*.md into VS Code / IntelliJ Copilot files.
+# Only platform differences live here. Generated output: copilot/ (committed; regenerate with tools/generate.sh).
+platform: copilot
+agent:
+  dir: .github/agents
+  file: "{name}.agent.md"
+  emitName: true
+  invocableField: user-invocable     # VS Code docs also spell it user-invokable; pinned per Copilot version, verified by evals
+  notInvocableFields: {}
+  subagentsField: agents             # VS Code: allow-list of subagents for the orchestrator
+models:
+  # Picked by the P0a evals, not hard-coded. null = use the model selected in the chat picker.
+  # Candidates: reasoning -> Fusion high / latest GPT or Gemini reasoning model; standard -> Fusion standard.
+  # Prefer a different model family for gta-reviewer than for gta-test-author.
+  reasoning: null
+  standard: null
+profiles:
+  orchestrator:
+    tools: [read, search, execute, agent]
+  spec-writer:
+    tools: [read, search, edit, execute]
+  test-writer:
+    tools: [read, search, edit, execute]
+  read-only:
+    tools: [read, search]
+command:
+  path: .github/prompts/gta.prompt.md
+  template: gta.prompt.md.tmpl
+  args: "the text after `/gta` in the user's message"
+files:
+  - { template: settings.json.tmpl, path: .vscode/settings.json }
+  - { template: extensions.json.tmpl, path: .vscode/extensions.json }

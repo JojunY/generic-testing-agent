@@ -1,0 +1,82 @@
+# Capability registry (plan §4.4). Single source of truth; bundled into gta-core under gta/registry/.
+# `since` is the roadmap phase from which the capability is active; earlier phases treat it as explain-only.
+schemaVersion: "1.0"
+capabilities:
+  - id: rest-api
+    since: P0
+    detect:
+      buildDeps: [spring-boot-starter-web, spring-boot-starter-webmvc, spring-boot-starter-webflux]
+      annotations: ["@RestController", "@RequestMapping"]
+    layers: [unit, slice, component, contract, system]
+    diagrams: [sequence]
+    skills: [gta-testing-spring-apis, gta-stubbing-with-wiremock, gta-testing-api-contracts]
+  - id: grpc-api
+    since: P1
+    detect: { buildDeps: [grpc-stub, spring-grpc-spring-boot-starter], files: ["**/*.proto"] }
+    layers: [unit, component, contract]
+    diagrams: [sequence]
+    skills: [gta-testing-spring-apis, gta-testing-api-contracts]
+  - id: graphql-api
+    since: P1
+    detect: { buildDeps: [spring-boot-starter-graphql] }
+    layers: [unit, slice, component]
+    diagrams: [sequence]
+    skills: [gta-testing-spring-apis]
+  - id: scheduler
+    since: P2
+    detect:
+      annotations: ["@Scheduled", "@EnableScheduling", "@SchedulerLock"]
+      buildDeps: [spring-boot-starter-quartz, shedlock-spring]
+    layers: [unit, component, system]
+    diagrams: [flowchart, state]
+    skills: [gta-testing-scheduled-jobs, gta-using-embedded-dependencies]
+  - id: spring-batch
+    since: P2
+    detect: { buildDeps: [spring-boot-starter-batch, spring-boot-starter-batch-jdbc, spring-batch-core] }
+    layers: [unit, component]
+    diagrams: [flowchart, state]
+    skills: [gta-testing-spring-batch-jobs, gta-using-embedded-dependencies]
+  - id: db-migration
+    since: P2
+    detect: { buildDeps: [flyway-core, flyway-database-oracle, liquibase-core], files: ["**/db/migration/**", "**/db/changelog/**"] }
+    layers: [component]
+    diagrams: [er]
+    skills: [gta-testing-db-migrations, gta-using-embedded-dependencies]
+  - id: messaging
+    since: P3
+    detect:
+      buildDeps: [spring-kafka, spring-cloud-gcp-starter-pubsub, spring-cloud-stream, spring-jms,
+                  spring-boot-starter-artemis, mq-jms-spring-boot-starter]
+      annotations: ["@KafkaListener", "@JmsListener", "@ApplicationModuleListener", "@TransactionalEventListener"]
+    layers: [unit, component, contract]
+    diagrams: [sequence]
+    skills: [gta-testing-event-flows, gta-using-embedded-dependencies]
+  - id: workflow
+    since: P3
+    detect:
+      files: ["**/workflows/*.y*ml"]
+      buildDeps: [spring-statemachine-core, temporal-sdk, camunda-bpm-spring-boot-starter]
+    layers: [unit, component, system]
+    diagrams: [state]
+    skills: [gta-testing-workflows]
+  - id: beam-pipeline
+    since: P3
+    detect: { buildDeps: [beam-sdks-java-core, beam-runners-google-cloud-dataflow-java] }
+    layers: [unit, component, system]
+    diagrams: [flowchart]
+    skills: [gta-testing-beam-pipelines, gta-using-embedded-dependencies]
+  - id: deployed-runtime
+    since: P4
+    detect: { files: ["**/service.yaml", "**/helm/**/Chart.yaml", "**/k8s/**/*.yaml", "**/*.tf"] }
+    layers: [system]
+    skills: [gta-testing-deployed-systems]
+  - id: data-dependencies     # never produces flows; adds the embedded-dependency skill to detected items
+    since: P0
+    dispatch: false
+    detect:
+      buildDeps: [google-cloud-bigquery, spring-cloud-gcp-starter-bigquery, google-cloud-storage, ojdbc11, ojdbc17, ojdbc8,
+                  spring-boot-starter-data-jpa, spring-boot-starter-jdbc, spring-kafka, spring-jms, spring-cloud-gcp-starter-pubsub]
+    skills: [gta-using-embedded-dependencies]
+
+always:
+  skills: [gta-designing-test-oracles, gta-writing-tests]

@@ -1,0 +1,37 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "21", cache: maven }
+      - name: Build, unit tests, harness lint and sync check
+        run: mvn -B install
+      - name: Generated folders are committed
+        run: java -jar toolkit/gta-harness-gen/target/gta-harness-gen.jar generate --repo . --check
+      - name: Scripted end-to-end run
+        run: evals/e2e/run.sh "$RUNNER_TEMP/gta-e2e"
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "21", cache: maven }
+      - name: Build and unit tests on Windows
+        run: mvn -B install
+      - name: gtaw.cmd runs the local jar
+        shell: cmd
+        run: |
+          set GTA_CLI_JAR=%CD%\toolkit\gta-cli\target\gta-cli.jar
+          copy wrapper\gtaw.cmd evals\fixtures\order-service\gtaw.cmd
+          cd evals\fixtures\order-service && gtaw.cmd --version
