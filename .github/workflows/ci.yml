@@ -16,7 +16,7 @@ jobs:
         java: ["17", "21"]   # 17 is the floor the product promises; 21 is the current LTS most teams use
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with: { distribution: temurin, java-version: "${{ matrix.java }}", cache: maven }
       - name: Build, unit tests, Spotless, SpotBugs, coverage gate, harness lint and sync check
         run: ./mvnw -B install
@@ -31,7 +31,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with: { distribution: temurin, java-version: "21", cache: maven }
       - name: Build and unit tests on Windows
         # the coverage gate is enforced on Linux, where the POSIX-only tests (stand-in Maven) run
