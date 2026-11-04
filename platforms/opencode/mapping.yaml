@@ -1,5 +1,5 @@
 # OpenCode mapping (plan §11.4): translates the neutral fields of core/agents/*.md into OpenCode files.
-# Generated output: opencode/ (committed; regenerate with tools/generate.sh).
+# Generated output: opencode/ (committed; regenerate with scripts/generate.sh).
 platform: opencode
 agent:
   dir: .opencode/agents

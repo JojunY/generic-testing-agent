@@ -29,7 +29,7 @@ A capability is a kind of flow gta can test, such as `rest-api`, `scheduler` or 
 4. **Generate and lint**:
 
    ```bash
-   tools/generate.sh             # lints core/ and regenerates copilot/ and opencode/
+   scripts/generate.sh             # lints core/ and regenerates copilot/ and opencode/
    mvn -B install                # unit tests include the lint and the sync check
    ```
 

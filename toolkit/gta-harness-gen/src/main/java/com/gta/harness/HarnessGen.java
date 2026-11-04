@@ -85,7 +85,7 @@ public final class HarnessGen {
         }
         if (check) {
             if (stale > 0) {
-                System.out.println(stale + " file(s) out of date; run tools/generate.sh and commit the result");
+                System.out.println(stale + " file(s) out of date; run scripts/generate.sh and commit the result");
                 return 1;
             }
             System.out.println("copilot/ and opencode/ are in sync with core/");

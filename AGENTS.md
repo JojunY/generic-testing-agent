@@ -5,7 +5,7 @@ These are the rules for working on this repository. They do not apply to service
 ## Layout and sources of truth
 
 - `core/` is the only place to edit agents, the `/gta` command, rules, skills, templates and the capability registry.
-- `copilot/` and `opencode/` are **generated**. Never edit them. Run `tools/generate.sh` and commit the result. `mvn install` fails when they are stale.
+- `copilot/` and `opencode/` are **generated**. Never edit them. Run `scripts/generate.sh` and commit the result. `mvn install` fails when they are stale.
 - Platform differences (tool names, permissions, models, file locations) live only in `platforms/<platform>/mapping.yaml`.
 - `pom.xml` at the root is the single source of the version.
 
