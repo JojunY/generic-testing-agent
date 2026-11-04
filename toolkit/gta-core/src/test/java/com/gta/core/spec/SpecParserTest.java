@@ -11,7 +11,7 @@ class SpecParserTest {
 
     @Test
     void shouldParseHeaderRequirementsScenariosAndQuestions() {
-        Spec spec = SpecParser.parseText(SpecFixtures.CREATE_ORDER);
+        Spec spec = SpecParser.parseText(SpecTestData.CREATE_ORDER);
 
         assertEquals("order.create", spec.flowId());
         assertEquals("rest-api", spec.capability());
@@ -24,7 +24,7 @@ class SpecParserTest {
 
     @Test
     void shouldExtractBacktickThenLiteralsOnly() {
-        Spec.Scenario s01 = SpecParser.parseText(SpecFixtures.CREATE_ORDER)
+        Spec.Scenario s01 = SpecParser.parseText(SpecTestData.CREATE_ORDER)
                 .scenario("order.create/s01")
                 .orElseThrow();
 
@@ -35,7 +35,7 @@ class SpecParserTest {
     @Test
     void shouldRecogniseTheCurrentCodeOption() {
         Spec.Question q =
-                SpecParser.parseText(SpecFixtures.CREATE_ORDER).openQuestions().get(0);
+                SpecParser.parseText(SpecTestData.CREATE_ORDER).openQuestions().get(0);
 
         assertTrue(q.options.get(0).isCurrentCode());
         assertFalse(q.options.get(1).isCurrentCode());

@@ -1,7 +1,7 @@
 package com.gta.core.spec;
 
 import com.gta.core.profile.RefResolver;
-import com.gta.core.registry.Registry;
+import com.gta.core.registry.CapabilityRegistry;
 import com.gta.core.util.Ids;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -23,7 +23,8 @@ public final class SpecLinter {
 
     private SpecLinter() {}
 
-    public static List<String> lint(Spec spec, String expectedFlowId, RefResolver refs, Registry registry, Path root) {
+    public static List<String> lint(
+            Spec spec, String expectedFlowId, RefResolver refs, CapabilityRegistry registry, Path root) {
         List<String> issues = new ArrayList<>();
         String flowId = spec.flowId();
         if (flowId == null) {

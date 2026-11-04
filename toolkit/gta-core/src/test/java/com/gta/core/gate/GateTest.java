@@ -13,9 +13,9 @@ import com.gta.core.oracle.AssertionScanner;
 import com.gta.core.oracle.OracleLock;
 import com.gta.core.oracle.OracleShard;
 import com.gta.core.plan.Planner;
-import com.gta.core.run.TestCase;
-import com.gta.core.spec.SpecFixtures;
+import com.gta.core.run.TestOutcome;
 import com.gta.core.spec.SpecParser;
+import com.gta.core.spec.SpecTestData;
 import com.gta.core.util.ProcessRunner;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -65,7 +65,7 @@ class GateTest {
 
     private void writeShard(String relockedBy, String reason, String relockedAt) {
         OracleShard.Entry e = new OracleShard.Entry();
-        e.scenarioRevision = Planner.scenarioRevision(SpecParser.parseText(SpecFixtures.CREATE_ORDER)
+        e.scenarioRevision = Planner.scenarioRevision(SpecParser.parseText(SpecTestData.CREATE_ORDER)
                 .scenario("order.create/s01")
                 .orElseThrow());
         e.fingerprint = fingerprint();
@@ -79,7 +79,7 @@ class GateTest {
     }
 
     private Gate.Result gate() {
-        TestCase passed = new TestCase();
+        TestOutcome passed = new TestOutcome();
         passed.className = TEST_CLASS;
         passed.method = "shouldCreate";
         passed.outcome = "passed";
@@ -97,7 +97,7 @@ class GateTest {
         Files.createDirectories(paths.spec("order.create").getParent());
         Files.writeString(
                 paths.spec("order.create"),
-                SpecFixtures.CREATE_ORDER.replace("status=draft", "status=approved rev=R2"));
+                SpecTestData.CREATE_ORDER.replace("status=draft", "status=approved rev=R2"));
         Files.createDirectories(paths.testSource(TEST_CLASS).getParent());
         Files.writeString(paths.testSource(TEST_CLASS), TEST_V1);
         writeShard("alice@corp", "first relock", "2026-10-01T10:00:00Z");
@@ -139,7 +139,7 @@ class GateTest {
 
     @Test
     void shouldFailWhenATestOfTheBaseNoLongerPasses() {
-        TestCase failed = new TestCase();
+        TestOutcome failed = new TestOutcome();
         failed.className = TEST_CLASS;
         failed.outcome = "failed";
         failed.tags = List.of("scenario:order.create/s01");

@@ -17,7 +17,7 @@ import com.gta.core.plan.PlanItem;
 import com.gta.core.plan.Planner;
 import com.gta.core.profile.Profiler;
 import com.gta.core.profile.ServiceProfile;
-import com.gta.core.registry.Registry;
+import com.gta.core.registry.CapabilityRegistry;
 import com.gta.core.run.RunResult;
 import com.gta.core.run.TestRunner;
 import com.gta.core.spec.AnswerParser;
@@ -53,7 +53,7 @@ public final class Engine {
     private final EngineContext ctx;
     private final GtaPaths paths;
     private final GtaConfig config;
-    private final Registry registry;
+    private final CapabilityRegistry registry;
     private final StateStore store;
     private final Git git;
 
@@ -113,8 +113,8 @@ public final class Engine {
         String capability = Files.exists(specPath)
                 ? SpecParser.parse(specPath).capability()
                 : entry != null ? entry.capability : "rest-api";
-        Registry.Capability cap = registry.capability(capability);
-        boolean explainOnly = !cap.activeIn(Registry.CURRENT_PHASE);
+        CapabilityRegistry.Capability cap = registry.capability(capability);
+        boolean explainOnly = !cap.activeIn(CapabilityRegistry.CURRENT_PHASE);
 
         if (!Files.exists(specPath)
                 || sw.needsRevision
@@ -163,8 +163,8 @@ public final class Engine {
         }
         if (explainOnly) {
             return done(
-                    "Capability " + capability + " is explain-only in " + Registry.CURRENT_PHASE + " (active from "
-                            + cap.since + "). The approved spec is kept as documentation.",
+                    "Capability " + capability + " is explain-only in " + CapabilityRegistry.CURRENT_PHASE
+                            + " (active from " + cap.since + "). The approved spec is kept as documentation.",
                     null);
         }
         if ("explain".equals(st.mode)) {

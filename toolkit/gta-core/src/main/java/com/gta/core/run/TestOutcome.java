@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** One executed test (merged from Surefire XML and gta-junit results). */
-public class TestCase {
+public class TestOutcome {
     public String className;
     public String method;
     public String displayName;

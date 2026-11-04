@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /** Surefire XML merged with gta-junit scenario tags (plan §5.3: results map to scenarios by tag). */
-class SurefireReportsTest {
+class SurefireReportParserTest {
     @TempDir
     Path dir;
 
@@ -48,7 +48,7 @@ class SurefireReportsTest {
                 <testcase classname="com.acme.OrderIT" name="skipped()"><skipped/></testcase>
                 """);
 
-        List<TestCase> cases = SurefireReports.parse(List.of(reports), gtaResults);
+        List<TestOutcome> cases = SurefireReportParser.parse(List.of(reports), gtaResults);
 
         assertEquals(
                 List.of("passed", "failed", "error", "skipped"),
@@ -75,11 +75,11 @@ class SurefireReportsTest {
                 {"className":"com.acme.OrderIT","method":"retries","tags":["gta","scenario:order.create/s03"]}
                 """);
 
-        List<TestCase> cases = SurefireReports.parse(List.of(reports), gtaResults);
+        List<TestOutcome> cases = SurefireReportParser.parse(List.of(reports), gtaResults);
 
         assertEquals(
                 List.of("order.create/s02", "order.create/s02", "order.create/s03"),
-                cases.stream().map(TestCase::scenarioId).toList(),
+                cases.stream().map(TestOutcome::scenarioId).toList(),
                 "every invocation keeps the scenario of its method");
     }
 
@@ -89,7 +89,7 @@ class SurefireReportsTest {
         tags(
                 "{\"className\":\"com.acme.OrderIT\",\"method\":\"pinned\",\"tags\":[\"gta\"],\"outcome\":\"known-defect\",\"displayName\":\"pinned\"}\n");
 
-        TestCase c = SurefireReports.parse(List.of(reports), gtaResults).get(0);
+        TestOutcome c = SurefireReportParser.parse(List.of(reports), gtaResults).get(0);
 
         assertEquals("known-defect", c.outcome);
         assertEquals("pinned", c.displayName);
@@ -99,7 +99,8 @@ class SurefireReportsTest {
     void shouldFailClosedOnAnUnreadableReport() throws Exception {
         Files.writeString(reports.resolve("TEST-com.acme.OrderIT.xml"), "<testsuite><testcase name=");
 
-        GtaException e = assertThrows(GtaException.class, () -> SurefireReports.parse(List.of(reports), gtaResults));
+        GtaException e =
+                assertThrows(GtaException.class, () -> SurefireReportParser.parse(List.of(reports), gtaResults));
 
         assertEquals(
                 ErrorCode.ENV_TEST_REPORTS_UNUSABLE,
@@ -112,7 +113,7 @@ class SurefireReportsTest {
         Files.writeString(reports.resolve("TEST-com.acme.HangingIT.xml"), "<testsuite><testcase name=");
         report("com.acme.OrderIT", "<testcase classname=\"com.acme.OrderIT\" name=\"passes()\"/>\n");
 
-        List<TestCase> cases = SurefireReports.parse(List.of(reports), gtaResults, true);
+        List<TestOutcome> cases = SurefireReportParser.parse(List.of(reports), gtaResults, true);
 
         assertEquals(1, cases.size());
     }
@@ -130,22 +131,22 @@ class SurefireReportsTest {
                         + "{\"className\":\"com.acme.OrderIT\",\"meth\n"
                         + "{\"className\":\"com.acme.OrderIT\",\"method\":\"second\",\"tags\":[\"scenario:order.create/s02\"]}\n");
 
-        List<TestCase> cases = SurefireReports.parse(List.of(reports), gtaResults);
+        List<TestOutcome> cases = SurefireReportParser.parse(List.of(reports), gtaResults);
 
         assertEquals(
                 List.of("order.create/s01", "order.create/s02"),
-                cases.stream().map(TestCase::scenarioId).toList());
+                cases.stream().map(TestOutcome::scenarioId).toList());
     }
 
     @Test
     void shouldIgnoreMissingDirectories() {
-        assertEquals(List.of(), SurefireReports.parse(List.of(dir.resolve("none")), dir.resolve("none-either")));
+        assertEquals(List.of(), SurefireReportParser.parse(List.of(dir.resolve("none")), dir.resolve("none-either")));
     }
 
     @Test
     void shouldReduceAReportedNameToTheMethodName() {
-        assertEquals("shouldCreate", SurefireReports.methodName("shouldCreate()"));
-        assertEquals("rejects", SurefireReports.methodName("rejects(String, int)[12]"));
-        assertEquals("plain", SurefireReports.methodName("plain"));
+        assertEquals("shouldCreate", SurefireReportParser.methodName("shouldCreate()"));
+        assertEquals("rejects", SurefireReportParser.methodName("rejects(String, int)[12]"));
+        assertEquals("plain", SurefireReportParser.methodName("plain"));
     }
 }

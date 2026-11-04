@@ -1,6 +1,6 @@
 package com.gta.harness;
 
-import com.gta.core.registry.Registry;
+import com.gta.core.registry.CapabilityRegistry;
 import com.gta.core.util.Ids;
 import com.gta.core.util.Json;
 import com.gta.core.util.Yaml;
@@ -221,15 +221,15 @@ public class Linter {
 
     private void lintRegistry(Set<String> skills) {
         Path file = repo.resolve("core/registry/capabilities.yaml");
-        Registry registry;
+        CapabilityRegistry registry;
         try {
-            registry = Yaml.MAPPER.readValue(file.toFile(), Registry.class);
+            registry = Yaml.MAPPER.readValue(file.toFile(), CapabilityRegistry.class);
         } catch (IOException e) {
             errors.add(rel(file) + ": " + e.getMessage());
             return;
         }
         Set<String> ids = new HashSet<>();
-        for (Registry.Capability c : registry.capabilities) {
+        for (CapabilityRegistry.Capability c : registry.capabilities) {
             if (!ids.add(c.id)) {
                 errors.add(rel(file) + ": duplicate capability " + c.id);
             }
@@ -242,10 +242,10 @@ public class Linter {
             for (String s : c.skills) {
                 if (!skills.contains(s)) {
                     String msg = rel(file) + ": capability " + c.id + " references missing skill " + s;
-                    if (c.activeIn(Registry.CURRENT_PHASE)) {
+                    if (c.activeIn(CapabilityRegistry.CURRENT_PHASE)) {
                         errors.add(msg);
                     } else {
-                        warnings.add(msg + " (capability not active in " + Registry.CURRENT_PHASE + ")");
+                        warnings.add(msg + " (capability not active in " + CapabilityRegistry.CURRENT_PHASE + ")");
                     }
                 }
             }

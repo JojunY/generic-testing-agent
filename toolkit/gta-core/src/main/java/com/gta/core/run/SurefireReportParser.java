@@ -23,20 +23,20 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 /** Parses Surefire/Failsafe XML and merges gta-junit scenario tags (target/gta-results/*.jsonl). */
-public final class SurefireReports {
-    private SurefireReports() {}
+public final class SurefireReportParser {
+    private SurefireReportParser() {}
 
     /** Strict parse: an unreadable report fails the run instead of silently dropping its tests (fail closed). */
-    public static List<TestCase> parse(List<Path> reportDirs, Path gtaResultsDir) {
+    public static List<TestOutcome> parse(List<Path> reportDirs, Path gtaResultsDir) {
         return parse(reportDirs, gtaResultsDir, false);
     }
 
     /**
      * @param tolerateUnreadable true after a timeout, when the killed test JVM may have left a truncated report
      */
-    public static List<TestCase> parse(List<Path> reportDirs, Path gtaResultsDir, boolean tolerateUnreadable) {
+    public static List<TestOutcome> parse(List<Path> reportDirs, Path gtaResultsDir, boolean tolerateUnreadable) {
         Map<String, JsonNode> tagged = readGtaResults(gtaResultsDir);
-        List<TestCase> out = new ArrayList<>();
+        List<TestOutcome> out = new ArrayList<>();
         for (Path dir : reportDirs) {
             if (!Files.isDirectory(dir)) {
                 continue;
@@ -58,7 +58,7 @@ public final class SurefireReports {
                 // a missing report directory simply yields no cases
             }
         }
-        for (TestCase c : out) {
+        for (TestOutcome c : out) {
             JsonNode n = tagged.get(c.className + "#" + c.method);
             if (n != null) {
                 n.path("tags").forEach(t -> c.tags.add(t.asText()));
@@ -71,8 +71,8 @@ public final class SurefireReports {
         return out;
     }
 
-    static List<TestCase> parseFile(Path file) {
-        List<TestCase> out = new ArrayList<>();
+    static List<TestOutcome> parseFile(Path file) {
+        List<TestOutcome> out = new ArrayList<>();
         try {
             DocumentBuilderFactory f = DocumentBuilderFactory.newInstance();
             f.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
@@ -81,7 +81,7 @@ public final class SurefireReports {
             NodeList cases = doc.getElementsByTagName("testcase");
             for (int i = 0; i < cases.getLength(); i++) {
                 Element e = (Element) cases.item(i);
-                TestCase c = new TestCase();
+                TestOutcome c = new TestOutcome();
                 c.className = e.getAttribute("classname");
                 c.method = methodName(e.getAttribute("name"));
                 c.outcome = "passed";

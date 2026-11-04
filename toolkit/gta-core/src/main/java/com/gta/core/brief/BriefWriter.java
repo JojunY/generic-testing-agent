@@ -21,10 +21,10 @@ import java.util.stream.Stream;
  * Writes self-contained briefs (plan §4.2). A brief carries everything a node needs, so it can run in a fresh
  * subagent or inline in the orchestrator (dispatch=inline).
  */
-public final class Briefs {
+public final class BriefWriter {
     private final GtaPaths paths;
 
-    public Briefs(GtaPaths paths) {
+    public BriefWriter(GtaPaths paths) {
         this.paths = paths;
     }
 
@@ -372,7 +372,7 @@ public final class Briefs {
     }
 
     public static String template(String name) {
-        try (InputStream in = Briefs.class.getResourceAsStream("/gta/templates/" + name)) {
+        try (InputStream in = BriefWriter.class.getResourceAsStream("/gta/templates/" + name)) {
             return in == null ? "" : new String(in.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
             return "";

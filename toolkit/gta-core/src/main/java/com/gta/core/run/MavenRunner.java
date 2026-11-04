@@ -122,8 +122,8 @@ public final class MavenRunner implements TestRunner {
             result.compileError = true;
             result.compileMessage = compileSummary(output);
         }
-        result.cases = SurefireReports.parse(List.of(surefire), gtaResults, timedOut);
-        for (TestCase c : result.cases) {
+        result.cases = SurefireReportParser.parse(List.of(surefire), gtaResults, timedOut);
+        for (TestOutcome c : result.cases) {
             FailureClassifier.classify(c, productionClasses, testClasses);
         }
         Path runDir = paths.runs().resolve(runId);

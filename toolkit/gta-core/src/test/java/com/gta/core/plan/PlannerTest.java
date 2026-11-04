@@ -4,9 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.gta.core.profile.ServiceProfile;
-import com.gta.core.registry.Registry;
-import com.gta.core.spec.SpecFixtures;
+import com.gta.core.registry.CapabilityRegistry;
 import com.gta.core.spec.SpecParser;
+import com.gta.core.spec.SpecTestData;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -17,8 +17,8 @@ class PlannerTest {
         ServiceProfile profile = new ServiceProfile();
         profile.basePackage = "com.acme";
 
-        List<PlanItem> items =
-                Planner.plan(SpecParser.parseText(SpecFixtures.CREATE_ORDER), Registry.loadBundled(), profile);
+        List<PlanItem> items = Planner.plan(
+                SpecParser.parseText(SpecTestData.CREATE_ORDER), CapabilityRegistry.loadBundled(), profile);
 
         assertEquals(
                 List.of("order#foundation-01", "order.create/s01#component-01"),

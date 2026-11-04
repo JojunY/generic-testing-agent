@@ -1,10 +1,10 @@
 package com.gta.core.engine;
 
-import com.gta.core.brief.Briefs;
+import com.gta.core.brief.BriefWriter;
 import com.gta.core.change.CommitLedger;
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
-import com.gta.core.registry.Registry;
+import com.gta.core.registry.CapabilityRegistry;
 import com.gta.core.run.MavenRunner;
 import com.gta.core.run.TestRunner;
 import com.gta.core.state.StateStore;
@@ -17,10 +17,10 @@ import java.util.Optional;
 final class EngineContext {
     final GtaPaths paths;
     final GtaConfig config;
-    final Registry registry;
+    final CapabilityRegistry registry;
     final StateStore store;
     final Git git;
-    final Briefs briefs;
+    final BriefWriter briefs;
     final TestRunner runner;
 
     final SessionManager sessions;
@@ -39,10 +39,10 @@ final class EngineContext {
     EngineContext(Path root, TestRunner runner) {
         this.paths = new GtaPaths(root.toAbsolutePath().normalize());
         this.config = GtaConfig.load(paths);
-        this.registry = Registry.loadBundled();
+        this.registry = CapabilityRegistry.loadBundled();
         this.store = new StateStore(paths);
         this.git = new Git(paths.root());
-        this.briefs = new Briefs(paths);
+        this.briefs = new BriefWriter(paths);
         this.runner = runner != null ? runner : new MavenRunner(paths, config);
         this.runs = new TestRuns(this);
         this.sessions = new SessionManager(this);

@@ -11,8 +11,8 @@ import com.gta.core.plan.PlanItem;
 import com.gta.core.report.Reporter;
 import com.gta.core.run.MavenRunner;
 import com.gta.core.run.RunResult;
-import com.gta.core.run.SurefireReports;
-import com.gta.core.run.TestCase;
+import com.gta.core.run.SurefireReportParser;
+import com.gta.core.run.TestOutcome;
 import com.gta.core.state.ItemStatus;
 import com.gta.core.state.StateStore;
 import com.gta.core.state.WorkState;
@@ -128,11 +128,11 @@ final class SessionEnd {
 
     @SuppressWarnings("unchecked")
     Gate.Result gateInternal(String base, List<Path> reportDirs) {
-        List<TestCase> cases;
+        List<TestOutcome> cases;
         if (reportDirs == null || reportDirs.isEmpty()) {
             cases = ctx.runs.runAll().cases;
         } else {
-            cases = SurefireReports.parse(reportDirs, paths.gtaResults());
+            cases = SurefireReportParser.parse(reportDirs, paths.gtaResults());
         }
         List<String> unstable = new ArrayList<>();
         Path verify = paths.verifyLatest();

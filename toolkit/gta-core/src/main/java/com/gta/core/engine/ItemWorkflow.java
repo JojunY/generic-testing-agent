@@ -5,7 +5,7 @@ import static com.gta.core.engine.NodeResults.firstLines;
 import static com.gta.core.engine.NodeResults.node;
 import static com.gta.core.engine.NodeResults.result;
 
-import com.gta.core.brief.Briefs;
+import com.gta.core.brief.BriefWriter;
 import com.gta.core.change.ChangeChecker;
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
@@ -17,10 +17,10 @@ import com.gta.core.oracle.OracleShard;
 import com.gta.core.plan.PlanItem;
 import com.gta.core.plan.Planner;
 import com.gta.core.profile.ServiceProfile;
-import com.gta.core.registry.Registry;
+import com.gta.core.registry.CapabilityRegistry;
 import com.gta.core.run.FailureClassifier;
 import com.gta.core.run.RunResult;
-import com.gta.core.run.TestCase;
+import com.gta.core.run.TestOutcome;
 import com.gta.core.spec.AnswerParser;
 import com.gta.core.spec.Spec;
 import com.gta.core.spec.SpecEditor;
@@ -65,10 +65,10 @@ final class ItemWorkflow {
     private final EngineContext ctx;
     private final GtaPaths paths;
     private final GtaConfig config;
-    private final Registry registry;
+    private final CapabilityRegistry registry;
     private final StateStore store;
     private final Git git;
-    private final Briefs briefs;
+    private final BriefWriter briefs;
 
     ItemWorkflow(EngineContext ctx) {
         this.ctx = ctx;
@@ -111,7 +111,7 @@ final class ItemWorkflow {
                     // every brief gets its own token: items adopted after a rebuild have none, and a re-issued
                     // brief must invalidate the previous one
                     st.seq++;
-                    s.token = Briefs.token(st.session.id, st.seq);
+                    s.token = BriefWriter.token(st.session.id, st.seq);
                     Path brief = briefs.author(st.seq, s, item, spec, profile);
                     return Dispatch.of(authorNode(item, s, brief));
                 }
@@ -149,7 +149,7 @@ final class ItemWorkflow {
                 continue;
             }
             st.seq++;
-            s.token = Briefs.token(st.session.id, st.seq);
+            s.token = BriefWriter.token(st.session.id, st.seq);
             s.baseline = new ChangeChecker(paths).capture();
             st.move(s, ItemStatus.AUTHORING);
             Path brief = briefs.author(st.seq, s, item, spec, profile);
@@ -176,7 +176,7 @@ final class ItemWorkflow {
     Map<String, Object> reviewNode(WorkState st, WorkState.ItemState s, PlanItem item, Spec spec, String kind) {
         // the verdict must come back with this token: it binds the verdict to this review round
         st.seq++;
-        s.token = Briefs.token(st.session.id, st.seq);
+        s.token = BriefWriter.token(st.session.id, st.seq);
         String details;
         if (kind.equals("oracle-review")) {
             details = "The test passed. Check that it asserts exactly what the THEN clauses say, on the right object, "
@@ -406,7 +406,7 @@ final class ItemWorkflow {
                 s.inputsChangedAfterAssertion = true;
             }
         }
-        List<TestCase> failures = run.failures();
+        List<TestOutcome> failures = run.failures();
         if ("known-defect".equals(s.intentOverride)
                 && !run.cases.isEmpty()
                 && run.cases.stream().allMatch(c -> "known-defect".equals(c.outcome))) {
@@ -455,7 +455,7 @@ final class ItemWorkflow {
             }
             return markPassed(st, item, s, runId);
         }
-        TestCase first = failures.get(0);
+        TestOutcome first = failures.get(0);
         // a code this version does not know is treated as unclassified: triage is the safe default
         ErrorCode code = ErrorCode.find(first.code).orElse(ErrorCode.TEST_SUT_ERROR);
         String message = (first.failureType == null ? "" : first.failureType + ": ")

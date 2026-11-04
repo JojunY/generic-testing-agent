@@ -2,7 +2,7 @@ package com.gta.core.plan;
 
 import com.gta.core.config.GtaPaths;
 import com.gta.core.profile.ServiceProfile;
-import com.gta.core.registry.Registry;
+import com.gta.core.registry.CapabilityRegistry;
 import com.gta.core.spec.Ref;
 import com.gta.core.spec.Spec;
 import com.gta.core.util.Hashes;
@@ -19,9 +19,9 @@ import java.util.Optional;
 public final class Planner {
     private Planner() {}
 
-    public static List<PlanItem> plan(Spec spec, Registry registry, ServiceProfile profile) {
+    public static List<PlanItem> plan(Spec spec, CapabilityRegistry registry, ServiceProfile profile) {
         String flowId = spec.flowId();
-        Registry.Capability capability = registry.capability(spec.capability());
+        CapabilityRegistry.Capability capability = registry.capability(spec.capability());
         String domain = Ids.domainOf(flowId);
         String flowName = Ids.flowNameOf(flowId);
         String pkg = packageFor(spec, profile);

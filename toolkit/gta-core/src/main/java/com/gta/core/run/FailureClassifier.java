@@ -48,7 +48,7 @@ public final class FailureClassifier {
 
     private FailureClassifier() {}
 
-    public static void classify(TestCase c, Set<String> productionClasses, Set<String> testClasses) {
+    public static void classify(TestOutcome c, Set<String> productionClasses, Set<String> testClasses) {
         if (c.passed() || "skipped".equals(c.outcome)) {
             return;
         }

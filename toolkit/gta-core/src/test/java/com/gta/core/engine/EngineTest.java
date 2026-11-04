@@ -13,10 +13,10 @@ import com.gta.core.oracle.OracleShard;
 import com.gta.core.plan.PlanItem;
 import com.gta.core.plan.Planner;
 import com.gta.core.run.RunResult;
-import com.gta.core.run.TestCase;
-import com.gta.core.run.TestRunner;
-import com.gta.core.spec.SpecFixtures;
+import com.gta.core.run.TestOutcome;
+import com.gta.core.run.TestRunnerFake;
 import com.gta.core.spec.SpecParser;
+import com.gta.core.spec.SpecTestData;
 import com.gta.core.state.ItemStatus;
 import com.gta.core.state.StateStore;
 import com.gta.core.state.WorkState;
@@ -25,12 +25,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -40,26 +37,6 @@ class EngineTest {
     static final String ITEM = "order.create/s01#component-01";
     static final String TOKEN = "s20261104090000-test:0007";
 
-    /** Returns the queued results in order; the last one repeats. */
-    static final class FakeTestRunner implements TestRunner {
-        final Deque<RunResult> results = new ArrayDeque<>();
-        int runs;
-
-        FakeTestRunner then(RunResult r) {
-            results.add(r);
-            return this;
-        }
-
-        @Override
-        public RunResult run(
-                String runId, String itemId, Options options, Set<String> productionClasses, Set<String> testClasses) {
-            runs++;
-            RunResult r = results.size() > 1 ? results.poll() : results.peek();
-            r.runId = runId;
-            return r;
-        }
-    }
-
     static RunResult timedOut() {
         RunResult r = new RunResult();
         r.timedOut = true;
@@ -68,7 +45,7 @@ class EngineTest {
 
     static RunResult outcome(String outcome) {
         RunResult r = new RunResult();
-        TestCase c = new TestCase();
+        TestOutcome c = new TestOutcome();
         c.className = "com.acme.OrderCreateIT";
         c.method = "shouldCreate";
         c.outcome = outcome;
@@ -82,7 +59,7 @@ class EngineTest {
 
     GtaPaths paths;
     StateStore store;
-    FakeTestRunner runner;
+    TestRunnerFake runner;
 
     private void git(String... args) {
         List<String> cmd = new ArrayList<>(List.of("git"));
@@ -94,7 +71,7 @@ class EngineTest {
     void repository() throws Exception {
         paths = new GtaPaths(root);
         store = new StateStore(paths);
-        runner = new FakeTestRunner();
+        runner = new TestRunnerFake();
         Files.writeString(root.resolve("pom.xml"), "<project/>\n");
         Files.writeString(root.resolve(".gitignore"), ".gta/work/\n");
         Files.createDirectories(paths.mainJava());
@@ -211,7 +188,7 @@ class EngineTest {
 
         assertEquals(ItemStatus.NEEDS_HUMAN, item().status, out.toString());
         assertTrue(item().reason.contains("commits made outside gtaw"), item().reason);
-        assertEquals(0, runner.runs, "no test run on a tampered tree");
+        assertEquals(0, runner.runs(), "no test run on a tampered tree");
     }
 
     @Test
@@ -254,7 +231,7 @@ class EngineTest {
         EngineContext ctx = new EngineContext(root, runner);
 
         ctx.items.syncPlan(
-                st, SpecParser.parseText(SpecFixtures.CREATE_ORDER), new com.gta.core.profile.ServiceProfile());
+                st, SpecParser.parseText(SpecTestData.CREATE_ORDER), new com.gta.core.profile.ServiceProfile());
 
         assertEquals(null, st.pending, "the human decision was about the old scenario");
         assertEquals(ItemStatus.PENDING, st.items.get(ITEM).status, "the item starts again from the new scenario");
@@ -283,7 +260,7 @@ class EngineTest {
         EngineContext ctx = new EngineContext(root, runner);
         ctx.specs.writeSpec(
                 paths.spec("order.create"),
-                SpecFixtures.CREATE_ORDER
+                SpecTestData.CREATE_ORDER
                         .replace("status=draft", "status=in-review rev=R2")
                         .replace("source=assumed hint.layer=component", "source=observed hint.layer=component")
                         .replaceAll("(?s)## Open questions.*## Findings", "## Open questions\n\n## Findings"));
@@ -365,7 +342,7 @@ class EngineTest {
         Files.createDirectories(paths.spec("order.create").getParent());
         Files.writeString(
                 paths.spec("order.create"),
-                SpecFixtures.CREATE_ORDER.replace("status=draft", "status=approved rev=R2"));
+                SpecTestData.CREATE_ORDER.replace("status=draft", "status=approved rev=R2"));
         Files.createDirectories(paths.testSource("com.acme.OrderCreateIT").getParent());
         Files.writeString(
                 paths.testSource("com.acme.OrderCreateIT"),

@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Set;
 
 /** core/registry/capabilities.yaml, bundled into the jar under gta/registry/ (plan §4.4). */
-public class Registry {
+public class CapabilityRegistry {
     public String schemaVersion;
     public List<Capability> capabilities = new ArrayList<>();
     public Always always = new Always();
@@ -58,12 +58,12 @@ public class Registry {
         }
     }
 
-    public static Registry loadBundled() {
-        try (InputStream in = Registry.class.getResourceAsStream("/gta/registry/capabilities.yaml")) {
+    public static CapabilityRegistry loadBundled() {
+        try (InputStream in = CapabilityRegistry.class.getResourceAsStream("/gta/registry/capabilities.yaml")) {
             if (in == null) {
                 throw new GtaException(ErrorCode.INTERNAL_ERROR, "Bundled registry not found", "Rebuild gta-cli");
             }
-            return Yaml.MAPPER.readValue(in, Registry.class);
+            return Yaml.MAPPER.readValue(in, CapabilityRegistry.class);
         } catch (IOException e) {
             throw new GtaException(
                     ErrorCode.INTERNAL_ERROR,

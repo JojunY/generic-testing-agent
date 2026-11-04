@@ -12,8 +12,8 @@ class FailureClassifierTest {
     static final String GTA_JUNIT_SAMPLE = "6a1f76173bb3";
     static final Set<String> TESTS = Set.of("com.acme.order.OrderIT");
 
-    private static TestCase failing(String outcome, String type, String stack) {
-        TestCase c = new TestCase();
+    private static TestOutcome failing(String outcome, String type, String stack) {
+        TestOutcome c = new TestOutcome();
         c.outcome = outcome;
         c.failureType = type;
         c.stack = stack;
@@ -22,7 +22,7 @@ class FailureClassifierTest {
 
     @Test
     void shouldClassifyAnAssertionFailure() {
-        TestCase c = failing(
+        TestOutcome c = failing(
                 "failed",
                 "java.lang.AssertionError",
                 "java.lang.AssertionError: x\n\tat com.acme.order.OrderIT.should(OrderIT.java:10)");
@@ -34,7 +34,7 @@ class FailureClassifierTest {
 
     @Test
     void shouldBlameProductionCodeByTheFirstNonFrameworkFrame() {
-        TestCase c = failing(
+        TestOutcome c = failing(
                 "error",
                 "java.lang.NullPointerException",
                 "java.lang.NullPointerException\n\tat org.springframework.aop.Foo.invoke(Foo.java:1)\n"
@@ -47,7 +47,7 @@ class FailureClassifierTest {
 
     @Test
     void shouldBlameTestCodeWhenOnlyTheTestIsInTheChain() {
-        TestCase c = failing(
+        TestOutcome c = failing(
                 "error",
                 "java.lang.IllegalStateException",
                 "java.lang.IllegalStateException\n\tat com.acme.order.OrderIT.setUp(OrderIT.java:5)");

@@ -7,7 +7,7 @@ import com.gta.core.oracle.AssertionScanner;
 import com.gta.core.plan.PlanItem;
 import com.gta.core.profile.JavaIndex;
 import com.gta.core.run.RunResult;
-import com.gta.core.run.TestCase;
+import com.gta.core.run.TestOutcome;
 import com.gta.core.run.TestRunner;
 import com.gta.core.util.Git;
 import com.gta.core.util.Ids;
@@ -100,7 +100,7 @@ final class TestRuns {
             out.put("knownDefect", pinned);
         }
         List<Map<String, Object>> failures = new ArrayList<>();
-        for (TestCase c : run.failures()) {
+        for (TestOutcome c : run.failures()) {
             Map<String, Object> f = new LinkedHashMap<>();
             f.put("test", c.className + "#" + c.method);
             f.put("code", c.code);

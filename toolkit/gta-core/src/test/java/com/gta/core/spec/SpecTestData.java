@@ -1,7 +1,7 @@
 package com.gta.core.spec;
 
 /** A small, valid behaviour spec used by several tests. */
-public final class SpecFixtures {
+public final class SpecTestData {
     public static final String CREATE_ORDER =
             """
             # order.create — Create an order
@@ -53,5 +53,5 @@ public final class SpecFixtures {
             ## Findings
             """;
 
-    private SpecFixtures() {}
+    private SpecTestData() {}
 }

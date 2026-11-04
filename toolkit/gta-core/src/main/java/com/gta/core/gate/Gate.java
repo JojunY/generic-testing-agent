@@ -9,7 +9,7 @@ import com.gta.core.oracle.AssertionScanner;
 import com.gta.core.oracle.OracleLock;
 import com.gta.core.oracle.OracleShard;
 import com.gta.core.plan.Planner;
-import com.gta.core.run.TestCase;
+import com.gta.core.run.TestOutcome;
 import com.gta.core.spec.CommentMeta;
 import com.gta.core.spec.Ref;
 import com.gta.core.spec.Spec;
@@ -77,7 +77,7 @@ public final class Gate {
         this.git = new Git(paths.root());
     }
 
-    public Result evaluate(String baseRef, List<TestCase> results, List<String> unstableItems) {
+    public Result evaluate(String baseRef, List<TestOutcome> results, List<String> unstableItems) {
         if (!git.refExists(baseRef)) {
             // comparing against nothing would make every locked scenario look new and pass the gate
             throw new GtaException(
@@ -90,8 +90,8 @@ public final class Gate {
         r.base = baseRef;
         Map<String, Spec> currentSpecs = currentSpecs();
         Map<String, Map<String, OracleShard.Entry>> baseShards = baseShards(baseRef, r);
-        Map<String, TestCase> byScenario = new HashMap<>();
-        for (TestCase c : results) {
+        Map<String, TestOutcome> byScenario = new HashMap<>();
+        for (TestOutcome c : results) {
             if (c.scenarioId() != null) {
                 byScenario.merge(c.scenarioId(), c, (a, b) -> a.passed() ? b : a);
             }
@@ -131,7 +131,7 @@ public final class Gate {
                 Optional<Spec.Scenario> scenario = spec == null ? Optional.empty() : spec.scenario(scenarioId);
                 boolean changedInPr = scenario.isEmpty()
                         || !Planner.scenarioRevision(scenario.get()).equals(e.getValue().scenarioRevision);
-                TestCase tc = byScenario.get(scenarioId);
+                TestOutcome tc = byScenario.get(scenarioId);
                 if (!changedInPr && (tc == null || !tc.passed())) {
                     r.failures.add(new Condition(
                             tc == null

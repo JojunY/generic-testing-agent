@@ -3,7 +3,7 @@ package com.gta.core.engine;
 import static com.gta.core.engine.NodeResults.node;
 import static com.gta.core.engine.NodeResults.result;
 
-import com.gta.core.brief.Briefs;
+import com.gta.core.brief.BriefWriter;
 import com.gta.core.change.ChangeChecker;
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
@@ -11,7 +11,7 @@ import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
 import com.gta.core.profile.RefResolver;
 import com.gta.core.profile.ServiceProfile;
-import com.gta.core.registry.Registry;
+import com.gta.core.registry.CapabilityRegistry;
 import com.gta.core.spec.AnswerParser;
 import com.gta.core.spec.CommentMeta;
 import com.gta.core.spec.Spec;
@@ -40,10 +40,10 @@ final class SpecWorkflow {
     private final EngineContext ctx;
     private final GtaPaths paths;
     private final GtaConfig config;
-    private final Registry registry;
+    private final CapabilityRegistry registry;
     private final StateStore store;
     private final Git git;
-    private final Briefs briefs;
+    private final BriefWriter briefs;
 
     SpecWorkflow(EngineContext ctx) {
         this.ctx = ctx;
@@ -73,7 +73,7 @@ final class SpecWorkflow {
                                     + ", or start the flow over with ./gtaw abort --flow " + flowId));
         }
         st.seq++;
-        sw.token = Briefs.token(st.session.id, st.seq);
+        sw.token = BriefWriter.token(st.session.id, st.seq);
         sw.baseline = new ChangeChecker(paths).capture();
         Path specPath = paths.spec(flowId);
         List<String> issues = new ArrayList<>(extraIssues);

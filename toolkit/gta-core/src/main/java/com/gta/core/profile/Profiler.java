@@ -8,7 +8,7 @@ import com.github.javaparser.ast.expr.MemberValuePair;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.expr.SingleMemberAnnotationExpr;
 import com.gta.core.config.GtaPaths;
-import com.gta.core.registry.Registry;
+import com.gta.core.registry.CapabilityRegistry;
 import com.gta.core.util.Ids;
 import java.io.IOException;
 import java.nio.file.FileSystems;
@@ -43,7 +43,7 @@ public final class Profiler {
 
     private Profiler() {}
 
-    public static ServiceProfile profile(Path root, Registry registry, String configuredBasePackage) {
+    public static ServiceProfile profile(Path root, CapabilityRegistry registry, String configuredBasePackage) {
         PomInfo pom = PomInfo.read(root);
         JavaIndex main = JavaIndex.of(root.resolve(GtaPaths.MAIN_JAVA));
         ServiceProfile p = new ServiceProfile();
@@ -58,12 +58,14 @@ public final class Profiler {
                 : configuredBasePackage;
 
         String sources = allSources(main);
-        for (Registry.Capability c : registry.capabilities) {
+        for (CapabilityRegistry.Capability c : registry.capabilities) {
             boolean hit = c.detect.buildDeps.stream().anyMatch(pom.dependencies::contains)
                     || c.detect.annotations.stream().anyMatch(sources::contains)
                     || c.detect.files.stream().anyMatch(g -> anyFileMatches(root, g));
             if (hit) {
-                (c.activeIn(Registry.CURRENT_PHASE) || !c.dispatch ? p.capabilities : p.explainOnlyCapabilities)
+                (c.activeIn(CapabilityRegistry.CURRENT_PHASE) || !c.dispatch
+                                ? p.capabilities
+                                : p.explainOnlyCapabilities)
                         .add(c.id);
             }
         }

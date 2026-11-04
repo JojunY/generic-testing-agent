@@ -16,14 +16,14 @@ public class RunResult {
 
     public String compileMessage;
     public long durationMs;
-    public List<TestCase> cases = new ArrayList<>();
+    public List<TestOutcome> cases = new ArrayList<>();
     public String logFile;
 
     public boolean allPassed() {
-        return !compileError && !cases.isEmpty() && cases.stream().allMatch(TestCase::passed);
+        return !compileError && !cases.isEmpty() && cases.stream().allMatch(TestOutcome::passed);
     }
 
-    public List<TestCase> failures() {
+    public List<TestOutcome> failures() {
         return cases.stream()
                 .filter(c -> !c.passed() && !"skipped".equals(c.outcome))
                 .toList();
