@@ -25,6 +25,8 @@ public final class OracleShard {
         public String source;
         public String relockedBy;
         public String reason;
+        /** When the oracle was relocked (ISO-8601); each relock is a new record the gate shows once. */
+        public String relockedAt;
     }
 
     private OracleShard() {

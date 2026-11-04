@@ -1,6 +1,7 @@
 package com.gta.harness;
 
 import com.gta.core.util.Json;
+import com.gta.core.util.Yaml;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -192,7 +193,7 @@ public class Generator {
     @SuppressWarnings("unchecked")
     static Map<String, Object> yaml(Path p) {
         try {
-            return Json.YAML.readValue(p.toFile(), LinkedHashMap.class);
+            return Yaml.MAPPER.readValue(p.toFile(), LinkedHashMap.class);
         } catch (IOException e) {
             throw new UncheckedIOException("Cannot read " + p + ": " + e.getMessage(), e);
         }

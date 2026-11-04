@@ -1192,7 +1192,7 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 
 ```
 generic-testing-agent/
-├── README.md · plan.md · AGENTS.md · CHANGELOG.md · LICENSE
+├── README.md · AGENTS.md · CHANGELOG.md · LICENSE
 ├── pom.xml                              # 版本号的唯一来源
 ├── core/                                # ★ 内容的单一事实源
 │   ├── agents/      gta-orchestrator.md · gta-analyst.md · gta-test-author.md · gta-reviewer.md
@@ -1213,8 +1213,9 @@ generic-testing-agent/
 ├── wrapper/                 # gtaw · gtaw.cmd
 ├── copilot/                 # ★ 用户选择 Copilot 时使用的完整文件夹（生成物，已提交）：.github/… · .vscode/… · .gta/skills/…
 ├── opencode/                # ★ 用户选择 OpenCode 时使用的完整文件夹（生成物，已提交）：.opencode/… · opencode.json · .gta/skills/…
-├── evals/   fixtures/ · tasks/<task-id>.task.json · graders/
-├── docs/    quickstart.md · adding-a-capability.md · ci-integration.md · adr/
+├── evals/   fixtures/（带缺陷的样例服务） · e2e/（脚本化端到端；模型评测任务 P0a 加入）
+├── scripts/ generate.sh                 # 维护脚本
+├── docs/    quickstart.md · adding-a-capability.md · ci-integration.md · design/plan.md（本文档）
 └── .github/workflows/ci.yml
 ```
 

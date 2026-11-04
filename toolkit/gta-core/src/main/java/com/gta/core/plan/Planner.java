@@ -1,5 +1,6 @@
 package com.gta.core.plan;
 
+import com.gta.core.config.GtaPaths;
 import com.gta.core.profile.ServiceProfile;
 import com.gta.core.registry.Registry;
 import com.gta.core.spec.Spec;
@@ -61,8 +62,8 @@ public final class Planner {
                 item.oracle.then = s.thenLiterals();
                 item.oracle.reviewerChecked = s.reviewerChecked();
                 item.testClass = pkg.isEmpty() ? className : pkg + "." + className;
-                item.ownsFiles.add("src/test/java/" + pkgPath + className + ".java");
-                item.ownsFiles.add("src/test/resources/fixtures/" + domain + "/" + flowName + "/**");
+                item.ownsFiles.add(GtaPaths.TEST_JAVA + "/" + pkgPath + className + ".java");
+                item.ownsFiles.add(GtaPaths.TEST_RESOURCES + "/fixtures/" + domain + "/" + flowName + "/**");
                 item.priority = priority(spec.risk());
                 item.scenarioRevision = scenarioRevision(s);
                 items.add(item);
@@ -87,9 +88,9 @@ public final class Planner {
             String basePkg = profile.basePackage == null || profile.basePackage.isEmpty() ? pkg : profile.basePackage;
             String basePath = basePkg.isEmpty() ? "" : basePkg.replace('.', '/') + "/";
             f.testClass = basePkg.isEmpty() ? seed : basePkg + "." + seed;
-            f.ownsFiles.add("src/test/java/" + basePath + seed + ".java");
-            f.ownsFiles.add("src/test/java/" + basePath + "support/**");
-            f.ownsFiles.add("src/test/resources/**");
+            f.ownsFiles.add(GtaPaths.TEST_JAVA + "/" + basePath + seed + ".java");
+            f.ownsFiles.add(GtaPaths.TEST_JAVA + "/" + basePath + "support/**");
+            f.ownsFiles.add(GtaPaths.TEST_RESOURCES + "/**");
             f.ownsFiles.add("pom.xml");
             f.priority = "p0";
             f.scenarioRevision = "foundation";

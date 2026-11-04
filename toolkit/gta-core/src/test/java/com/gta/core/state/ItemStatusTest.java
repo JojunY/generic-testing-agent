@@ -32,4 +32,15 @@ class ItemStatusTest {
 
         assertThrows(RuntimeException.class, () -> st.move(s, ItemStatus.PASSED));
     }
+
+    @Test
+    void shouldLetARejectedOracleGoBackToTheAuthor() {
+        assertTrue(ItemStatus.REVIEWING.canMoveTo(ItemStatus.REPAIRING));
+        assertTrue(ItemStatus.REVIEWING.canMoveTo(ItemStatus.NEEDS_HUMAN));
+    }
+
+    @Test
+    void shouldAllowAdoptingAnExistingTestOnRebuild() {
+        assertTrue(ItemStatus.PENDING.canMoveTo(ItemStatus.VERIFYING));
+    }
 }

@@ -1,6 +1,7 @@
 package com.gta.core.report;
 
 import com.gta.core.config.GtaPaths;
+import com.gta.core.error.ErrorCode;
 import com.gta.core.gate.Gate;
 import com.gta.core.plan.PlanItem;
 import com.gta.core.spec.Spec;
@@ -40,8 +41,8 @@ public final class Reporter {
                         .append(c.target).append(" — ").append(c.message).append(c.waived ? "~~ (waived)" : "").append('\n'));
                 b.append('\n');
             }
-            List<Gate.Condition> confirmations = gate.concerns.stream().filter(c -> c.code.equals("GATE_NEW_CONFIRMATION")
-                    || c.code.equals("GATE_RELOCKED")).toList();
+            List<Gate.Condition> confirmations = gate.concerns.stream().filter(c -> c.code.equals(ErrorCode.GATE_NEW_CONFIRMATION.name())
+                    || c.code.equals(ErrorCode.GATE_RELOCKED.name())).toList();
             if (!confirmations.isEmpty()) {
                 b.append("### Human confirmations, approvals and relocks in this change (review them)\n\n");
                 confirmations.forEach(c -> b.append("- ").append(c.target).append(": ").append(c.message).append('\n'));

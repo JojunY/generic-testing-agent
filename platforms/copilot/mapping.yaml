@@ -1,5 +1,5 @@
 # Copilot mapping (plan §11.4): translates the neutral fields of core/agents/*.md into VS Code / IntelliJ Copilot files.
-# Only platform differences live here. Generated output: copilot/ (committed; regenerate with tools/generate.sh).
+# Only platform differences live here. Generated output: copilot/ (committed; regenerate with scripts/generate.sh).
 platform: copilot
 agent:
   dir: .github/agents

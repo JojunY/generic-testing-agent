@@ -30,7 +30,7 @@ Coverage is not the goal. Tests should check what the service is *supposed* to d
 | `gta-junit` (`toolkit/gta-junit`) | `@KnownDefect` (strict expected-failure) and a listener that maps test results to scenarios. |
 | `copilot/`, `opencode/` | Ready-to-install harness folders, generated from `core/` + `platforms/` by `gta-harness-gen`. |
 
-[`plan.md`](plan.md) has the full design.
+[`docs/design/plan.md`](docs/design/plan.md) has the full design.
 
 ## Quick start
 
@@ -57,21 +57,22 @@ Then open the service in VS Code, IntelliJ or OpenCode and type `/gta`.
 ## Repository layout
 
 ```
-core/        single source of truth: agents, command, rules, skills, templates, registry
+core/        source of truth for harness content: agents, command, rules, skills, templates, schemas, registry
 platforms/   copilot/ and opencode/ mappings (only platform differences live here)
-copilot/     generated: .github/agents, .github/prompts, .vscode, .gta/skills, AGENTS.gta.md
-opencode/    generated: .opencode/agents, .opencode/commands, opencode.json, .gta/skills, AGENTS.gta.md
-toolkit/     gta-core, gta-cli, gta-junit, gta-harness-gen (Maven reactor; pom.xml holds the version)
-wrapper/     gtaw, gtaw.cmd, gtaw-download.ps1 (download the pinned gta-cli jar from Nexus and verify its sha256)
+copilot/     GENERATED from core/ + platforms/copilot (committed so teams can pick it): never edit by hand
+opencode/    GENERATED from core/ + platforms/opencode (committed so teams can pick it): never edit by hand
+toolkit/     Java sources: gta-core, gta-cli, gta-junit, gta-harness-gen (Maven reactor; pom.xml holds the version)
+wrapper/     files installed into services: gtaw, gtaw.cmd, gtaw-download.ps1 (pinned jar from Nexus, sha256-verified)
+scripts/     maintainer scripts for this repository (generate.sh)
 evals/       order-service fixture with seeded defects and a scripted end-to-end run
-docs/        quickstart, CI integration, adding a capability
+docs/        quickstart, CI integration, adding a capability; design/plan.md is the full design
 ```
 
 ## Development
 
 ```bash
 mvn -B install                 # build + unit tests (also checks that copilot/ and opencode/ are in sync)
-tools/generate.sh              # regenerate copilot/ and opencode/ after editing core/ or platforms/
+scripts/generate.sh            # regenerate copilot/ and opencode/ after editing core/ or platforms/
 evals/e2e/run.sh               # scripted end-to-end run against evals/fixtures/order-service
 ```
 

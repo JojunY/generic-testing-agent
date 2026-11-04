@@ -96,7 +96,12 @@ public final class MavenRunner {
         }
 
         long start = System.currentTimeMillis();
-        Proc.Result proc = Proc.run(root, Duration.ofMinutes(config.budgets.nodeTimeoutMinutes), env, cmd);
+        Proc.Result proc;
+        try {
+            proc = Proc.run(root, Duration.ofMinutes(config.budgets.nodeTimeoutMinutes), env, cmd);
+        } finally {
+            deleteDir(Path.of(env.get(CLOUDSDK_CONFIG))); // the empty gcloud config dir exists for this run only
+        }
         RunResult result = new RunResult();
         result.runId = runId;
         result.itemId = itemId;
@@ -124,11 +129,16 @@ public final class MavenRunner {
         return result;
     }
 
-    /** Environment with cloud credentials cut off so non-system tests can never reach real GCP (plan §13). */
-    public static Map<String, String> isolatedEnv() {
+    static final String CLOUDSDK_CONFIG = "CLOUDSDK_CONFIG";
+
+    /**
+     * Environment with cloud credentials cut off so non-system tests can never reach real GCP (plan §13). The caller owns
+     * the temporary {@code CLOUDSDK_CONFIG} directory and deletes it after the run.
+     */
+    static Map<String, String> isolatedEnv() {
         Map<String, String> env = new LinkedHashMap<>();
         try {
-            env.put("CLOUDSDK_CONFIG", Files.createTempDirectory("gta-gcloud-empty").toString());
+            env.put(CLOUDSDK_CONFIG, Files.createTempDirectory("gta-gcloud-empty").toString());
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

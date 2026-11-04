@@ -37,7 +37,7 @@ java -jar gta-cli-<version>.jar --root path/to/service init --platform copilot \
 | `.github/agents/gta-*.agent.md`, `.github/prompts/gta.prompt.md` | Copilot agents and the `/gta` command (OpenCode: `.opencode/agents`, `.opencode/commands`) |
 | `.gta/skills/**` | testing skills, loaded by path from briefs |
 | `AGENTS.md` | a gta block between `<!-- gta:begin -->` and `<!-- gta:end -->`; the rest of the file is kept |
-| `.vscode/settings.json`, `.vscode/extensions.json` / `opencode.json` | merged, never overwritten: auto-approve for `./gtaw next|check|submit|answer|status`, the Mermaid preview |
+| `.vscode/settings.json`, `.vscode/extensions.json` / `opencode.json` | merged, never overwritten: auto-approve for `./gtaw next|check|submit|answer|status`, the Mermaid preview. A file with comments is left untouched and `init` prints the keys to add (`mergeManually`) |
 | `gtaw`, `gtaw.cmd`, `.gta/wrapper/*` | the wrapper: it downloads the pinned jar from Nexus, verifies its sha256 and runs it |
 | `.gitignore` | adds `.gta/work/` (rebuildable working state) |
 

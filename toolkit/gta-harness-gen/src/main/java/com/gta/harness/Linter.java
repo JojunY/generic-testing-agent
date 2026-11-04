@@ -3,6 +3,7 @@ package com.gta.harness;
 import com.gta.core.registry.Registry;
 import com.gta.core.util.Ids;
 import com.gta.core.util.Json;
+import com.gta.core.util.Yaml;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -214,7 +215,7 @@ public class Linter {
         Path file = repo.resolve("core/registry/capabilities.yaml");
         Registry registry;
         try {
-            registry = Json.YAML.readValue(file.toFile(), Registry.class);
+            registry = Yaml.MAPPER.readValue(file.toFile(), Registry.class);
         } catch (IOException e) {
             errors.add(rel(file) + ": " + e.getMessage());
             return;

@@ -17,11 +17,11 @@ import java.util.List;
 import java.util.Map;
 
 /** Environment and installation checks with actionable hints (plan §11.2). */
-public final class Doctor {
+public final class DoctorChecks {
     private final Path root;
     private final List<Map<String, String>> checks = new ArrayList<>();
 
-    public Doctor(Path root) {
+    public DoctorChecks(Path root) {
         this.root = root.toAbsolutePath().normalize();
     }
 
@@ -69,7 +69,7 @@ public final class Doctor {
             add("config", "fail", e.getMessage(), e.hint());
         }
 
-        Path managed = root.resolve(".gta/managed-files.json");
+        Path managed = paths.managedFiles();
         if (Files.exists(managed)) {
             Map<?, ?> m = Json.read(managed, Map.class);
             List<String> modified = new ArrayList<>();

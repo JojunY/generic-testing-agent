@@ -4,28 +4,20 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.AtomicMoveNotSupportedException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 
-/** JSON/YAML helpers. All writes are atomic: write a temp file next to the target, then rename. */
+/** The JSON mapper used for all gta files (stable key order, no nulls) and atomic JSON writes. */
 public final class Json {
     public static final ObjectMapper MAPPER = new ObjectMapper()
             .enable(SerializationFeature.INDENT_OUTPUT)
             .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             .setSerializationInclusion(JsonInclude.Include.NON_NULL);
-
-    public static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory())
-            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
     private Json() {
     }
@@ -47,23 +39,9 @@ public final class Json {
         }
     }
 
+    /** Serialises a value as pretty JSON and writes it atomically. */
     public static void writeAtomic(Path path, Object value) {
-        writeStringAtomic(path, write(value) + "\n");
+        AtomicFiles.write(path, write(value) + "\n");
     }
 
-    public static void writeStringAtomic(Path path, String content) {
-        try {
-            Path parent = path.toAbsolutePath().getParent();
-            Files.createDirectories(parent);
-            Path tmp = Files.createTempFile(parent, "." + path.getFileName(), ".tmp");
-            Files.writeString(tmp, content, StandardCharsets.UTF_8);
-            try {
-                Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            } catch (AtomicMoveNotSupportedException e) {
-                Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING);
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
 }

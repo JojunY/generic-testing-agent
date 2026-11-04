@@ -66,6 +66,41 @@ class ChangeCheckerTest {
     }
 
     @Test
+    void shouldReportChangesTheAgentCommittedItself() throws Exception {
+        WorkState.Baseline baseline = checker.capture();
+        Files.writeString(root.resolve("src/main/java/App.java"), "class App { int hacked; }\n");
+        git("commit", "-qam", "make the test pass");
+
+        ChangeChecker.Result r = checker.check(baseline, List.of("src/test/java/**"), root.resolve("backup"), true);
+
+        assertFalse(r.ok());
+        assertEquals(1, r.foreignCommits().size());
+        assertEquals(List.of("src/main/java/App.java"), r.unrestorable(), "gtaw never rewrites history");
+    }
+
+    @Test
+    void shouldIgnoreCommitsMadeByGtaw() throws Exception {
+        WorkState.Baseline baseline = checker.capture();
+        Files.writeString(root.resolve("src/test/java/AppIT.java"), "class AppIT {}\n");
+        git("add", "-A");
+        git("commit", "-qm", "test(app): x\n\nGta-Item: app.x/s01#component-01");
+
+        ChangeChecker.Result r = checker.check(baseline, List.of(), root.resolve("backup"), true);
+
+        assertTrue(r.ok(), r.toString());
+    }
+
+    @Test
+    void shouldSeeBothSidesOfARename() throws Exception {
+        WorkState.Baseline baseline = checker.capture();
+        git("mv", "src/main/java/App.java", "src/test/java/App.java");
+
+        ChangeChecker.Result r = checker.check(baseline, List.of("src/test/java/**"), root.resolve("backup"), false);
+
+        assertTrue(r.outOfScope().contains("src/main/java/App.java"), r.toString());
+    }
+
+    @Test
     void shouldMatchGlobs() {
         assertTrue(ChangeChecker.matchesAny("src/test/resources/fixtures/order/a.json", List.of("src/test/resources/**")));
         assertFalse(ChangeChecker.matchesAny("src/main/resources/application.yml", List.of("src/test/resources/**")));

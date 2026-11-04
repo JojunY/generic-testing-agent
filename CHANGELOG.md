@@ -4,6 +4,22 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 
 ## [Unreleased] — 0.1.0 (P0)
 
+### Fixed (code review)
+- A reviewer `reject` no longer fails with an illegal transition.
+- Items adopted after a rebuild get a token, so they can be repaired instead of deadlocking.
+- The scope check sees commits made outside gtaw and the source of a rename. Such commits go to a human.
+- Corrupt working-state files are kept and reported (`STATE_CORRUPT`) instead of being silently reset.
+- A second relock by the same person is accepted by the gate. Relocks now carry `relockedAt`.
+- `init`/`upgrade` read JSONC, never rewrite files that contain comments, and write nothing if an input cannot be parsed.
+- An `@KnownDefect` added without a human's confirmation is refused. Adopted pins stay `defect-found`.
+- Per-run temporary gcloud directories are deleted.
+
+### Changed
+- `Engine` is split into `SpecWorkflow`, `ItemWorkflow`, `SessionManager`, `SessionEnd`, `HumanPrompts` and `EscalationWriter` behind the same facade.
+- `AtomicFiles` and `Yaml` are split out of `Json`. Gate concern codes and new environment and state codes are in `ErrorCode`.
+- `--format` is `json|human`.
+- `plan.md` moved to `docs/design/` and `tools/` to `scripts/`.
+
 ### Added
 - `gtaw` CLI (`gta-cli`):
   - commands: `init`, `upgrade`, `doctor`, `next`, `check`, `submit`, `answer` (with `--file`), `status`, `abort`, `run`, `verify`, `gate` (and `gate waive`), `relock`, `report`;

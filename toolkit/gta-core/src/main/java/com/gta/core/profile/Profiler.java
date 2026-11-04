@@ -7,6 +7,7 @@ import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MemberValuePair;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.expr.SingleMemberAnnotationExpr;
+import com.gta.core.config.GtaPaths;
 import com.gta.core.registry.Registry;
 import com.gta.core.util.Ids;
 
@@ -35,7 +36,7 @@ public final class Profiler {
 
     public static ServiceProfile profile(Path root, Registry registry, String configuredBasePackage) {
         PomInfo pom = PomInfo.read(root);
-        JavaIndex main = JavaIndex.of(root.resolve("src/main/java"));
+        JavaIndex main = JavaIndex.of(root.resolve(GtaPaths.MAIN_JAVA));
         ServiceProfile p = new ServiceProfile();
         p.artifactId = pom.artifactId;
         p.bootVersion = pom.bootVersion;

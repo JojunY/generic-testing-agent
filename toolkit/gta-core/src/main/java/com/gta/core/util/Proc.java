@@ -56,7 +56,7 @@ public final class Proc {
                 Files.deleteIfExists(log);
             }
         } catch (IOException e) {
-            throw new GtaException(ErrorCode.ENV_MAVEN_UNAVAILABLE, "Cannot start " + command.get(0) + ": " + e.getMessage(),
+            throw new GtaException(ErrorCode.ENV_TOOL_UNAVAILABLE, "Cannot start " + command.get(0) + ": " + e.getMessage(),
                     "Make sure the tool is installed and on PATH; ./gtaw doctor checks this");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

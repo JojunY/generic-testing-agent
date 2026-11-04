@@ -25,7 +25,7 @@ class RepositoryHarnessTest {
         Generator gen = new Generator(REPO);
         for (String platform : HarnessGen.PLATFORMS) {
             List<String> diff = gen.diff(REPO.resolve(platform), gen.render(platform));
-            assertEquals(List.of(), diff, platform + "/ is stale: run tools/generate.sh");
+            assertEquals(List.of(), diff, platform + "/ is stale: run scripts/generate.sh");
         }
     }
 

@@ -2,7 +2,7 @@ package com.gta.core.registry;
 
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
-import com.gta.core.util.Json;
+import com.gta.core.util.Yaml;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -64,7 +64,7 @@ public class Registry {
             if (in == null) {
                 throw new GtaException(ErrorCode.INTERNAL_ERROR, "Bundled registry not found", "Rebuild gta-cli");
             }
-            return Json.YAML.readValue(in, Registry.class);
+            return Yaml.MAPPER.readValue(in, Registry.class);
         } catch (IOException e) {
             throw new GtaException(ErrorCode.INTERNAL_ERROR, "Cannot parse registry: " + e.getMessage(), "Fix core/registry/capabilities.yaml");
         }

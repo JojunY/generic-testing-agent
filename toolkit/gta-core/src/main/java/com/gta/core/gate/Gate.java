@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -112,18 +113,21 @@ public final class Gate {
                 }
                 if (!changedInPr && e.getValue().testClass != null) {
                     Path file = testFile(e.getValue().testClass);
-                    AssertionScanner.ScenarioOracle now = AssertionScanner.scan(file, scenarioId, paths.root().resolve("src/test/resources"));
+                    AssertionScanner.ScenarioOracle now = AssertionScanner.scan(file, scenarioId, paths.testResources());
                     List<String> stmts = now.assertionStatements().stream()
                             .filter(s -> e.getValue().tokens.stream().anyMatch(s::contains)).toList();
                     String fp = OracleLock.fingerprint(stmts);
                     OracleShard.Entry cur = currentShard.get(itemId);
-                    boolean relocked = cur != null && cur.relockedBy != null
-                            && !cur.relockedBy.equals(e.getValue().relockedBy) && fp.equals(cur.fingerprint);
+                    // a relock in this PR is a new relock record (by, reason, time) whose fingerprint matches the test now
+                    OracleShard.Entry base = e.getValue();
+                    boolean relocked = cur != null && cur.relockedBy != null && fp.equals(cur.fingerprint)
+                            && !(Objects.equals(cur.relockedBy, base.relockedBy) && Objects.equals(cur.reason, base.reason)
+                            && Objects.equals(cur.relockedAt, base.relockedAt));
                     if (!fp.equals(e.getValue().fingerprint) && !relocked) {
                         r.failures.add(new Condition(ErrorCode.GATE_ORACLE_CHANGED_WITHOUT_SPEC.name(), scenarioId,
                                 "assertions of a locked expectation changed but the spec did not"));
                     } else if (relocked) {
-                        r.concerns.add(new Condition("GATE_RELOCKED", scenarioId, "relocked by " + cur.relockedBy + ": " + cur.reason));
+                        r.concerns.add(new Condition(ErrorCode.GATE_RELOCKED.name(), scenarioId, "relocked by " + cur.relockedBy + ": " + cur.reason));
                     }
                 }
             }
@@ -167,20 +171,20 @@ public final class Gate {
                     characterization++;
                 }
                 if ("assumed".equals(s.source()) || "defaulted".equals(s.source())) {
-                    r.concerns.add(new Condition("GATE_" + s.source().toUpperCase() + "_CLAIM", s.id(), s.source() + " claim, not confirmed by a human"));
+                    r.concerns.add(new Condition(("assumed".equals(s.source()) ? ErrorCode.GATE_ASSUMED_CLAIM : ErrorCode.GATE_DEFAULTED_CLAIM).name(), s.id(), s.source() + " claim, not confirmed by a human"));
                 }
             }
             for (CommentMeta a : newAnswerRecords(spec, baseRef)) {
-                r.concerns.add(new Condition("GATE_NEW_CONFIRMATION", spec.flowId(),
+                r.concerns.add(new Condition(ErrorCode.GATE_NEW_CONFIRMATION.name(), spec.flowId(),
                         a.kind() + " " + a.getOr("rev", a.getOr("round", "")) + " via " + a.getOr("channel", "?") + ": \"" + a.getOr("text", "") + "\""));
             }
         }
         if (total > 0 && (double) characterization / total > config.qualityGates.concernsCharacterizationRatio) {
-            r.concerns.add(new Condition("GATE_CHARACTERIZATION_RATIO", "*",
+            r.concerns.add(new Condition(ErrorCode.GATE_CHARACTERIZATION_RATIO.name(), "*",
                     characterization + "/" + total + " scenarios only lock current behaviour (answer questions to turn them into correctness tests)"));
         }
         for (String unmapped : unmappedChanges(baseRef, currentSpecs)) {
-            r.concerns.add(new Condition("GATE_UNMAPPED_CHANGE", unmapped,
+            r.concerns.add(new Condition(ErrorCode.GATE_UNMAPPED_CHANGE.name(), unmapped,
                     "production change not covered by any spec ref"));
         }
 
@@ -211,16 +215,11 @@ public final class Gate {
 
     private Map<String, Map<String, OracleShard.Entry>> baseShards(String baseRef) {
         Map<String, Map<String, OracleShard.Entry>> out = new HashMap<>();
-        for (String file : git.listFiles(baseRef, ".gta/specs")) {
-            if (!file.endsWith(".oracles.json")) {
-                continue;
+        for (String file : git.listFiles(baseRef, paths.rel(paths.specs()))) {
+            if (file.endsWith(".oracles.json")) {
+                GtaPaths.flowIdOfSpecPath(file).ifPresent(flowId ->
+                        git.show(baseRef, file).ifPresent(json -> out.put(flowId, OracleShard.parse(json))));
             }
-            String[] parts = file.substring(".gta/specs/".length()).split("/");
-            if (parts.length != 2) {
-                continue;
-            }
-            String flowId = parts[0] + "." + parts[1].replace(".oracles.json", "");
-            git.show(baseRef, file).ifPresent(json -> out.put(flowId, OracleShard.parse(json)));
         }
         return out;
     }
@@ -230,11 +229,8 @@ public final class Gate {
         List<String> changed = new ArrayList<>(git.changedFiles(baseRef));
         changed.addAll(git.dirtyPaths());
         for (String f : changed) {
-            if (f.startsWith(".gta/specs/") && f.endsWith(".spec.md")) {
-                String[] parts = f.substring(".gta/specs/".length()).split("/");
-                if (parts.length == 2) {
-                    out.add(parts[0] + "." + parts[1].replace(".spec.md", ""));
-                }
+            if (f.endsWith(".spec.md")) {
+                GtaPaths.flowIdOfSpecPath(f).ifPresent(out::add);
             }
         }
         return out;
@@ -270,7 +266,7 @@ public final class Gate {
             return out;
         }
         for (String f : git.changedFiles(baseRef)) {
-            if (f.startsWith("src/main/java/") && referencedClasses.stream().noneMatch(f::endsWith)) {
+            if (f.startsWith(GtaPaths.MAIN_JAVA + "/") && referencedClasses.stream().noneMatch(f::endsWith)) {
                 out.add(f);
             }
         }
@@ -278,7 +274,7 @@ public final class Gate {
     }
 
     private void applyWaivers(Result r, String baseRef) {
-        Optional<String> json = git.show(baseRef, ".gta/waivers.json");
+        Optional<String> json = git.show(baseRef, paths.rel(paths.waivers()));
         if (json.isEmpty()) {
             return;
         }
@@ -295,12 +291,12 @@ public final class Gate {
                 }
             }
         } catch (IOException | RuntimeException e) {
-            r.concerns.add(new Condition("GATE_WAIVERS_UNREADABLE", ".gta/waivers.json", e.getMessage()));
+            r.concerns.add(new Condition(ErrorCode.GATE_WAIVERS_UNREADABLE.name(), paths.rel(paths.waivers()), e.getMessage()));
         }
     }
 
     private Path testFile(String testClass) {
-        return paths.root().resolve("src/test/java").resolve(testClass.replace('.', '/') + ".java");
+        return paths.testSource(testClass);
     }
 
 }

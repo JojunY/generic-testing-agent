@@ -17,6 +17,7 @@
       "intent": { "enum": ["characterization", "hardening", "reproducing"] },
       "source": { "enum": ["observed", "documented", "confirmed", "defaulted"] },
       "relockedBy": { "type": "string" },
+      "relockedAt": { "type": "string", "format": "date-time" },
       "reason": { "type": "string" }
     }
   }
