@@ -56,7 +56,7 @@ public final class RefResolver {
         }
         try (Stream<Path> files = Files.list(resources)) {
             for (Path f : files.sorted().toList()) {
-                String name = f.getFileName().toString();
+                String name = String.valueOf(f.getFileName()); // a listed entry always has a file name
                 if (!name.startsWith("application")) {
                     continue;
                 }

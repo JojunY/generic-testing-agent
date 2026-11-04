@@ -75,7 +75,7 @@ public class Linter {
             if (!Ids.AGENT_NAME.matcher(name).matches()) {
                 errors.add(where + ": agent name '" + name + "' must match " + Ids.AGENT_NAME.pattern());
             }
-            if (!p.getFileName().toString().equals(name + ".md")) {
+            if (!fileName(p).equals(name + ".md")) {
                 errors.add(where + ": file name must be " + name + ".md");
             }
             for (String k : f.keySet()) {
@@ -119,7 +119,7 @@ public class Linter {
         Path root = repo.resolve("core/skills");
         try (Stream<Path> dirs = Files.list(root)) {
             for (Path dir : dirs.filter(Files::isDirectory).sorted().toList()) {
-                String dirName = dir.getFileName().toString();
+                String dirName = fileName(dir);
                 names.add(dirName);
                 Path skill = dir.resolve("SKILL.md");
                 String where = rel(skill);
@@ -178,7 +178,7 @@ public class Linter {
                 for (Path p : s.sorted().toList()) {
                     if (Files.isDirectory(p)) {
                         errors.add(rel(p) + ": no subdirectories under references/");
-                    } else if (!linked.contains(p.getFileName().toString())) {
+                    } else if (!linked.contains(fileName(p))) {
                         warnings.add(rel(p) + ": not linked from SKILL.md");
                     }
                 }
@@ -266,7 +266,7 @@ public class Linter {
         Path schemas = repo.resolve("core/schemas");
         if (Files.isDirectory(schemas)) {
             for (Path p : Generator.list(schemas, ".json")) {
-                Matcher m = Pattern.compile("^([a-z0-9-]+)\\.v(\\d+)\\.schema\\.json$").matcher(p.getFileName().toString());
+                Matcher m = Pattern.compile("^([a-z0-9-]+)\\.v(\\d+)\\.schema\\.json$").matcher(fileName(p));
                 if (!m.matches()) {
                     errors.add(rel(p) + ": schema names follow <artifact>.v<major>.schema.json");
                     continue;
@@ -284,7 +284,7 @@ public class Linter {
         }
         try (Stream<Path> s = Files.list(repo.resolve("core/templates"))) {
             for (Path t : s.toList()) {
-                if (!t.getFileName().toString().matches("^[a-z0-9-]+\\.[a-z]+\\.tmpl$")) {
+                if (!fileName(t).matches("^[a-z0-9-]+\\.[a-z]+\\.tmpl$")) {
                     errors.add(rel(t) + ": template names follow <artifact>.<ext>.tmpl");
                 }
             }
@@ -327,5 +327,10 @@ public class Linter {
 
     private String rel(Path p) {
         return repo.relativize(p).toString().replace('\\', '/');
+    }
+
+    /** The last path element; a listed entry always has one. */
+    private static String fileName(Path p) {
+        return String.valueOf(p.getFileName());
     }
 }

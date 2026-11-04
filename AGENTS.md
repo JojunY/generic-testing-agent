@@ -45,7 +45,7 @@ These are the rules for working on this repository. They do not apply to service
 ## Before you push
 
 ```bash
-mvn -B install
+./mvnw -B install
 python3 scripts/diagrams/render.py --check
 evals/e2e/run.sh
 ```

@@ -4,6 +4,19 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 
 ## [Unreleased] — 0.1.0 (P0)
 
+### Fixed (code review, round 3; see docs/reviews/round-3-plan.md §6.3)
+- Git failures (dubious ownership, a stale `index.lock`, an unknown base) fail closed instead of reading as "nothing changed"; git always runs with `LC_ALL=C`.
+- A failed item commit unstages its files and undoes gtaw's own shard write.
+- Parameterized and repeated tests keep their scenario tags; unreadable Surefire reports fail the run.
+- Timed-out processes keep their output; stale reports that cannot be deleted fail the run.
+- An out-of-scope file that was only staged is removed when it is restored.
+- Oracle shard keys are validated; error codes from older state files no longer crash.
+- The wrapper never puts Nexus credentials on a command line, and reports download failures as JSON.
+
+### Added (engineering baseline, round 3)
+- Maven wrapper, enforcer, SpotBugs, JaCoCo, CONTRIBUTING, SECURITY, a PR template and Dependabot; CI builds on JDK 17 and 21.
+- `qualityGates.stabilityTimezone` / `stabilityLocale` configure the stability variant run.
+
 ### Changed (documentation)
 - Documentation, agents, skills, templates and gtaw prompts are English. Chinese replies (`批准`, `其余默认`, `= 代码现状`) are still accepted.
 - `README.md` and `docs/design/plan.md` are English, with `README.zh-CN.md` and `docs/design/plan.zh-CN.md` copies and a language switch.

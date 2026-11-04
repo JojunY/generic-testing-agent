@@ -23,7 +23,10 @@ public final class WorkLock implements AutoCloseable {
 
     public static WorkLock acquire(Path lockFile) {
         try {
-            Files.createDirectories(lockFile.getParent());
+            Path dir = lockFile.toAbsolutePath().getParent();
+            if (dir != null) {
+                Files.createDirectories(dir);
+            }
             FileChannel channel = FileChannel.open(lockFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
             FileLock lock;
             try {

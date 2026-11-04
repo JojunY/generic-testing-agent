@@ -56,7 +56,10 @@ public final class GtaResultsListener implements TestExecutionListener {
                 + ",\"displayName\":" + quote(id.getDisplayName()) + ",\"tags\":[" + tags + "],\"outcome\":" + quote(outcome)
                 + ",\"message\":" + quote(message) + "}\n";
         try {
-            Files.createDirectories(file.getParent());
+            Path dir = file.toAbsolutePath().getParent();
+            if (dir != null) {
+                Files.createDirectories(dir);
+            }
             Files.writeString(file, line, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         } catch (IOException e) {
             // results are an optimisation for gtaw; never fail the build because of them
