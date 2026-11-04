@@ -69,17 +69,22 @@ Implements [round-3-plan.md](round-3-plan.md) on branch `claude/sweet-lovelace-w
 Not verifiable in this sandbox: `./mvnw` downloads Maven with wget, which this sandbox's TLS proxy blocks. CI runs
 `./mvnw` on GitHub's runners, which verifies it.
 
-## Open questions (plan §10), with what is implemented now
+## Decisions on the open questions (plan §10)
 
-| # | Implemented | Waiting for |
+All ten are decided. "Now" is what the code does today.
+
+| # | Decision | Now |
 |---|---|---|
-| Q-R1 | session scope = Needs Review + P0 via `gtaw impact`; the CI gate still runs every gta test | your confirmation of the revision to §5 "regression = affected + all P0" |
-| Q-R2 | 80 % branch floor on the core decisions | the number you want |
-| Q-R3 | `priority=` per scenario, default P1 | confirmation |
-| Q-R4 | explicit includes added by the foundation only when absent; never rewritten | confirmation |
-| Q-R5 | gtaw commits the report and ledger changes at session end (one commit per session) | confirmation |
-| Q-R6 | `nexus.example.com` placeholder | the real Nexus URL |
-| Q-R7 | single-module services only | when multi-module support is needed |
-| Q-R8 | SpotBugs `EI_EXPOSE_REP*` and DTO field patterns excluded, documented in `toolkit/spotbugs-exclude.xml` | confirmation |
-| Q-R9 | persisted strings stay strings | whether to schedule the enum migration |
-| Q-R10 | manual case ids `<flowId>/mNN` | confirmation |
+| Q-R1 | A session runs the scenarios that need review plus all P0 (`gtaw impact`). The CI gate still runs every gta test; it is the safety net for a missed "affected" scenario. | as decided |
+| Q-R2 | A branch floor of 80 % applies to the core decisions only (`oracle`, `state`, `run`, `engine.Triage`). There is no library-wide branch gate: gta-core is at 79.5 % and a global gate would force tests for DTOs and glue code. | as decided |
+| Q-R3 | A scenario without `priority=` is P1. | as decided |
+| Q-R4 | The foundation item adds explicit Surefire/Failsafe includes only when the pom has none. An existing configuration is never rewritten. | as decided |
+| Q-R5 | gtaw commits the session report and the ledger changes at session end, one commit per session. | as decided |
+| Q-R6 | No change. A service gets its Maven repositories and credentials from its own `settings.xml`, so gta needs no Nexus setting. The `nexus.example.com` URLs in the docs and in `gtaw install` are examples for where the gta jar is published, nothing else. | as decided |
+| Q-R7 | Single-module services only, until a real multi-module service needs gta. | as decided |
+| Q-R8 | `EI_EXPOSE_REP*` and DTO field patterns stay excluded in `toolkit/spotbugs-exclude.xml`, each with its reason. Drop the exclusion when a DTO becomes a record. | as decided |
+| Q-R9 | No scheduled enum migration. Persisted strings stay strings; migrate a field when its code is touched anyway. | as decided |
+| Q-R10 | Manual case ids are `<flowId>/mNN`. | as decided |
+
+Two small follow-ups came out of these decisions and are **not implemented yet**: a linter warning (not an error) for a
+scenario without `priority=` (Q-R3), and a clear "multi-module is not supported yet" message from `gtaw doctor` (Q-R7).
