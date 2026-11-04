@@ -394,7 +394,7 @@ Users may reply in Chinese: gtaw accepts `批准` for approve and `其余默认`
 | Agents | `gta-orchestrator` · `gta-analyst` · `gta-test-author` · `gta-reviewer` |
 | Skills | `.gta/skills/gta-*` (SKILL.md format, loaded by path from the brief) |
 | Toolkit | `gtaw` → `gta-cli.jar`: scheduling, specs, planning, execution, triage, oracle lock, change check, gate, report · `gta-junit` (test-time dependency) |
-| State | git: specs + oracle shards + escalations + tests \| `.gta/work/` |
+| State | git: specs + oracle shards + case ledgers + reports + escalations + tests \| `.gta/work/` (temporary) |
 | Gate | `gtaw gate --base` locally at the end of every session (CI optional) |
 
 ### 4.2 Protocol: `next` → dispatch → `check` (any number of times) → `submit`
@@ -571,6 +571,8 @@ Optional enhancement for P5: in IntelliJ (hooks are GA) or in VS Code with the p
 |---|---|---|
 | `.gta/specs/<domain>/<flow-name>.spec.md` | spec, answers (original words / round / channel), approval records | yes |
 | `.gta/specs/<domain>/<flow-name>.oracles.json` | oracle fingerprints and scenario revision hashes of the flow's items | yes |
+| `.gta/specs/<domain>/<flow-name>.cases.md` · `.gta/specs/INDEX.md` | test case ledger of the flow and the overview (§10.6) | yes |
+| `.gta/reports/<yyyy-MM-dd>-<sessionId>.md` | session reports, the audit trail (§10.6) | yes |
 | `.gta/escalations/<itemKey>.md` | escalation package: attempts, errors, assumptions, suggestions | yes |
 | `.gta/skills/gta-*/` | managed skills | yes (managed) |
 | `.gta/config.json` · `.gta/waivers.json` · `.gta/wrapper/` · `.gta/managed-files.json` | configuration, waivers, wrapper, checksums of managed files | yes |
@@ -1169,6 +1171,47 @@ Unknown keys are rejected. Organisation floors cannot be loosened by a repositor
 - **CI (connected in P1; confirmed feasible)**: people can skip the local gate, for example by changing code and opening a PR without `/gta`, or by editing tests by hand. P1 therefore provides an alm-github workflow template `gta-gate.yml` (see `docs/guides/ci-integration.md`) that runs `mvn verify` → `gtaw verify --new` → `gtaw gate --base` → posts the PR comment. Without branch protection it is a status check plus a comment; making it a required check later blocks merges without changing the design.
 - Mutation is advisory by default; after calibrating thresholds on pilot repositories it switches to enforced repository by repository.
 
+### 10.6 Test case ledger (`<flow>.cases.md`) and session reports
+
+The spec is the only source of behaviour and expected values. The **ledger** is the test asset index next to it: one row
+per scenario, a one-sentence summary, the link to the spec, the test that automates it, its priority, its latest result
+and its status. It never copies the spec's steps or expected values. Manual or exploratory cases without a spec are the
+only rows written in full, in its `## Manual cases` table (ids `<flowId>/mNN`).
+
+| Column | Content |
+|---|---|
+| Test Case ID | the scenario id (`order.create/s01`); no second, QA-style id |
+| Test Title · Test Content · Expect Result | the scenario title; the first WHEN and the first THEN, shortened, with "(+n more)" |
+| Linked Spec | `<flow>.spec.md#sNN` |
+| Automation | `<test class>#<method>` once a test is committed, `Manual` for manual cases, `–` before |
+| Priority | `P0` core path (run every time) · `P1` important branch · `P2` edge case; the scenario's `priority=`, default P1 |
+| Test Result | the latest result only: `Pass` / `Fail` / `Known defect` + date + short SHA, or `Not run`; history is in the reports |
+| Status | `Active` · `Needs Review` · `Retired` |
+
+**Maintained by gtaw, row by row** (never rewritten whole, so a human's Status edit and the manual cases stay):
+
+| When | Change | Committed with |
+|---|---|---|
+| a spec is approved | new scenario → new row; a scenario whose locked test is for another revision → Needs Review; a scenario that left the spec → Retired | the approval commit |
+| an item is committed | Automation and a passing (or known-defect) result; Active | the item commit |
+| the session ends | the result of every automated case from the gate's full run; a failing or unstable case → Needs Review | the session-report commit |
+| `gtaw impact --base <ref>` | cases whose referenced code changed → Needs Review; prints the regression scope (those cases plus every P0 case) | – (the next commit) |
+
+Results map to rows through the `scenario:` tags that gta-junit's listener records; no other mechanism is needed.
+`.gta/specs/INDEX.md` is derived from all ledgers: one line per flow with its counts (the coverage matrix).
+
+**Retiring.** A case is retired when its scenario leaves the approved spec or a human sets its Status to `Retired`. Its
+test keeps running, and every session report lists the retired cases. Only a human's batch confirmation,
+`gtaw cases confirm-retired <ids>` or `--all`, deletes the tests (the methods tagged with the scenario; a class left
+without tests is deleted), their fixtures, lock entries and rows, in one gtaw commit. Nothing is deleted automatically.
+
+**First ledger for an existing service**: `gtaw cases --rebuild` builds the ledgers from the approved specs and the
+committed locks; results follow with the next session or `gtaw run`.
+
+**Session reports** are the audit trail: `.gta/reports/<yyyy-MM-dd>-<sessionId>.md`, committed by gtaw at the end of
+the session together with the ledger changes they list. `.gta/work/` keeps only temporary files (state, briefs, run
+evidence, the PR comment draft).
+
 ---
 
 ## 11. Toolkit and distribution
@@ -1204,6 +1247,8 @@ Unknown keys are rejected. Organisation floors cannot be loosened by a repositor
 | `gtaw gate --base <ref> --reports <dir>` · `gtaw gate waive <GATE_CODE> …` | CI / person | the gate; registering a waiver (**people only**) |
 | `gtaw relock --item <id> --reason "<text>"` | **people only** | relocks an oracle on the spec's current expected values |
 | `gtaw report [--kind md\|pr-comment]` | gtaw internally / CI | traceability matrix, orphan check, new confirmations |
+| `gtaw cases [--rebuild]` · `gtaw cases confirm-retired <ids>\|--all` | people / gtaw | ledger overview or rebuild; deleting the tests of retired cases is a person's batch confirmation (§10.6) |
+| `gtaw impact [--base <ref>]` | people / CI | cases whose code changed → Needs Review; prints the regression scope (+ all P0) |
 | `gtaw env up\|down\|gc` (P4) | **people only** / system items | temporary environments |
 
 ### 11.3 Layout of this repository

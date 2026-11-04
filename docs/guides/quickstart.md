@@ -109,6 +109,20 @@ The reply must be exactly that line: "don't approve …" or "approve … after q
 
 If your terminal mangles Chinese characters, gta says so. Use the ASCII forms above, or put the reply in a UTF-8 file and run `./gtaw answer --file reply.txt`.
 
+## What gta keeps in the repository
+
+| File | What it is |
+|---|---|
+| `.gta/specs/<domain>/<flow>.spec.md` | the behaviour spec you approved: the only source of expected values |
+| `.gta/specs/<domain>/<flow>.cases.md` | the test case ledger: one row per scenario with its test, priority, latest result and status. Set a Status to `Retired` to retire a case; add exploratory cases to its `## Manual cases` table |
+| `.gta/specs/INDEX.md` | the overview of every ledger |
+| `.gta/reports/<date>-<session>.md` | one report per session: gate, changed ledger rows, retired cases waiting for you |
+
+After a code change, `./gtaw impact --base origin/main` marks the cases whose code changed and prints the regression
+scope (those cases plus every P0). Retired cases keep their tests until you run
+`./gtaw cases confirm-retired <ids>` (or `--all`). `./gtaw cases --rebuild` creates the ledgers for a service that
+already has approved specs. Test names follow [test-naming.md](test-naming.md).
+
 ## Configuration (optional)
 
 `.gta/config.json` overrides the defaults. Only the keys you set are used.

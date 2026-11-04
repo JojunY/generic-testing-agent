@@ -109,6 +109,10 @@ public final class SpecLinter {
                 s.meta.get("hint.oracle")
                         .filter(o -> !ORACLES.contains(o))
                         .ifPresent(o -> issues.add(sw + ": hint.oracle must be one of " + ORACLES));
+                s.meta.get("priority")
+                        .filter(p -> !p.matches("P[012]"))
+                        .ifPresent(p -> issues.add(
+                                sw + ": priority must be P0 (core path), P1 (important branch) or P2 (edge case)"));
             }
         }
         for (Spec.Invariant inv : spec.invariants) {

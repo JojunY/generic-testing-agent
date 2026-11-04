@@ -392,7 +392,7 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
 | Agents | `gta-orchestrator` · `gta-analyst` · `gta-test-author` · `gta-reviewer` |
 | Skills | `.gta/skills/gta-*`（SKILL.md 格式，由 brief 按路径加载） |
 | Toolkit | `gtaw` → `gta-cli.jar`：调度、规格、计划、执行、分流、oracle lock、改动检查、门禁、报告 · `gta-junit`（测试期依赖） |
-| State | git：specs + oracle 分片 + escalations + tests \| `.gta/work/` |
+| State | git：specs + oracle 分片 + 用例台账 + 报告 + escalations + tests \| `.gta/work/`（临时） |
 | Gate | 会话结束时本地运行 `gtaw gate --base`（CI 可选） |
 
 ### 4.2 协议：`next` → 派发 → `check`（可多次）→ `submit`
@@ -569,6 +569,8 @@ P5 的可选增强：在 IntelliJ（hooks 已 GA）或开启 preview 后的 VS C
 |---|---|---|
 | `.gta/specs/<domain>/<flow-name>.spec.md` | 规格、答案（原话/轮次/渠道）、批准记录 | 提交 |
 | `.gta/specs/<domain>/<flow-name>.oracles.json` | 该 flow 下各条目的 oracle 指纹和 scenario 修订哈希 | 提交 |
+| `.gta/specs/<domain>/<flow-name>.cases.md` · `.gta/specs/INDEX.md` | 该 flow 的测试用例台账与总览（§10.6） | 提交 |
+| `.gta/reports/<yyyy-MM-dd>-<sessionId>.md` | 会话报告，即审计轨迹（§10.6） | 提交 |
 | `.gta/escalations/<itemKey>.md` | 升级资料包：做过的尝试、错误、假设、建议 | 提交 |
 | `.gta/skills/gta-*/` | 受管的 skills | 提交（受管） |
 | `.gta/config.json` · `.gta/waivers.json` · `.gta/wrapper/` · `.gta/managed-files.json` | 配置、豁免、wrapper、受管文件校验和 | 提交 |
@@ -1167,6 +1169,37 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 - **CI（P1 接入，已确认可以实现）**：本地 gate 可以被人跳过，比如没跑 `/gta` 就直接改代码提 PR，或者手工修改测试。所以 P1 提供 alm-github 的 workflow 模板 `gta-gate.yml`（见 `docs/guides/ci-integration.md`），在 PR 上依次执行 `mvn verify` → `gtaw verify --new` → `gtaw gate --base` → 自动贴出 PR 评论。目前没有分支保护，所以它是一个状态检查加一条评论；以后设为 required check，就能真正阻断合入，设计本身不变。
 - mutation 默认是 advisory，在试点仓库校准阈值后，再逐个仓库切换为 enforced。
 
+### 10.6 测试用例台账（`<flow>.cases.md`）与会话报告
+
+规格是行为与期望值的唯一真理来源。**台账**是与之并列的测试资产索引：每个 scenario 一行，含一句话摘要、指向规格的链接、实现它的自动化测试、优先级、最近一次结果和状态。台账从不复制规格中的步骤或期望值。没有规格的手工或探索性用例是唯一完整书写的行，放在 `## Manual cases` 表中（id 为 `<flowId>/mNN`）。
+
+| 列 | 内容 |
+|---|---|
+| Test Case ID | scenario id（`order.create/s01`）；不另设 QA 风格的编号 |
+| Test Title · Test Content · Expect Result | scenario 标题；第一条 WHEN 与第一条 THEN 的缩写，后接“(+n more)” |
+| Linked Spec | `<flow>.spec.md#sNN` |
+| Automation | 测试提交后为 `<测试类>#<方法>`，手工用例为 `Manual`，此前为 `–` |
+| Priority | `P0` 核心路径（每次必跑）· `P1` 重要分支 · `P2` 边缘情况；取 scenario 的 `priority=`，默认 P1 |
+| Test Result | 只记录最近一次：`Pass` / `Fail` / `Known defect` + 日期 + 短 SHA，或 `Not run`；历史在报告中 |
+| Status | `Active` · `Needs Review` · `Retired` |
+
+**由 gtaw 逐行维护**（从不整体重写，因此人工修改的 Status 与手工用例都会保留）：
+
+| 时机 | 变化 | 随哪个 commit 提交 |
+|---|---|---|
+| 规格被批准 | 新 scenario → 新行；已锁定测试的修订与当前不同 → Needs Review；从规格中移除的 scenario → Retired | 批准 commit |
+| 条目提交 | Automation 与通过（或已知缺陷）结果；Active | 条目 commit |
+| 会话结束 | 用 gate 全量运行的结果更新每个自动化用例；失败或不稳定 → Needs Review | 会话报告 commit |
+| `gtaw impact --base <ref>` | 引用的代码有改动的用例 → Needs Review；输出回归范围（这些用例加全部 P0） | –（下一次 commit） |
+
+结果通过 gta-junit 监听器记录的 `scenario:` tag 对应到行，不需要其他机制。`.gta/specs/INDEX.md` 由所有台账派生：每个 flow 一行计数（覆盖矩阵）。
+
+**退役**：scenario 离开已批准规格，或有人把 Status 改为 `Retired`，用例即退役。它的测试继续运行，每份会话报告都会列出已退役用例。只有人工批量确认 `gtaw cases confirm-retired <ids>` 或 `--all` 才会删除测试（带该 scenario tag 的方法；没有测试剩下的类整体删除）、fixtures、锁定条目和台账行，并由 gtaw 一次提交。永远不会自动删除。
+
+**为已有服务首次建立台账**：`gtaw cases --rebuild` 根据已批准规格与已提交的锁定生成台账；结果在下一次会话或 `gtaw run` 后回填。
+
+**会话报告**是审计轨迹：`.gta/reports/<yyyy-MM-dd>-<sessionId>.md`，在会话结束时由 gtaw 与其列出的台账变化一起提交。`.gta/work/` 只保留临时文件（状态、brief、运行证据、PR 评论草稿）。
+
 ---
 
 ## 11. Toolkit 与分发
@@ -1202,6 +1235,8 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | `gtaw gate --base <ref> --reports <dir>` · `gtaw gate waive <GATE_CODE> …` | CI / 人 | 门禁；登记豁免（**仅限人**） |
 | `gtaw relock --item <id> --reason "<text>"` | **仅限人** | 按规格当前的期望值重新上锁 |
 | `gtaw report [--kind md\|pr-comment]` | gtaw 内部 / CI | 追踪矩阵、孤儿检查、新增确认项 |
+| `gtaw cases [--rebuild]` · `gtaw cases confirm-retired <ids>\|--all` | 人 / gtaw | 台账总览或重建；删除已退役用例的测试须由人批量确认（§10.6） |
+| `gtaw impact [--base <ref>]` | 人 / CI | 代码有改动的用例 → Needs Review；输出回归范围（加全部 P0） |
 | `gtaw env up\|down\|gc`（P4） | **仅限人** / system 条目 | 临时环境 |
 
 ### 11.3 本仓库结构

@@ -172,6 +172,12 @@ OUT=$(gtaw next)
 expect "$(jget "$OUT" 'd["node"]')" done "final node"
 expect "$(jget "$OUT" 'd["gate"]')" concerns "gate on the feature branch"
 grep -q "Product defects found" "$(jget "$OUT" 'd["report"]')" || fail "report lacks the known defect"
+case "$(jget "$OUT" 'd["report"]')" in .gta/reports/*) echo "ok   session report is tracked in .gta/reports" ;; *) fail "report outside .gta/reports: $OUT" ;; esac
+git ls-files --error-unmatch "$(jget "$OUT" 'd["report"]')" >/dev/null 2>&1 || fail "session report not committed"
+LEDGER=.gta/specs/order/create-order.cases.md
+expect "$(grep -c '^| order.create-order/s0' "$LEDGER")" 4 "ledger rows, one per scenario"
+grep -q '^| order.create-order/s01 .*OrderControllerIT#.* | Pass .* | Active |$' "$LEDGER" || fail "s01 ledger row: $(grep s01 "$LEDGER")"
+grep -q 'order.create-order' .gta/specs/INDEX.md || fail "INDEX.md lacks the flow"
 echo "ok   report lists the known defect"
 
 step "rebuild: lost working state, adopted tests are verified and repaired"

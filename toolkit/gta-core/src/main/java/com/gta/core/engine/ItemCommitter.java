@@ -7,6 +7,7 @@ import com.gta.core.error.GtaException;
 import com.gta.core.oracle.OracleLock;
 import com.gta.core.oracle.OracleShard;
 import com.gta.core.plan.PlanItem;
+import com.gta.core.state.ItemStatus;
 import com.gta.core.state.WorkState;
 import com.gta.core.util.AtomicFiles;
 import com.gta.core.util.Git;
@@ -17,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -55,7 +57,11 @@ final class ItemCommitter {
                     + " — commit them yourself";
         }
         Path shardPath = paths.oracleShard(item.flowId);
-        String shardBefore = readIfExists(shardPath);
+        // gtaw's own writes that go into this commit, undone when the commit fails
+        Map<Path, String> before = new LinkedHashMap<>();
+        for (Path p : List.of(shardPath, paths.cases(item.flowId), paths.casesIndex())) {
+            before.put(p, readIfExists(p));
+        }
         if (!item.isFoundation() && s.lock != null) {
             Map<String, OracleShard.Entry> shard = OracleShard.read(shardPath);
             OracleShard.Entry e = new OracleShard.Entry();
@@ -74,12 +80,15 @@ final class ItemCommitter {
         if (files.isEmpty()) {
             return;
         }
+        if (!item.isFoundation()) {
+            files.addAll(ctx.cases.afterItemCommit(item, runId, s.status == ItemStatus.DEFECT_FOUND));
+        }
         String msg = "test(" + item.domain() + "): " + summary + "\n\nGta-Item: " + item.id + "\nGta-Run: " + runId;
         try {
             ctx.commit(files, msg).ifPresent(sha -> s.commit = sha);
         } catch (GtaException e) {
             // keep the shard and the commit together: the next submit must not see gtaw's own write as an agent change
-            restore(shardPath, shardBefore);
+            before.forEach(ItemCommitter::restore);
             throw e;
         }
     }

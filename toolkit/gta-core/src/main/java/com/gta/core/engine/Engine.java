@@ -449,6 +449,22 @@ public final class Engine {
         return ctx.sessionEnd.verify(newOnly);
     }
 
+    /** {@code gtaw cases}: the test case ledgers (plan §10.6); {@code rebuild} creates them from the approved specs. */
+    public Map<String, Object> cases(boolean rebuild) {
+        return rebuild ? ctx.cases.rebuild() : ctx.cases.overview();
+    }
+
+    /** {@code gtaw cases confirm-retired}: deletes the tests of retired cases a human confirmed. */
+    public Map<String, Object> confirmRetired(List<String> ids, boolean all) {
+        return ctx.cases.confirmRetired(ids, all);
+    }
+
+    /** {@code gtaw impact --base <ref>}: cases whose code changed need review; returns the regression scope. */
+    public Map<String, Object> impact(String base) {
+        git.requireRepo();
+        return ctx.cases.impact(base == null ? ctx.sessionEnd.defaultBase() : base);
+    }
+
     public Gate.Result gate(String base, List<Path> reportDirs) {
         return ctx.sessionEnd.gate(base, reportDirs);
     }

@@ -8,6 +8,7 @@ import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
 import com.gta.core.gate.Gate;
 import com.gta.core.plan.PlanItem;
+import com.gta.core.report.CaseLedger;
 import com.gta.core.report.Reporter;
 import com.gta.core.run.MavenRunner;
 import com.gta.core.run.RunResult;
@@ -24,6 +25,8 @@ import com.gta.core.util.ProcessRunner;
 import com.gta.core.util.WorkLock;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -38,6 +41,8 @@ final class SessionEnd {
     private final GtaConfig config;
     private final StateStore store;
     private final Git git;
+    /** The test outcomes of the last gate run; the session end records them in the case ledgers. */
+    private List<TestOutcome> lastCases = List.of();
 
     SessionEnd(EngineContext ctx) {
         this.ctx = ctx;
@@ -49,21 +54,37 @@ final class SessionEnd {
 
     Map<String, Object> finishSession(WorkState st, String why, String base) {
         Map<String, Object> more = new LinkedHashMap<>();
+        List<String> unstable = new ArrayList<>();
         if (!st.sessionPassed.isEmpty()) {
-            more.put("verify", verifyInternal(st, st.sessionPassed));
+            Map<String, Object> verify = verifyInternal(st, st.sessionPassed);
+            more.put("verify", verify);
+            if (verify.get("unstable") instanceof List<?> u) {
+                u.forEach(x -> unstable.add(String.valueOf(x)));
+            }
         }
         String baseRef = base != null ? base : defaultBase();
         Gate.Result gate = gateInternal(baseRef, List.of());
+        Map<String, Object> ledgers = ctx.cases.afterSession(lastCases, unstable);
         String runId = Ids.newRunId(git.head());
         Path dir = paths.runs().resolve(runId);
         List<PlanItem> plan = store.loadPlan();
         Reporter reporter = new Reporter(paths);
-        AtomicFiles.write(dir.resolve("report.md"), reporter.markdown(st, plan, gate, false));
+        @SuppressWarnings("unchecked")
+        List<CaseLedger.Change> changes = (List<CaseLedger.Change>) ledgers.get("changes");
+        String report =
+                reporter.markdown(st, plan, gate, false) + CaseLedgers.reportSection(changes, ctx.cases.retired());
+        // the report is the session's audit trail: tracked, next to nothing temporary (plan §10.1)
+        Path reportFile = paths.reports().resolve(LocalDate.now(ZoneOffset.UTC) + "-" + st.session.id + ".md");
+        AtomicFiles.write(reportFile, report);
         AtomicFiles.write(dir.resolve("pr-comment.md"), reporter.markdown(st, plan, gate, true));
         Json.writeAtomic(dir.resolve("gate.json"), gate);
+        @SuppressWarnings("unchecked")
+        List<String> files = new ArrayList<>((List<String>) ledgers.get("paths"));
+        files.add(paths.rel(reportFile));
+        ctx.commit(files.stream().distinct().toList(), "docs(gta): session report " + st.session.id);
         st.sessionEnded = true;
         more.put("gate", gate.decision);
-        more.put("report", paths.rel(dir.resolve("report.md")));
+        more.put("report", paths.rel(reportFile));
         more.put("prComment", paths.rel(dir.resolve("pr-comment.md")));
         return done(why, more);
     }
@@ -129,6 +150,7 @@ final class SessionEnd {
     @SuppressWarnings("unchecked")
     Gate.Result gateInternal(String base, List<Path> reportDirs) {
         List<TestOutcome> cases;
+        lastCases = List.of();
         if (reportDirs == null || reportDirs.isEmpty()) {
             cases = ctx.runs.runAll().cases;
         } else {
@@ -143,6 +165,7 @@ final class SessionEnd {
                 list.forEach(x -> unstable.add(String.valueOf(x)));
             }
         }
+        lastCases = cases;
         Gate.Result r = new Gate(paths, config).evaluate(base, cases, unstable);
         Json.writeAtomic(paths.gateLatest(), r);
         return r;

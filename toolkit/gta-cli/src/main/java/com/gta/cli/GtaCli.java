@@ -55,6 +55,8 @@ import picocli.CommandLine.Parameters;
             GtaCli.GateCmd.class,
             GtaCli.Relock.class,
             GtaCli.Report.class,
+            GtaCli.Cases.class,
+            GtaCli.Impact.class,
             GtaCli.Env.class
         })
 public final class GtaCli implements Callable<Integer> {
@@ -548,6 +550,65 @@ public final class GtaCli implements Callable<Integer> {
         public Integer call() {
             System.out.println(engine(parent).report(kind));
             return 0;
+        }
+    }
+
+    @Command(
+            name = "cases",
+            description =
+                    "Test case ledgers (.gta/specs/<domain>/<flow>.cases.md): overview, or --rebuild from approved specs.",
+            subcommands = GtaCli.ConfirmRetired.class)
+    static final class Cases implements Callable<Integer> {
+        @CommandLine.ParentCommand
+        GtaCli parent;
+
+        @Option(names = "--rebuild", description = "Create or refresh the ledgers of every approved spec")
+        boolean rebuild;
+
+        @Override
+        public Integer call() {
+            return print(parent, engine(parent).cases(rebuild));
+        }
+    }
+
+    @Command(
+            name = "confirm-retired",
+            description = "Delete the tests of retired cases (human only; nothing is ever deleted automatically).")
+    static final class ConfirmRetired implements Callable<Integer> {
+        @CommandLine.ParentCommand
+        Cases cases;
+
+        @CommandLine.Parameters(description = "Case ids, e.g. order.create/s03")
+        List<String> ids = new ArrayList<>();
+
+        @Option(names = "--all", description = "Every retired case")
+        boolean all;
+
+        @Override
+        public Integer call() {
+            if (!all && ids.isEmpty()) {
+                throw new GtaException(
+                        ErrorCode.USAGE_INVALID_ARGUMENT,
+                        "Name the retired cases to delete, or pass --all",
+                        "The run report lists them; ./gtaw cases shows them too");
+            }
+            return print(cases.parent, engine(cases.parent).confirmRetired(ids, all));
+        }
+    }
+
+    @Command(
+            name = "impact",
+            description = "Cases whose code changed since --base need review; prints the regression scope (+ all P0).")
+    static final class Impact implements Callable<Integer> {
+        @CommandLine.ParentCommand
+        GtaCli parent;
+
+        @Option(names = "--base", description = "Base ref (default origin/main, main, ...)")
+        String base;
+
+        @Override
+        public Integer call() {
+            return print(parent, engine(parent).impact(base));
         }
     }
 

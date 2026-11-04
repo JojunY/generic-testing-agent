@@ -240,9 +240,9 @@ final class SpecWorkflow {
                 .appendRecord(approval)
                 .text();
         writeSpec(specPath, updated);
-        ctx.commit(
-                List.of(paths.rel(specPath)),
-                "docs(spec): " + p.flowId + " " + p.rev + " approved\n\nGta-Approval: " + text);
+        List<String> files = new ArrayList<>(List.of(paths.rel(specPath)));
+        files.addAll(ctx.cases.afterApproval(p.flowId)); // the ledger is committed with the approval it follows
+        ctx.commit(files, "docs(spec): " + p.flowId + " " + p.rev + " approved\n\nGta-Approval: " + text);
         st.newConfirmations.add(p.flowId + "@" + p.rev + " approved: \"" + text + "\"");
         st.pending = null;
         return result(p.flowId + "@" + p.rev + " approved and committed; run ./gtaw next to start writing tests", null);

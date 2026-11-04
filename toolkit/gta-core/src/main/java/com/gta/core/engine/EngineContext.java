@@ -31,6 +31,7 @@ final class EngineContext {
     final Triage triage;
     final ItemCommitter committer;
     final PlanSync planSync;
+    final CaseLedgers cases;
     final SessionEnd sessionEnd;
     final TestRuns runs;
 
@@ -56,6 +57,7 @@ final class EngineContext {
         this.triage = new Triage(this);
         this.committer = new ItemCommitter(this);
         this.planSync = new PlanSync(this);
+        this.cases = new CaseLedgers(this);
         this.sessionEnd = new SessionEnd(this);
     }
 
