@@ -42,7 +42,7 @@ public final class SurefireReportParser {
                 continue;
             }
             try (Stream<Path> files = Files.list(dir)) {
-                for (Path f : files.filter(p -> p.getFileName().toString().startsWith("TEST-")
+                for (Path f : files.filter(p -> String.valueOf(p.getFileName()).startsWith("TEST-")
                                 && p.toString().endsWith(".xml"))
                         .sorted()
                         .toList()) {
