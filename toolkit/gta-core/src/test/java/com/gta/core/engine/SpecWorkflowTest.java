@@ -152,6 +152,16 @@ class SpecWorkflowTest {
     }
 
     @Test
+    void shouldNoteScenariosWithoutAPriorityAndStillAcceptTheSpec() throws Exception {
+        Files.writeString(paths.spec(FLOW), scripted());
+
+        Map<String, Object> out = engine().submitSpec(FLOW, token);
+
+        assertTrue(
+                out.get("notes").toString().contains(FLOW + "/s01 has no priority=; it counts as P1"), out.toString());
+    }
+
+    @Test
     void shouldCheckTheRoundOfAnAnswer() throws Exception {
         Files.writeString(paths.spec(FLOW), scripted());
         engine().submitSpec(FLOW, token);

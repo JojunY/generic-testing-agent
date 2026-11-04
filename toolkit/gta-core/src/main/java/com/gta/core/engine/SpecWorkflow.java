@@ -364,6 +364,9 @@ final class SpecWorkflow {
             st.pending = null;
             store.save(st);
             Spec done = SpecParser.parse(specPath);
+            for (String id : SpecLinter.missingPriority(done)) {
+                notes.add(id + " has no priority=; it counts as P1");
+            }
             Map<String, Object> more = new LinkedHashMap<>();
             more.put("status", status);
             more.put("rev", rev);

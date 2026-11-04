@@ -17,6 +17,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - Test case ledger per flow (`.gta/specs/<domain>/<flow>.cases.md`) and `.gta/specs/INDEX.md`, maintained row by row by gtaw; `gtaw cases [--rebuild]`, `gtaw cases confirm-retired`, `gtaw impact --base`.
 - Session reports are tracked in `.gta/reports/<date>-<session>.md` and committed with the ledger changes they list.
 - Scenario `priority=P0|P1|P2`; a `naming-conflict` decision when the test class gta would write belongs to a developer.
+- A spec submit notes scenarios without `priority=` (they count as P1); `gtaw doctor` warns that multi-module services are not supported yet.
 - `docs/guides/test-naming.md`, `docs/guides/diagram-style.md`, the artifact-map and package-layer diagrams.
 
 ### Changed (round 3)
