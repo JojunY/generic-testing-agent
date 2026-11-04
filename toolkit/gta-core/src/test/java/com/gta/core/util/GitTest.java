@@ -1,11 +1,12 @@
 package com.gta.core.util;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -13,16 +14,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /** Git queries the scope check and the gate rely on fail closed (AGENTS.md: untrusted state fails closed). */
 class GitTest {
     @TempDir
     Path root;
+
     Git git;
 
     private ProcessRunner.Result run(String... args) {
@@ -86,7 +86,8 @@ class GitTest {
     void shouldFailClosedWhenTheBaselineCommitNoLongerExists() throws Exception {
         commitFile("a.txt", "a\n");
 
-        GtaException e = assertThrows(GtaException.class, () -> git.commitsSince("1234567890123456789012345678901234567890"));
+        GtaException e =
+                assertThrows(GtaException.class, () -> git.commitsSince("1234567890123456789012345678901234567890"));
 
         assertEquals(ErrorCode.ENV_GIT_FAILED, e.code());
         assertTrue(e.hint().contains("--takeover"), e.hint());

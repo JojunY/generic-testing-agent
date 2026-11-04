@@ -2,7 +2,6 @@ package com.gta.core.util;
 
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
-
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -38,7 +37,9 @@ public final class Git {
 
     public void requireRepo() {
         if (!isRepo()) {
-            throw new GtaException(ErrorCode.ENV_NOT_A_GIT_REPO, root + " is not a git work tree",
+            throw new GtaException(
+                    ErrorCode.ENV_NOT_A_GIT_REPO,
+                    root + " is not a git work tree",
                     "Run gta inside the service repository (git init if it is new)");
         }
     }
@@ -86,8 +87,7 @@ public final class Git {
     }
 
     /** A commit between two revisions and the files it touched (against its first parent). */
-    public record Commit(String sha, List<String> files) {
-    }
+    public record Commit(String sha, List<String> files) {}
 
     /**
      * Commits reachable from HEAD but not from {@code since}, oldest first, in one git call. When {@code since} is
@@ -105,17 +105,23 @@ public final class Git {
         } else if (refExists(since)) {
             range = since + "..HEAD";
         } else {
-            throw new GtaException(ErrorCode.ENV_GIT_FAILED, "The baseline commit " + since + " no longer exists",
+            throw new GtaException(
+                    ErrorCode.ENV_GIT_FAILED,
+                    "The baseline commit " + since + " no longer exists",
                     "History was rewritten since the brief. Run ./gtaw next --takeover to restart the item from the current HEAD");
         }
-        ProcessRunner.Result log = git("log", "--reverse", "-m", "--first-parent", "--name-only", "--format=%x1e%H", range);
+        ProcessRunner.Result log =
+                git("log", "--reverse", "-m", "--first-parent", "--name-only", "--format=%x1e%H", range);
         if (!log.ok()) {
             throw failed("log", log);
         }
         for (String rec : log.output().split("\u001e")) {
-            List<String> lines = rec.lines().map(String::strip).filter(l -> !l.isEmpty()).toList();
+            List<String> lines =
+                    rec.lines().map(String::strip).filter(l -> !l.isEmpty()).toList();
             if (!lines.isEmpty()) {
-                out.add(new Commit(lines.get(0), lines.subList(1, lines.size()).stream().distinct().toList()));
+                out.add(new Commit(
+                        lines.get(0),
+                        lines.subList(1, lines.size()).stream().distinct().toList()));
             }
         }
         return out;
@@ -191,7 +197,9 @@ public final class Git {
             List<String> reset = ProcessRunner.cmd("git", "reset", "-q", "--");
             reset.addAll(paths);
             ProcessRunner.run(root, TIMEOUT, ENV, reset);
-            throw new GtaException(ErrorCode.ENV_GIT_FAILED, "git commit failed: " + firstLine(r.output()),
+            throw new GtaException(
+                    ErrorCode.ENV_GIT_FAILED,
+                    "git commit failed: " + firstLine(r.output()),
                     "Fix the git setup (user.name and user.email; commit signing must work without a prompt), then submit again");
         }
         return Optional.of(head());
@@ -204,7 +212,9 @@ public final class Git {
     }
 
     private GtaException failed(String what, ProcessRunner.Result r) {
-        return new GtaException(ErrorCode.ENV_GIT_FAILED, "git " + what + " failed: " + firstLine(r.output()),
+        return new GtaException(
+                ErrorCode.ENV_GIT_FAILED,
+                "git " + what + " failed: " + firstLine(r.output()),
                 "Run the same git command in " + root + " to see why (a stale .git/index.lock, or 'dubious ownership':"
                         + " git config --global --add safe.directory <path>)");
     }

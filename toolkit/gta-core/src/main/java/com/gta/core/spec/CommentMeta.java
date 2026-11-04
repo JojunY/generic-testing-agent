@@ -15,8 +15,7 @@ public final class CommentMeta {
     private static final Pattern PAIR = Pattern.compile("([A-Za-z][\\w.]*)=(\"((?:[^\"\\\\]|\\\\.)*)\"|[^\\s\"]+)");
     private static final Pattern BARE_KIND = Pattern.compile("^\\s*([a-z][a-z-]*)(\\s|$)");
 
-    public record Entry(String key, String value) {
-    }
+    public record Entry(String key, String value) {}
 
     private final String kind;
     private final List<Entry> entries;
@@ -69,7 +68,10 @@ public final class CommentMeta {
     }
 
     public Optional<String> get(String key) {
-        return entries.stream().filter(e -> e.key().equals(key)).map(Entry::value).findFirst();
+        return entries.stream()
+                .filter(e -> e.key().equals(key))
+                .map(Entry::value)
+                .findFirst();
     }
 
     public String getOr(String key, String fallback) {
@@ -77,7 +79,10 @@ public final class CommentMeta {
     }
 
     public List<String> getAll(String key) {
-        return entries.stream().filter(e -> e.key().equals(key)).map(Entry::value).toList();
+        return entries.stream()
+                .filter(e -> e.key().equals(key))
+                .map(Entry::value)
+                .toList();
     }
 
     /** Replaces the first occurrence of key (or appends it). */
@@ -98,7 +103,8 @@ public final class CommentMeta {
     }
 
     public CommentMeta without(String key) {
-        return new CommentMeta(kind, entries.stream().filter(e -> !e.key().equals(key)).toList());
+        return new CommentMeta(
+                kind, entries.stream().filter(e -> !e.key().equals(key)).toList());
     }
 
     public CommentMeta withEntries(List<Entry> newEntries) {

@@ -1,20 +1,19 @@
 package com.gta.core.util;
 
-import com.gta.core.error.ErrorCode;
-import com.gta.core.error.GtaException;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
-import java.nio.file.Path;
-import java.time.Duration;
-import java.util.List;
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
+
+import com.gta.core.error.ErrorCode;
+import com.gta.core.error.GtaException;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class ProcessRunnerTest {
     @TempDir
@@ -36,7 +35,10 @@ class ProcessRunnerTest {
         env.put("GTA_TEST_VALUE", "set-by-test");
         env.put("HOME", null);
 
-        ProcessRunner.Result r = ProcessRunner.run(dir, Duration.ofSeconds(30), env,
+        ProcessRunner.Result r = ProcessRunner.run(
+                dir,
+                Duration.ofSeconds(30),
+                env,
                 ProcessRunner.cmd("sh", "-c", "echo \"$GTA_TEST_VALUE:${HOME:-unset}\""));
 
         assertEquals("set-by-test:unset", r.output().strip());
@@ -46,8 +48,8 @@ class ProcessRunnerTest {
     void shouldKeepTheOutputOfAProcessThatTimesOut() {
         assumeFalse(ProcessRunner.isWindows());
 
-        ProcessRunner.Result r = ProcessRunner.run(dir, Duration.ofMillis(500), Map.of(),
-                ProcessRunner.cmd("sh", "-c", "echo started; sleep 30"));
+        ProcessRunner.Result r = ProcessRunner.run(
+                dir, Duration.ofMillis(500), Map.of(), ProcessRunner.cmd("sh", "-c", "echo started; sleep 30"));
 
         assertTrue(r.timedOut());
         assertFalse(r.ok());
@@ -58,8 +60,8 @@ class ProcessRunnerTest {
 
     @Test
     void shouldReportAToolThatIsNotInstalled() {
-        GtaException e = assertThrows(GtaException.class,
-                () -> ProcessRunner.run(dir, List.of("gta-no-such-tool-" + System.nanoTime())));
+        GtaException e = assertThrows(
+                GtaException.class, () -> ProcessRunner.run(dir, List.of("gta-no-such-tool-" + System.nanoTime())));
 
         assertEquals(ErrorCode.ENV_TOOL_UNAVAILABLE, e.code());
     }

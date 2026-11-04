@@ -13,6 +13,7 @@ public class RunResult {
     public boolean compileError;
     /** The run hit budgets.nodeTimeoutMinutes and was killed; cases hold whatever reports were written. */
     public boolean timedOut;
+
     public String compileMessage;
     public long durationMs;
     public List<TestCase> cases = new ArrayList<>();
@@ -23,6 +24,8 @@ public class RunResult {
     }
 
     public List<TestCase> failures() {
-        return cases.stream().filter(c -> !c.passed() && !"skipped".equals(c.outcome)).toList();
+        return cases.stream()
+                .filter(c -> !c.passed() && !"skipped".equals(c.outcome))
+                .toList();
     }
 }

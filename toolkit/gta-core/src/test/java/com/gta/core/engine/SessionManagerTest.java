@@ -1,14 +1,13 @@
 package com.gta.core.engine;
 
-import com.gta.core.state.WorkState;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
-import java.nio.file.Path;
-import java.time.Instant;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+
+import com.gta.core.state.WorkState;
+import java.nio.file.Path;
+import java.time.Instant;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /** Session ownership (plan §5.2). */
 class SessionManagerTest {

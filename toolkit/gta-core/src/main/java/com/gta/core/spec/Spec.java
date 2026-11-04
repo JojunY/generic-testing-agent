@@ -146,7 +146,10 @@ public final class Spec {
         }
 
         public List<String> affects() {
-            return List.of(meta.getOr("affects", "").split(",")).stream().map(String::trim).filter(s -> !s.isEmpty()).toList();
+            return List.of(meta.getOr("affects", "").split(",")).stream()
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toList();
         }
 
         public boolean answered() {
@@ -168,7 +171,8 @@ public final class Spec {
         public boolean checked;
 
         public boolean isCurrentCode() {
-            return text.toLowerCase().contains("= current code") || text.contains("= 代码现状"); // the Chinese marker is an accepted alias
+            return text.toLowerCase().contains("= current code")
+                    || text.contains("= 代码现状"); // the Chinese marker is an accepted alias
         }
     }
 

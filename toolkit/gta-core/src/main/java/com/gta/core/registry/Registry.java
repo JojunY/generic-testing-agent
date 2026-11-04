@@ -3,7 +3,6 @@ package com.gta.core.registry;
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
 import com.gta.core.util.Yaml;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -66,13 +65,20 @@ public class Registry {
             }
             return Yaml.MAPPER.readValue(in, Registry.class);
         } catch (IOException e) {
-            throw new GtaException(ErrorCode.INTERNAL_ERROR, "Cannot parse registry: " + e.getMessage(), "Fix core/registry/capabilities.yaml");
+            throw new GtaException(
+                    ErrorCode.INTERNAL_ERROR,
+                    "Cannot parse registry: " + e.getMessage(),
+                    "Fix core/registry/capabilities.yaml");
         }
     }
 
     public Capability capability(String id) {
-        return capabilities.stream().filter(c -> c.id.equals(id)).findFirst()
-                .orElseThrow(() -> new GtaException(ErrorCode.USAGE_INVALID_ARGUMENT, "Unknown capability " + id,
+        return capabilities.stream()
+                .filter(c -> c.id.equals(id))
+                .findFirst()
+                .orElseThrow(() -> new GtaException(
+                        ErrorCode.USAGE_INVALID_ARGUMENT,
+                        "Unknown capability " + id,
                         "Use one of the ids in core/registry/capabilities.yaml"));
     }
 

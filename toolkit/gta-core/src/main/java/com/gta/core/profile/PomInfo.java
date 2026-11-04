@@ -2,17 +2,16 @@ package com.gta.core.profile;
 
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 /** The parts of pom.xml gta needs: parent (Spring Boot version), coordinates, dependencies, modules. */
 public final class PomInfo {
@@ -29,7 +28,9 @@ public final class PomInfo {
     public static PomInfo read(Path root) {
         Path pom = root.resolve("pom.xml");
         if (!Files.exists(pom)) {
-            throw new GtaException(ErrorCode.ENV_UNSUPPORTED_BUILD, "No pom.xml in " + root,
+            throw new GtaException(
+                    ErrorCode.ENV_UNSUPPORTED_BUILD,
+                    "No pom.xml in " + root,
                     "gta v1 supports Maven projects; run gtaw from the module that contains pom.xml");
         }
         try {
@@ -89,7 +90,8 @@ public final class PomInfo {
         } catch (GtaException e) {
             throw e;
         } catch (Exception e) {
-            throw new GtaException(ErrorCode.ENV_UNSUPPORTED_BUILD, "Cannot parse pom.xml: " + e.getMessage(), "Fix pom.xml");
+            throw new GtaException(
+                    ErrorCode.ENV_UNSUPPORTED_BUILD, "Cannot parse pom.xml: " + e.getMessage(), "Fix pom.xml");
         }
     }
 

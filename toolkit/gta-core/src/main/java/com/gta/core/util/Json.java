@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
@@ -19,15 +18,17 @@ public final class Json {
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             .setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
-    private Json() {
-    }
+    private Json() {}
 
     public static <T> T read(Path path, Class<T> type) {
         try {
             return MAPPER.readValue(path.toFile(), type);
         } catch (IOException e) {
-            throw new GtaException(ErrorCode.CONFIG_INVALID, "Cannot read " + path + ": " + e.getMessage(),
-                    "Fix or delete the file; files under .gta/work/ are rebuilt by ./gtaw next", e);
+            throw new GtaException(
+                    ErrorCode.CONFIG_INVALID,
+                    "Cannot read " + path + ": " + e.getMessage(),
+                    "Fix or delete the file; files under .gta/work/ are rebuilt by ./gtaw next",
+                    e);
         }
     }
 
@@ -43,5 +44,4 @@ public final class Json {
     public static void writeAtomic(Path path, Object value) {
         AtomicFiles.write(path, write(value) + "\n");
     }
-
 }

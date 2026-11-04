@@ -6,7 +6,6 @@ import com.gta.core.state.WorkState;
 import com.gta.core.util.AtomicFiles;
 import com.gta.core.util.Git;
 import com.gta.core.util.Hashes;
-
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -25,10 +24,25 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class ChangeChecker {
     /** Paths no agent may change (plan §13, single list). */
-    public static final List<String> PROTECTED = List.of("gtaw", "gtaw.cmd", "**/.gta/wrapper/**", "**/.gta/config.json",
-            "**/.gta/waivers.json", "**/.gta/managed-files.json", "**/.gta/specs/**/*.oracles.json", "**/.gta/skills/**",
-            ".gta/wrapper/**", ".gta/config.json", ".gta/waivers.json", ".gta/managed-files.json", ".gta/specs/*/*.oracles.json",
-            ".gta/skills/**", ".github/agents/gta-*", ".github/prompts/gta*", ".vscode/settings.json", ".opencode/**",
+    public static final List<String> PROTECTED = List.of(
+            "gtaw",
+            "gtaw.cmd",
+            "**/.gta/wrapper/**",
+            "**/.gta/config.json",
+            "**/.gta/waivers.json",
+            "**/.gta/managed-files.json",
+            "**/.gta/specs/**/*.oracles.json",
+            "**/.gta/skills/**",
+            ".gta/wrapper/**",
+            ".gta/config.json",
+            ".gta/waivers.json",
+            ".gta/managed-files.json",
+            ".gta/specs/*/*.oracles.json",
+            ".gta/skills/**",
+            ".github/agents/gta-*",
+            ".github/prompts/gta*",
+            ".vscode/settings.json",
+            ".opencode/**",
             "opencode.json");
     /** Never considered agent changes: build output and gtaw's own working area. */
     private static final List<String> IGNORED = List.of("target/**", "**/target/**", ".gta/work/**", "**/.gta/work/**");
@@ -37,8 +51,12 @@ public final class ChangeChecker {
      * @param foreignCommits commits made since the baseline that gtaw did not make (see {@link CommitLedger});
      *                       gtaw never rewrites history, so their files are reported as out of scope and unrestorable
      */
-    public record Result(List<String> changed, List<String> outOfScope, List<String> restored, List<String> unrestorable,
-                         List<String> foreignCommits) {
+    public record Result(
+            List<String> changed,
+            List<String> outOfScope,
+            List<String> restored,
+            List<String> unrestorable,
+            List<String> foreignCommits) {
         public boolean ok() {
             return outOfScope.isEmpty();
         }
@@ -170,7 +188,8 @@ public final class ChangeChecker {
             if (g.equals(rel)) {
                 return true;
             }
-            if (MATCHERS.computeIfAbsent(g, k -> FileSystems.getDefault().getPathMatcher("glob:" + k)).matches(p)) {
+            if (MATCHERS.computeIfAbsent(g, k -> FileSystems.getDefault().getPathMatcher("glob:" + k))
+                    .matches(p)) {
                 return true;
             }
         }

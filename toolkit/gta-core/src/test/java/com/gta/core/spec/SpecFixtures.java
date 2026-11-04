@@ -2,7 +2,8 @@ package com.gta.core.spec;
 
 /** A small, valid behaviour spec used by several tests. */
 public final class SpecFixtures {
-    public static final String CREATE_ORDER = """
+    public static final String CREATE_ORDER =
+            """
             # order.create — Create an order
             <!-- gta: flowId=order.create capability=rest-api risk=6 status=draft -->
 
@@ -52,6 +53,5 @@ public final class SpecFixtures {
             ## Findings
             """;
 
-    private SpecFixtures() {
-    }
+    private SpecFixtures() {}
 }

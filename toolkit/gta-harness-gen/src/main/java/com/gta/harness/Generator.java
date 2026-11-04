@@ -2,7 +2,6 @@ package com.gta.harness;
 
 import com.gta.core.util.Json;
 import com.gta.core.util.Yaml;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -51,7 +50,8 @@ public class Generator {
             fm.put("description", f.get("description"));
             Map<String, Object> profileFields = (Map<String, Object>) profiles.get(profile);
             if (profileFields == null) {
-                throw new IllegalStateException(platform + " mapping has no profile " + profile + " (agent " + name + ")");
+                throw new IllegalStateException(
+                        platform + " mapping has no profile " + profile + " (agent " + name + ")");
             }
             Object model = models.get(f.get("modelTier"));
             if (model != null) {
@@ -80,12 +80,23 @@ public class Generator {
         Path cmdSrc = repo.resolve("core/commands/gta.md");
         Frontmatter c = Frontmatter.parse(read(cmdSrc));
         String cmdTemplate = read(platformFile(platform, (String) cmd.get("template")));
-        String cmdBody = generatedHeader(rel(cmdSrc)) + "\n" + c.body().strip().replace("{{args}}", (String) cmd.get("args")) + "\n";
-        out.put((String) cmd.get("path"), cmdTemplate
-                .replace("{{name}}", Frontmatter.scalar(c.fields().get("name")))
-                .replace("{{description}}", Frontmatter.scalar(c.fields().get("description")))
-                .replace("{{agent}}", Frontmatter.scalar(c.fields().get("agent")))
-                .replace("{{body}}", cmdBody.stripTrailing()) .stripTrailing() + "\n");
+        String cmdBody = generatedHeader(rel(cmdSrc)) + "\n"
+                + c.body().strip().replace("{{args}}", (String) cmd.get("args")) + "\n";
+        out.put(
+                (String) cmd.get("path"),
+                cmdTemplate
+                                .replace(
+                                        "{{name}}",
+                                        Frontmatter.scalar(c.fields().get("name")))
+                                .replace(
+                                        "{{description}}",
+                                        Frontmatter.scalar(c.fields().get("description")))
+                                .replace(
+                                        "{{agent}}",
+                                        Frontmatter.scalar(c.fields().get("agent")))
+                                .replace("{{body}}", cmdBody.stripTrailing())
+                                .stripTrailing()
+                        + "\n");
 
         // merged config files
         for (Map<String, Object> file : (List<Map<String, Object>>) mapping.getOrDefault("files", List.of())) {
@@ -93,7 +104,8 @@ public class Generator {
             try {
                 Json.MAPPER.readTree(content); // templates must be valid JSON; installer deep-merges them
             } catch (IOException e) {
-                throw new IllegalStateException("Template " + file.get("template") + " is not valid JSON: " + e.getMessage());
+                throw new IllegalStateException(
+                        "Template " + file.get("template") + " is not valid JSON: " + e.getMessage());
             }
             out.put((String) file.get("path"), content);
         }
@@ -102,13 +114,16 @@ public class Generator {
         out.put("AGENTS.gta.md", read(repo.resolve("core/rules/gta-guardrails.md")));
         Path skills = repo.resolve("core/skills");
         try (Stream<Path> walk = Files.walk(skills)) {
-            walk.filter(Files::isRegularFile).sorted().forEach(p ->
-                    out.put(".gta/skills/" + skills.relativize(p).toString().replace('\\', '/'), read(p)));
+            walk.filter(Files::isRegularFile)
+                    .sorted()
+                    .forEach(p -> out.put(
+                            ".gta/skills/" + skills.relativize(p).toString().replace('\\', '/'), read(p)));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
 
-        StringBuilder manifest = new StringBuilder("# Files installed by `gtaw init --platform " + platform + "` (generated)\n");
+        StringBuilder manifest =
+                new StringBuilder("# Files installed by `gtaw init --platform " + platform + "` (generated)\n");
         out.keySet().forEach(k -> manifest.append(k).append('\n'));
         out.put("gta-manifest.txt", manifest.toString());
         return out;
@@ -119,7 +134,8 @@ public class Generator {
         try {
             if (Files.exists(target)) {
                 try (Stream<Path> walk = Files.walk(target)) {
-                    for (Path p : walk.sorted((a, b) -> b.getNameCount() - a.getNameCount()).toList()) {
+                    for (Path p : walk.sorted((a, b) -> b.getNameCount() - a.getNameCount())
+                            .toList()) {
                         String r = target.relativize(p).toString().replace('\\', '/');
                         if (Files.isRegularFile(p) && !files.containsKey(r)) {
                             Files.delete(p);
@@ -190,7 +206,9 @@ public class Generator {
 
     static List<Path> list(Path dir, String suffix) {
         try (Stream<Path> s = Files.list(dir)) {
-            return s.filter(p -> p.getFileName().toString().endsWith(suffix)).sorted().toList();
+            return s.filter(p -> p.getFileName().toString().endsWith(suffix))
+                    .sorted()
+                    .toList();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

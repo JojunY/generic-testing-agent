@@ -1,27 +1,27 @@
 package com.gta.core.change;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.gta.core.config.GtaPaths;
 import com.gta.core.state.WorkState;
 import com.gta.core.util.Git;
 import com.gta.core.util.ProcessRunner;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class ChangeCheckerTest {
     @TempDir
     Path root;
+
     ChangeChecker checker;
 
     private void git(String... args) {
@@ -48,12 +48,15 @@ class ChangeCheckerTest {
         Files.writeString(root.resolve("src/test/java/AppIT.java"), "class AppIT {}\n");
         Files.writeString(root.resolve("src/main/java/App.java"), "class App { int hacked; }\n");
 
-        ChangeChecker.Result r = checker.check(baseline, List.of("src/test/java/AppIT.java"), root.resolve("backup"), true);
+        ChangeChecker.Result r =
+                checker.check(baseline, List.of("src/test/java/AppIT.java"), root.resolve("backup"), true);
 
         assertFalse(r.ok());
         assertEquals(List.of("src/main/java/App.java"), r.outOfScope());
         // git may check files out with CRLF on Windows (autocrlf); the content is what matters
-        assertEquals("class App {}", Files.readString(root.resolve("src/main/java/App.java")).strip());
+        assertEquals(
+                "class App {}",
+                Files.readString(root.resolve("src/main/java/App.java")).strip());
         assertTrue(Files.exists(root.resolve("src/test/java/AppIT.java")));
     }
 
@@ -117,7 +120,8 @@ class ChangeCheckerTest {
 
     @Test
     void shouldMatchGlobs() {
-        assertTrue(ChangeChecker.matchesAny("src/test/resources/fixtures/order/a.json", List.of("src/test/resources/**")));
+        assertTrue(
+                ChangeChecker.matchesAny("src/test/resources/fixtures/order/a.json", List.of("src/test/resources/**")));
         assertFalse(ChangeChecker.matchesAny("src/main/resources/application.yml", List.of("src/test/resources/**")));
     }
 
@@ -130,7 +134,9 @@ class ChangeCheckerTest {
         ChangeChecker.Result r = checker.check(baseline, List.of("src/test/java/**"), root.resolve("backup"), true);
 
         assertEquals(List.of("src/main/java/Extra.java"), r.restored());
-        assertFalse(Files.exists(root.resolve("src/main/java/Extra.java")), "checking out HEAD cannot remove it; gtaw must");
+        assertFalse(
+                Files.exists(root.resolve("src/main/java/Extra.java")),
+                "checking out HEAD cannot remove it; gtaw must");
         assertFalse(new Git(root).isTracked("src/main/java/Extra.java"));
         assertTrue(Files.exists(root.resolve("backup/src/main/java/Extra.java")), "backed up before removal");
     }

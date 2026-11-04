@@ -7,7 +7,6 @@ import com.gta.core.error.GtaException;
 import com.gta.core.util.AtomicFiles;
 import com.gta.core.util.Json;
 import com.gta.core.util.ProcessRunner;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,7 +26,8 @@ import java.util.stream.Stream;
  * agent - decides what "passed" means. Cloud credentials are isolated for every run (plan §13).
  */
 public final class MavenRunner implements TestRunner {
-    private static final Pattern COMPILE_ERROR = Pattern.compile("\\[ERROR\\]\\s+(/?\\S+\\.java):\\[(\\d+),(\\d+)]\\s*(.*)");
+    private static final Pattern COMPILE_ERROR =
+            Pattern.compile("\\[ERROR\\]\\s+(/?\\S+\\.java):\\[(\\d+),(\\d+)]\\s*(.*)");
 
     private final GtaPaths paths;
     private final GtaConfig config;
@@ -58,7 +58,8 @@ public final class MavenRunner implements TestRunner {
     static final String ALL_TESTS = "**/*Test,**/*Tests,**/*TestCase,**/Test*,**/*IT";
 
     @Override
-    public RunResult run(String runId, String itemId, Options options, Set<String> productionClasses, Set<String> testClasses) {
+    public RunResult run(
+            String runId, String itemId, Options options, Set<String> productionClasses, Set<String> testClasses) {
         Path root = paths.root();
         Path surefire = root.resolve("target/surefire-reports");
         Path gtaResults = paths.gtaResults();
@@ -66,8 +67,12 @@ public final class MavenRunner implements TestRunner {
         deleteDir(gtaResults);
 
         List<String> cmd = mavenCommand();
-        cmd.addAll(List.of("-B", "-Dsurefire.failIfNoSpecifiedTests=false", "-DfailIfNoTests=false",
-                "-Djacoco.skip=true", "-Dgta.results.dir=" + gtaResults));
+        cmd.addAll(List.of(
+                "-B",
+                "-Dsurefire.failIfNoSpecifiedTests=false",
+                "-DfailIfNoTests=false",
+                "-Djacoco.skip=true",
+                "-Dgta.results.dir=" + gtaResults));
         if (options.testClass() != null) {
             cmd.add("-Dtest=" + options.testClass());
         } else {
@@ -145,9 +150,16 @@ public final class MavenRunner implements TestRunner {
         Matcher m = COMPILE_ERROR.matcher(output);
         int n = 0;
         while (m.find() && n++ < 10) {
-            sb.append(m.group(1).replaceAll(".*/src/", "src/")).append(':').append(m.group(2)).append(' ').append(m.group(4)).append('\n');
+            sb.append(m.group(1).replaceAll(".*/src/", "src/"))
+                    .append(':')
+                    .append(m.group(2))
+                    .append(' ')
+                    .append(m.group(4))
+                    .append('\n');
         }
-        return sb.length() == 0 ? "compilation failed (see maven.log)" : sb.toString().trim();
+        return sb.length() == 0
+                ? "compilation failed (see maven.log)"
+                : sb.toString().trim();
     }
 
     private static void deleteDir(Path dir) {
@@ -160,7 +172,9 @@ public final class MavenRunner implements TestRunner {
             }
         } catch (IOException e) {
             // reports left over from an earlier run would be read as this run's results
-            throw new GtaException(ErrorCode.ENV_TEST_REPORTS_UNUSABLE, "Cannot clear " + dir + ": " + e.getMessage(),
+            throw new GtaException(
+                    ErrorCode.ENV_TEST_REPORTS_UNUSABLE,
+                    "Cannot clear " + dir + ": " + e.getMessage(),
                     "Close programs that hold files in it (IDE, antivirus scan), then run the command again");
         }
     }

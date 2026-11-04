@@ -21,7 +21,6 @@ import com.github.javaparser.ast.stmt.ExpressionStmt;
 import com.github.javaparser.ast.stmt.Statement;
 import com.gta.core.profile.JavaIndex;
 import com.gta.core.util.Hashes;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,39 +39,115 @@ import java.util.function.Predicate;
  * (inputs, setup, referenced fixture files). Used for the THEN-literal check and the oracle lock (plan §5.3).
  */
 public final class AssertionScanner {
-    private static final Set<String> ASSERTION_CALLS = Set.of("isEqualTo", "isNotEqualTo", "containsExactly",
-            "containsExactlyInAnyOrder", "containsEntry", "contains", "hasSize", "hasStatus", "andExpect", "statusCode",
-            "expectStatus", "expectBody", "isEqualByComparingTo", "hasFieldOrPropertyWithValue", "isTrue", "isFalse",
-            "isNull", "isNotNull", "isEmpty", "isNotEmpty", "isPresent", "hasMessage", "hasMessageContaining",
-            "isInstanceOf", "matches", "startsWith", "endsWith", "satisfies", "hasValue", "isZero", "isPositive");
+    private static final Set<String> ASSERTION_CALLS = Set.of(
+            "isEqualTo",
+            "isNotEqualTo",
+            "containsExactly",
+            "containsExactlyInAnyOrder",
+            "containsEntry",
+            "contains",
+            "hasSize",
+            "hasStatus",
+            "andExpect",
+            "statusCode",
+            "expectStatus",
+            "expectBody",
+            "isEqualByComparingTo",
+            "hasFieldOrPropertyWithValue",
+            "isTrue",
+            "isFalse",
+            "isNull",
+            "isNotNull",
+            "isEmpty",
+            "isNotEmpty",
+            "isPresent",
+            "hasMessage",
+            "hasMessageContaining",
+            "isInstanceOf",
+            "matches",
+            "startsWith",
+            "endsWith",
+            "satisfies",
+            "hasValue",
+            "isZero",
+            "isPositive");
     private static final Map<String, String> STATUS_NAMES = Map.ofEntries(
-            Map.entry("OK", "200"), Map.entry("CREATED", "201"), Map.entry("ACCEPTED", "202"), Map.entry("NO_CONTENT", "204"),
-            Map.entry("BAD_REQUEST", "400"), Map.entry("UNAUTHORIZED", "401"), Map.entry("FORBIDDEN", "403"),
-            Map.entry("NOT_FOUND", "404"), Map.entry("CONFLICT", "409"), Map.entry("UNPROCESSABLE_ENTITY", "422"),
-            Map.entry("UNPROCESSABLE_CONTENT", "422"), Map.entry("TOO_MANY_REQUESTS", "429"),
-            Map.entry("INTERNAL_SERVER_ERROR", "500"), Map.entry("BAD_GATEWAY", "502"),
-            Map.entry("SERVICE_UNAVAILABLE", "503"), Map.entry("GATEWAY_TIMEOUT", "504"));
+            Map.entry("OK", "200"),
+            Map.entry("CREATED", "201"),
+            Map.entry("ACCEPTED", "202"),
+            Map.entry("NO_CONTENT", "204"),
+            Map.entry("BAD_REQUEST", "400"),
+            Map.entry("UNAUTHORIZED", "401"),
+            Map.entry("FORBIDDEN", "403"),
+            Map.entry("NOT_FOUND", "404"),
+            Map.entry("CONFLICT", "409"),
+            Map.entry("UNPROCESSABLE_ENTITY", "422"),
+            Map.entry("UNPROCESSABLE_CONTENT", "422"),
+            Map.entry("TOO_MANY_REQUESTS", "429"),
+            Map.entry("INTERNAL_SERVER_ERROR", "500"),
+            Map.entry("BAD_GATEWAY", "502"),
+            Map.entry("SERVICE_UNAVAILABLE", "503"),
+            Map.entry("GATEWAY_TIMEOUT", "504"));
     private static final Map<String, String> STATUS_MATCHERS = Map.ofEntries(
-            Map.entry("isOk", "200"), Map.entry("isCreated", "201"), Map.entry("isAccepted", "202"),
-            Map.entry("isNoContent", "204"), Map.entry("isBadRequest", "400"), Map.entry("isUnauthorized", "401"),
-            Map.entry("isForbidden", "403"), Map.entry("isNotFound", "404"), Map.entry("isConflict", "409"),
-            Map.entry("isUnprocessableEntity", "422"), Map.entry("isInternalServerError", "500"),
-            Map.entry("isServiceUnavailable", "503"), Map.entry("isGatewayTimeout", "504"));
+            Map.entry("isOk", "200"),
+            Map.entry("isCreated", "201"),
+            Map.entry("isAccepted", "202"),
+            Map.entry("isNoContent", "204"),
+            Map.entry("isBadRequest", "400"),
+            Map.entry("isUnauthorized", "401"),
+            Map.entry("isForbidden", "403"),
+            Map.entry("isNotFound", "404"),
+            Map.entry("isConflict", "409"),
+            Map.entry("isUnprocessableEntity", "422"),
+            Map.entry("isInternalServerError", "500"),
+            Map.entry("isServiceUnavailable", "503"),
+            Map.entry("isGatewayTimeout", "504"));
 
-    private static final Set<String> STIMULUS_CALLS = Set.of("perform", "post", "get", "put", "patch", "delete", "head",
-            "options", "request", "multipart", "content", "contentType", "accept", "header", "headers", "param", "params",
-            "queryParam", "cookie", "uri", "body", "bodyValue", "exchange", "postForEntity", "postForObject", "getForEntity",
-            "getForObject", "send", "convertAndSend", "publish", "launchJob", "launchStep", "given", "when");
+    private static final Set<String> STIMULUS_CALLS = Set.of(
+            "perform",
+            "post",
+            "get",
+            "put",
+            "patch",
+            "delete",
+            "head",
+            "options",
+            "request",
+            "multipart",
+            "content",
+            "contentType",
+            "accept",
+            "header",
+            "headers",
+            "param",
+            "params",
+            "queryParam",
+            "cookie",
+            "uri",
+            "body",
+            "bodyValue",
+            "exchange",
+            "postForEntity",
+            "postForObject",
+            "getForEntity",
+            "getForObject",
+            "send",
+            "convertAndSend",
+            "publish",
+            "launchJob",
+            "launchStep",
+            "given",
+            "when");
 
     /** Oracle view of one scenario's tests. */
-    public record ScenarioOracle(int methods, List<String> assertionStatements, Set<String> tokens, String watchedHash) {
+    public record ScenarioOracle(
+            int methods, List<String> assertionStatements, Set<String> tokens, String watchedHash) {
         public boolean found() {
             return methods > 0;
         }
     }
 
-    private AssertionScanner() {
-    }
+    private AssertionScanner() {}
 
     public static ScenarioOracle scan(Path testFile, String scenarioId, Path testResources) {
         if (!Files.exists(testFile)) {
@@ -104,8 +179,12 @@ public final class AssertionScanner {
                     // only the assertion fragments are locked; the rest of the statement is an input (watched)
                     String rest = normalize(stmt);
                     for (MethodCallExpr fragment : assertionFragments(stmt)) {
-                        String f = fragment.getNameAsString() + "(" + fragment.getArguments().stream()
-                                .map(AssertionScanner::normalize).reduce((a, b) -> a + "," + b).orElse("") + ")";
+                        String f = fragment.getNameAsString() + "("
+                                + fragment.getArguments().stream()
+                                        .map(AssertionScanner::normalize)
+                                        .reduce((a, b) -> a + "," + b)
+                                        .orElse("")
+                                + ")";
                         statements.add(f);
                         rest = rest.replace(f, "");
                     }
@@ -126,7 +205,8 @@ public final class AssertionScanner {
         }
         // setup methods and fields belong to the inputs of every scenario in the class
         for (MethodDeclaration m : cu.findAll(MethodDeclaration.class)) {
-            if (m.getAnnotationByName("BeforeEach").isPresent() || m.getAnnotationByName("BeforeAll").isPresent()) {
+            if (m.getAnnotationByName("BeforeEach").isPresent()
+                    || m.getAnnotationByName("BeforeAll").isPresent()) {
                 watched.append(normalize(m));
             }
         }
@@ -137,7 +217,10 @@ public final class AssertionScanner {
     static boolean isTest(MethodDeclaration m) {
         return m.getAnnotations().stream().anyMatch(a -> {
             String n = a.getNameAsString();
-            return n.equals("Test") || n.equals("ParameterizedTest") || n.equals("RepeatedTest") || n.equals("TestFactory");
+            return n.equals("Test")
+                    || n.equals("ParameterizedTest")
+                    || n.equals("RepeatedTest")
+                    || n.equals("TestFactory");
         });
     }
 
@@ -153,7 +236,10 @@ public final class AssertionScanner {
 
     static boolean isAssertionCall(MethodCallExpr c) {
         String n = c.getNameAsString();
-        return n.startsWith("assert") || n.startsWith("verify") || ASSERTION_CALLS.contains(n) || STATUS_MATCHERS.containsKey(n);
+        return n.startsWith("assert")
+                || n.startsWith("verify")
+                || ASSERTION_CALLS.contains(n)
+                || STATUS_MATCHERS.containsKey(n);
     }
 
     static boolean isAssertion(Statement stmt) {
@@ -261,8 +347,13 @@ public final class AssertionScanner {
                 continue;
             }
             for (VariableDeclarator v : f.getVariables()) {
-                v.getInitializer().filter(Expression::isLiteralExpr).ifPresent(init -> out.put(v.getNameAsString(),
-                        init.isStringLiteralExpr() ? init.asStringLiteralExpr().getValue() : init.toString()));
+                v.getInitializer()
+                        .filter(Expression::isLiteralExpr)
+                        .ifPresent(init -> out.put(
+                                v.getNameAsString(),
+                                init.isStringLiteralExpr()
+                                        ? init.asStringLiteralExpr().getValue()
+                                        : init.toString()));
             }
         }
         return out;

@@ -9,7 +9,6 @@ import com.gta.core.state.ItemStatus;
 import com.gta.core.state.StateStore;
 import com.gta.core.state.WorkState;
 import com.gta.core.util.Ids;
-
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -50,13 +49,16 @@ final class SessionManager {
                             PlanItem item = store.planItem(s.id);
                             ChangeChecker cc = new ChangeChecker(paths);
                             if (s.baseline != null) {
-                                cc.changedSince(s.baseline).stream().filter(f -> ChangeChecker.matchesAny(f, item.ownsFiles))
+                                cc.changedSince(s.baseline).stream()
+                                        .filter(f -> ChangeChecker.matchesAny(f, item.ownsFiles))
                                         .forEach(f -> cc.backup(f, backup));
                             }
                         } catch (GtaException ignored) {
                             // item not in plan any more
                         } catch (UncheckedIOException backupFailed) {
-                            recovered.put(s.id + " (backup)", "failed: " + backupFailed.getCause().getMessage());
+                            recovered.put(
+                                    s.id + " (backup)",
+                                    "failed: " + backupFailed.getCause().getMessage());
                         }
                         st.move(s, ItemStatus.PENDING);
                         recovered.put(s.id, "reset to pending; files backed up to " + paths.rel(backup));

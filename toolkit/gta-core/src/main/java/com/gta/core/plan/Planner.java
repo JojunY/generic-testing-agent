@@ -1,25 +1,23 @@
 package com.gta.core.plan;
 
-import com.gta.core.spec.Ref;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.profile.ServiceProfile;
 import com.gta.core.registry.Registry;
+import com.gta.core.spec.Ref;
 import com.gta.core.spec.Spec;
 import com.gta.core.util.Hashes;
 import com.gta.core.util.Ids;
-
-import java.util.Optional;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Turns an approved spec into plan items (plan §4.3: no planner agent; this mapping is a workflow).
  * scenario hints + registry + naming rules (plan §9.3) -> item, layer, test class and owned files.
  */
 public final class Planner {
-    private Planner() {
-    }
+    private Planner() {}
 
     public static List<PlanItem> plan(Spec spec, Registry registry, ServiceProfile profile) {
         String flowId = spec.flowId();
@@ -28,7 +26,8 @@ public final class Planner {
         String flowName = Ids.flowNameOf(flowId);
         String pkg = packageFor(spec, profile);
         List<String> skills = registry.skillsFor(capability.id, new HashSet<>(profile.capabilities)).stream()
-                .map(s -> ".gta/skills/" + s + "/SKILL.md").toList();
+                .map(s -> ".gta/skills/" + s + "/SKILL.md")
+                .toList();
 
         List<PlanItem> items = new ArrayList<>();
         boolean needsFoundation = false;
@@ -117,14 +116,16 @@ public final class Planner {
     }
 
     public static String scenarioRevision(Spec.Scenario s) {
-        return Hashes.normalizedShort(s.title + "|" + String.join("|", s.whens) + "|" + String.join("|", s.thens) + "|" + s.source());
+        return Hashes.normalizedShort(
+                s.title + "|" + String.join("|", s.whens) + "|" + String.join("|", s.thens) + "|" + s.source());
     }
 
     /** Package of the first referenced production class, falling back to the service base package. */
     static String packageFor(Spec spec, ServiceProfile profile) {
         for (Spec.Requirement r : spec.requirements) {
             for (String ref : r.refs()) {
-                Optional<Ref> code = Ref.parse(ref).filter(Ref::isCode).filter(x -> !x.packageName().isEmpty());
+                Optional<Ref> code = Ref.parse(ref).filter(Ref::isCode).filter(x -> !x.packageName()
+                        .isEmpty());
                 if (code.isPresent()) {
                     return code.get().packageName();
                 }

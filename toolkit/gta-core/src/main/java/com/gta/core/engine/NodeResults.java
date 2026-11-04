@@ -1,15 +1,13 @@
 package com.gta.core.engine;
 
 import com.gta.core.state.WorkState;
-
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /** The JSON shapes gtaw prints: agent/human nodes, done and plain results. */
 final class NodeResults {
-    private NodeResults() {
-    }
+    private NodeResults() {}
 
     static Map<String, Object> node(String node, Map<String, Object> extra) {
         Map<String, Object> out = new LinkedHashMap<>();
@@ -46,7 +44,9 @@ final class NodeResults {
             extra.put("itemId", p.itemId);
         }
         extra.put("prompt", p.prompt);
-        extra.put("instruction", "Show the prompt to the human verbatim, then pass their reply verbatim to ./gtaw answer \"<reply>\"");
+        extra.put(
+                "instruction",
+                "Show the prompt to the human verbatim, then pass their reply verbatim to ./gtaw answer \"<reply>\"");
         return node("answer", extra);
     }
 

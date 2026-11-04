@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
 import com.gta.core.util.Json;
-
 import java.io.IOException;
 import java.nio.file.Files;
 
@@ -17,6 +16,7 @@ public class GtaConfig {
     /** Lets editors validate the file against core/schemas/config.v1.schema.json; ignored by gtaw. */
     @JsonProperty("$schema")
     public String jsonSchema;
+
     public String schemaVersion = "1.0";
     public Build build = new Build();
     public String dispatch = "subagent";
@@ -68,6 +68,7 @@ public class GtaConfig {
         public int stabilityRepeat = 3;
         /** Timezone and locale of the stability variant run: chosen to differ from typical developer machines. */
         public String stabilityTimezone = "Asia/Kolkata";
+
         public String stabilityLocale = "de-DE";
         public boolean oracleReview = true;
         public Mutation mutation = new Mutation();
@@ -89,24 +90,34 @@ public class GtaConfig {
     /** Unknown keys are errors: a typo such as "maxItemPerSession" must not silently fall back to the default. */
     private static GtaConfig readStrict(GtaPaths paths) {
         try {
-            return Json.MAPPER.readerFor(GtaConfig.class).with(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            return Json.MAPPER
+                    .readerFor(GtaConfig.class)
+                    .with(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                     .readValue(paths.config().toFile());
         } catch (IOException e) {
-            throw new GtaException(ErrorCode.CONFIG_INVALID, "Invalid " + paths.rel(paths.config()) + ": " + e.getMessage(),
-                    "Fix the key or value; core/schemas/config.v1.schema.json lists every setting", e);
+            throw new GtaException(
+                    ErrorCode.CONFIG_INVALID,
+                    "Invalid " + paths.rel(paths.config()) + ": " + e.getMessage(),
+                    "Fix the key or value; core/schemas/config.v1.schema.json lists every setting",
+                    e);
         }
     }
 
     void validate() {
         if (!"maven".equals(build.tool)) {
-            throw new GtaException(ErrorCode.ENV_UNSUPPORTED_BUILD, "build.tool=" + build.tool + " is not supported",
+            throw new GtaException(
+                    ErrorCode.ENV_UNSUPPORTED_BUILD,
+                    "build.tool=" + build.tool + " is not supported",
                     "gta v1 supports Maven only");
         }
         if (!"subagent".equals(dispatch) && !"inline".equals(dispatch)) {
-            throw new GtaException(ErrorCode.CONFIG_INVALID, "dispatch must be subagent or inline", "Fix .gta/config.json");
+            throw new GtaException(
+                    ErrorCode.CONFIG_INVALID, "dispatch must be subagent or inline", "Fix .gta/config.json");
         }
         if (!"advisory".equals(qualityGates.mutation.mode) && !"enforced".equals(qualityGates.mutation.mode)) {
-            throw new GtaException(ErrorCode.CONFIG_INVALID, "qualityGates.mutation.mode must be advisory or enforced",
+            throw new GtaException(
+                    ErrorCode.CONFIG_INVALID,
+                    "qualityGates.mutation.mode must be advisory or enforced",
                     "Fix .gta/config.json");
         }
     }

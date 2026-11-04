@@ -9,7 +9,6 @@ import com.gta.core.run.MavenRunner;
 import com.gta.core.run.TestRunner;
 import com.gta.core.state.StateStore;
 import com.gta.core.util.Git;
-
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;

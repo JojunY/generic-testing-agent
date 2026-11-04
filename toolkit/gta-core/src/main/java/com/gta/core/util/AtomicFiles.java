@@ -13,8 +13,7 @@ import java.nio.file.StandardCopyOption;
  * the target, then rename it over the target, so a crash never leaves a half-written file.
  */
 public final class AtomicFiles {
-    private AtomicFiles() {
-    }
+    private AtomicFiles() {}
 
     /** Atomic copy of any file (binary-safe), e.g. backups of files gtaw is about to revert. */
     public static void copy(Path source, Path target) {

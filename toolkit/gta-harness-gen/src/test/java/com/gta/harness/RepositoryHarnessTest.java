@@ -1,6 +1,7 @@
 package com.gta.harness;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.charset.MalformedInputException;
@@ -14,9 +15,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 /**
  * Lints this repository's core/, checks that the committed copilot/ and opencode/ folders are up to date, and enforces
@@ -27,8 +26,9 @@ class RepositoryHarnessTest {
     static final Pattern CJK = Pattern.compile("[\\u3000-\\u303f\\u4e00-\\u9fff\\uff00-\\uffef]+");
     /** Chinese replies gtaw accepts (see docs/quickstart.md) and the label of the language switch. */
     static final Set<String> ALLOWED = Set.of("批准", "不批准", "其余默认", "其他默认", "代码现状", "简体中文");
-    static final Set<String> TEXT = Set.of("md", "java", "yaml", "yml", "json", "txt", "sh", "cmd", "ps1", "xml", "tmpl",
-            "properties", "py");
+
+    static final Set<String> TEXT =
+            Set.of("md", "java", "yaml", "yml", "json", "txt", "sh", "cmd", "ps1", "xml", "tmpl", "properties", "py");
 
     @Test
     void shouldLintCleanly() {
@@ -65,11 +65,14 @@ class RepositoryHarnessTest {
                 String rel = REPO.relativize(f).toString().replace('\\', '/');
                 String name = f.getFileName().toString();
                 String ext = name.contains(".") ? name.substring(name.lastIndexOf('.') + 1) : "";
-                boolean skipped = rel.startsWith(".git/") || rel.contains("/target/") || rel.startsWith("target/")
-                        || rel.startsWith("copilot/") || rel.startsWith("opencode/") // generated from core/
-                        || rel.contains("/src/test/")                               // tests of Chinese input
+                boolean skipped = rel.startsWith(".git/")
+                        || rel.contains("/target/")
+                        || rel.startsWith("target/")
+                        || rel.startsWith("copilot/")
+                        || rel.startsWith("opencode/") // generated from core/
+                        || rel.contains("/src/test/") // tests of Chinese input
                         || rel.endsWith(".zh-CN.md")
-                        || rel.endsWith("spec/AnswerParser.java");                  // the alias patterns themselves
+                        || rel.endsWith("spec/AnswerParser.java"); // the alias patterns themselves
                 if (skipped || !(TEXT.contains(ext) || name.equals("gtaw"))) {
                     continue;
                 }

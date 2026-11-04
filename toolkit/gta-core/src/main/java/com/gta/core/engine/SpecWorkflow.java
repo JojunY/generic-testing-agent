@@ -1,5 +1,8 @@
 package com.gta.core.engine;
 
+import static com.gta.core.engine.NodeResults.node;
+import static com.gta.core.engine.NodeResults.result;
+
 import com.gta.core.brief.Briefs;
 import com.gta.core.change.ChangeChecker;
 import com.gta.core.config.GtaConfig;
@@ -21,7 +24,6 @@ import com.gta.core.util.AtomicFiles;
 import com.gta.core.util.Git;
 import com.gta.core.util.Hashes;
 import com.gta.core.util.WorkLock;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -32,9 +34,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import static com.gta.core.engine.NodeResults.node;
-import static com.gta.core.engine.NodeResults.result;
 
 /** Spec lifecycle (plan §3): analyze briefs, spec submission and lint, answer rounds, approval, snapshots of gtaw-owned fields. */
 final class SpecWorkflow {
@@ -56,13 +55,22 @@ final class SpecWorkflow {
         this.briefs = ctx.briefs;
     }
 
-    Map<String, Object> analyzeNode(WorkState st, WorkState.SpecWork sw, String flowId, ServiceProfile.EntryPoint entry,
-                                            String capability, List<String> extraIssues) {
+    Map<String, Object> analyzeNode(
+            WorkState st,
+            WorkState.SpecWork sw,
+            String flowId,
+            ServiceProfile.EntryPoint entry,
+            String capability,
+            List<String> extraIssues) {
         if (sw.attempts >= config.spec.maxSubmitAttempts) {
-            return node("escalate", Map.of("message", "The spec of " + flowId + " was rejected " + sw.attempts
-                    + " times in a row (see the last error). Fix " + paths.rel(paths.spec(flowId))
-                    + " yourself and run ./gtaw submit --spec " + flowId + " --token " + sw.token
-                    + ", or start the flow over with ./gtaw abort --flow " + flowId));
+            return node(
+                    "escalate",
+                    Map.of(
+                            "message",
+                            "The spec of " + flowId + " was rejected " + sw.attempts
+                                    + " times in a row (see the last error). Fix " + paths.rel(paths.spec(flowId))
+                                    + " yourself and run ./gtaw submit --spec " + flowId + " --token " + sw.token
+                                    + ", or start the flow over with ./gtaw abort --flow " + flowId));
         }
         st.seq++;
         sw.token = Briefs.token(st.session.id, st.seq);
@@ -70,13 +78,15 @@ final class SpecWorkflow {
         Path specPath = paths.spec(flowId);
         List<String> issues = new ArrayList<>(extraIssues);
         if (Files.exists(specPath)) {
-            issues.addAll(SpecLinter.lint(SpecParser.parse(specPath), flowId, RefResolver.of(paths.root()), registry, paths.root()));
+            issues.addAll(SpecLinter.lint(
+                    SpecParser.parse(specPath), flowId, RefResolver.of(paths.root()), registry, paths.root()));
         }
         List<String> skills = new ArrayList<>(List.of("gta-mapping-flows", "gta-writing-behavior-specs"));
         if ("pr".equals(st.mode)) {
             skills.add("gta-analyzing-change-impact");
         }
-        Path brief = briefs.analyze(st.seq, sw.token, flowId, entry, capability, skills, issues, sw.answersToApply, Files.exists(specPath));
+        Path brief = briefs.analyze(
+                st.seq, sw.token, flowId, entry, capability, skills, issues, sw.answersToApply, Files.exists(specPath));
         if (Files.exists(specPath) && !Files.exists(paths.snapshots().resolve(flowId + ".spec.md"))) {
             snapshot(flowId); // first brief on this machine: the committed/current file is the owned-field baseline
         }
@@ -90,18 +100,22 @@ final class SpecWorkflow {
 
     Map<String, Object> applyAnswers(WorkState st, WorkState.Pending p, AnswerParser.Parsed parsed, String text) {
         if (!(parsed instanceof AnswerParser.Answers a)) {
-            throw new GtaException(ErrorCode.USAGE_UNPARSEABLE_ANSWER, "Expected answers to " + p.round,
+            throw new GtaException(
+                    ErrorCode.USAGE_UNPARSEABLE_ANSWER,
+                    "Expected answers to " + p.round,
                     "Reply like '" + p.round + ": 1A 2B rest default'");
         }
         if (a.round() != null && !a.round().equals(p.round)) {
-            throw new GtaException(ErrorCode.USAGE_UNPARSEABLE_ANSWER, "These answers are for " + a.round() + " but the open round is " + p.round,
+            throw new GtaException(
+                    ErrorCode.USAGE_UNPARSEABLE_ANSWER,
+                    "These answers are for " + a.round() + " but the open round is " + p.round,
                     "Answer the questions of " + p.round);
         }
         Path specPath = paths.spec(p.flowId);
         Spec spec = SpecParser.parse(specPath);
         SpecEditor ed = new SpecEditor(spec.text);
-        CommentMeta record = new CommentMeta("answer", List.of(new CommentMeta.Entry("round", p.round),
-                new CommentMeta.Entry("channel", "chat")));
+        CommentMeta record = new CommentMeta(
+                "answer", List.of(new CommentMeta.Entry("round", p.round), new CommentMeta.Entry("channel", "chat")));
         List<String> unansweredHigh = new ArrayList<>();
         List<String> toApply = new ArrayList<>();
         for (Spec.Question q : spec.openQuestions()) {
@@ -122,19 +136,30 @@ final class SpecWorkflow {
                 continue;
             }
             String chosen = letter;
-            Spec.Option option = q.options.stream().filter(o -> o.letter.equals(chosen)).findFirst()
-                    .orElseThrow(() -> new GtaException(ErrorCode.USAGE_UNPARSEABLE_ANSWER, "Question " + q.number + " has no option " + chosen,
+            Spec.Option option = q.options.stream()
+                    .filter(o -> o.letter.equals(chosen))
+                    .findFirst()
+                    .orElseThrow(() -> new GtaException(
+                            ErrorCode.USAGE_UNPARSEABLE_ANSWER,
+                            "Question " + q.number + " has no option " + chosen,
                             "Pick one of the listed letters"));
             ed.tick(q.id(), letter);
-            record = record.with(q.id().substring(q.id().indexOf('/') + 1), "defaulted".equals(source) ? letter + "(default)" : letter);
+            record = record.with(
+                    q.id().substring(q.id().indexOf('/') + 1),
+                    "defaulted".equals(source) ? letter + "(default)" : letter);
             for (String target : q.affects()) {
                 for (Spec.Scenario s : spec.scenarios()) {
-                    boolean hit = target.equals(s.id()) || spec.requirementOf(s).map(r -> target.equals(r.id())).orElse(false);
+                    boolean hit = target.equals(s.id())
+                            || spec.requirementOf(s)
+                                    .map(r -> target.equals(r.id()))
+                                    .orElse(false);
                     if (hit) {
                         ed.setElement(s.id(), "source", source).setElement(s.id(), "by", p.round);
                     }
                 }
-                spec.invariants.stream().filter(i -> target.equals(i.id())).forEach(i -> ed.setElement(i.id(), "source", "confirmed"));
+                spec.invariants.stream()
+                        .filter(i -> target.equals(i.id()))
+                        .forEach(i -> ed.setElement(i.id(), "source", "confirmed"));
             }
             if (!option.isCurrentCode()) {
                 toApply.add("Q" + q.number + " (" + q.id() + ") → " + letter + ") " + option.text);
@@ -147,15 +172,19 @@ final class SpecWorkflow {
         Spec after = SpecParser.parse(specPath);
         if (!after.openQuestions().isEmpty()) {
             p.prompt = ctx.prompts.renderQuestions(after, p.round);
-            return result("answers recorded; still open: " + after.openQuestions().stream().map(q -> q.number).toList()
-                    + (unansweredHigh.isEmpty() ? "" : " (high impact needs an explicit answer)"), Map.of("prompt", p.prompt));
+            return result(
+                    "answers recorded; still open: "
+                            + after.openQuestions().stream().map(q -> q.number).toList()
+                            + (unansweredHigh.isEmpty() ? "" : " (high impact needs an explicit answer)"),
+                    Map.of("prompt", p.prompt));
         }
         WorkState.SpecWork sw = st.specWork.computeIfAbsent(p.flowId, k -> new WorkState.SpecWork());
         if (!toApply.isEmpty()) {
             sw.needsRevision = true;
             sw.answersToApply = toApply;
             st.pending = null;
-            return result("answers recorded; the analyst will now rewrite the affected THEN clauses (run ./gtaw next)", null);
+            return result(
+                    "answers recorded; the analyst will now rewrite the affected THEN clauses (run ./gtaw next)", null);
         }
         String newRev = bump(after.rev());
         writeSpec(specPath, new SpecEditor(after.text).setHeader("rev", newRev).text());
@@ -167,8 +196,12 @@ final class SpecWorkflow {
     }
 
     Map<String, Object> applyApproval(WorkState st, WorkState.Pending p, AnswerParser.Parsed parsed, String text) {
-        if (!(parsed instanceof AnswerParser.Approval a) || !a.flowId().equals(p.flowId) || !a.rev().equals(p.rev)) {
-            throw new GtaException(ErrorCode.USAGE_UNPARSEABLE_ANSWER, "Approval must name the current revision",
+        if (!(parsed instanceof AnswerParser.Approval a)
+                || !a.flowId().equals(p.flowId)
+                || !a.rev().equals(p.rev)) {
+            throw new GtaException(
+                    ErrorCode.USAGE_UNPARSEABLE_ANSWER,
+                    "Approval must name the current revision",
                     "Reply exactly 'approve " + p.flowId + "@" + p.rev + "'");
         }
         Path specPath = paths.spec(p.flowId);
@@ -179,8 +212,10 @@ final class SpecWorkflow {
             sw.answersToApply = List.of("The spec was edited after " + p.flowId + "@" + p.rev
                     + " was shown for approval; check the edits, keep only intended ones and submit again");
             st.pending = null;
-            return result("not approved: " + paths.rel(specPath) + " changed after " + p.flowId + "@" + p.rev
-                    + " was shown. It goes back to the analyst and comes back as a new revision", null);
+            return result(
+                    "not approved: " + paths.rel(specPath) + " changed after " + p.flowId + "@" + p.rev
+                            + " was shown. It goes back to the analyst and comes back as a new revision",
+                    null);
         }
         Spec spec = SpecParser.parse(specPath);
         if (!spec.openQuestions().isEmpty()) {
@@ -193,12 +228,21 @@ final class SpecWorkflow {
             }
             hashes.append(r.id().substring(r.id().indexOf('/') + 1)).append(':').append(requirementHash(spec, r));
         }
-        CommentMeta approval = new CommentMeta("approval", List.of(new CommentMeta.Entry("rev", p.rev),
-                new CommentMeta.Entry("channel", "chat"), new CommentMeta.Entry("hashes", hashes.toString()),
-                new CommentMeta.Entry("text", text)));
-        String updated = new SpecEditor(spec.text).setHeader("status", "approved").appendRecord(approval).text();
+        CommentMeta approval = new CommentMeta(
+                "approval",
+                List.of(
+                        new CommentMeta.Entry("rev", p.rev),
+                        new CommentMeta.Entry("channel", "chat"),
+                        new CommentMeta.Entry("hashes", hashes.toString()),
+                        new CommentMeta.Entry("text", text)));
+        String updated = new SpecEditor(spec.text)
+                .setHeader("status", "approved")
+                .appendRecord(approval)
+                .text();
         writeSpec(specPath, updated);
-        ctx.commit(List.of(paths.rel(specPath)), "docs(spec): " + p.flowId + " " + p.rev + " approved\n\nGta-Approval: " + text);
+        ctx.commit(
+                List.of(paths.rel(specPath)),
+                "docs(spec): " + p.flowId + " " + p.rev + " approved\n\nGta-Approval: " + text);
         st.newConfirmations.add(p.flowId + "@" + p.rev + " approved: \"" + text + "\"");
         st.pending = null;
         return result(p.flowId + "@" + p.rev + " approved and committed; run ./gtaw next to start writing tests", null);
@@ -211,7 +255,10 @@ final class SpecWorkflow {
         sw.answersToApply = List.of("The human did not approve " + p.flowId + "@" + p.rev + " and wrote: \"" + text
                 + "\". Revise the spec accordingly (turn anything unclear into an open question) and submit again");
         st.pending = null;
-        return result("not approved; change request passed to the analyst (" + p.flowId + "@" + p.rev + " will come back as a new revision)", null);
+        return result(
+                "not approved; change request passed to the analyst (" + p.flowId + "@" + p.rev
+                        + " will come back as a new revision)",
+                null);
     }
 
     public Map<String, Object> submitSpec(String flowId, String token) {
@@ -219,31 +266,43 @@ final class SpecWorkflow {
             WorkState st = store.load();
             WorkState.SpecWork sw = st.specWork.get(flowId);
             if (sw == null || sw.token == null || !sw.token.equals(token)) {
-                throw new GtaException(ErrorCode.STATE_STALE_SESSION, "Token does not match the open analyze node of " + flowId,
+                throw new GtaException(
+                        ErrorCode.STATE_STALE_SESSION,
+                        "Token does not match the open analyze node of " + flowId,
                         "Run ./gtaw next to get a fresh brief and token");
             }
             Path specPath = paths.spec(flowId);
             String specRel = paths.rel(specPath);
-            ChangeChecker.Result scope = new ChangeChecker(paths).check(sw.baseline,
-                    List.of(specRel, paths.rel(paths.specs().resolve("service-overview.md"))), paths.recover().resolve("analyze-" + st.seq), true);
+            ChangeChecker.Result scope = new ChangeChecker(paths)
+                    .check(
+                            sw.baseline,
+                            List.of(specRel, paths.rel(paths.specs().resolve("service-overview.md"))),
+                            paths.recover().resolve("analyze-" + st.seq),
+                            true);
             if (!scope.ok()) {
                 sw.attempts++;
                 store.save(st);
-                throw new GtaException(ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE, "The analyst may only change " + specRel,
-                        scope.foreignCommits().isEmpty()
-                                ? "Reverted (backup in .gta/work/recover/): " + scope.restored()
-                                : "Commits not made by gtaw " + scope.foreignCommits() + " must be reverted by a human; agents must not run git")
+                throw new GtaException(
+                                ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE,
+                                "The analyst may only change " + specRel,
+                                scope.foreignCommits().isEmpty()
+                                        ? "Reverted (backup in .gta/work/recover/): " + scope.restored()
+                                        : "Commits not made by gtaw " + scope.foreignCommits()
+                                                + " must be reverted by a human; agents must not run git")
                         .detail("outOfScope", scope.outOfScope());
             }
             if (!Files.exists(specPath)) {
-                throw new GtaException(ErrorCode.USAGE_UNKNOWN_FLOW, "Spec not found: " + specRel, "Write the spec file first");
+                throw new GtaException(
+                        ErrorCode.USAGE_UNKNOWN_FLOW, "Spec not found: " + specRel, "Write the spec file first");
             }
             Spec spec = SpecParser.parse(specPath);
             List<String> owned = ownedFieldViolations(flowId, spec);
             if (!owned.isEmpty()) {
                 sw.attempts++;
                 store.save(st);
-                throw new GtaException(ErrorCode.POLICY_GTA_OWNED_FIELD, "Fields owned by gtaw were changed: " + owned,
+                throw new GtaException(
+                        ErrorCode.POLICY_GTA_OWNED_FIELD,
+                        "Fields owned by gtaw were changed: " + owned,
                         "Revert them (status, rev, ticks, source=confirmed/defaulted, the Answers section) and submit again");
             }
             RefResolver refs = RefResolver.of(paths.root());
@@ -252,8 +311,10 @@ final class SpecWorkflow {
             List<String> firstPass = SpecLinter.lint(spec, flowId, null, registry, paths.root());
             for (Spec.Scenario s : spec.scenarios()) {
                 String where = SpecLinter.scenarioLabel(s);
-                if ("documented".equals(s.source()) && firstPass.stream()
-                        .anyMatch(i -> i.startsWith(where + ":") && (i.contains("documented") || i.contains("quote")))) {
+                if ("documented".equals(s.source())
+                        && firstPass.stream()
+                                .anyMatch(i -> i.startsWith(where + ":")
+                                        && (i.contains("documented") || i.contains("quote")))) {
                     ed.setElement(s.id(), "source", "observed");
                     notes.add(s.id() + " downgraded to observed (citation not verifiable)");
                 }
@@ -275,8 +336,11 @@ final class SpecWorkflow {
             if (!issues.isEmpty()) {
                 sw.attempts++;
                 store.save(st);
-                throw new GtaException(ErrorCode.POLICY_SPEC_INVALID, issues.size() + " lint issue(s) in " + specRel,
-                        "Fix them and run ./gtaw submit --spec " + flowId + " --token " + token + " again").detail("issues", issues);
+                throw new GtaException(
+                                ErrorCode.POLICY_SPEC_INVALID,
+                                issues.size() + " lint issue(s) in " + specRel,
+                                "Fix them and run ./gtaw submit --spec " + flowId + " --token " + token + " again")
+                        .detail("issues", issues);
             }
             String status = edited.status();
             String rev = edited.rev();
@@ -287,7 +351,8 @@ final class SpecWorkflow {
                 status = "in-review";
                 rev = bump(rev);
             }
-            SpecEditor finalEd = new SpecEditor(ed.text()).setHeader("status", status).setHeader("rev", rev);
+            SpecEditor finalEd =
+                    new SpecEditor(ed.text()).setHeader("status", status).setHeader("rev", rev);
             if (!edited.openQuestions().isEmpty()) {
                 finalEd.setRound(rev);
             }
@@ -316,7 +381,9 @@ final class SpecWorkflow {
         for (Spec.Requirement r : spec.requirements) {
             List<CommentMeta.Entry> entries = r.meta.entries();
             for (int i = 0; i < entries.size(); i++) {
-                if (entries.get(i).key().equals("ref") && i + 1 < entries.size() && entries.get(i + 1).key().equals("refHash")) {
+                if (entries.get(i).key().equals("ref")
+                        && i + 1 < entries.size()
+                        && entries.get(i + 1).key().equals("refHash")) {
                     String ref = entries.get(i).value();
                     Optional<String> now = refs.hash(ref);
                     if (now.isEmpty() || !now.get().equals(entries.get(i + 1).value())) {
@@ -353,7 +420,11 @@ final class SpecWorkflow {
      * they are observations, not human-approved expectations, so correcting them does not void the approval.
      */
     static String requirementHash(Spec spec, Spec.Requirement r) {
-        StringBuilder b = new StringBuilder(r.title).append('|').append(r.text()).append('|').append(String.join(",", r.refs()));
+        StringBuilder b = new StringBuilder(r.title)
+                .append('|')
+                .append(r.text())
+                .append('|')
+                .append(String.join(",", r.refs()));
         for (Spec.Scenario s : r.scenarios) {
             boolean mask = "observed".equals(s.source()) || "defaulted".equals(s.source());
             b.append('|').append(s.id()).append(s.title).append(s.source()).append(String.join(";", s.whens));
@@ -372,7 +443,8 @@ final class SpecWorkflow {
             if (!now.answers.isEmpty() || !now.approvals.isEmpty()) {
                 v.add("Answers section");
             }
-            now.scenarios().stream().filter(s -> s.source().equals("confirmed") || s.source().equals("defaulted"))
+            now.scenarios().stream()
+                    .filter(s -> s.source().equals("confirmed") || s.source().equals("defaulted"))
                     .forEach(s -> v.add(s.id() + " source=" + s.source()));
             if ("approved".equals(now.status())) {
                 v.add("status=approved");
@@ -388,8 +460,14 @@ final class SpecWorkflow {
         if (!before.rev().equals(now.rev())) {
             v.add("rev");
         }
-        if (!before.answers.stream().map(CommentMeta::format).toList().equals(now.answers.stream().map(CommentMeta::format).toList())
-                || !before.approvals.stream().map(CommentMeta::format).toList().equals(now.approvals.stream().map(CommentMeta::format).toList())) {
+        if (!before.answers.stream()
+                        .map(CommentMeta::format)
+                        .toList()
+                        .equals(now.answers.stream().map(CommentMeta::format).toList())
+                || !before.approvals.stream()
+                        .map(CommentMeta::format)
+                        .toList()
+                        .equals(now.approvals.stream().map(CommentMeta::format).toList())) {
             v.add("Answers section");
         }
         for (Spec.Scenario s : now.scenarios()) {
@@ -402,11 +480,14 @@ final class SpecWorkflow {
             }
         }
         for (Spec.Question q : now.questions) {
-            before.questions.stream().filter(bq -> bq.id() != null && bq.id().equals(q.id())).findFirst().ifPresent(bq -> {
-                if (!bq.chosen().map(o -> o.letter).equals(q.chosen().map(o -> o.letter))) {
-                    v.add("tick on question " + q.number);
-                }
-            });
+            before.questions.stream()
+                    .filter(bq -> bq.id() != null && bq.id().equals(q.id()))
+                    .findFirst()
+                    .ifPresent(bq -> {
+                        if (!bq.chosen().map(o -> o.letter).equals(q.chosen().map(o -> o.letter))) {
+                            v.add("tick on question " + q.number);
+                        }
+                    });
         }
         return v;
     }
@@ -431,8 +512,9 @@ final class SpecWorkflow {
     boolean matchesSnapshot(String flowId) {
         try {
             Path snap = snapshotPath(flowId);
-            return Files.exists(snap) && Files.readString(snap, StandardCharsets.UTF_8)
-                    .equals(Files.readString(paths.spec(flowId), StandardCharsets.UTF_8));
+            return Files.exists(snap)
+                    && Files.readString(snap, StandardCharsets.UTF_8)
+                            .equals(Files.readString(paths.spec(flowId), StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -446,9 +528,11 @@ final class SpecWorkflow {
             issues.add("open questions: " + open + " in one round, at most " + config.spec.maxQuestionsPerRound
                     + " (ask the highest-impact ones; record the rest as findings)");
         }
-        long rounds = spec.answers.stream().map(a -> a.getOr("round", "")).distinct().count();
+        long rounds =
+                spec.answers.stream().map(a -> a.getOr("round", "")).distinct().count();
         if (open > 0 && rounds >= config.spec.maxClarifyRounds) {
-            issues.add("open questions: the " + config.spec.maxClarifyRounds + " clarify rounds are used up; keep the remaining"
+            issues.add("open questions: the " + config.spec.maxClarifyRounds
+                    + " clarify rounds are used up; keep the remaining"
                     + " scenarios observed and record the doubts under ## Findings");
         }
         return issues;

@@ -2,7 +2,6 @@ package com.gta.core.util;
 
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -32,8 +31,7 @@ public final class ProcessRunner {
         }
     }
 
-    private ProcessRunner() {
-    }
+    private ProcessRunner() {}
 
     public static boolean isWindows() {
         return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
@@ -43,7 +41,9 @@ public final class ProcessRunner {
         Path log = null;
         try {
             log = Files.createTempFile("gta-proc", ".log");
-            ProcessBuilder pb = new ProcessBuilder(command).directory(dir.toFile()).redirectErrorStream(true)
+            ProcessBuilder pb = new ProcessBuilder(command)
+                    .directory(dir.toFile())
+                    .redirectErrorStream(true)
                     .redirectOutput(log.toFile());
             if (env != null) {
                 env.forEach((k, v) -> {
@@ -61,11 +61,13 @@ public final class ProcessRunner {
             p.descendants().forEach(ProcessHandle::destroyForcibly);
             p.destroyForcibly();
             p.waitFor(10, TimeUnit.SECONDS); // let the OS release the log file (Windows keeps it locked until exit)
-            String output = Files.readString(log, StandardCharsets.UTF_8)
-                    + "\n[gtaw] timed out after " + timeout.toMinutes() + " min: " + String.join(" ", command) + "\n";
+            String output = Files.readString(log, StandardCharsets.UTF_8) + "\n[gtaw] timed out after "
+                    + timeout.toMinutes() + " min: " + String.join(" ", command) + "\n";
             return new Result(TIMED_OUT, output, true);
         } catch (IOException e) {
-            throw new GtaException(ErrorCode.ENV_TOOL_UNAVAILABLE, "Cannot start " + command.get(0) + ": " + e.getMessage(),
+            throw new GtaException(
+                    ErrorCode.ENV_TOOL_UNAVAILABLE,
+                    "Cannot start " + command.get(0) + ": " + e.getMessage(),
                     "Make sure the tool is installed and on PATH; ./gtaw doctor checks this");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

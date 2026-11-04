@@ -1,7 +1,6 @@
 package com.gta.core.gate;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.gta.core.spec.Ref;
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
@@ -12,11 +11,11 @@ import com.gta.core.oracle.OracleShard;
 import com.gta.core.plan.Planner;
 import com.gta.core.run.TestCase;
 import com.gta.core.spec.CommentMeta;
+import com.gta.core.spec.Ref;
 import com.gta.core.spec.Spec;
 import com.gta.core.spec.SpecParser;
 import com.gta.core.util.Git;
 import com.gta.core.util.Json;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,8 +41,7 @@ public final class Gate {
         public String message;
         public boolean waived;
 
-        Condition() {
-        }
+        Condition() {}
 
         Condition(String code, String target, String message) {
             this.code = code;
@@ -82,8 +80,11 @@ public final class Gate {
     public Result evaluate(String baseRef, List<TestCase> results, List<String> unstableItems) {
         if (!git.refExists(baseRef)) {
             // comparing against nothing would make every locked scenario look new and pass the gate
-            throw new GtaException(ErrorCode.ENV_GIT_FAILED, "The base " + baseRef + " is not a commit in this repository",
-                    "Fetch it first (CI: git fetch origin " + baseRef.replaceFirst("^origin/", "") + "), or pass --base <ref>");
+            throw new GtaException(
+                    ErrorCode.ENV_GIT_FAILED,
+                    "The base " + baseRef + " is not a commit in this repository",
+                    "Fetch it first (CI: git fetch origin " + baseRef.replaceFirst("^origin/", "")
+                            + "), or pass --base <ref>");
         }
         Result r = new Result();
         r.base = baseRef;
@@ -111,9 +112,14 @@ public final class Gate {
             }
             if (spec == null || !"approved".equals(spec.status())) {
                 // the locked scenarios of this flow are exempt below: make the reason visible in the PR
-                r.concerns.add(new Condition(ErrorCode.GATE_SCENARIOS_UNLOCKED.name(), flowId, spec == null
-                        ? "the spec was deleted: its " + shard.getValue().size() + " locked scenario(s) are no longer checked"
-                        : "the spec is " + spec.status() + ": its locked scenarios are checked again once it is approved"));
+                r.concerns.add(new Condition(
+                        ErrorCode.GATE_SCENARIOS_UNLOCKED.name(),
+                        flowId,
+                        spec == null
+                                ? "the spec was deleted: its "
+                                        + shard.getValue().size() + " locked scenario(s) are no longer checked"
+                                : "the spec is " + spec.status()
+                                        + ": its locked scenarios are checked again once it is approved"));
             }
             for (Map.Entry<String, OracleShard.Entry> e : shard.getValue().entrySet()) {
                 String itemId = e.getKey();
@@ -127,26 +133,43 @@ public final class Gate {
                         || !Planner.scenarioRevision(scenario.get()).equals(e.getValue().scenarioRevision);
                 TestCase tc = byScenario.get(scenarioId);
                 if (!changedInPr && (tc == null || !tc.passed())) {
-                    r.failures.add(new Condition(tc == null ? ErrorCode.GATE_SCENARIO_UNVERIFIED.name() : ErrorCode.GATE_SCENARIO_REGRESSED.name(),
-                            scenarioId, tc == null ? "verified on base, now missing or disabled" : "verified on base, now failing: " + tc.message));
+                    r.failures.add(new Condition(
+                            tc == null
+                                    ? ErrorCode.GATE_SCENARIO_UNVERIFIED.name()
+                                    : ErrorCode.GATE_SCENARIO_REGRESSED.name(),
+                            scenarioId,
+                            tc == null
+                                    ? "verified on base, now missing or disabled"
+                                    : "verified on base, now failing: " + tc.message));
                 }
                 if (!changedInPr && e.getValue().testClass != null) {
                     Path file = testFile(e.getValue().testClass);
-                    AssertionScanner.ScenarioOracle now = AssertionScanner.scan(file, scenarioId, paths.testResources());
+                    AssertionScanner.ScenarioOracle now =
+                            AssertionScanner.scan(file, scenarioId, paths.testResources());
                     List<String> stmts = now.assertionStatements().stream()
-                            .filter(s -> e.getValue().tokens.stream().anyMatch(s::contains)).toList();
+                            .filter(s -> e.getValue().tokens.stream().anyMatch(s::contains))
+                            .toList();
                     String fp = OracleLock.fingerprint(stmts);
                     OracleShard.Entry cur = currentShard.get(itemId);
-                    // a relock in this PR is a new relock record (by, reason, time) whose fingerprint matches the test now
+                    // a relock in this PR is a new relock record (by, reason, time) whose fingerprint matches the test
+                    // now
                     OracleShard.Entry base = e.getValue();
-                    boolean relocked = cur != null && cur.relockedBy != null && fp.equals(cur.fingerprint)
-                            && !(Objects.equals(cur.relockedBy, base.relockedBy) && Objects.equals(cur.reason, base.reason)
-                            && Objects.equals(cur.relockedAt, base.relockedAt));
+                    boolean relocked = cur != null
+                            && cur.relockedBy != null
+                            && fp.equals(cur.fingerprint)
+                            && !(Objects.equals(cur.relockedBy, base.relockedBy)
+                                    && Objects.equals(cur.reason, base.reason)
+                                    && Objects.equals(cur.relockedAt, base.relockedAt));
                     if (!fp.equals(e.getValue().fingerprint) && !relocked) {
-                        r.failures.add(new Condition(ErrorCode.GATE_ORACLE_CHANGED_WITHOUT_SPEC.name(), scenarioId,
+                        r.failures.add(new Condition(
+                                ErrorCode.GATE_ORACLE_CHANGED_WITHOUT_SPEC.name(),
+                                scenarioId,
                                 "assertions of a locked expectation changed but the spec did not"));
                     } else if (relocked) {
-                        r.concerns.add(new Condition(ErrorCode.GATE_RELOCKED.name(), scenarioId, "relocked by " + cur.relockedBy + ": " + cur.reason));
+                        r.concerns.add(new Condition(
+                                ErrorCode.GATE_RELOCKED.name(),
+                                scenarioId,
+                                "relocked by " + cur.relockedBy + ": " + cur.reason));
                     }
                 }
             }
@@ -165,16 +188,22 @@ public final class Gate {
                 }
                 String rev = Planner.scenarioRevision(s);
                 boolean inBase = base.values().stream().anyMatch(e -> rev.equals(e.scenarioRevision));
-                boolean verifiedNow = shard.entrySet().stream().anyMatch(e -> e.getKey().startsWith(s.id() + "#") && rev.equals(e.getValue().scenarioRevision));
+                boolean verifiedNow = shard.entrySet().stream()
+                        .anyMatch(
+                                e -> e.getKey().startsWith(s.id() + "#") && rev.equals(e.getValue().scenarioRevision));
                 if (!inBase && !verifiedNow) {
-                    r.failures.add(new Condition(ErrorCode.GATE_SCENARIO_UNVERIFIED.name(), s.id(), "new or changed scenario has no verified test"));
+                    r.failures.add(new Condition(
+                            ErrorCode.GATE_SCENARIO_UNVERIFIED.name(),
+                            s.id(),
+                            "new or changed scenario has no verified test"));
                 }
             }
         }
 
         // ④ new tests must be stable
         for (String item : unstableItems) {
-            r.failures.add(new Condition(ErrorCode.GATE_UNSTABLE_TEST.name(), item, "failed under pass^k / timezone / locale variation"));
+            r.failures.add(new Condition(
+                    ErrorCode.GATE_UNSTABLE_TEST.name(), item, "failed under pass^k / timezone / locale variation"));
         }
 
         // concerns: only about flows whose spec changed in this PR (a repo-wide ratio would show on every PR)
@@ -190,21 +219,34 @@ public final class Gate {
                     characterization++;
                 }
                 if ("assumed".equals(s.source()) || "defaulted".equals(s.source())) {
-                    r.concerns.add(new Condition(("assumed".equals(s.source()) ? ErrorCode.GATE_ASSUMED_CLAIM : ErrorCode.GATE_DEFAULTED_CLAIM).name(), s.id(), s.source() + " claim, not confirmed by a human"));
+                    r.concerns.add(new Condition(
+                            ("assumed".equals(s.source())
+                                            ? ErrorCode.GATE_ASSUMED_CLAIM
+                                            : ErrorCode.GATE_DEFAULTED_CLAIM)
+                                    .name(),
+                            s.id(),
+                            s.source() + " claim, not confirmed by a human"));
                 }
             }
             for (CommentMeta a : newAnswerRecords(spec, baseRef)) {
-                r.concerns.add(new Condition(ErrorCode.GATE_NEW_CONFIRMATION.name(), spec.flowId(),
-                        a.kind() + " " + a.getOr("rev", a.getOr("round", "")) + " via " + a.getOr("channel", "?") + ": \"" + a.getOr("text", "") + "\""));
+                r.concerns.add(new Condition(
+                        ErrorCode.GATE_NEW_CONFIRMATION.name(),
+                        spec.flowId(),
+                        a.kind() + " " + a.getOr("rev", a.getOr("round", "")) + " via " + a.getOr("channel", "?")
+                                + ": \"" + a.getOr("text", "") + "\""));
             }
         }
         if (total > 0 && (double) characterization / total > config.qualityGates.concernsCharacterizationRatio) {
-            r.concerns.add(new Condition(ErrorCode.GATE_CHARACTERIZATION_RATIO.name(), "*",
-                    characterization + "/" + total + " scenarios only lock current behaviour (answer questions to turn them into correctness tests)"));
+            r.concerns.add(
+                    new Condition(
+                            ErrorCode.GATE_CHARACTERIZATION_RATIO.name(),
+                            "*",
+                            characterization + "/" + total
+                                    + " scenarios only lock current behaviour (answer questions to turn them into correctness tests)"));
         }
         for (String unmapped : unmappedChanges(baseRef, currentSpecs)) {
-            r.concerns.add(new Condition(ErrorCode.GATE_UNMAPPED_CHANGE.name(), unmapped,
-                    "production change not covered by any spec ref"));
+            r.concerns.add(new Condition(
+                    ErrorCode.GATE_UNMAPPED_CHANGE.name(), unmapped, "production change not covered by any spec ref"));
         }
 
         applyWaivers(r, baseRef);
@@ -235,7 +277,8 @@ public final class Gate {
     private Map<String, Map<String, OracleShard.Entry>> baseShards(String baseRef, Result r) {
         Map<String, Map<String, OracleShard.Entry>> out = new HashMap<>();
         for (String file : git.listFiles(baseRef, paths.rel(paths.specs()))) {
-            Optional<String> flowId = file.endsWith(".oracles.json") ? GtaPaths.flowIdOfSpecPath(file) : Optional.empty();
+            Optional<String> flowId =
+                    file.endsWith(".oracles.json") ? GtaPaths.flowIdOfSpecPath(file) : Optional.empty();
             Optional<String> json = flowId.isPresent() ? git.show(baseRef, file) : Optional.empty();
             if (json.isEmpty()) {
                 continue;
@@ -244,7 +287,8 @@ public final class Gate {
                 out.put(flowId.get(), OracleShard.parse(json.get(), baseRef + ":" + file));
             } catch (GtaException unreadable) {
                 // fail closed: an unreadable base shard must not exempt its flow from the gate
-                r.failures.add(new Condition(ErrorCode.GATE_SHARD_UNREADABLE.name(), flowId.get(), unreadable.getMessage()));
+                r.failures.add(
+                        new Condition(ErrorCode.GATE_SHARD_UNREADABLE.name(), flowId.get(), unreadable.getMessage()));
             }
         }
         return out;
@@ -272,7 +316,9 @@ public final class Gate {
             b.approvals.forEach(a -> before.add(a.format()));
         });
         List<CommentMeta> out = new ArrayList<>();
-        Stream.concat(spec.answers.stream(), spec.approvals.stream()).filter(a -> !before.contains(a.format())).forEach(out::add);
+        Stream.concat(spec.answers.stream(), spec.approvals.stream())
+                .filter(a -> !before.contains(a.format()))
+                .forEach(out::add);
         return out;
     }
 
@@ -290,7 +336,8 @@ public final class Gate {
             return out;
         }
         for (String f : git.changedFiles(baseRef)) {
-            if (f.startsWith(GtaPaths.MAIN_JAVA + "/") && referencedClasses.stream().noneMatch(f::endsWith)) {
+            if (f.startsWith(GtaPaths.MAIN_JAVA + "/")
+                    && referencedClasses.stream().noneMatch(f::endsWith)) {
                 out.add(f);
             }
         }
@@ -303,24 +350,24 @@ public final class Gate {
             return;
         }
         try {
-            List<Waiver> waivers = Json.MAPPER.readValue(json.get(), new TypeReference<List<Waiver>>() {
-            });
+            List<Waiver> waivers = Json.MAPPER.readValue(json.get(), new TypeReference<List<Waiver>>() {});
             LocalDate today = LocalDate.now();
             for (Condition c : r.failures) {
                 for (Waiver w : waivers) {
-                    boolean valid = w.expires != null && !LocalDate.parse(w.expires).isBefore(today);
+                    boolean valid =
+                            w.expires != null && !LocalDate.parse(w.expires).isBefore(today);
                     if (valid && w.code.equals(c.code) && ("*".equals(w.target) || w.target.equals(c.target))) {
                         c.waived = true;
                     }
                 }
             }
         } catch (IOException | RuntimeException e) {
-            r.concerns.add(new Condition(ErrorCode.GATE_WAIVERS_UNREADABLE.name(), paths.rel(paths.waivers()), e.getMessage()));
+            r.concerns.add(new Condition(
+                    ErrorCode.GATE_WAIVERS_UNREADABLE.name(), paths.rel(paths.waivers()), e.getMessage()));
         }
     }
 
     private Path testFile(String testClass) {
         return paths.testSource(testClass);
     }
-
 }

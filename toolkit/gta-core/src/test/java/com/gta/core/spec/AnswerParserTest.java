@@ -1,15 +1,14 @@
 package com.gta.core.spec;
 
-import com.gta.core.error.GtaException;
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.gta.core.error.GtaException;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
 
 class AnswerParserTest {
 
@@ -24,7 +23,8 @@ class AnswerParserTest {
 
     @Test
     void shouldAcceptAsciiRestDefault() {
-        AnswerParser.Answers a = assertInstanceOf(AnswerParser.Answers.class, AnswerParser.parse("R1: 1B rest default"));
+        AnswerParser.Answers a =
+                assertInstanceOf(AnswerParser.Answers.class, AnswerParser.parse("R1: 1B rest default"));
 
         assertTrue(a.restDefault());
     }
@@ -49,8 +49,11 @@ class AnswerParserTest {
 
     @Test
     void shouldNeverReadANegatedOrConditionalReplyAsApproval() {
-        for (String reply : List.of("不批准 order.create@R2", "不批准 order.create@R2，q2 还要改",
-                "don't approve order.create@R2 yet", "approve order.create@R2 after q2 is fixed")) {
+        for (String reply : List.of(
+                "不批准 order.create@R2",
+                "不批准 order.create@R2，q2 还要改",
+                "don't approve order.create@R2 yet",
+                "approve order.create@R2 after q2 is fixed")) {
             assertThrows(GtaException.class, () -> AnswerParser.parse(reply), reply);
         }
         assertEquals(new AnswerParser.Approval("order.create", "R2"), AnswerParser.parse("  批准 order.create@R2。 "));

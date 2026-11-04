@@ -4,12 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
 import com.gta.core.util.Json;
-import org.xml.sax.SAXException;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -22,11 +16,15 @@ import java.util.stream.Stream;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 /** Parses Surefire/Failsafe XML and merges gta-junit scenario tags (target/gta-results/*.jsonl). */
 public final class SurefireReports {
-    private SurefireReports() {
-    }
+    private SurefireReports() {}
 
     /** Strict parse: an unreadable report fails the run instead of silently dropping its tests (fail closed). */
     public static List<TestCase> parse(List<Path> reportDirs, Path gtaResultsDir) {
@@ -44,7 +42,10 @@ public final class SurefireReports {
                 continue;
             }
             try (Stream<Path> files = Files.list(dir)) {
-                for (Path f : files.filter(p -> p.getFileName().toString().startsWith("TEST-") && p.toString().endsWith(".xml")).sorted().toList()) {
+                for (Path f : files.filter(p -> p.getFileName().toString().startsWith("TEST-")
+                                && p.toString().endsWith(".xml"))
+                        .sorted()
+                        .toList()) {
                     try {
                         out.addAll(parseFile(f));
                     } catch (GtaException unreadable) {
@@ -98,7 +99,9 @@ public final class SurefireReports {
                 out.add(c);
             }
         } catch (IOException | ParserConfigurationException | SAXException e) {
-            throw new GtaException(ErrorCode.ENV_TEST_REPORTS_UNUSABLE, "Cannot read " + file.getFileName() + ": " + e.getMessage(),
+            throw new GtaException(
+                    ErrorCode.ENV_TEST_REPORTS_UNUSABLE,
+                    "Cannot read " + file.getFileName() + ": " + e.getMessage(),
                     "Run the command again; if it repeats, look for a test that kills the JVM (System.exit, OOM)");
         }
         return out;
@@ -143,7 +146,10 @@ public final class SurefireReports {
                     }
                     try {
                         JsonNode n = Json.MAPPER.readTree(line);
-                        out.put(n.path("className").asText() + "#" + n.path("method").asText(), n);
+                        out.put(
+                                n.path("className").asText() + "#"
+                                        + n.path("method").asText(),
+                                n);
                     } catch (IOException truncated) {
                         // one bad line (e.g. the last one of a killed JVM) must not drop the others
                     }

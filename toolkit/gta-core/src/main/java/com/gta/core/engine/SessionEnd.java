@@ -1,5 +1,7 @@
 package com.gta.core.engine;
 
+import static com.gta.core.engine.NodeResults.done;
+
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
@@ -20,7 +22,6 @@ import com.gta.core.util.Ids;
 import com.gta.core.util.Json;
 import com.gta.core.util.ProcessRunner;
 import com.gta.core.util.WorkLock;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -29,8 +30,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import static com.gta.core.engine.NodeResults.done;
 
 /** Session end (plan §8): stability runs, the base-anchored gate and the report / PR comment. */
 final class SessionEnd {
@@ -72,8 +71,12 @@ final class SessionEnd {
     public Map<String, Object> verify(boolean newOnly) {
         try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
             WorkState st = store.load();
-            List<String> ids = newOnly ? st.sessionPassed : st.items.values().stream()
-                    .filter(i -> i.status == ItemStatus.PASSED).map(i -> i.id).toList();
+            List<String> ids = newOnly
+                    ? st.sessionPassed
+                    : st.items.values().stream()
+                            .filter(i -> i.status == ItemStatus.PASSED)
+                            .map(i -> i.id)
+                            .toList();
             Map<String, Object> out = verifyInternal(st, new ArrayList<>(ids));
             store.save(st);
             return out;
@@ -99,7 +102,11 @@ final class SessionEnd {
                     unstable.add(id);
                     WorkState.ItemState s = st.items.get(id);
                     if (s != null && s.status == ItemStatus.PASSED) {
-                        s.lastError = ItemWorkflow.lastError(s, ErrorCode.TEST_ASSERTION_FAILED, "unstable under pass^k / " + MavenRunner.stabilityVariantLabel(config.qualityGates) + " / random order");
+                        s.lastError = ItemWorkflow.lastError(
+                                s,
+                                ErrorCode.TEST_ASSERTION_FAILED,
+                                "unstable under pass^k / " + MavenRunner.stabilityVariantLabel(config.qualityGates)
+                                        + " / random order");
                         s.verdict = "flaky";
                         st.move(s, ItemStatus.TRIAGING);
                     }
@@ -154,7 +161,8 @@ final class SessionEnd {
 
     String defaultBase() {
         for (String ref : List.of("origin/main", "origin/master", "main", "master")) {
-            if (ProcessRunner.run(paths.root(), ProcessRunner.cmd("git", "rev-parse", "--verify", "--quiet", ref)).ok()) {
+            if (ProcessRunner.run(paths.root(), ProcessRunner.cmd("git", "rev-parse", "--verify", "--quiet", ref))
+                    .ok()) {
                 return ref;
             }
         }

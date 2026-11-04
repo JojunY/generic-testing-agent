@@ -1,20 +1,20 @@
 package com.gta.core.oracle;
 
-import com.gta.core.state.WorkState;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.gta.core.state.WorkState;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
 class AssertionScannerTest {
     static final String SCENARIO = "order.create/s01";
-    static final String TEST = """
+    static final String TEST =
+            """
             package com.acme;
             class OrderIT {
                 static final String CREATED = "CREATED";
@@ -48,7 +48,9 @@ class AssertionScannerTest {
         AssertionScanner.ScenarioOracle o = scan(TEST);
 
         assertEquals(1, o.methods());
-        assertTrue(o.tokens().containsAll(List.of("201", "50.00", "CREATED")), o.tokens().toString());
+        assertTrue(
+                o.tokens().containsAll(List.of("201", "50.00", "CREATED")),
+                o.tokens().toString());
         assertFalse(o.tokens().contains("99.99"), "other scenario leaked in");
     }
 
@@ -73,7 +75,8 @@ class AssertionScannerTest {
     void shouldAllowChangedInputsAndAddedAssertions() throws Exception {
         WorkState.Lock lock = OracleLock.create(scan(TEST), List.of("201", "50.00", "CREATED"), "r1");
         String changed = TEST.replace("\\\"subtotal\\\":50.00", "\\\"subtotal\\\":50.000")
-                .replace(".andExpect(jsonPath(\"$.status\").value(CREATED));",
+                .replace(
+                        ".andExpect(jsonPath(\"$.status\").value(CREATED));",
                         ".andExpect(jsonPath(\"$.status\").value(CREATED))\n.andExpect(jsonPath(\"$.id\").exists());");
 
         AssertionScanner.ScenarioOracle now = scan(changed);

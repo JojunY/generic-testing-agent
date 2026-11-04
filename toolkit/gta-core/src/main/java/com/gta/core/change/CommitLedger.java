@@ -2,7 +2,6 @@ package com.gta.core.change;
 
 import com.gta.core.config.GtaPaths;
 import com.gta.core.util.AtomicFiles;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -42,7 +41,9 @@ public final class CommitLedger {
             return out;
         }
         try {
-            Files.readAllLines(paths.commitLedger(), StandardCharsets.UTF_8).stream().map(String::strip).filter(l -> !l.isEmpty())
+            Files.readAllLines(paths.commitLedger(), StandardCharsets.UTF_8).stream()
+                    .map(String::strip)
+                    .filter(l -> !l.isEmpty())
                     .forEach(out::add);
         } catch (IOException e) {
             throw new UncheckedIOException(e);

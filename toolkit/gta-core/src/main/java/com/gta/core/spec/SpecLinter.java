@@ -3,7 +3,6 @@ package com.gta.core.spec;
 import com.gta.core.profile.RefResolver;
 import com.gta.core.registry.Registry;
 import com.gta.core.util.Ids;
-
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,13 +15,13 @@ import java.util.Set;
 public final class SpecLinter {
     private static final Set<Integer> RISK_VALUES = Set.of(1, 2, 3, 4, 6, 9);
     private static final List<String> LAYERS = List.of("unit", "slice", "component", "contract", "system");
-    private static final List<String> ORACLES = List.of("state", "response", "message", "property", "golden", "contract");
-    private static final List<String> DIAGRAMS = List.of("sequenceDiagram", "flowchart", "graph", "stateDiagram-v2",
-            "stateDiagram", "erDiagram");
+    private static final List<String> ORACLES =
+            List.of("state", "response", "message", "property", "golden", "contract");
+    private static final List<String> DIAGRAMS =
+            List.of("sequenceDiagram", "flowchart", "graph", "stateDiagram-v2", "stateDiagram", "erDiagram");
     private static final Set<String> API_CAPABILITIES = Set.of("rest-api", "grpc-api", "graphql-api");
 
-    private SpecLinter() {
-    }
+    private SpecLinter() {}
 
     public static List<String> lint(Spec spec, String expectedFlowId, RefResolver refs, Registry registry, Path root) {
         List<String> issues = new ArrayList<>();
@@ -35,7 +34,8 @@ public final class SpecLinter {
             issues.add("header: flowId '" + flowId + "' must be <domain>.<flow-name>");
         }
         if (expectedFlowId != null && !expectedFlowId.equals(flowId)) {
-            issues.add("header: flowId '" + flowId + "' does not match the file location (expected " + expectedFlowId + ")");
+            issues.add("header: flowId '" + flowId + "' does not match the file location (expected " + expectedFlowId
+                    + ")");
         }
         if (registry.capabilities.stream().noneMatch(c -> c.id.equals(spec.capability()))) {
             issues.add("header: unknown capability '" + spec.capability() + "'");
@@ -47,7 +47,8 @@ public final class SpecLinter {
             issues.add("header: risk must be probability(1-3) x impact(1-3), i.e. one of " + RISK_VALUES);
         }
         if (API_CAPABILITIES.contains(spec.capability()) && !spec.sections.contains("access")) {
-            issues.add("access: flows with an external entry point need a '## Access' section (role x operation x ownership)");
+            issues.add(
+                    "access: flows with an external entry point need a '## Access' section (role x operation x ownership)");
         }
         if (spec.requirements.isEmpty()) {
             issues.add("requirements: at least one '### Requirement:' is required");
@@ -73,7 +74,8 @@ public final class SpecLinter {
             }
             for (String ref : r.refs()) {
                 if (refs != null && refs.hash(ref).isEmpty()) {
-                    issues.add(where + ": ref '" + ref + "' does not resolve (use method:<fqcn>#<method>, bean:<fqcn>#<method> or config:<key>)");
+                    issues.add(where + ": ref '" + ref
+                            + "' does not resolve (use method:<fqcn>#<method>, bean:<fqcn>#<method> or config:<key>)");
                 }
             }
             for (Spec.Scenario s : r.scenarios) {
@@ -90,16 +92,21 @@ public final class SpecLinter {
                     checkDocumented(issues, sw, s.meta.getOr("doc", ""), s.meta.getOr("quote", ""), root);
                 }
                 if (s.source().equals("assumed") && !affected.contains(s.id()) && !affected.contains(r.id())) {
-                    issues.add(sw + ": an assumed scenario must be covered by an open question (affects=" + s.id() + ")");
+                    issues.add(
+                            sw + ": an assumed scenario must be covered by an open question (affects=" + s.id() + ")");
                 }
                 if (s.thens.isEmpty()) {
                     issues.add(sw + ": needs at least one '- **THEN** ...' clause");
                 } else if (!s.reviewerChecked() && s.thenLiterals().isEmpty()) {
-                    issues.add(sw + ": THEN must contain at least one expected value in backticks, e.g. `503`, or mark check=reviewer");
+                    issues.add(
+                            sw
+                                    + ": THEN must contain at least one expected value in backticks, e.g. `503`, or mark check=reviewer");
                 }
-                s.meta.get("hint.layer").filter(l -> !LAYERS.contains(l))
+                s.meta.get("hint.layer")
+                        .filter(l -> !LAYERS.contains(l))
                         .ifPresent(l -> issues.add(sw + ": hint.layer must be one of " + LAYERS));
-                s.meta.get("hint.oracle").filter(o -> !ORACLES.contains(o))
+                s.meta.get("hint.oracle")
+                        .filter(o -> !ORACLES.contains(o))
                         .ifPresent(o -> issues.add(sw + ": hint.oracle must be one of " + ORACLES));
             }
         }
@@ -119,11 +126,14 @@ public final class SpecLinter {
                 issues.add(qw + ": needs at least two options '- [ ] A) ...'");
             }
             if (q.impact().equals("normal") && q.currentCodeOption().isEmpty()) {
-                issues.add(qw + ": a normal-impact question needs an option marked '= current code' (picked by 'rest default')");
+                issues.add(
+                        qw
+                                + ": a normal-impact question needs an option marked '= current code' (picked by 'rest default')");
             }
             for (Spec.Option o : q.options) {
                 if (!o.isCurrentCode() && !o.text.contains("→") && !o.text.contains("->")) {
-                    issues.add(qw + " option " + o.letter + ": state the effect on THEN ('→ ...') or mark '= current code'");
+                    issues.add(qw + " option " + o.letter
+                            + ": state the effect on THEN ('→ ...') or mark '= current code'");
                 }
             }
             if (q.affects().isEmpty()) {

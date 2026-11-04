@@ -11,7 +11,6 @@ import com.gta.core.run.TestCase;
 import com.gta.core.run.TestRunner;
 import com.gta.core.util.Git;
 import com.gta.core.util.Ids;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,26 +33,44 @@ final class TestRuns {
 
     RunResult runItem(String runId, PlanItem item, boolean variant, boolean random) {
         String tag = item.isFoundation() ? null : "scenario:" + item.ref;
-        return runner.run(runId, item.id, new TestRunner.Options(item.testClass, tag, variant, random), productionClasses(), testClasses());
+        return runner.run(
+                runId,
+                item.id,
+                new TestRunner.Options(item.testClass, tag, variant, random),
+                productionClasses(),
+                testClasses());
     }
 
     /** Every test tagged {@code gta}, as the gate needs it. */
     RunResult runAll() {
-        return runner.run(Ids.newRunId(git.head()), null, new TestRunner.Options(null, "gta", false, false), productionClasses(), testClasses());
+        return runner.run(
+                Ids.newRunId(git.head()),
+                null,
+                new TestRunner.Options(null, "gta", false, false),
+                productionClasses(),
+                testClasses());
     }
 
     /** {@code gtaw run}: the seed tests (smoke) or every gta test, optionally one layer. */
     RunResult runTests(boolean smoke, String layer) {
         if ("system".equals(layer)) {
-            throw new GtaException(ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE, "The system layer arrives in P4", "Run component tests instead");
+            throw new GtaException(
+                    ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE,
+                    "The system layer arrives in P4",
+                    "Run component tests instead");
         }
         String tag = smoke ? null : layer != null ? layer : "gta";
-        return runner.run(Ids.newRunId(git.head()), null, new TestRunner.Options(smoke ? "*SeedIT" : null, tag, false, false),
-                productionClasses(), testClasses());
+        return runner.run(
+                Ids.newRunId(git.head()),
+                null,
+                new TestRunner.Options(smoke ? "*SeedIT" : null, tag, false, false),
+                productionClasses(),
+                testClasses());
     }
 
     AssertionScanner.ScenarioOracle scanOracle(PlanItem item) {
-        return AssertionScanner.scan(paths.testSource(item.testClass), item.isFoundation() ? null : item.ref, paths.testResources());
+        return AssertionScanner.scan(
+                paths.testSource(item.testClass), item.isFoundation() ? null : item.ref, paths.testResources());
     }
 
     /** True once a test got past setup and touched the system under test (the oracle may then be locked). */
@@ -74,8 +91,11 @@ final class TestRuns {
             out.put("timedOut", true);
         }
         out.put("tests", run.cases.size());
-        out.put("passed", run.cases.stream().filter(c -> "passed".equals(c.outcome)).count());
-        long pinned = run.cases.stream().filter(c -> "known-defect".equals(c.outcome)).count();
+        out.put(
+                "passed",
+                run.cases.stream().filter(c -> "passed".equals(c.outcome)).count());
+        long pinned =
+                run.cases.stream().filter(c -> "known-defect".equals(c.outcome)).count();
         if (pinned > 0) {
             out.put("knownDefect", pinned);
         }

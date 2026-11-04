@@ -7,7 +7,6 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.gta.core.util.Hashes;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -22,8 +21,7 @@ import java.util.stream.Stream;
 
 /** Parsed view of a source root (src/main/java or src/test/java). */
 public final class JavaIndex {
-    public record Unit(Path file, CompilationUnit cu) {
-    }
+    public record Unit(Path file, CompilationUnit cu) {}
 
     private final List<Unit> units = new ArrayList<>();
     private final Map<String, String> methodHashes = new LinkedHashMap<>();
@@ -40,7 +38,8 @@ public final class JavaIndex {
         }
         JavaParser parser = parser();
         try (Stream<Path> files = Files.walk(sourceRoot)) {
-            for (Path file : files.filter(p -> p.toString().endsWith(".java")).sorted().toList()) {
+            for (Path file :
+                    files.filter(p -> p.toString().endsWith(".java")).sorted().toList()) {
                 ParseResult<CompilationUnit> result = parser.parse(file);
                 result.getResult().ifPresent(cu -> index.add(file, cu));
             }
@@ -52,7 +51,8 @@ public final class JavaIndex {
 
     private void add(Path file, CompilationUnit cu) {
         units.add(new Unit(file, cu));
-        String pkg = cu.getPackageDeclaration().map(p -> p.getNameAsString() + ".").orElse("");
+        String pkg =
+                cu.getPackageDeclaration().map(p -> p.getNameAsString() + ".").orElse("");
         for (TypeDeclaration<?> type : cu.findAll(TypeDeclaration.class)) {
             String fqcn = type.getFullyQualifiedName().orElse(pkg + type.getNameAsString());
             classFiles.put(fqcn, file);
@@ -60,9 +60,11 @@ public final class JavaIndex {
             for (Object m : type.getMethods()) {
                 MethodDeclaration md = (MethodDeclaration) m;
                 bodies.computeIfAbsent(md.getNameAsString(), k -> new StringBuilder())
-                        .append(md.getDeclarationAsString()).append(md.getBody().map(Object::toString).orElse(""));
+                        .append(md.getDeclarationAsString())
+                        .append(md.getBody().map(Object::toString).orElse(""));
             }
-            bodies.forEach((name, body) -> methodHashes.put(fqcn + "#" + name, Hashes.normalizedShort(body.toString())));
+            bodies.forEach(
+                    (name, body) -> methodHashes.put(fqcn + "#" + name, Hashes.normalizedShort(body.toString())));
         }
     }
 

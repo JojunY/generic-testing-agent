@@ -19,8 +19,7 @@ import java.util.Map;
 public final class HarnessGen {
     static final List<String> PLATFORMS = List.of("copilot", "opencode");
 
-    private HarnessGen() {
-    }
+    private HarnessGen() {}
 
     public static void main(String[] args) {
         System.exit(run(args));
@@ -28,7 +27,8 @@ public final class HarnessGen {
 
     static int run(String[] args) {
         if (args.length == 0 || args[0].equals("--help") || args[0].equals("-h")) {
-            System.out.println("usage: gta-harness-gen lint|generate [--repo DIR] [--check] [--platform copilot|opencode]");
+            System.out.println(
+                    "usage: gta-harness-gen lint|generate [--repo DIR] [--check] [--platform copilot|opencode]");
             return args.length == 0 ? 2 : 0;
         }
         String command = args[0];

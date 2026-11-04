@@ -1,22 +1,22 @@
 package com.gta.core.run;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /** Surefire XML merged with gta-junit scenario tags (plan §5.3: results map to scenarios by tag). */
 class SurefireReportsTest {
     @TempDir
     Path dir;
+
     Path reports;
     Path gtaResults;
 
@@ -27,8 +27,10 @@ class SurefireReportsTest {
     }
 
     private void report(String name, String testcases) throws Exception {
-        Files.writeString(reports.resolve("TEST-" + name + ".xml"),
-                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuite name=\"" + name + "\">\n" + testcases + "</testsuite>\n");
+        Files.writeString(
+                reports.resolve("TEST-" + name + ".xml"),
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuite name=\"" + name + "\">\n" + testcases
+                        + "</testsuite>\n");
     }
 
     private void tags(String lines) throws Exception {
@@ -37,7 +39,9 @@ class SurefireReportsTest {
 
     @Test
     void shouldReadOutcomesFromSurefireXml() throws Exception {
-        report("com.acme.OrderIT", """
+        report(
+                "com.acme.OrderIT",
+                """
                 <testcase classname="com.acme.OrderIT" name="passes()"/>
                 <testcase classname="com.acme.OrderIT" name="fails()"><failure type="org.opentest4j.AssertionFailedError" message="expected: &lt;201&gt; but was: &lt;500&gt;">stack</failure></testcase>
                 <testcase classname="com.acme.OrderIT" name="breaks()"><error type="java.lang.IllegalStateException" message="boom">stack</error></testcase>
@@ -46,34 +50,44 @@ class SurefireReportsTest {
 
         List<TestCase> cases = SurefireReports.parse(List.of(reports), gtaResults);
 
-        assertEquals(List.of("passed", "failed", "error", "skipped"), cases.stream().map(c -> c.outcome).toList());
-        assertEquals(List.of("passes", "fails", "breaks", "skipped"), cases.stream().map(c -> c.method).toList());
+        assertEquals(
+                List.of("passed", "failed", "error", "skipped"),
+                cases.stream().map(c -> c.outcome).toList());
+        assertEquals(
+                List.of("passes", "fails", "breaks", "skipped"),
+                cases.stream().map(c -> c.method).toList());
         assertEquals("expected: <201> but was: <500>", cases.get(1).message);
         assertEquals("java.lang.IllegalStateException", cases.get(2).failureType);
     }
 
     @Test
     void shouldKeepTheScenarioTagsOfParameterizedAndRepeatedTests() throws Exception {
-        report("com.acme.OrderIT", """
+        report(
+                "com.acme.OrderIT",
+                """
                 <testcase classname="com.acme.OrderIT" name="rejects(String)[1]"/>
                 <testcase classname="com.acme.OrderIT" name="rejects(String)[2]"/>
                 <testcase classname="com.acme.OrderIT" name="retries()[3]"/>
                 """);
-        tags("""
+        tags(
+                """
                 {"className":"com.acme.OrderIT","method":"rejects","tags":["gta","scenario:order.create/s02"]}
                 {"className":"com.acme.OrderIT","method":"retries","tags":["gta","scenario:order.create/s03"]}
                 """);
 
         List<TestCase> cases = SurefireReports.parse(List.of(reports), gtaResults);
 
-        assertEquals(List.of("order.create/s02", "order.create/s02", "order.create/s03"),
-                cases.stream().map(TestCase::scenarioId).toList(), "every invocation keeps the scenario of its method");
+        assertEquals(
+                List.of("order.create/s02", "order.create/s02", "order.create/s03"),
+                cases.stream().map(TestCase::scenarioId).toList(),
+                "every invocation keeps the scenario of its method");
     }
 
     @Test
     void shouldTakeTheKnownDefectOutcomeFromGtaJunit() throws Exception {
         report("com.acme.OrderIT", "<testcase classname=\"com.acme.OrderIT\" name=\"pinned()\"/>\n");
-        tags("{\"className\":\"com.acme.OrderIT\",\"method\":\"pinned\",\"tags\":[\"gta\"],\"outcome\":\"known-defect\",\"displayName\":\"pinned\"}\n");
+        tags(
+                "{\"className\":\"com.acme.OrderIT\",\"method\":\"pinned\",\"tags\":[\"gta\"],\"outcome\":\"known-defect\",\"displayName\":\"pinned\"}\n");
 
         TestCase c = SurefireReports.parse(List.of(reports), gtaResults).get(0);
 
@@ -87,7 +101,10 @@ class SurefireReportsTest {
 
         GtaException e = assertThrows(GtaException.class, () -> SurefireReports.parse(List.of(reports), gtaResults));
 
-        assertEquals(ErrorCode.ENV_TEST_REPORTS_UNUSABLE, e.code(), "dropping its tests silently would read as 'no test ran'");
+        assertEquals(
+                ErrorCode.ENV_TEST_REPORTS_UNUSABLE,
+                e.code(),
+                "dropping its tests silently would read as 'no test ran'");
     }
 
     @Test
@@ -102,17 +119,22 @@ class SurefireReportsTest {
 
     @Test
     void shouldSkipOnlyTheBrokenLineOfTheListenerOutput() throws Exception {
-        report("com.acme.OrderIT", """
+        report(
+                "com.acme.OrderIT",
+                """
                 <testcase classname="com.acme.OrderIT" name="first()"/>
                 <testcase classname="com.acme.OrderIT" name="second()"/>
                 """);
-        tags("{\"className\":\"com.acme.OrderIT\",\"method\":\"first\",\"tags\":[\"scenario:order.create/s01\"]}\n"
-                + "{\"className\":\"com.acme.OrderIT\",\"meth\n"
-                + "{\"className\":\"com.acme.OrderIT\",\"method\":\"second\",\"tags\":[\"scenario:order.create/s02\"]}\n");
+        tags(
+                "{\"className\":\"com.acme.OrderIT\",\"method\":\"first\",\"tags\":[\"scenario:order.create/s01\"]}\n"
+                        + "{\"className\":\"com.acme.OrderIT\",\"meth\n"
+                        + "{\"className\":\"com.acme.OrderIT\",\"method\":\"second\",\"tags\":[\"scenario:order.create/s02\"]}\n");
 
         List<TestCase> cases = SurefireReports.parse(List.of(reports), gtaResults);
 
-        assertEquals(List.of("order.create/s01", "order.create/s02"), cases.stream().map(TestCase::scenarioId).toList());
+        assertEquals(
+                List.of("order.create/s01", "order.create/s02"),
+                cases.stream().map(TestCase::scenarioId).toList());
     }
 
     @Test

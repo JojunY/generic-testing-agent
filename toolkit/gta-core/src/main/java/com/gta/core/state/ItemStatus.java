@@ -2,20 +2,38 @@ package com.gta.core.state;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 
 /** Item status and its authoritative transition table (plan §5.4). */
 public enum ItemStatus {
-    PENDING, AUTHORING, VERIFYING, REPAIRING, TRIAGING, REVIEWING, PASSED, DEFECT_FOUND, NEEDS_HUMAN, CANCELLED;
+    PENDING,
+    AUTHORING,
+    VERIFYING,
+    REPAIRING,
+    TRIAGING,
+    REVIEWING,
+    PASSED,
+    DEFECT_FOUND,
+    NEEDS_HUMAN,
+    CANCELLED;
 
     private static final Map<ItemStatus, Set<ItemStatus>> ALLOWED = Map.of(
             PENDING, EnumSet.of(AUTHORING, VERIFYING, CANCELLED), // VERIFYING: adopt an existing test on rebuild
             AUTHORING, EnumSet.of(VERIFYING, PENDING, CANCELLED),
             REPAIRING, EnumSet.of(VERIFYING, NEEDS_HUMAN, PENDING, CANCELLED),
-            VERIFYING, EnumSet.of(REPAIRING, NEEDS_HUMAN, TRIAGING, REVIEWING, PASSED, DEFECT_FOUND, PENDING, CANCELLED, AUTHORING),
+            VERIFYING,
+                    EnumSet.of(
+                            REPAIRING,
+                            NEEDS_HUMAN,
+                            TRIAGING,
+                            REVIEWING,
+                            PASSED,
+                            DEFECT_FOUND,
+                            PENDING,
+                            CANCELLED,
+                            AUTHORING),
             TRIAGING, EnumSet.of(REPAIRING, NEEDS_HUMAN, PENDING, CANCELLED),
             REVIEWING, EnumSet.of(PASSED, REPAIRING, NEEDS_HUMAN, PENDING, CANCELLED),
             NEEDS_HUMAN, EnumSet.of(DEFECT_FOUND, CANCELLED, PENDING),

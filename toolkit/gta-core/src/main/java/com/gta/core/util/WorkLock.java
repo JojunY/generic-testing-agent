@@ -2,7 +2,6 @@ package com.gta.core.util;
 
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
-
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
@@ -39,12 +38,17 @@ public final class WorkLock implements AutoCloseable {
             }
             if (lock == null) {
                 channel.close();
-                throw new GtaException(ErrorCode.STATE_LOCKED, "Another gtaw process holds " + lockFile,
+                throw new GtaException(
+                        ErrorCode.STATE_LOCKED,
+                        "Another gtaw process holds " + lockFile,
                         "Wait for it to finish, then run ./gtaw next again");
             }
             return new WorkLock(channel, lock);
         } catch (IOException e) {
-            throw new GtaException(ErrorCode.INTERNAL_ERROR, "Cannot lock " + lockFile + ": " + e.getMessage(), "Check file permissions");
+            throw new GtaException(
+                    ErrorCode.INTERNAL_ERROR,
+                    "Cannot lock " + lockFile + ": " + e.getMessage(),
+                    "Check file permissions");
         }
     }
 

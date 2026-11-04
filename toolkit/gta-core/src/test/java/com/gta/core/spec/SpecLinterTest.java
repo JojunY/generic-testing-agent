@@ -1,15 +1,14 @@
 package com.gta.core.spec;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.gta.core.profile.RefResolver;
 import com.gta.core.registry.Registry;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class SpecLinterTest {
     @TempDir
@@ -18,11 +17,14 @@ class SpecLinterTest {
     private List<String> lint(String text) throws Exception {
         Path src = root.resolve("src/main/java/com/acme/order");
         Files.createDirectories(src);
-        Files.writeString(src.resolve("OrderController.java"), """
+        Files.writeString(
+                src.resolve("OrderController.java"),
+                """
                 package com.acme.order;
                 public class OrderController { public Object create() { return null; } }
                 """);
-        return SpecLinter.lint(SpecParser.parseText(text), "order.create", RefResolver.of(root), Registry.loadBundled(), root);
+        return SpecLinter.lint(
+                SpecParser.parseText(text), "order.create", RefResolver.of(root), Registry.loadBundled(), root);
     }
 
     @Test
@@ -34,7 +36,8 @@ class SpecLinterTest {
 
     @Test
     void shouldRejectAnAgentWrittenConfirmation() throws Exception {
-        String forged = SpecFixtures.CREATE_ORDER.replace("source=observed hint.layer=component hint.oracle=response",
+        String forged = SpecFixtures.CREATE_ORDER.replace(
+                "source=observed hint.layer=component hint.oracle=response",
                 "source=confirmed hint.layer=component hint.oracle=response");
 
         List<String> issues = lint(forged);
@@ -44,7 +47,8 @@ class SpecLinterTest {
 
     @Test
     void shouldRequireExpectedValuesInBackticks() throws Exception {
-        String vague = SpecFixtures.CREATE_ORDER.replace("- **THEN** the response status is `201`\n- **AND** the total is `50.00`",
+        String vague = SpecFixtures.CREATE_ORDER.replace(
+                "- **THEN** the response status is `201`\n- **AND** the total is `50.00`",
                 "- **THEN** the order is created correctly");
 
         List<String> issues = lint(vague);

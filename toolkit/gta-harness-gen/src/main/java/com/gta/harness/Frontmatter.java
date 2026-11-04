@@ -1,7 +1,6 @@
 package com.gta.harness;
 
 import com.gta.core.util.Yaml;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.LinkedHashMap;
@@ -29,7 +28,8 @@ public record Frontmatter(Map<String, Object> fields, String body) {
         String yaml = t.substring(4, end + 1);
         String body = t.substring(end + 5);
         try {
-            Map<String, Object> map = yaml.isBlank() ? new LinkedHashMap<>() : Yaml.MAPPER.readValue(yaml, LinkedHashMap.class);
+            Map<String, Object> map =
+                    yaml.isBlank() ? new LinkedHashMap<>() : Yaml.MAPPER.readValue(yaml, LinkedHashMap.class);
             return new Frontmatter(map, body);
         } catch (IOException e) {
             throw new UncheckedIOException("Invalid frontmatter: " + e.getMessage(), e);
@@ -79,7 +79,10 @@ public record Frontmatter(Map<String, Object> fields, String body) {
             return v.toString();
         }
         String s = String.valueOf(v);
-        if (PLAIN.matcher(s).matches() && !RESERVED.contains(s.toLowerCase()) && !s.endsWith(" ") && !s.matches("^[0-9.]+$")) {
+        if (PLAIN.matcher(s).matches()
+                && !RESERVED.contains(s.toLowerCase())
+                && !s.endsWith(" ")
+                && !s.matches("^[0-9.]+$")) {
             return s;
         }
         StringBuilder q = new StringBuilder("\"");

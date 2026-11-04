@@ -13,8 +13,7 @@ public interface TestRunner {
      * @param stabilityVariant run under the configured stability timezone and locale (qualityGates.stabilityTimezone/stabilityLocale)
      * @param randomOrder     run test methods in random order
      */
-    record Options(String testClass, String scenarioTag, boolean stabilityVariant, boolean randomOrder) {
-    }
+    record Options(String testClass, String scenarioTag, boolean stabilityVariant, boolean randomOrder) {}
 
     RunResult run(String runId, String itemId, Options options, Set<String> productionClasses, Set<String> testClasses);
 }

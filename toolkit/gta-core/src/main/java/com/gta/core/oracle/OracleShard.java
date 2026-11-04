@@ -5,7 +5,6 @@ import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
 import com.gta.core.util.Ids;
 import com.gta.core.util.Json;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -33,8 +32,7 @@ public final class OracleShard {
         public String relockedAt;
     }
 
-    private OracleShard() {
-    }
+    private OracleShard() {}
 
     /**
      * Reads a committed shard. A shard that cannot be parsed (e.g. merge-conflict markers) fails closed: treating it as
@@ -53,21 +51,25 @@ public final class OracleShard {
 
     public static Map<String, Entry> parse(String json, String where) {
         try {
-            Map<String, Entry> m = Json.MAPPER.readValue(json, new TypeReference<TreeMap<String, Entry>>() {
-            });
+            Map<String, Entry> m = Json.MAPPER.readValue(json, new TypeReference<TreeMap<String, Entry>>() {});
             if (m == null) {
                 return new TreeMap<>();
             }
             for (String key : m.keySet()) {
                 if (!Ids.ITEM_ID.matcher(key).matches()) {
-                    throw new GtaException(ErrorCode.CONFIG_ORACLE_SHARD_INVALID, "Oracle shard " + where + " has an invalid item id '" + key + "'",
+                    throw new GtaException(
+                            ErrorCode.CONFIG_ORACLE_SHARD_INVALID,
+                            "Oracle shard " + where + " has an invalid item id '" + key + "'",
                             "Keys are item ids like order.create/s01#component-01; restore the file from git");
                 }
             }
             return m;
         } catch (IOException e) {
-            throw new GtaException(ErrorCode.CONFIG_ORACLE_SHARD_INVALID, "Oracle shard " + where + " cannot be read: " + e.getMessage(),
-                    "Resolve the merge conflict or restore the file from git (both sides' entries must be kept), then re-run", e);
+            throw new GtaException(
+                    ErrorCode.CONFIG_ORACLE_SHARD_INVALID,
+                    "Oracle shard " + where + " cannot be read: " + e.getMessage(),
+                    "Resolve the merge conflict or restore the file from git (both sides' entries must be kept), then re-run",
+                    e);
         }
     }
 

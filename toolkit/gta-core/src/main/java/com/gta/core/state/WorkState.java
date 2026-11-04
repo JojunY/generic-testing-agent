@@ -2,7 +2,6 @@ package com.gta.core.state;
 
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,12 +41,12 @@ public class WorkState {
 
     /** A decision waiting for a human (plan §5.5). */
     public static class Pending {
-        public String type;      // answer | approve | defect | escalation
+        public String type; // answer | approve | defect | escalation
         public String flowId;
         public String itemId;
         public String round;
         public String rev;
-        public String prompt;    // the exact block the orchestrator must show verbatim
+        public String prompt; // the exact block the orchestrator must show verbatim
     }
 
     public static class ItemState {
@@ -93,7 +92,8 @@ public class WorkState {
     public ItemState item(String id) {
         ItemState s = items.get(id);
         if (s == null) {
-            throw new GtaException(ErrorCode.USAGE_UNKNOWN_ITEM, "Unknown item " + id, "Run ./gtaw status to list items");
+            throw new GtaException(
+                    ErrorCode.USAGE_UNKNOWN_ITEM, "Unknown item " + id, "Run ./gtaw status to list items");
         }
         return s;
     }
@@ -103,7 +103,8 @@ public class WorkState {
             return;
         }
         if (!item.status.canMoveTo(to)) {
-            throw new GtaException(ErrorCode.STATE_ILLEGAL_TRANSITION,
+            throw new GtaException(
+                    ErrorCode.STATE_ILLEGAL_TRANSITION,
                     "Illegal transition " + item.status.id() + " -> " + to.id() + " for " + item.id,
                     "Run ./gtaw next to get the next valid step");
         }

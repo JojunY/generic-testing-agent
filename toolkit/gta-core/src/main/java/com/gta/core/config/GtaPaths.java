@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 public record GtaPaths(Path root) {
     /** Maven source layout, relative to the module root (forward slashes, as git reports paths). */
     public static final String MAIN_JAVA = "src/main/java";
+
     public static final String MAIN_RESOURCES = "src/main/resources";
     public static final String TEST_JAVA = "src/test/java";
     public static final String TEST_RESOURCES = "src/test/resources";
@@ -143,6 +144,10 @@ public record GtaPaths(Path root) {
 
     /** Repo-relative path with forward slashes. */
     public String rel(Path p) {
-        return root.toAbsolutePath().normalize().relativize(p.toAbsolutePath().normalize()).toString().replace('\\', '/');
+        return root.toAbsolutePath()
+                .normalize()
+                .relativize(p.toAbsolutePath().normalize())
+                .toString()
+                .replace('\\', '/');
     }
 }

@@ -135,7 +135,9 @@ public enum ErrorCode {
 
     /** Failures the author may repair freely (oracle stays locked). */
     public boolean isMechanical() {
-        return this == BUILD_COMPILE_ERROR || this == TEST_CODE_ERROR || this == TEST_SETUP_ERROR
+        return this == BUILD_COMPILE_ERROR
+                || this == TEST_CODE_ERROR
+                || this == TEST_SETUP_ERROR
                 || this == TEST_NOT_FOUND;
     }
 }

@@ -1,5 +1,10 @@
 package com.gta.core.gate;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
@@ -12,27 +17,22 @@ import com.gta.core.run.TestCase;
 import com.gta.core.spec.SpecFixtures;
 import com.gta.core.spec.SpecParser;
 import com.gta.core.util.ProcessRunner;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /** Gate decisions against a real base branch in a temporary git repository. */
 class GateTest {
     static final String ITEM = "order.create/s01#component-01";
     static final String TEST_CLASS = "com.acme.OrderCreateIT";
-    static final String TEST_V1 = """
+    static final String TEST_V1 =
+            """
             package com.acme;
             class OrderCreateIT {
                 @Test
@@ -46,6 +46,7 @@ class GateTest {
 
     @TempDir
     Path root;
+
     GtaPaths paths;
 
     private void git(String... args) {
@@ -55,13 +56,18 @@ class GateTest {
     }
 
     private String fingerprint() {
-        AssertionScanner.ScenarioOracle o = AssertionScanner.scan(paths.testSource(TEST_CLASS), "order.create/s01", paths.testResources());
-        return OracleLock.fingerprint(o.assertionStatements().stream().filter(s -> s.contains("201") || s.contains("50.00")).toList());
+        AssertionScanner.ScenarioOracle o =
+                AssertionScanner.scan(paths.testSource(TEST_CLASS), "order.create/s01", paths.testResources());
+        return OracleLock.fingerprint(o.assertionStatements().stream()
+                .filter(s -> s.contains("201") || s.contains("50.00"))
+                .toList());
     }
 
     private void writeShard(String relockedBy, String reason, String relockedAt) {
         OracleShard.Entry e = new OracleShard.Entry();
-        e.scenarioRevision = Planner.scenarioRevision(SpecParser.parseText(SpecFixtures.CREATE_ORDER).scenario("order.create/s01").orElseThrow());
+        e.scenarioRevision = Planner.scenarioRevision(SpecParser.parseText(SpecFixtures.CREATE_ORDER)
+                .scenario("order.create/s01")
+                .orElseThrow());
         e.fingerprint = fingerprint();
         e.tokens = List.of("201", "50.00");
         e.testClass = TEST_CLASS;
@@ -89,7 +95,9 @@ class GateTest {
     void base() throws Exception {
         paths = new GtaPaths(root);
         Files.createDirectories(paths.spec("order.create").getParent());
-        Files.writeString(paths.spec("order.create"), SpecFixtures.CREATE_ORDER.replace("status=draft", "status=approved rev=R2"));
+        Files.writeString(
+                paths.spec("order.create"),
+                SpecFixtures.CREATE_ORDER.replace("status=draft", "status=approved rev=R2"));
         Files.createDirectories(paths.testSource(TEST_CLASS).getParent());
         Files.writeString(paths.testSource(TEST_CLASS), TEST_V1);
         writeShard("alice@corp", "first relock", "2026-10-01T10:00:00Z");
@@ -109,20 +117,24 @@ class GateTest {
 
     @Test
     void shouldFailWhenALockedAssertionChangesWithoutARelock() throws Exception {
-        Files.writeString(paths.testSource(TEST_CLASS), TEST_V1.replace("isEqualTo(\"50.00\")", "isNotEqualTo(\"50.00\")"));
+        Files.writeString(
+                paths.testSource(TEST_CLASS), TEST_V1.replace("isEqualTo(\"50.00\")", "isNotEqualTo(\"50.00\")"));
 
         assertTrue(failedWith(gate(), ErrorCode.GATE_ORACLE_CHANGED_WITHOUT_SPEC));
     }
 
     @Test
     void shouldAcceptASecondRelockByTheSamePerson() throws Exception {
-        Files.writeString(paths.testSource(TEST_CLASS), TEST_V1.replace("isEqualTo(\"50.00\")", "isNotEqualTo(\"50.00\")"));
+        Files.writeString(
+                paths.testSource(TEST_CLASS), TEST_V1.replace("isEqualTo(\"50.00\")", "isNotEqualTo(\"50.00\")"));
         writeShard("alice@corp", "second relock", "2026-11-04T09:00:00Z");
 
         Gate.Result r = gate();
 
         assertFalse(failedWith(r, ErrorCode.GATE_ORACLE_CHANGED_WITHOUT_SPEC), r.failures.toString());
-        assertTrue(r.concerns.stream().anyMatch(c -> c.code.equals(ErrorCode.GATE_RELOCKED.name())), r.concerns.toString());
+        assertTrue(
+                r.concerns.stream().anyMatch(c -> c.code.equals(ErrorCode.GATE_RELOCKED.name())),
+                r.concerns.toString());
     }
 
     @Test
@@ -155,13 +167,15 @@ class GateTest {
 
         Gate.Result r = gate();
 
-        assertTrue(r.concerns.stream().anyMatch(c -> c.code.equals(ErrorCode.GATE_SCENARIOS_UNLOCKED.name())), r.concerns.toString());
+        assertTrue(
+                r.concerns.stream().anyMatch(c -> c.code.equals(ErrorCode.GATE_SCENARIOS_UNLOCKED.name())),
+                r.concerns.toString());
     }
 
     @Test
     void shouldRefuseABaseThatDoesNotExist() {
-        GtaException e = assertThrows(GtaException.class,
-                () -> new Gate(paths, new GtaConfig()).evaluate("origin/no-such-branch", List.of(), List.of()));
+        GtaException e = assertThrows(GtaException.class, () -> new Gate(paths, new GtaConfig())
+                .evaluate("origin/no-such-branch", List.of(), List.of()));
 
         assertEquals(ErrorCode.ENV_GIT_FAILED, e.code(), "a missing base must not pass the gate");
     }

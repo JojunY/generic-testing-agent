@@ -1,5 +1,10 @@
 package com.gta.core.engine;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.gta.core.change.ChangeChecker;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
@@ -16,10 +21,6 @@ import com.gta.core.state.ItemStatus;
 import com.gta.core.state.StateStore;
 import com.gta.core.state.WorkState;
 import com.gta.core.util.ProcessRunner;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -30,11 +31,9 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /** The item and spec state machines, driven with a fake test runner (no Maven). */
 class EngineTest {
@@ -52,7 +51,8 @@ class EngineTest {
         }
 
         @Override
-        public RunResult run(String runId, String itemId, Options options, Set<String> productionClasses, Set<String> testClasses) {
+        public RunResult run(
+                String runId, String itemId, Options options, Set<String> productionClasses, Set<String> testClasses) {
             runs++;
             RunResult r = results.size() > 1 ? results.poll() : results.peek();
             r.runId = runId;
@@ -79,6 +79,7 @@ class EngineTest {
 
     @TempDir
     Path root;
+
     GtaPaths paths;
     StateStore store;
     FakeTestRunner runner;
@@ -155,7 +156,8 @@ class EngineTest {
     void shouldRefuseAReviewVerdictWithoutTheCurrentToken() {
         store.save(state(ItemStatus.REVIEWING));
 
-        GtaException e = assertThrows(GtaException.class, () -> engine().submitReview(ITEM, "stale-token", "accept", "late"));
+        GtaException e =
+                assertThrows(GtaException.class, () -> engine().submitReview(ITEM, "stale-token", "accept", "late"));
 
         assertEquals(ErrorCode.STATE_STALE_SESSION, e.code());
         assertEquals(ItemStatus.REVIEWING, item().status);
@@ -226,12 +228,18 @@ class EngineTest {
         git("config", "gpg.format", "openpgp");
         git("config", "gpg.program", "false-gpg-that-does-not-exist");
 
-        GtaException e = assertThrows(GtaException.class, () -> engine().submitReview(ITEM, TOKEN, "accept", "matches the spec"));
+        GtaException e = assertThrows(
+                GtaException.class, () -> engine().submitReview(ITEM, TOKEN, "accept", "matches the spec"));
 
         assertEquals(ErrorCode.ENV_GIT_FAILED, e.code());
-        assertFalse(Files.exists(paths.oracleShard("order.create")), "gtaw's own shard write is undone with the failed commit");
+        assertFalse(
+                Files.exists(paths.oracleShard("order.create")),
+                "gtaw's own shard write is undone with the failed commit");
         assertEquals(ItemStatus.REVIEWING, item().status, "the state is unchanged, so the verdict can be given again");
-        assertTrue(ProcessRunner.run(root, ProcessRunner.cmd("git", "diff", "--cached", "--quiet")).ok(), "nothing left staged");
+        assertTrue(
+                ProcessRunner.run(root, ProcessRunner.cmd("git", "diff", "--cached", "--quiet"))
+                        .ok(),
+                "nothing left staged");
     }
 
     @Test
@@ -245,7 +253,8 @@ class EngineTest {
         store.savePlan(List.of(old));
         EngineContext ctx = new EngineContext(root, runner);
 
-        ctx.items.syncPlan(st, SpecParser.parseText(SpecFixtures.CREATE_ORDER), new com.gta.core.profile.ServiceProfile());
+        ctx.items.syncPlan(
+                st, SpecParser.parseText(SpecFixtures.CREATE_ORDER), new com.gta.core.profile.ServiceProfile());
 
         assertEquals(null, st.pending, "the human decision was about the old scenario");
         assertEquals(ItemStatus.PENDING, st.items.get(ITEM).status, "the item starts again from the new scenario");
@@ -272,10 +281,12 @@ class EngineTest {
 
     private void specInReview() {
         EngineContext ctx = new EngineContext(root, runner);
-        ctx.specs.writeSpec(paths.spec("order.create"), SpecFixtures.CREATE_ORDER
-                .replace("status=draft", "status=in-review rev=R2")
-                .replace("source=assumed hint.layer=component", "source=observed hint.layer=component")
-                .replaceAll("(?s)## Open questions.*## Findings", "## Open questions\n\n## Findings"));
+        ctx.specs.writeSpec(
+                paths.spec("order.create"),
+                SpecFixtures.CREATE_ORDER
+                        .replace("status=draft", "status=in-review rev=R2")
+                        .replace("source=assumed hint.layer=component", "source=observed hint.layer=component")
+                        .replaceAll("(?s)## Open questions.*## Findings", "## Open questions\n\n## Findings"));
         WorkState st = state(ItemStatus.PENDING);
         st.pending = new WorkState.Pending();
         st.pending.type = "approve";
@@ -314,7 +325,8 @@ class EngineTest {
 
         assertTrue(String.valueOf(out.get("result")).startsWith("not approved"), out.toString());
         assertEquals("in-review", SpecParser.parse(paths.spec("order.create")).status());
-        assertTrue(store.load().specWork.get("order.create").answersToApply.get(0).contains("s02 还要改"));
+        assertTrue(
+                store.load().specWork.get("order.create").answersToApply.get(0).contains("s02 还要改"));
     }
 
     // ------------------------------------------------------------------ sessions
@@ -351,9 +363,13 @@ class EngineTest {
     @Test
     void shouldRelockOnTheSpecsExpectedValues() throws Exception {
         Files.createDirectories(paths.spec("order.create").getParent());
-        Files.writeString(paths.spec("order.create"), SpecFixtures.CREATE_ORDER.replace("status=draft", "status=approved rev=R2"));
+        Files.writeString(
+                paths.spec("order.create"),
+                SpecFixtures.CREATE_ORDER.replace("status=draft", "status=approved rev=R2"));
         Files.createDirectories(paths.testSource("com.acme.OrderCreateIT").getParent());
-        Files.writeString(paths.testSource("com.acme.OrderCreateIT"), """
+        Files.writeString(
+                paths.testSource("com.acme.OrderCreateIT"),
+                """
                 class OrderCreateIT {
                     @Test
                     @Tag("scenario:order.create/s01")
@@ -371,9 +387,13 @@ class EngineTest {
 
         engine().relock(ITEM, "assertion style changed", "alice@corp");
 
-        OracleShard.Entry now = OracleShard.read(paths.oracleShard("order.create")).get(ITEM);
+        OracleShard.Entry now =
+                OracleShard.read(paths.oracleShard("order.create")).get(ITEM);
         assertEquals(List.of("201", "50.00"), now.tokens, "tokens come from the spec, not the old lock");
-        assertEquals(Planner.scenarioRevision(SpecParser.parse(paths.spec("order.create")).scenario("order.create/s01").orElseThrow()),
+        assertEquals(
+                Planner.scenarioRevision(SpecParser.parse(paths.spec("order.create"))
+                        .scenario("order.create/s01")
+                        .orElseThrow()),
                 now.scenarioRevision);
         assertTrue(now.relockedAt != null);
     }

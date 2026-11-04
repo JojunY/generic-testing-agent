@@ -6,7 +6,6 @@ import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
 import com.gta.core.plan.PlanItem;
 import com.gta.core.util.Json;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -45,10 +44,12 @@ public final class StateStore {
         } catch (IOException moveFailed) {
             aside = file;
         }
-        return new GtaException(ErrorCode.STATE_CORRUPT, "Cannot read " + paths.rel(file) + ": " + cause.getMessage()
-                + " (kept as " + paths.rel(aside) + ")",
+        return new GtaException(
+                ErrorCode.STATE_CORRUPT,
+                "Cannot read " + paths.rel(file) + ": " + cause.getMessage() + " (kept as " + paths.rel(aside) + ")",
                 "Run ./gtaw next again: gtaw rebuilds the working state from specs, oracle shards and committed tests."
-                        + " Pending answers or approvals will be asked again", cause);
+                        + " Pending answers or approvals will be asked again",
+                cause);
     }
 
     /** Saves the state; the session counts as active until this moment (a long Maven run is not idle time). */
@@ -67,8 +68,11 @@ public final class StateStore {
         try {
             return Json.MAPPER.readValue(paths.state().toFile(), WorkState.class);
         } catch (IOException e) {
-            throw new GtaException(ErrorCode.STATE_CORRUPT, "Cannot read " + paths.rel(paths.state()) + ": " + e.getMessage(),
-                    "Run ./gtaw next: it keeps a copy of the file and rebuilds the working state", e);
+            throw new GtaException(
+                    ErrorCode.STATE_CORRUPT,
+                    "Cannot read " + paths.rel(paths.state()) + ": " + e.getMessage(),
+                    "Run ./gtaw next: it keeps a copy of the file and rebuilds the working state",
+                    e);
         }
     }
 
@@ -78,11 +82,13 @@ public final class StateStore {
             return new ArrayList<>();
         }
         try {
-            return Json.MAPPER.readValue(paths.plan().toFile(), new TypeReference<List<PlanItem>>() {
-            });
+            return Json.MAPPER.readValue(paths.plan().toFile(), new TypeReference<List<PlanItem>>() {});
         } catch (IOException e) {
-            throw new GtaException(ErrorCode.STATE_CORRUPT, "Cannot read " + paths.rel(paths.plan()) + ": " + e.getMessage(),
-                    "Run ./gtaw next: it keeps a copy of the file and rebuilds the working state", e);
+            throw new GtaException(
+                    ErrorCode.STATE_CORRUPT,
+                    "Cannot read " + paths.rel(paths.plan()) + ": " + e.getMessage(),
+                    "Run ./gtaw next: it keeps a copy of the file and rebuilds the working state",
+                    e);
         }
     }
 
@@ -91,8 +97,7 @@ public final class StateStore {
             return new ArrayList<>();
         }
         try {
-            return Json.MAPPER.readValue(paths.plan().toFile(), new TypeReference<List<PlanItem>>() {
-            });
+            return Json.MAPPER.readValue(paths.plan().toFile(), new TypeReference<List<PlanItem>>() {});
         } catch (IOException e) {
             throw corrupt(paths.plan(), e);
         }
@@ -100,8 +105,11 @@ public final class StateStore {
 
     /** The plan item with this id; USAGE_UNKNOWN_ITEM if the plan does not contain it. */
     public PlanItem planItem(String id) {
-        return loadPlan().stream().filter(i -> i.id.equals(id)).findFirst()
-                .orElseThrow(() -> new GtaException(ErrorCode.USAGE_UNKNOWN_ITEM, "Unknown item " + id, "Run ./gtaw status"));
+        return loadPlan().stream()
+                .filter(i -> i.id.equals(id))
+                .findFirst()
+                .orElseThrow(() ->
+                        new GtaException(ErrorCode.USAGE_UNKNOWN_ITEM, "Unknown item " + id, "Run ./gtaw status"));
     }
 
     public void savePlan(List<PlanItem> plan) {
