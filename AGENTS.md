@@ -6,8 +6,19 @@ These are the rules for working on this repository. They do not apply to service
 
 - `core/` is the only place to edit agents, the `/gta` command, rules, skills, templates and the capability registry.
 - `copilot/` and `opencode/` are **generated**. Never edit them. Run `scripts/generate.sh` and commit the result. `mvn install` fails when they are stale.
+- `docs/design/plan.md` is the design. Code comments cite it as `plan §N`; keep section numbers stable when you edit it.
 - Platform differences (tool names, permissions, models, file locations) live only in `platforms/<platform>/mapping.yaml`.
 - `pom.xml` at the root is the single source of the version.
+
+## gta-core packages
+
+| Package | Responsibility |
+|---|---|
+| `engine` | `Engine` is the only public facade. `SpecWorkflow`, `ItemWorkflow`, `SessionManager` and `SessionEnd` do the work; `HumanPrompts` holds every human-facing text and `EscalationWriter` the escalation records. They share one `EngineContext`. |
+| `spec` · `plan` · `state` | spec model, parser, linter and editor · planning · item state machine and the state store |
+| `oracle` · `change` · `run` · `gate` · `report` | oracle lock · scope check · Maven runs and triage · the gate · reports |
+| `profile` · `registry` · `brief` | code profiling · capability registry · agent briefs |
+| `config` · `error` · `util` | `GtaPaths` (every well-known location; never hard-code paths) · `ErrorCode` · `AtomicFiles`, `Json`, `Yaml`, `Git`, `Proc`, `Ids` |
 
 ## Naming (plan §9)
 
@@ -21,7 +32,7 @@ These are the rules for working on this repository. They do not apply to service
 ## Engineering rules
 
 - `gtaw` is deterministic. Anything an LLM could get wrong must not decide state: passing, locking, committing and the gate are all gtaw's.
-- Only gtaw writes `.gta/work/state.json`. Every write is atomic, under `WorkLock`.
+- Only gtaw writes `.gta/work/state.json`. Every file write goes through `AtomicFiles`; state changes happen under `WorkLock` and through `WorkState.move` (never assign `status` directly).
 - New behaviour needs a unit test. Changes to the loop also need the scripted e2e (`evals/e2e/run.sh`) to pass.
 - Keep the Java toolkit on Java 17 language level. Keep `gta-junit` compiled against JUnit 5.14 so it works on Boot 3.5 and 4.x.
 - Do not add a primitive (hook, MCP server, plugin, handoff) without updating plan §4.0 and showing why the existing ones are not enough.
