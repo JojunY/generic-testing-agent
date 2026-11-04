@@ -31,6 +31,11 @@ public final class CommitLedger {
         return read().contains(sha);
     }
 
+    /** Every recorded SHA, read once (for checks over many commits). */
+    public Set<String> shas() {
+        return read();
+    }
+
     private Set<String> read() {
         Set<String> out = new LinkedHashSet<>();
         if (!Files.exists(paths.commitLedger())) {

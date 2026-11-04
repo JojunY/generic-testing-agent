@@ -15,7 +15,7 @@ import com.gta.core.spec.SpecParser;
 import com.gta.core.state.ItemStatus;
 import com.gta.core.state.StateStore;
 import com.gta.core.state.WorkState;
-import com.gta.core.util.Proc;
+import com.gta.core.util.ProcessRunner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -86,7 +86,7 @@ class EngineTest {
     private void git(String... args) {
         List<String> cmd = new ArrayList<>(List.of("git"));
         cmd.addAll(List.of(args));
-        Proc.run(root, Duration.ofSeconds(30), Map.of(), cmd);
+        ProcessRunner.run(root, Duration.ofSeconds(30), Map.of(), cmd);
     }
 
     @BeforeEach
@@ -210,6 +210,45 @@ class EngineTest {
         assertEquals(ItemStatus.NEEDS_HUMAN, item().status, out.toString());
         assertTrue(item().reason.contains("commits made outside gtaw"), item().reason);
         assertEquals(0, runner.runs, "no test run on a tampered tree");
+    }
+
+    @Test
+    void shouldLeaveNoShardBehindWhenTheCommitFails() throws Exception {
+        WorkState st = state(ItemStatus.REVIEWING);
+        st.items.get(ITEM).lock = new WorkState.Lock();
+        st.items.get(ITEM).lock.tokens.add("201");
+        st.items.get(ITEM).evidenceRunId = "r1";
+        store.save(st);
+        Path test = root.resolve(GtaPaths.testSourceRel("com.acme.OrderCreateIT"));
+        Files.createDirectories(test.getParent());
+        Files.writeString(test, "class OrderCreateIT {}\n");
+        git("config", "commit.gpgsign", "true");
+        git("config", "gpg.format", "openpgp");
+        git("config", "gpg.program", "false-gpg-that-does-not-exist");
+
+        GtaException e = assertThrows(GtaException.class, () -> engine().submitReview(ITEM, TOKEN, "accept", "matches the spec"));
+
+        assertEquals(ErrorCode.ENV_GIT_FAILED, e.code());
+        assertFalse(Files.exists(paths.oracleShard("order.create")), "gtaw's own shard write is undone with the failed commit");
+        assertEquals(ItemStatus.REVIEWING, item().status, "the state is unchanged, so the verdict can be given again");
+        assertTrue(ProcessRunner.run(root, ProcessRunner.cmd("git", "diff", "--cached", "--quiet")).ok(), "nothing left staged");
+    }
+
+    @Test
+    void shouldDropAPendingDecisionWhenItsScenarioChanges() {
+        WorkState st = state(ItemStatus.NEEDS_HUMAN);
+        st.pending = new WorkState.Pending();
+        st.pending.type = "defect";
+        st.pending.itemId = ITEM;
+        PlanItem old = store.planItem(ITEM);
+        old.scenarioRevision = "before-the-spec-changed";
+        store.savePlan(List.of(old));
+        EngineContext ctx = new EngineContext(root, runner);
+
+        ctx.items.syncPlan(st, SpecParser.parseText(SpecFixtures.CREATE_ORDER), new com.gta.core.profile.ServiceProfile());
+
+        assertEquals(null, st.pending, "the human decision was about the old scenario");
+        assertEquals(ItemStatus.PENDING, st.items.get(ITEM).status, "the item starts again from the new scenario");
     }
 
     // ------------------------------------------------------------------ human decisions

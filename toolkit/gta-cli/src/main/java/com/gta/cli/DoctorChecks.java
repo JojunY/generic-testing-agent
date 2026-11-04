@@ -7,7 +7,7 @@ import com.gta.core.profile.PomInfo;
 import com.gta.core.util.Git;
 import com.gta.core.util.Hashes;
 import com.gta.core.util.Json;
-import com.gta.core.util.Proc;
+import com.gta.core.util.ProcessRunner;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -35,10 +35,10 @@ public final class DoctorChecks {
         boolean git = new Git(root).isRepo();
         add("git", git ? "ok" : "fail", git ? "git work tree" : "not a git work tree", "Run gtaw inside the service repository");
 
-        boolean mvnw = Files.exists(root.resolve(Proc.isWindows() ? "mvnw.cmd" : "mvnw"));
+        boolean mvnw = Files.exists(root.resolve(ProcessRunner.isWindows() ? "mvnw.cmd" : "mvnw"));
         boolean mvn;
         try {
-            mvn = mvnw || Proc.run(root, Proc.isWindows() ? Proc.cmd("cmd", "/c", "mvn", "-v") : Proc.cmd("mvn", "-v")).ok();
+            mvn = mvnw || ProcessRunner.run(root, ProcessRunner.isWindows() ? ProcessRunner.cmd("cmd", "/c", "mvn", "-v") : ProcessRunner.cmd("mvn", "-v")).ok();
         } catch (GtaException e) {
             mvn = false;
         }
@@ -108,7 +108,7 @@ public final class DoctorChecks {
         } else {
             add("harness", "fail", "not installed", "Run ./gtaw init --platform copilot (or opencode)");
         }
-        if (Proc.isWindows()) {
+        if (ProcessRunner.isWindows()) {
             add("windows", "info", "Windows detected", "Use .\\gtaw.cmd; keep the repository on a short path to avoid long-path issues");
         }
 

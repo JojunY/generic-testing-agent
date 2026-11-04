@@ -24,15 +24,20 @@ import com.gta.core.state.ItemStatus;
 import com.gta.core.state.StateStore;
 import com.gta.core.state.WorkState;
 import com.gta.core.util.Git;
+import com.gta.core.util.AtomicFiles;
 import com.gta.core.util.Ids;
 import com.gta.core.util.WorkLock;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -313,8 +318,9 @@ final class ItemWorkflow {
                         "Locked expected values were changed or removed: " + lockCheck.missingTokens() + ". Restore them; only a human can relock.");
             }
             s.structuralOracleChange = lockCheck.verdict() == OracleLock.Verdict.STRUCTURAL_CHANGE;
-            if (s.lock != null && s.lastError != null && ErrorCode.valueOf(s.lastError.code).needsTriage()
-                    && !s.lock.watched.equals(oracle.watchedHash())) {
+            if (s.lock != null && s.lastError != null
+                    && ErrorCode.find(s.lastError.code).map(ErrorCode::needsTriage).orElse(false)
+                    && !Objects.equals(s.lock.watched, oracle.watchedHash())) {
                 s.inputsChangedAfterAssertion = true;
             }
         }
@@ -349,7 +355,8 @@ final class ItemWorkflow {
             return markPassed(st, item, s, runId);
         }
         TestCase first = failures.get(0);
-        ErrorCode code = ErrorCode.valueOf(first.code);
+        // a code this version does not know is treated as unclassified: triage is the safe default
+        ErrorCode code = ErrorCode.find(first.code).orElse(ErrorCode.TEST_SUT_ERROR);
         String message = (first.failureType == null ? "" : first.failureType + ": ") + (first.message == null ? "" : first.message);
         if (code.isMechanical()) {
             return fail(st, item, s, code, message + "\n" + firstLines(first.stack, 8));
@@ -474,8 +481,7 @@ final class ItemWorkflow {
         store.savePlan(plan);
         if (s.lock != null) {
             String exp = expected;
-            s.lock.tokens.replaceAll(t -> t.equals(exp) ? null : t);
-            s.lock.tokens.removeIf(t -> t == null);
+            s.lock.tokens.removeIf(exp::equals);
             s.lock.tokens.add(actual);
             s.lock.statements.removeIf(stmt -> stmt.contains(exp));
         }
@@ -555,8 +561,9 @@ final class ItemWorkflow {
         if (!mixed.isEmpty()) {
             s.reason = "not committed because they also contain your uncommitted edits: " + mixed + " — commit them yourself";
         }
+        Path shardPath = paths.oracleShard(item.flowId);
+        String shardBefore = readIfExists(shardPath);
         if (!item.isFoundation() && s.lock != null) {
-            Path shardPath = paths.oracleShard(item.flowId);
             Map<String, OracleShard.Entry> shard = OracleShard.read(shardPath);
             OracleShard.Entry e = new OracleShard.Entry();
             e.scenarioRevision = item.scenarioRevision;
@@ -574,7 +581,33 @@ final class ItemWorkflow {
             return;
         }
         String msg = "test(" + item.domain() + "): " + summary + "\n\nGta-Item: " + item.id + "\nGta-Run: " + runId;
-        ctx.commit(files, msg).ifPresent(sha -> s.commit = sha);
+        try {
+            ctx.commit(files, msg).ifPresent(sha -> s.commit = sha);
+        } catch (GtaException e) {
+            // keep the shard and the commit together: the next submit must not see gtaw's own write as an agent change
+            restore(shardPath, shardBefore);
+            throw e;
+        }
+    }
+
+    private static String readIfExists(Path file) {
+        try {
+            return Files.exists(file) ? Files.readString(file, StandardCharsets.UTF_8) : null;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private static void restore(Path file, String content) {
+        try {
+            if (content == null) {
+                Files.deleteIfExists(file);
+            } else {
+                AtomicFiles.write(file, content);
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /** A pin is confirmed when gtaw committed the item's known-defect record (see EscalationWriter); the working tree does not count. */
@@ -595,6 +628,12 @@ final class ItemWorkflow {
         return s;
     }
 
+    private static void dropPendingDecision(WorkState st, String itemId) {
+        if (st.pending != null && itemId.equals(st.pending.itemId)) {
+            st.pending = null;
+        }
+    }
+
     List<PlanItem> syncPlan(WorkState st, Spec spec, ServiceProfile profile) {
         List<PlanItem> fresh = Planner.plan(spec, registry, profile);
         List<PlanItem> plan = store.loadPlan();
@@ -608,9 +647,7 @@ final class ItemWorkflow {
                 result.add(old);
                 continue;
             }
-            if (s != null && !s.status.terminal()) {
-                st.move(s, ItemStatus.CANCELLED);
-            }
+            dropPendingDecision(st, f.id); // a human decision about the old item no longer applies
             WorkState.ItemState ns = new WorkState.ItemState();
             ns.id = f.id;
             st.items.put(f.id, ns);
@@ -621,6 +658,7 @@ final class ItemWorkflow {
             if (s != null && !s.status.terminal()) {
                 st.move(s, ItemStatus.CANCELLED);
             }
+            dropPendingDecision(st, gone.id);
         }
         plan.removeIf(i -> i.flowId.equals(spec.flowId()));
         plan.addAll(result);

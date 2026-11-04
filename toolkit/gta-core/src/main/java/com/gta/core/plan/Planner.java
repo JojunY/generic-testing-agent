@@ -1,5 +1,6 @@
 package com.gta.core.plan;
 
+import com.gta.core.spec.Ref;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.profile.ServiceProfile;
 import com.gta.core.registry.Registry;
@@ -7,6 +8,7 @@ import com.gta.core.spec.Spec;
 import com.gta.core.util.Hashes;
 import com.gta.core.util.Ids;
 
+import java.util.Optional;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -122,11 +124,9 @@ public final class Planner {
     static String packageFor(Spec spec, ServiceProfile profile) {
         for (Spec.Requirement r : spec.requirements) {
             for (String ref : r.refs()) {
-                if (ref.startsWith("method:") || ref.startsWith("bean:")) {
-                    String fqcn = ref.substring(ref.indexOf(':') + 1, ref.contains("#") ? ref.indexOf('#') : ref.length());
-                    if (fqcn.contains(".")) {
-                        return fqcn.substring(0, fqcn.lastIndexOf('.'));
-                    }
+                Optional<Ref> code = Ref.parse(ref).filter(Ref::isCode).filter(x -> !x.packageName().isEmpty());
+                if (code.isPresent()) {
+                    return code.get().packageName();
                 }
             }
         }

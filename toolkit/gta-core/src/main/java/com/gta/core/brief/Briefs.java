@@ -1,5 +1,6 @@
 package com.gta.core.brief;
 
+import com.gta.core.spec.Ref;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.plan.PlanItem;
 import com.gta.core.profile.ServiceProfile;
@@ -12,6 +13,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -234,12 +236,8 @@ public final class Briefs {
     }
 
     private String fileHint(String ref) {
-        if (!ref.startsWith("method:") && !ref.startsWith("bean:")) {
-            return "";
-        }
-        String fqcn = ref.substring(ref.indexOf(':') + 1, ref.contains("#") ? ref.indexOf('#') : ref.length());
-        Path f = paths.mainJava().resolve(fqcn.replace('.', '/') + ".java");
-        return Files.exists(f) ? " → `" + paths.rel(f) + "`" : "";
+        return Ref.parse(ref).filter(Ref::isCode).map(r -> paths.mainJava().resolve(r.sourcePath())).filter(Files::exists)
+                .map(f -> " → `" + paths.rel(f) + "`").orElse("");
     }
 
     private List<String> siblingTests(String testClass) {

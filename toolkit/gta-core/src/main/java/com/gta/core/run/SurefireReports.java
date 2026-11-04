@@ -1,7 +1,10 @@
 package com.gta.core.run;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.gta.core.error.ErrorCode;
+import com.gta.core.error.GtaException;
 import com.gta.core.util.Json;
+import org.xml.sax.SAXException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -18,13 +21,22 @@ import java.util.Map;
 import java.util.stream.Stream;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 /** Parses Surefire/Failsafe XML and merges gta-junit scenario tags (target/gta-results/*.jsonl). */
 public final class SurefireReports {
     private SurefireReports() {
     }
 
+    /** Strict parse: an unreadable report fails the run instead of silently dropping its tests (fail closed). */
     public static List<TestCase> parse(List<Path> reportDirs, Path gtaResultsDir) {
+        return parse(reportDirs, gtaResultsDir, false);
+    }
+
+    /**
+     * @param tolerateUnreadable true after a timeout, when the killed test JVM may have left a truncated report
+     */
+    public static List<TestCase> parse(List<Path> reportDirs, Path gtaResultsDir, boolean tolerateUnreadable) {
         Map<String, JsonNode> tagged = readGtaResults(gtaResultsDir);
         List<TestCase> out = new ArrayList<>();
         for (Path dir : reportDirs) {
@@ -33,7 +45,13 @@ public final class SurefireReports {
             }
             try (Stream<Path> files = Files.list(dir)) {
                 for (Path f : files.filter(p -> p.getFileName().toString().startsWith("TEST-") && p.toString().endsWith(".xml")).sorted().toList()) {
-                    out.addAll(parseFile(f));
+                    try {
+                        out.addAll(parseFile(f));
+                    } catch (GtaException unreadable) {
+                        if (!tolerateUnreadable) {
+                            throw unreadable;
+                        }
+                    }
                 }
             } catch (IOException e) {
                 // a missing report directory simply yields no cases
@@ -64,7 +82,7 @@ public final class SurefireReports {
                 Element e = (Element) cases.item(i);
                 TestCase c = new TestCase();
                 c.className = e.getAttribute("classname");
-                c.method = e.getAttribute("name").replaceAll("\\(.*\\)$", "");
+                c.method = methodName(e.getAttribute("name"));
                 c.outcome = "passed";
                 Element failure = first(e, "failure");
                 Element error = first(e, "error");
@@ -79,10 +97,26 @@ public final class SurefireReports {
                 }
                 out.add(c);
             }
-        } catch (Exception e) {
-            // unreadable report: ignored, the run will be classified from Maven output
+        } catch (IOException | ParserConfigurationException | SAXException e) {
+            throw new GtaException(ErrorCode.ENV_TEST_REPORTS_UNUSABLE, "Cannot read " + file.getFileName() + ": " + e.getMessage(),
+                    "Run the command again; if it repeats, look for a test that kills the JVM (System.exit, OOM)");
         }
         return out;
+    }
+
+    /**
+     * The plain method name of a reported test case. Surefire appends the parameter types and, for parameterized or
+     * repeated tests, the invocation index ({@code shouldX(String)[2]}); gta-junit reports the plain name.
+     */
+    static String methodName(String reported) {
+        int cut = reported.length();
+        for (char c : new char[] {'(', '['}) {
+            int i = reported.indexOf(c);
+            if (i > 0 && i < cut) {
+                cut = i;
+            }
+        }
+        return reported.substring(0, cut).strip();
     }
 
     private static Element first(Element parent, String tag) {
@@ -107,8 +141,12 @@ public final class SurefireReports {
                     if (line.isBlank()) {
                         continue;
                     }
-                    JsonNode n = Json.MAPPER.readTree(line);
-                    out.put(n.path("className").asText() + "#" + n.path("method").asText(), n);
+                    try {
+                        JsonNode n = Json.MAPPER.readTree(line);
+                        out.put(n.path("className").asText() + "#" + n.path("method").asText(), n);
+                    } catch (IOException truncated) {
+                        // one bad line (e.g. the last one of a killed JVM) must not drop the others
+                    }
                 }
             }
         } catch (IOException e) {

@@ -8,7 +8,7 @@ import com.gta.core.error.GtaException;
 import com.gta.core.gate.Gate;
 import com.gta.core.run.RunResult;
 import com.gta.core.util.Json;
-import com.gta.core.util.Proc;
+import com.gta.core.util.ProcessRunner;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -335,7 +335,7 @@ public final class GtaCli implements Callable<Integer> {
         }
     }
 
-    @Command(name = "verify", description = "Stability (pass^k, random order, Asia/Kolkata timezone, de-DE locale) for new tests.")
+    @Command(name = "verify", description = "Stability (pass^k, random order, another timezone and locale) for new tests.")
     static final class Verify implements Callable<Integer> {
         @CommandLine.ParentCommand
         GtaCli parent;
@@ -463,7 +463,7 @@ public final class GtaCli implements Callable<Integer> {
     }
 
     static String gitUser(Path root) {
-        Proc.Result r = Proc.run(root, Proc.cmd("git", "config", "user.email"));
+        ProcessRunner.Result r = ProcessRunner.run(root, ProcessRunner.cmd("git", "config", "user.email"));
         return r.ok() && !r.output().isBlank() ? r.output().trim() : System.getProperty("user.name", "unknown");
     }
 }

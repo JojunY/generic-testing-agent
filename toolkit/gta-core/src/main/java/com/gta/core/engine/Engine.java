@@ -1,5 +1,6 @@
 package com.gta.core.engine;
 
+import com.gta.core.spec.Ref;
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
@@ -31,6 +32,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -258,6 +260,10 @@ public final class Engine {
         }
     }
 
+    /**
+     * Discards the working state of one flow, or of everything when {@code flowId} is null. Specs, shards, committed
+     * tests, run evidence and the backups in {@code .gta/work/recover/} are kept.
+     */
     public Map<String, Object> abort(String flowId) {
         try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
             WorkState st = store.load();
@@ -345,9 +351,12 @@ public final class Engine {
         }
         String t = target.replace('\\', '/');
         for (ServiceProfile.EntryPoint e : profile.entrypoints) {
-            String fqcn = e.ref.substring(e.ref.indexOf(':') + 1, e.ref.indexOf('#'));
-            String simple = fqcn.substring(fqcn.lastIndexOf('.') + 1);
-            if (t.endsWith(fqcn.replace('.', '/') + ".java") || t.endsWith(simple + ".java") || t.equals(simple)) {
+            Optional<Ref> ref = Ref.parse(e.ref);
+            if (ref.isEmpty()) {
+                continue;
+            }
+            String simple = ref.get().simpleName();
+            if (t.endsWith(ref.get().sourcePath()) || t.endsWith(simple + ".java") || t.equals(simple)) {
                 return e.flowId;
             }
         }

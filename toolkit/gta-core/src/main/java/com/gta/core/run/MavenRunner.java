@@ -6,7 +6,7 @@ import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
 import com.gta.core.util.AtomicFiles;
 import com.gta.core.util.Json;
-import com.gta.core.util.Proc;
+import com.gta.core.util.ProcessRunner;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -42,7 +43,7 @@ public final class MavenRunner implements TestRunner {
         if (configured != null && !"auto".equals(configured)) {
             return new ArrayList<>(List.of(configured));
         }
-        if (Proc.isWindows()) {
+        if (ProcessRunner.isWindows()) {
             if (Files.exists(root.resolve("mvnw.cmd"))) {
                 return new ArrayList<>(List.of("cmd", "/c", "mvnw.cmd"));
             }
@@ -86,7 +87,7 @@ public final class MavenRunner implements TestRunner {
             toolOptions.add(inherited);
         }
         if (options.stabilityVariant()) {
-            toolOptions.add("-Duser.timezone=Asia/Kolkata -Duser.language=de -Duser.country=DE");
+            toolOptions.add(stabilityVariantOptions(config.qualityGates));
         }
         if (options.randomOrder()) {
             toolOptions.add("-Djunit.jupiter.testmethod.order.default=org.junit.jupiter.api.MethodOrderer$Random");
@@ -96,20 +97,14 @@ public final class MavenRunner implements TestRunner {
         }
 
         long start = System.currentTimeMillis();
-        Proc.Result proc;
-        boolean timedOut = false;
+        ProcessRunner.Result proc;
         try {
-            proc = Proc.run(root, Duration.ofMinutes(config.budgets.nodeTimeoutMinutes), env, cmd);
-        } catch (GtaException e) {
-            if (e.code() != ErrorCode.TRANSIENT_PROCESS_TIMEOUT) {
-                throw e;
-            }
-            // a hanging test is a result, not an error: the caller counts it against the item's budgets
-            timedOut = true;
-            proc = new Proc.Result(-1, e.getMessage());
+            proc = ProcessRunner.run(root, Duration.ofMinutes(config.budgets.nodeTimeoutMinutes), env, cmd);
         } finally {
             isolated.close(); // the empty gcloud config dir exists for this run only
         }
+        // a hanging test is a result, not an error: the caller counts it against the item's budgets
+        boolean timedOut = proc.timedOut();
         RunResult result = new RunResult();
         result.runId = runId;
         result.itemId = itemId;
@@ -122,7 +117,7 @@ public final class MavenRunner implements TestRunner {
             result.compileError = true;
             result.compileMessage = compileSummary(output);
         }
-        result.cases = SurefireReports.parse(List.of(surefire), gtaResults);
+        result.cases = SurefireReports.parse(List.of(surefire), gtaResults, timedOut);
         for (TestCase c : result.cases) {
             FailureClassifier.classify(c, productionClasses, testClasses);
         }
@@ -131,6 +126,18 @@ public final class MavenRunner implements TestRunner {
         result.logFile = paths.rel(runDir.resolve("maven.log"));
         Json.writeAtomic(runDir.resolve("run.json"), result);
         return result;
+    }
+
+    /** JVM options of the stability variant: another timezone and locale (plan §8). */
+    static String stabilityVariantOptions(GtaConfig.QualityGates gates) {
+        Locale locale = Locale.forLanguageTag(gates.stabilityLocale);
+        return "-Duser.timezone=" + gates.stabilityTimezone + " -Duser.language=" + locale.getLanguage()
+                + (locale.getCountry().isEmpty() ? "" : " -Duser.country=" + locale.getCountry());
+    }
+
+    /** How the stability variant is described in messages, e.g. "Asia/Kolkata timezone / de-DE locale". */
+    public static String stabilityVariantLabel(GtaConfig.QualityGates gates) {
+        return gates.stabilityTimezone + " timezone / " + gates.stabilityLocale + " locale";
     }
 
     static String compileSummary(String output) {
@@ -148,9 +155,13 @@ public final class MavenRunner implements TestRunner {
             return;
         }
         try (Stream<Path> walk = Files.walk(dir)) {
-            walk.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
+            for (Path p : walk.sorted(Comparator.reverseOrder()).toList()) {
+                Files.deleteIfExists(p);
+            }
         } catch (IOException e) {
-            // stale reports are harmless; they are filtered by test class later
+            // reports left over from an earlier run would be read as this run's results
+            throw new GtaException(ErrorCode.ENV_TEST_REPORTS_UNUSABLE, "Cannot clear " + dir + ": " + e.getMessage(),
+                    "Close programs that hold files in it (IDE, antivirus scan), then run the command again");
         }
     }
 }

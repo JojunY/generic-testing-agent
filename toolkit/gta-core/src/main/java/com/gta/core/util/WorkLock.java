@@ -30,6 +30,9 @@ public final class WorkLock implements AutoCloseable {
                 lock = channel.tryLock();
             } catch (OverlappingFileLockException e) {
                 lock = null;
+            } catch (IOException e) {
+                channel.close();
+                throw e;
             }
             if (lock == null) {
                 channel.close();

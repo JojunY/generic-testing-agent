@@ -3,6 +3,7 @@ package com.gta.core.oracle;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
+import com.gta.core.util.Ids;
 import com.gta.core.util.Json;
 
 import java.io.IOException;
@@ -54,7 +55,16 @@ public final class OracleShard {
         try {
             Map<String, Entry> m = Json.MAPPER.readValue(json, new TypeReference<TreeMap<String, Entry>>() {
             });
-            return m == null ? new TreeMap<>() : m;
+            if (m == null) {
+                return new TreeMap<>();
+            }
+            for (String key : m.keySet()) {
+                if (!Ids.ITEM_ID.matcher(key).matches()) {
+                    throw new GtaException(ErrorCode.CONFIG_ORACLE_SHARD_INVALID, "Oracle shard " + where + " has an invalid item id '" + key + "'",
+                            "Keys are item ids like order.create/s01#component-01; restore the file from git");
+                }
+            }
+            return m;
         } catch (IOException e) {
             throw new GtaException(ErrorCode.CONFIG_ORACLE_SHARD_INVALID, "Oracle shard " + where + " cannot be read: " + e.getMessage(),
                     "Resolve the merge conflict or restore the file from git (both sides' entries must be kept), then re-run", e);

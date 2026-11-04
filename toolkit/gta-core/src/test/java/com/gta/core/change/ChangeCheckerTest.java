@@ -3,7 +3,7 @@ package com.gta.core.change;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.state.WorkState;
 import com.gta.core.util.Git;
-import com.gta.core.util.Proc;
+import com.gta.core.util.ProcessRunner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -27,7 +27,7 @@ class ChangeCheckerTest {
     private void git(String... args) {
         List<String> cmd = new ArrayList<>(List.of("git", "-c", "user.email=t@example.com", "-c", "user.name=t"));
         cmd.addAll(List.of(args));
-        Proc.run(root, Duration.ofSeconds(30), Map.of(), cmd);
+        ProcessRunner.run(root, Duration.ofSeconds(30), Map.of(), cmd);
     }
 
     @BeforeEach
@@ -119,5 +119,19 @@ class ChangeCheckerTest {
     void shouldMatchGlobs() {
         assertTrue(ChangeChecker.matchesAny("src/test/resources/fixtures/order/a.json", List.of("src/test/resources/**")));
         assertFalse(ChangeChecker.matchesAny("src/main/resources/application.yml", List.of("src/test/resources/**")));
+    }
+
+    @Test
+    void shouldRemoveAnOutOfScopeFileThatWasOnlyStaged() throws Exception {
+        WorkState.Baseline baseline = checker.capture();
+        Files.writeString(root.resolve("src/main/java/Extra.java"), "class Extra {}\n");
+        git("add", "src/main/java/Extra.java");
+
+        ChangeChecker.Result r = checker.check(baseline, List.of("src/test/java/**"), root.resolve("backup"), true);
+
+        assertEquals(List.of("src/main/java/Extra.java"), r.restored());
+        assertFalse(Files.exists(root.resolve("src/main/java/Extra.java")), "checking out HEAD cannot remove it; gtaw must");
+        assertFalse(new Git(root).isTracked("src/main/java/Extra.java"));
+        assertTrue(Files.exists(root.resolve("backup/src/main/java/Extra.java")), "backed up before removal");
     }
 }

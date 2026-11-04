@@ -66,6 +66,9 @@ public class GtaConfig {
 
     public static class QualityGates {
         public int stabilityRepeat = 3;
+        /** Timezone and locale of the stability variant run: chosen to differ from typical developer machines. */
+        public String stabilityTimezone = "Asia/Kolkata";
+        public String stabilityLocale = "de-DE";
         public boolean oracleReview = true;
         public Mutation mutation = new Mutation();
         public double concernsCharacterizationRatio = 0.5;

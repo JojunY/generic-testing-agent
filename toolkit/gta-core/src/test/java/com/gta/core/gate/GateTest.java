@@ -3,6 +3,7 @@ package com.gta.core.gate;
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
+import com.gta.core.error.GtaException;
 import com.gta.core.oracle.AssertionScanner;
 import com.gta.core.oracle.OracleLock;
 import com.gta.core.oracle.OracleShard;
@@ -10,7 +11,7 @@ import com.gta.core.plan.Planner;
 import com.gta.core.run.TestCase;
 import com.gta.core.spec.SpecFixtures;
 import com.gta.core.spec.SpecParser;
-import com.gta.core.util.Proc;
+import com.gta.core.util.ProcessRunner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -24,6 +25,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Gate decisions against a real base branch in a temporary git repository. */
@@ -49,7 +51,7 @@ class GateTest {
     private void git(String... args) {
         List<String> cmd = new ArrayList<>(List.of("git", "-c", "user.email=t@example.com", "-c", "user.name=t"));
         cmd.addAll(List.of(args));
-        Proc.run(root, Duration.ofSeconds(30), Map.of(), cmd);
+        ProcessRunner.run(root, Duration.ofSeconds(30), Map.of(), cmd);
     }
 
     private String fingerprint() {
@@ -154,5 +156,13 @@ class GateTest {
         Gate.Result r = gate();
 
         assertTrue(r.concerns.stream().anyMatch(c -> c.code.equals(ErrorCode.GATE_SCENARIOS_UNLOCKED.name())), r.concerns.toString());
+    }
+
+    @Test
+    void shouldRefuseABaseThatDoesNotExist() {
+        GtaException e = assertThrows(GtaException.class,
+                () -> new Gate(paths, new GtaConfig()).evaluate("origin/no-such-branch", List.of(), List.of()));
+
+        assertEquals(ErrorCode.ENV_GIT_FAILED, e.code(), "a missing base must not pass the gate");
     }
 }

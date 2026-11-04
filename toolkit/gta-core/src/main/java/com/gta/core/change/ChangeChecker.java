@@ -1,6 +1,7 @@
 package com.gta.core.change;
 
 import com.gta.core.config.GtaPaths;
+import com.gta.core.error.GtaException;
 import com.gta.core.state.WorkState;
 import com.gta.core.util.AtomicFiles;
 import com.gta.core.util.Git;
@@ -14,7 +15,9 @@ import java.nio.file.PathMatcher;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The authoritative scope check (plan §5.8): everything an agent changed since dispatch must lie inside the node's
@@ -40,6 +43,8 @@ public final class ChangeChecker {
             return outOfScope.isEmpty();
         }
     }
+
+    private static final Map<String, PathMatcher> MATCHERS = new ConcurrentHashMap<>();
 
     private final GtaPaths paths;
     private final Git git;
@@ -93,9 +98,9 @@ public final class ChangeChecker {
         List<String> restored = new ArrayList<>();
         List<String> unrestorable = new ArrayList<>();
         List<String> foreign = new ArrayList<>();
-        CommitLedger ledger = new CommitLedger(paths);
+        Set<String> gtawCommits = new CommitLedger(paths).shas();
         for (Git.Commit c : git.commitsSince(baseline.head)) {
-            if (ledger.contains(c.sha())) {
+            if (gtawCommits.contains(c.sha())) {
                 continue;
             }
             foreign.add(c.sha().substring(0, Math.min(12, c.sha().length())));
@@ -119,21 +124,31 @@ public final class ChangeChecker {
                     continue;
                 }
                 backup(p, backupDir);
-                Path file = paths.root().resolve(p);
-                if (git.isTracked(p)) {
-                    git.restoreFromHead(p);
+                if (restore(p)) {
+                    restored.add(p);
                 } else {
-                    try {
-                        Files.deleteIfExists(file);
-                    } catch (IOException e) {
-                        unrestorable.add(p);
-                        continue;
-                    }
+                    unrestorable.add(p);
                 }
-                restored.add(p);
             }
         }
         return new Result(changed, out, restored, unrestorable, foreign);
+    }
+
+    /** Puts one file back to HEAD: committed files are checked out, new ones (staged or not) are removed. */
+    private boolean restore(String rel) {
+        try {
+            if (git.inHead(rel)) {
+                git.restoreFromHead(rel);
+            } else {
+                if (git.isTracked(rel)) {
+                    git.unstage(rel); // staged but never committed: checking out HEAD cannot remove it
+                }
+                Files.deleteIfExists(paths.root().resolve(rel));
+            }
+            return true;
+        } catch (GtaException | IOException e) {
+            return false;
+        }
     }
 
     public void backup(String rel, Path backupDir) {
@@ -155,8 +170,7 @@ public final class ChangeChecker {
             if (g.equals(rel)) {
                 return true;
             }
-            PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + g);
-            if (m.matches(p)) {
+            if (MATCHERS.computeIfAbsent(g, k -> FileSystems.getDefault().getPathMatcher("glob:" + k)).matches(p)) {
                 return true;
             }
         }

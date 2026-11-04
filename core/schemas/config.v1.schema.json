@@ -131,6 +131,14 @@
           "type": "integer",
           "minimum": 1
         },
+        "stabilityTimezone": {
+          "type": "string",
+          "description": "Timezone of the stability variant run (default Asia/Kolkata)"
+        },
+        "stabilityLocale": {
+          "type": "string",
+          "description": "BCP 47 locale of the stability variant run (default de-DE)"
+        },
         "oracleReview": {
           "const": true,
           "description": "organisation floor: the independent oracle review cannot be switched off"

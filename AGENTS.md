@@ -20,7 +20,7 @@ These are the rules for working on this repository. They do not apply to service
 | `spec` · `plan` · `state` | spec model, parser, linter and editor · planning · item state machine and the state store |
 | `oracle` · `change` · `run` · `gate` · `report` | oracle lock and shards · scope check and the commit ledger · `TestRunner` (Maven, or a fake in tests) and triage · the gate · reports |
 | `profile` · `registry` · `brief` | code profiling · capability registry · agent briefs |
-| `config` · `error` · `util` | `GtaPaths` (every well-known location; never hard-code paths) · `ErrorCode` · `AtomicFiles`, `Json`, `Yaml`, `Git`, `Proc`, `Ids` |
+| `config` · `error` · `util` | `GtaPaths` (every well-known location; never hard-code paths) · `ErrorCode` · `AtomicFiles`, `Json`, `Yaml`, `Git`, `ProcessRunner`, `Ids` |
 
 ## Naming (plan §9)
 

@@ -10,9 +10,11 @@ import com.gta.core.state.StateStore;
 import com.gta.core.state.WorkState;
 import com.gta.core.util.Ids;
 
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -37,8 +39,7 @@ final class SessionManager {
     Map<String, Object> touchSession(WorkState st, boolean takeover) {
         Map<String, Object> recovered = new LinkedHashMap<>();
         Instant now = Instant.now();
-        boolean idle = st.session != null && st.session.lastSeenAt != null && !st.sessionEnded
-                && Duration.between(Instant.parse(st.session.lastSeenAt), now).toMinutes() >= config.budgets.sessionIdleMinutes;
+        boolean idle = st.session != null && !st.sessionEnded && idleSince(st.session.lastSeenAt, now);
         boolean interrupted = st.session != null && (takeover || idle);
         if (st.session == null || st.sessionEnded || interrupted) {
             if (interrupted) {
@@ -54,6 +55,8 @@ final class SessionManager {
                             }
                         } catch (GtaException ignored) {
                             // item not in plan any more
+                        } catch (UncheckedIOException backupFailed) {
+                            recovered.put(s.id + " (backup)", "failed: " + backupFailed.getCause().getMessage());
                         }
                         st.move(s, ItemStatus.PENDING);
                         recovered.put(s.id, "reset to pending; files backed up to " + paths.rel(backup));
@@ -71,5 +74,17 @@ final class SessionManager {
         }
         st.session.lastSeenAt = now.toString();
         return recovered;
+    }
+
+    /** An unreadable timestamp (e.g. a hand-edited state file) counts as idle, so the session can be taken over. */
+    private boolean idleSince(String lastSeenAt, Instant now) {
+        if (lastSeenAt == null) {
+            return false;
+        }
+        try {
+            return Duration.between(Instant.parse(lastSeenAt), now).toMinutes() >= config.budgets.sessionIdleMinutes;
+        } catch (DateTimeParseException unreadable) {
+            return true;
+        }
     }
 }

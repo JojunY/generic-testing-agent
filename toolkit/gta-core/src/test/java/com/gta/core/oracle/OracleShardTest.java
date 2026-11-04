@@ -26,6 +26,16 @@ class OracleShardTest {
     }
 
     @Test
+    void shouldFailClosedOnAKeyThatIsNotAnItemId() throws Exception {
+        Path shard = dir.resolve("create.oracles.json");
+        Files.writeString(shard, "{\"order.create-s01\": {}}\n");
+
+        GtaException e = assertThrows(GtaException.class, () -> OracleShard.read(shard));
+
+        assertEquals(ErrorCode.CONFIG_ORACLE_SHARD_INVALID, e.code());
+    }
+
+    @Test
     void shouldReadAMissingShardAsEmpty() {
         assertEquals(0, OracleShard.read(dir.resolve("none.oracles.json")).size());
     }

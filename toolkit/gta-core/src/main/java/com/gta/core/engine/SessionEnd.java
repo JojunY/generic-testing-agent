@@ -7,6 +7,7 @@ import com.gta.core.error.GtaException;
 import com.gta.core.gate.Gate;
 import com.gta.core.plan.PlanItem;
 import com.gta.core.report.Reporter;
+import com.gta.core.run.MavenRunner;
 import com.gta.core.run.RunResult;
 import com.gta.core.run.SurefireReports;
 import com.gta.core.run.TestCase;
@@ -17,7 +18,7 @@ import com.gta.core.util.AtomicFiles;
 import com.gta.core.util.Git;
 import com.gta.core.util.Ids;
 import com.gta.core.util.Json;
-import com.gta.core.util.Proc;
+import com.gta.core.util.ProcessRunner;
 import com.gta.core.util.WorkLock;
 
 import java.nio.file.Files;
@@ -98,7 +99,7 @@ final class SessionEnd {
                     unstable.add(id);
                     WorkState.ItemState s = st.items.get(id);
                     if (s != null && s.status == ItemStatus.PASSED) {
-                        s.lastError = ItemWorkflow.lastError(s, ErrorCode.TEST_ASSERTION_FAILED, "unstable under pass^k / Asia/Kolkata timezone / de-DE locale / random order");
+                        s.lastError = ItemWorkflow.lastError(s, ErrorCode.TEST_ASSERTION_FAILED, "unstable under pass^k / " + MavenRunner.stabilityVariantLabel(config.qualityGates) + " / random order");
                         s.verdict = "flaky";
                         st.move(s, ItemStatus.TRIAGING);
                     }
@@ -153,7 +154,7 @@ final class SessionEnd {
 
     String defaultBase() {
         for (String ref : List.of("origin/main", "origin/master", "main", "master")) {
-            if (Proc.run(paths.root(), Proc.cmd("git", "rev-parse", "--verify", "--quiet", ref)).ok()) {
+            if (ProcessRunner.run(paths.root(), ProcessRunner.cmd("git", "rev-parse", "--verify", "--quiet", ref)).ok()) {
                 return ref;
             }
         }

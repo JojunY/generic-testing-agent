@@ -1,6 +1,7 @@
 package com.gta.core.gate;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.gta.core.spec.Ref;
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
@@ -79,6 +80,11 @@ public final class Gate {
     }
 
     public Result evaluate(String baseRef, List<TestCase> results, List<String> unstableItems) {
+        if (!git.refExists(baseRef)) {
+            // comparing against nothing would make every locked scenario look new and pass the gate
+            throw new GtaException(ErrorCode.ENV_GIT_FAILED, "The base " + baseRef + " is not a commit in this repository",
+                    "Fetch it first (CI: git fetch origin " + baseRef.replaceFirst("^origin/", "") + "), or pass --base <ref>");
+        }
         Result r = new Result();
         r.base = baseRef;
         Map<String, Spec> currentSpecs = currentSpecs();
@@ -275,9 +281,7 @@ public final class Gate {
         for (Spec s : specs.values()) {
             for (Spec.Requirement r : s.requirements) {
                 for (String ref : r.refs()) {
-                    if (ref.contains("#")) {
-                        referencedClasses.add(ref.substring(ref.indexOf(':') + 1, ref.indexOf('#')).replace('.', '/') + ".java");
-                    }
+                    Ref.parse(ref).filter(Ref::isCode).ifPresent(x -> referencedClasses.add(x.sourcePath()));
                 }
             }
         }

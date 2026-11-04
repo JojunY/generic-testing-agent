@@ -19,13 +19,19 @@ $cache = Join-Path $gtaHome 'wrapper\dists'
 New-Item -ItemType Directory -Force -Path $cache | Out-Null
 $jar = Join-Path $cache "gta-cli-$version.jar"
 if (-not (Test-Path $jar)) {
-    $tmp = "$jar.part"
+    $tmp = "$jar.$PID.part"  # one file per process: parallel first runs do not collide
     $headers = @{}
     if ($env:GTA_NEXUS_USER) {
         $pair = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("$($env:GTA_NEXUS_USER):$($env:GTA_NEXUS_PASSWORD)"))
         $headers['Authorization'] = "Basic $pair"
     }
-    Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $tmp -Headers $headers
+    try {
+        Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $tmp -Headers $headers
+    } catch {
+        Remove-Item -Force -ErrorAction SilentlyContinue $tmp
+        Write-Output '{"error":{"code":"ENV_TOOL_UNAVAILABLE","category":"environment","message":"cannot download the gta-cli jar from distributionUrl","hint":"check distributionUrl in .gta/wrapper/gta-wrapper.properties, the network and GTA_NEXUS_USER/GTA_NEXUS_PASSWORD","retryable":true}}'
+        exit 0
+    }
     Move-Item -Force $tmp $jar
 }
 $actual = (Get-FileHash -Algorithm SHA256 $jar).Hash.ToLower()
