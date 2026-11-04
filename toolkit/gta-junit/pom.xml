@@ -25,6 +25,7 @@
     <dependency>
       <groupId>org.junit.platform</groupId>
       <artifactId>junit-platform-launcher</artifactId>
+      <!-- stays on 1.14.x: see junit5.version in the root pom -->
       <version>1.14.4</version>
       <scope>provided</scope>
     </dependency>

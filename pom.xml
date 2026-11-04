@@ -40,7 +40,8 @@
     <picocli.version>4.7.7</picocli.version>
     <javaparser.version>3.28.2</javaparser.version>
     <junit.version>6.1.3</junit.version>
-    <!-- gta-junit is compiled against JUnit 5 so it also works with Spring Boot 3.5 projects -->
+    <!-- gta-junit is compiled against JUnit 5 so it also works with Spring Boot 3.5 projects.
+         Keep 5.x (and junit-platform 1.14.x in gta-junit); Dependabot ignores major versions. -->
     <junit5.version>5.14.4</junit5.version>
     <spotbugs.version>4.9.3.0</spotbugs.version>
     <jacoco.version>0.8.16</jacoco.version>
@@ -136,6 +137,8 @@
               <include>src/test/java/**/*.java</include>
             </includes>
             <palantirJavaFormat>
+              <!-- A new formatter version reformats the code: bump it together with a reformat commit
+                   listed in .git-blame-ignore-revs -->
               <version>2.50.0</version>
               <style>PALANTIR</style>
             </palantirJavaFormat>

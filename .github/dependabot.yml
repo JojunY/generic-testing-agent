@@ -6,10 +6,10 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     ignore:
-      # gta-junit stays compiled against JUnit 5.14 so it works on Spring Boot 3.5 and 4.x (AGENTS.md).
-      - dependency-name: "org.junit.jupiter:*"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "org.junit.platform:*"
+      # Major versions are a human decision (AGENTS.md): gta-junit stays on JUnit 5.14 / platform 1.14 so it works
+      # on Spring Boot 3.5 and 4.x, and the formatter, Maven and Java levels move together with the code.
+      # Minor and patch updates, including security fixes, still arrive as pull requests.
+      - dependency-name: "*"
         update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
