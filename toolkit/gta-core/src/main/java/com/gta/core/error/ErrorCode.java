@@ -18,6 +18,15 @@ public enum ErrorCode {
     GATE_ORACLE_CHANGED_WITHOUT_SPEC(Category.GATE_FAILED),
     GATE_UNSTABLE_TEST(Category.GATE_FAILED),
     GATE_KNOWN_DEFECT_MISMATCH(Category.GATE_FAILED),
+
+    // gate-concern (0): reported in the PR comment, never fail the build
+    GATE_ASSUMED_CLAIM(Category.GATE_CONCERN),
+    GATE_DEFAULTED_CLAIM(Category.GATE_CONCERN),
+    GATE_NEW_CONFIRMATION(Category.GATE_CONCERN),
+    GATE_RELOCKED(Category.GATE_CONCERN),
+    GATE_CHARACTERIZATION_RATIO(Category.GATE_CONCERN),
+    GATE_UNMAPPED_CHANGE(Category.GATE_CONCERN),
+    GATE_WAIVERS_UNREADABLE(Category.GATE_CONCERN),
     // usage (20)
     USAGE_UNKNOWN_ITEM(Category.USAGE),
     USAGE_UNKNOWN_FLOW(Category.USAGE),
@@ -30,6 +39,8 @@ public enum ErrorCode {
     // environment (30)
     ENV_NOT_A_GIT_REPO(Category.ENVIRONMENT),
     ENV_MAVEN_UNAVAILABLE(Category.ENVIRONMENT),
+    ENV_TOOL_UNAVAILABLE(Category.ENVIRONMENT),
+    ENV_CHECK_FAILED(Category.ENVIRONMENT),
     ENV_UNSUPPORTED_BUILD(Category.ENVIRONMENT),
     ENV_EMULATOR_UNAVAILABLE(Category.ENVIRONMENT),
     ENV_WRAPPER_CHECKSUM_MISMATCH(Category.ENVIRONMENT),
@@ -45,17 +56,21 @@ public enum ErrorCode {
     POLICY_ORACLE_MISMATCH(Category.POLICY),
     POLICY_SPEC_INVALID(Category.POLICY),
     POLICY_GTA_OWNED_FIELD(Category.POLICY),
+    POLICY_UNCONFIRMED_KNOWN_DEFECT(Category.POLICY),
     // state (60)
     STATE_ILLEGAL_TRANSITION(Category.STATE),
     STATE_LOCKED(Category.STATE),
     STATE_STALE_SESSION(Category.STATE),
     STATE_NOTHING_PENDING(Category.STATE),
+    STATE_BUDGET_EXHAUSTED(Category.STATE),
+    STATE_CORRUPT(Category.STATE),
     // internal (70)
     INTERNAL_ERROR(Category.INTERNAL);
 
     public enum Category {
         TEST_FAILURE("test-failure", 10, false),
         GATE_FAILED("gate-failed", 11, false),
+        GATE_CONCERN("gate-concern", 0, false),
         USAGE("usage", 20, false),
         CONFIG("config", 21, false),
         ENVIRONMENT("environment", 30, false),

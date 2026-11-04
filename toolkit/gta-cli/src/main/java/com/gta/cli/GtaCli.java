@@ -1,18 +1,21 @@
 package com.gta.cli;
 
+import com.gta.core.config.GtaPaths;
 import com.gta.core.engine.Engine;
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
 import com.gta.core.gate.Gate;
+import com.gta.core.run.RunResult;
 import com.gta.core.util.Json;
 import com.gta.core.util.Proc;
-import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+import picocli.CommandLine;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -36,8 +39,8 @@ public final class GtaCli implements Callable<Integer> {
     @Option(names = "--root", description = "Service repository root (default: current directory)", scope = CommandLine.ScopeType.INHERIT)
     Path root = Path.of(".");
 
-    @Option(names = "--format", description = "concise | detailed | human (default: concise)", scope = CommandLine.ScopeType.INHERIT)
-    String format = "concise";
+    @Option(names = "--format", description = "json | human (default: json)", scope = CommandLine.ScopeType.INHERIT)
+    String format = "json";
 
     public static void main(String[] args) {
         // JSON and prompts are UTF-8 regardless of the console code page (Windows cp1252/cp936), so agents read them intact.
@@ -175,9 +178,9 @@ public final class GtaCli implements Callable<Integer> {
 
         @Override
         public Integer call() {
-            Map<String, Object> report = new com.gta.cli.Doctor(parent.root).run();
+            Map<String, Object> report = new DoctorChecks(parent.root).run();
             print(parent, report);
-            return "fail".equals(report.get("overall")) ? ErrorCode.ENV_MAVEN_UNAVAILABLE.exitCode() : 0;
+            return "fail".equals(report.get("overall")) ? ErrorCode.ENV_CHECK_FAILED.exitCode() : 0;
         }
     }
 
@@ -314,17 +317,7 @@ public final class GtaCli implements Callable<Integer> {
 
         @Override
         public Integer call() {
-            if ("system".equals(layer)) {
-                throw new GtaException(ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE, "The system layer arrives in P4", "Run component tests instead");
-            }
-            Engine e = engine(parent);
-            String tag = smoke ? null : layer != null ? layer : "gta";
-            String testPattern = smoke ? "*SeedIT" : null;
-            com.gta.core.run.RunResult r = new com.gta.core.run.MavenRunner(e.paths(), e.config()).run(
-                    com.gta.core.util.Ids.newRunId(new com.gta.core.util.Git(e.paths().root()).head()), null,
-                    new com.gta.core.run.MavenRunner.Options(testPattern, tag, false, false),
-                    com.gta.core.profile.JavaIndex.of(e.paths().root().resolve("src/main/java")).classNames(),
-                    com.gta.core.profile.JavaIndex.of(e.paths().root().resolve("src/test/java")).classNames());
+            RunResult r = engine(parent).runTests(smoke, layer);
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("runId", r.runId);
             out.put("tests", r.cases.size());
@@ -395,9 +388,9 @@ public final class GtaCli implements Callable<Integer> {
             if (exp.isAfter(LocalDate.now().plusDays(90))) {
                 throw new GtaException(ErrorCode.USAGE_INVALID_ARGUMENT, "Waivers may last at most 90 days", "Pick an earlier --expires");
             }
-            Path file = gate.parent.root.resolve(".gta/waivers.json");
+            Path file = new GtaPaths(gate.parent.root).waivers();
             List<Map<String, Object>> list = new ArrayList<>();
-            if (java.nio.file.Files.exists(file)) {
+            if (Files.exists(file)) {
                 list.addAll(Json.MAPPER.readValue(file.toFile(), new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {
                 }));
             }

@@ -5,8 +5,8 @@ import com.gta.core.plan.PlanItem;
 import com.gta.core.profile.ServiceProfile;
 import com.gta.core.spec.Spec;
 import com.gta.core.state.WorkState;
+import com.gta.core.util.AtomicFiles;
 import com.gta.core.util.Ids;
-import com.gta.core.util.Json;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -236,7 +236,7 @@ public final class Briefs {
             return "";
         }
         String fqcn = ref.substring(ref.indexOf(':') + 1, ref.contains("#") ? ref.indexOf('#') : ref.length());
-        Path f = paths.root().resolve("src/main/java").resolve(fqcn.replace('.', '/') + ".java");
+        Path f = paths.mainJava().resolve(fqcn.replace('.', '/') + ".java");
         return Files.exists(f) ? " → `" + paths.rel(f) + "`" : "";
     }
 
@@ -244,7 +244,7 @@ public final class Briefs {
         if (testClass == null || !testClass.contains(".")) {
             return List.of();
         }
-        Path dir = paths.root().resolve("src/test/java").resolve(testClass.substring(0, testClass.lastIndexOf('.')).replace('.', '/'));
+        Path dir = paths.testJava().resolve(testClass.substring(0, testClass.lastIndexOf('.')).replace('.', '/'));
         if (!Files.isDirectory(dir)) {
             return List.of();
         }
@@ -265,7 +265,7 @@ public final class Briefs {
 
     private Path write(int seq, String content) {
         Path f = file(seq);
-        Json.writeStringAtomic(f, content);
+        AtomicFiles.write(f, content);
         return f;
     }
 

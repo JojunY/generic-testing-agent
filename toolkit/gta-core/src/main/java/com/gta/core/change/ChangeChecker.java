@@ -31,7 +31,12 @@ public final class ChangeChecker {
     /** Never considered agent changes: build output and gtaw's own working area. */
     private static final List<String> IGNORED = List.of("target/**", "**/target/**", ".gta/work/**", "**/.gta/work/**");
 
-    public record Result(List<String> changed, List<String> outOfScope, List<String> restored, List<String> unrestorable) {
+    /**
+     * @param foreignCommits commits made since the baseline without a gtaw trailer (an agent or a person ran git commit);
+     *                       gtaw never rewrites history, so their files are reported as out of scope and unrestorable
+     */
+    public record Result(List<String> changed, List<String> outOfScope, List<String> restored, List<String> unrestorable,
+                         List<String> foreignCommits) {
         public boolean ok() {
             return outOfScope.isEmpty();
         }
@@ -59,7 +64,8 @@ public final class ChangeChecker {
     /** Files changed since the baseline (excluding pre-existing dirty files that are byte-identical). */
     public List<String> changedSince(WorkState.Baseline baseline) {
         Set<String> changed = new LinkedHashSet<>();
-        for (String p : git.dirtyPaths()) {
+        Set<String> dirtyNow = git.dirtyPaths();
+        for (String p : dirtyNow) {
             if (matchesAny(p, IGNORED)) {
                 continue;
             }
@@ -69,7 +75,7 @@ public final class ChangeChecker {
             }
         }
         for (String p : baseline.dirty.keySet()) {
-            if (!git.dirtyPaths().contains(p)) {
+            if (!dirtyNow.contains(p)) {
                 changed.add(p); // a pre-existing change was reverted
             }
         }
@@ -87,8 +93,27 @@ public final class ChangeChecker {
         }
         List<String> restored = new ArrayList<>();
         List<String> unrestorable = new ArrayList<>();
+        List<String> foreign = new ArrayList<>();
+        for (Git.Commit c : git.commitsSince(baseline.head)) {
+            if (c.byGtaw()) {
+                continue;
+            }
+            foreign.add(c.sha().substring(0, Math.min(12, c.sha().length())));
+            for (String f : c.files()) {
+                if (!matchesAny(f, IGNORED) && !out.contains(f)) {
+                    out.add(f);
+                    unrestorable.add(f);
+                }
+            }
+            if (c.files().isEmpty()) {
+                out.add("(commit " + c.sha() + ")");
+            }
+        }
         if (restore) {
             for (String p : out) {
+                if (unrestorable.contains(p) || p.startsWith("(commit ")) {
+                    continue;
+                }
                 if (baseline.dirty.containsKey(p)) {
                     unrestorable.add(p); // we never overwrite a developer's own uncommitted change
                     continue;
@@ -108,7 +133,7 @@ public final class ChangeChecker {
                 restored.add(p);
             }
         }
-        return new Result(changed, out, restored, unrestorable);
+        return new Result(changed, out, restored, unrestorable, foreign);
     }
 
     public void backup(String rel, Path backupDir) {

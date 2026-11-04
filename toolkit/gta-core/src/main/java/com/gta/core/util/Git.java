@@ -50,11 +50,45 @@ public final class Git {
             String status = e.substring(0, 2);
             String path = e.substring(3);
             paths.add(path);
-            if (status.charAt(0) == 'R' || status.charAt(0) == 'C') {
-                i++; // skip the "from" path of renames/copies
+            if ((status.charAt(0) == 'R' || status.charAt(0) == 'C') && i + 1 < entries.length) {
+                i++;
+                if (status.charAt(0) == 'R') {
+                    paths.add(entries[i]); // the source of a rename disappeared: it is a change too
+                }
             }
         }
         return paths;
+    }
+
+    /** A commit between two revisions: its sha, whether gtaw made it (a {@code Gta-*} trailer) and the files it touched. */
+    public record Commit(String sha, boolean byGtaw, List<String> files) {
+    }
+
+    /** Commits reachable from HEAD but not from {@code since}, oldest first. Empty when {@code since} is unknown. */
+    public List<Commit> commitsSince(String since) {
+        List<Commit> out = new ArrayList<>();
+        if (since == null || !Proc.run(root, Proc.cmd("git", "cat-file", "-e", since + "^{commit}")).ok()) {
+            return out;
+        }
+        Proc.Result log = Proc.run(root, Proc.cmd("git", "log", "--reverse", "--format=%H%x1f%B%x1e", since + "..HEAD"));
+        if (!log.ok()) {
+            return out;
+        }
+        for (String rec : log.output().split("\u001e")) {
+            String r = rec.strip();
+            if (r.isEmpty() || !r.contains("\u001f")) {
+                continue;
+            }
+            String sha = r.substring(0, r.indexOf('\u001f')).strip();
+            String body = r.substring(r.indexOf('\u001f') + 1);
+            boolean byGtaw = body.lines().anyMatch(l -> l.matches("^Gta-[A-Za-z]+: .*"));
+            Proc.Result files = Proc.run(root, Proc.cmd("git", "diff-tree", "--no-commit-id", "--name-only", "-r", "-m", "--root", sha));
+            List<String> changed = files.ok()
+                    ? files.output().lines().map(String::strip).filter(l -> !l.isEmpty()).distinct().toList()
+                    : List.of();
+            out.add(new Commit(sha, byGtaw, changed));
+        }
+        return out;
     }
 
     public boolean isTracked(String path) {

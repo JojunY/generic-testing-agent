@@ -2,11 +2,15 @@ package com.gta.core.state;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.gta.core.config.GtaPaths;
+import com.gta.core.error.ErrorCode;
+import com.gta.core.error.GtaException;
 import com.gta.core.plan.PlanItem;
 import com.gta.core.util.Json;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,9 +29,25 @@ public final class StateStore {
         try {
             return Json.MAPPER.readValue(paths.state().toFile(), WorkState.class);
         } catch (IOException e) {
-            // corrupted snapshot: rebuild from specs, shards and tests (plan §5.2)
-            return new WorkState();
+            throw corrupt(paths.state(), e);
         }
+    }
+
+    /**
+     * A working-state file that cannot be read is moved aside (never overwritten) and reported. The next command finds
+     * no file and rebuilds from specs, oracle shards and committed tests (plan §5.2); open human decisions are asked again.
+     */
+    private GtaException corrupt(Path file, IOException cause) {
+        Path aside = file.resolveSibling(file.getFileName() + ".corrupt-" + System.currentTimeMillis());
+        try {
+            Files.move(file, aside, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException moveFailed) {
+            aside = file;
+        }
+        return new GtaException(ErrorCode.STATE_CORRUPT, "Cannot read " + paths.rel(file) + ": " + cause.getMessage()
+                + " (kept as " + paths.rel(aside) + ")",
+                "Run ./gtaw next again: gtaw rebuilds the working state from specs, oracle shards and committed tests."
+                        + " Pending answers or approvals will be asked again", cause);
     }
 
     public void save(WorkState state) {
@@ -42,7 +62,7 @@ public final class StateStore {
             return Json.MAPPER.readValue(paths.plan().toFile(), new TypeReference<List<PlanItem>>() {
             });
         } catch (IOException e) {
-            return new ArrayList<>();
+            throw corrupt(paths.plan(), e);
         }
     }
 

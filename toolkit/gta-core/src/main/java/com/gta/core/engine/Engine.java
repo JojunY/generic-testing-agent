@@ -32,6 +32,7 @@ import com.gta.core.spec.SpecParser;
 import com.gta.core.state.ItemStatus;
 import com.gta.core.state.StateStore;
 import com.gta.core.state.WorkState;
+import com.gta.core.util.AtomicFiles;
 import com.gta.core.util.Git;
 import com.gta.core.util.Hashes;
 import com.gta.core.util.Ids;
@@ -186,7 +187,10 @@ public final class Engine {
             WorkState.ItemState s = st.items.get(item.id);
             switch (s.status) {
                 case AUTHORING, REPAIRING -> {
+                    // every brief gets its own token: items adopted after a rebuild have none, and a re-issued
+                    // brief must invalidate the previous one
                     st.seq++;
+                    s.token = Briefs.token(st.session.id, st.seq);
                     Path brief = briefs.author(st.seq, s, item, spec, profile);
                     return authorNode(item, s, brief);
                 }
@@ -583,12 +587,15 @@ public final class Engine {
             Path specPath = paths.spec(flowId);
             String specRel = paths.rel(specPath);
             ChangeChecker.Result scope = new ChangeChecker(paths).check(sw.baseline,
-                    List.of(specRel, ".gta/specs/service-overview.md"), paths.recover().resolve("analyze-" + st.seq), true);
+                    List.of(specRel, paths.rel(paths.specs().resolve("service-overview.md"))), paths.recover().resolve("analyze-" + st.seq), true);
             if (!scope.ok()) {
                 sw.attempts++;
                 store.save(st);
                 throw new GtaException(ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE, "The analyst may only change " + specRel,
-                        "Reverted (backup in .gta/work/recover/): " + scope.restored()).detail("outOfScope", scope.outOfScope());
+                        scope.foreignCommits().isEmpty()
+                                ? "Reverted (backup in .gta/work/recover/): " + scope.restored()
+                                : "Commits not made by gtaw " + scope.foreignCommits() + " must be reverted by a human; agents must not run git")
+                        .detail("outOfScope", scope.outOfScope());
             }
             if (!Files.exists(specPath)) {
                 throw new GtaException(ErrorCode.USAGE_UNKNOWN_FLOW, "Spec not found: " + specRel, "Write the spec file first");
@@ -676,7 +683,7 @@ public final class Engine {
             touch(st);
             WorkState.ItemState s = requireToken(st, itemId, token, ItemStatus.AUTHORING, ItemStatus.REPAIRING);
             if (s.checks >= config.budgets.maxChecksPerItem) {
-                throw new GtaException(ErrorCode.STATE_NOTHING_PENDING, "Check budget used (" + s.checks + ")",
+                throw new GtaException(ErrorCode.STATE_BUDGET_EXHAUSTED, "Check budget used (" + s.checks + ")",
                         "Submit with ./gtaw submit --item " + itemId + " --token " + token);
             }
             s.checks++;
@@ -724,6 +731,12 @@ public final class Engine {
                     paths.recover().resolve(Ids.itemKey(item.id) + "-" + st.seq), true);
             st.move(s, ItemStatus.VERIFYING);
             if (!scope.ok()) {
+                if (!scope.foreignCommits().isEmpty()) {
+                    // history is never rewritten by gtaw: a human must look at the commits
+                    s.lastError = lastError(s, ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE, "commits not made by gtaw: " + scope.foreignCommits());
+                    return needsHuman(st, item, s, "commits made outside gtaw since the brief (" + String.join(", ", scope.foreignCommits())
+                            + ") touch " + scope.unrestorable() + ". Agents must not run git; revert or keep them yourself, then answer A to retry");
+                }
                 return fail(st, item, s, ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE,
                         "Changed files outside ownsFiles were reverted: " + scope.restored()
                                 + (scope.unrestorable().isEmpty() ? "" : "; not restorable (pre-existing changes): " + scope.unrestorable()));
@@ -770,6 +783,17 @@ public final class Engine {
                     + (s.lastError == null ? "-" : s.lastError.defectFingerprint) + ").");
             // not counted against the session budget: the item was already counted when it reached the human
             return result("defect-found: " + item.id + " pinned with @KnownDefect (build stays green)", Map.of("runId", runId));
+        }
+        boolean anyPinned = run.cases.stream().anyMatch(c -> "known-defect".equals(c.outcome));
+        if (anyPinned && !"known-defect".equals(s.intentOverride)) {
+            // @KnownDefect turns a failure green, so only a human's confirmation may introduce it
+            boolean pinnedOnly = run.cases.stream().allMatch(c -> "known-defect".equals(c.outcome));
+            if (rebuilt && pinnedOnly && confirmedPin(item)) {
+                st.move(s, ItemStatus.DEFECT_FOUND);
+                return result("defect-found: " + item.id + " (adopted; the pin was confirmed earlier)", Map.of("runId", runId));
+            }
+            return fail(st, item, s, ErrorCode.POLICY_UNCONFIRMED_KNOWN_DEFECT,
+                    "@KnownDefect may only be added after a human confirmed the defect; remove it and let the failure be triaged");
         }
         if (failures.isEmpty()) {
             if ("reproducing".equals(item.intent)) {
@@ -818,7 +842,6 @@ public final class Engine {
                 if ("accept".equals(verdict)) {
                     out = markPassed(st, item, s, s.evidenceRunId);
                 } else if ("reject".equals(verdict)) {
-                    st.move(s, ItemStatus.VERIFYING);
                     out = fail(st, item, s, ErrorCode.TEST_CODE_ERROR, "Reviewer rejected the oracle: " + reason);
                 } else {
                     throw new GtaException(ErrorCode.USAGE_INVALID_ARGUMENT, "Oracle review verdict must be accept or reject", "Use --verdict accept|reject");
@@ -999,6 +1022,16 @@ public final class Engine {
         git.commit(files, msg).ifPresent(sha -> s.commit = sha);
     }
 
+    /** A pin is confirmed when gtaw committed the known-defect record for the item (see writeEscalation). */
+    private boolean confirmedPin(PlanItem item) {
+        Path f = paths.escalations().resolve(Ids.itemKey(item.id) + ".md");
+        try {
+            return Files.exists(f) && git.isTracked(paths.rel(f)) && Files.readString(f).contains("- Status: `defect-found`");
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     private void writeEscalation(PlanItem item, WorkState.ItemState s, String reason) {
         Path f = paths.escalations().resolve(Ids.itemKey(item.id) + ".md");
         StringBuilder b = new StringBuilder();
@@ -1020,7 +1053,7 @@ public final class Engine {
         } else {
             b.append("Look at the last failure and the brief, fix the cause (environment, spec or test), then answer 'A' to retry in `/gta`.\n");
         }
-        Json.writeStringAtomic(f, b.toString());
+        AtomicFiles.write(f, b.toString());
         String verb = s.status == ItemStatus.DEFECT_FOUND ? "record known defect " : "escalate ";
         git.commit(List.of(paths.rel(f)), "docs(gta): " + verb + item.id + "\n\nGta-Item: " + item.id);
     }
@@ -1038,8 +1071,8 @@ public final class Engine {
         Path dir = paths.runs().resolve(runId);
         List<PlanItem> plan = store.loadPlan();
         Reporter reporter = new Reporter(paths);
-        Json.writeStringAtomic(dir.resolve("report.md"), reporter.markdown(st, plan, gate, false));
-        Json.writeStringAtomic(dir.resolve("pr-comment.md"), reporter.markdown(st, plan, gate, true));
+        AtomicFiles.write(dir.resolve("report.md"), reporter.markdown(st, plan, gate, false));
+        AtomicFiles.write(dir.resolve("pr-comment.md"), reporter.markdown(st, plan, gate, true));
         Json.writeAtomic(dir.resolve("gate.json"), gate);
         st.sessionEnded = true;
         more.put("gate", gate.decision);
@@ -1228,18 +1261,27 @@ public final class Engine {
         }
     }
 
+    /**
+     * Re-locks a committed oracle after an intended test change (human only). Works from the committed shard alone, so
+     * it also runs on a fresh checkout without working state.
+     */
     public Map<String, Object> relock(String itemId, String reason, String by) {
-        PlanItem item = planItem(itemId);
-        Path shardPath = paths.oracleShard(item.flowId);
+        if (!Ids.ITEM_ID.matcher(itemId).matches() || itemId.contains("#foundation")) {
+            throw new GtaException(ErrorCode.USAGE_UNKNOWN_ITEM, "Not a scenario item id: " + itemId, "Use an id like order.create/s01#component-01");
+        }
+        String scenarioId = itemId.substring(0, itemId.indexOf('#'));
+        String flowId = scenarioId.substring(0, scenarioId.indexOf('/'));
+        Path shardPath = paths.oracleShard(flowId);
         Map<String, OracleShard.Entry> shard = OracleShard.read(shardPath);
         OracleShard.Entry e = shard.get(itemId);
-        if (e == null) {
+        if (e == null || e.testClass == null) {
             throw new GtaException(ErrorCode.USAGE_UNKNOWN_ITEM, "No committed oracle for " + itemId, "Only committed (passed) items can be relocked");
         }
-        AssertionScanner.ScenarioOracle oracle = scanOracle(item);
+        AssertionScanner.ScenarioOracle oracle = AssertionScanner.scan(paths.testSource(e.testClass), scenarioId, paths.testResources());
         e.fingerprint = OracleLock.fingerprint(oracle.assertionStatements().stream().filter(x -> e.tokens.stream().anyMatch(x::contains)).toList());
         e.relockedBy = by;
         e.reason = reason;
+        e.relockedAt = Instant.now().toString();
         OracleShard.write(shardPath, shard);
         return result("relocked " + itemId + " by " + by + "; commit " + paths.rel(shardPath) + " so the PR shows it", null);
     }
@@ -1364,12 +1406,12 @@ public final class Engine {
         // rebuild: tests that already exist for a fresh pending item are verified first
         for (PlanItem i : result) {
             WorkState.ItemState s = st.items.get(i.id);
-            Path test = paths.root().resolve("src/test/java").resolve(i.testClass.replace('.', '/') + ".java");
+            Path test = paths.testSource(i.testClass);
             if (i.isFoundation() && s.status == ItemStatus.PENDING && s.attempts == 0 && Files.exists(test)
                     && git.isTracked(paths.rel(test))) {
                 // the committed seed test is adopted after one verification run instead of being written again
                 s.baseline = new ChangeChecker(paths).capture();
-                s.status = ItemStatus.VERIFYING;
+                st.move(s, ItemStatus.VERIFYING); // adopt: verify the existing test before trusting it
                 continue;
             }
             Map<String, OracleShard.Entry> shard = OracleShard.read(paths.oracleShard(i.flowId));
@@ -1383,7 +1425,7 @@ public final class Engine {
                 lock.fingerprint = shard.get(i.id).fingerprint;
                 s.lock = lock;
                 s.baseline = new ChangeChecker(paths).capture();
-                s.status = ItemStatus.VERIFYING;
+                st.move(s, ItemStatus.VERIFYING); // adopt: verify the existing test before trusting it
             }
         }
         return result;
@@ -1394,6 +1436,16 @@ public final class Engine {
                 .orElseThrow(() -> new GtaException(ErrorCode.USAGE_UNKNOWN_ITEM, "Unknown item " + id, "Run ./gtaw status"));
     }
 
+    /** {@code gtaw run}: the seed tests (smoke) or every gta test, optionally one layer. */
+    public RunResult runTests(boolean smoke, String layer) {
+        if ("system".equals(layer)) {
+            throw new GtaException(ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE, "The system layer arrives in P4", "Run component tests instead");
+        }
+        String tag = smoke ? null : layer != null ? layer : "gta";
+        return new MavenRunner(paths, config).run(Ids.newRunId(git.head()), null,
+                new MavenRunner.Options(smoke ? "*SeedIT" : null, tag, false, false), productionClasses(), testClasses());
+    }
+
     private RunResult runItem(String runId, PlanItem item, boolean variant, boolean random) {
         String tag = item.isFoundation() ? null : "scenario:" + item.ref;
         return new MavenRunner(paths, config).run(runId, item.id, new MavenRunner.Options(item.testClass, tag, variant, random),
@@ -1401,8 +1453,7 @@ public final class Engine {
     }
 
     private AssertionScanner.ScenarioOracle scanOracle(PlanItem item) {
-        Path test = paths.root().resolve("src/test/java").resolve(item.testClass.replace('.', '/') + ".java");
-        return AssertionScanner.scan(test, item.isFoundation() ? null : item.ref, paths.root().resolve("src/test/resources"));
+        return AssertionScanner.scan(paths.testSource(item.testClass), item.isFoundation() ? null : item.ref, paths.testResources());
     }
 
     private boolean reached(RunResult run) {
@@ -1413,11 +1464,11 @@ public final class Engine {
     }
 
     private Set<String> productionClasses() {
-        return JavaIndex.of(paths.root().resolve("src/main/java")).classNames();
+        return JavaIndex.of(paths.mainJava()).classNames();
     }
 
     private Set<String> testClasses() {
-        return JavaIndex.of(paths.root().resolve("src/test/java")).classNames();
+        return JavaIndex.of(paths.testJava()).classNames();
     }
 
     private Map<String, Object> summarize(RunResult run) {
@@ -1561,7 +1612,7 @@ public final class Engine {
     }
 
     private void writeSpec(Path specPath, String text) {
-        Json.writeStringAtomic(specPath, text.endsWith("\n") ? text : text + "\n");
+        AtomicFiles.write(specPath, text.endsWith("\n") ? text : text + "\n");
     }
 
     static String bump(String rev) {

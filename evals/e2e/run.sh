@@ -154,9 +154,16 @@ OUT=$(gtaw submit --item "$ITEM" --token "$TOKEN")
 jget "$OUT" 'd["result"]' | grep -q '^defect-found' || fail "pin: $OUT"
 echo "ok   s03 pinned with @KnownDefect ($FP)"
 
-step "s04"
+step "s04: the reviewer rejects the first oracle, the author resubmits"
 ITEM="order.create-order/s04#component-01"; TOKEN=$(author s04)
 add_method "$AGENT/s04.method.java"
+gtaw submit --item "$ITEM" --token "$TOKEN" >/dev/null
+OUT=$(gtaw next)
+expect "$(jget "$OUT" 'd["kind"]')" oracle-review "review kind for s04"
+OUT=$(gtaw submit --review "$ITEM" --verdict reject --reason "also assert that nothing was stored")
+jget "$OUT" 'd["result"]' | grep -q 'fix it' || fail "reject did not send s04 back to the author: $OUT"
+echo "ok   reject sends the item back to the author"
+TOKEN=$(author s04)
 gtaw submit --item "$ITEM" --token "$TOKEN" >/dev/null
 review_accept s04
 
@@ -166,6 +173,30 @@ expect "$(jget "$OUT" 'd["node"]')" done "final node"
 expect "$(jget "$OUT" 'd["gate"]')" concerns "gate on the feature branch"
 grep -q "Product defects found" "$(jget "$OUT" 'd["report"]')" || fail "report lacks the known defect"
 echo "ok   report lists the known defect"
+
+step "rebuild: lost working state, adopted tests are verified and repaired"
+gtaw abort >/dev/null
+sed -i 's|    void shouldRejectOrderWhenCustomerIdIsBlank() throws Exception {|&\n        if (Boolean.parseBoolean("true")) { throw new IllegalStateException("broken fixture"); }|' "$TEST"
+REPAIRED=0
+for i in $(seq 1 30); do
+  OUT=$(gtaw next --mode flow --target order.create-order)
+  NODE=$(jget "$OUT" 'd.get("node", "result")')
+  case "$NODE" in
+    author)
+      git checkout -q -- "$TEST"
+      gtaw submit --item "$(jget "$OUT" 'd["itemId"]')" --token "$(jget "$OUT" 'd["token"]')" >/dev/null
+      REPAIRED=$((REPAIRED + 1)) ;;
+    review)
+      gtaw submit --review "$(jget "$OUT" 'd["itemId"]')" --verdict accept --reason "unchanged oracle" >/dev/null ;;
+    done) break ;;
+    result) ;;
+    *) fail "unexpected node during rebuild: $OUT" ;;
+  esac
+done
+[ "$REPAIRED" -ge 1 ] || fail "the broken adopted test was never handed to the author"
+STATUS=$(gtaw status)
+expect "$(jget "$STATUS" '" ".join(sorted(set(i["status"] for i in d["items"])))')" "defect-found passed" "item states after the rebuild"
+git diff --quiet || fail "the work tree is dirty after the rebuild"
 
 step "regression: merge, then break the code on a new branch"
 git checkout -q main && git merge -q --no-ff feature/gta-tests -m "merge gta tests" && git checkout -q -b feature/regression
