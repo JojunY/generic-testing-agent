@@ -43,7 +43,7 @@
     <!-- gta-junit is compiled against JUnit 5 so it also works with Spring Boot 3.5 projects -->
     <junit5.version>5.14.4</junit5.version>
     <spotbugs.version>4.9.3.0</spotbugs.version>
-    <jacoco.version>0.8.13</jacoco.version>
+    <jacoco.version>0.8.16</jacoco.version>
   </properties>
 
   <dependencyManagement>
@@ -87,7 +87,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.14.0</version>
+          <version>3.16.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
