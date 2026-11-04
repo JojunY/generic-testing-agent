@@ -75,7 +75,10 @@ public final class SpecEditor {
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i];
             if (line.contains("gta:") && line.contains("<!--")) {
-                inQuestion = CommentMeta.parse(line).flatMap(m -> m.get("id")).map(questionId::equals).orElse(false);
+                inQuestion = CommentMeta.parse(line)
+                        .flatMap(m -> m.get("id"))
+                        .map(questionId::equals)
+                        .orElse(false);
                 continue;
             }
             if (line.trim().startsWith("## ")) {
@@ -94,7 +97,8 @@ public final class SpecEditor {
 
     public SpecEditor setRound(String round) {
         if (!rewriteComment(m -> m.get("round").isPresent() && m.get("id").isEmpty(), m -> m.with("round", round))) {
-            text = text.replaceFirst("(?m)^## Open questions\\s*$", "## Open questions\n<!-- gta: round=" + round + " -->");
+            text = text.replaceFirst(
+                    "(?m)^## Open questions\\s*$", "## Open questions\n<!-- gta: round=" + round + " -->");
         }
         return this;
     }
@@ -117,7 +121,7 @@ public final class SpecEditor {
         int nextReq = text.indexOf("### Requirement:", idx + 1);
         int nextSection = text.indexOf("\n## ", idx + 1);
         int stop = text.length();
-        for (int candidate : new int[]{end, nextReq, nextSection}) {
+        for (int candidate : new int[] {end, nextReq, nextSection}) {
             if (candidate > 0 && candidate < stop) {
                 stop = candidate;
             }

@@ -1,12 +1,11 @@
 package com.gta.junit;
 
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
  * Pins a confirmed product defect (plan §5.3 item 7) with strict-xfail semantics:

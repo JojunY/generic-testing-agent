@@ -8,12 +8,7 @@ import com.gta.core.error.GtaException;
 import com.gta.core.gate.Gate;
 import com.gta.core.run.RunResult;
 import com.gta.core.util.Json;
-import com.gta.core.util.Proc;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
-import picocli.CommandLine;
-
+import com.gta.core.util.ProcessRunner;
 import java.io.FileDescriptor;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -30,41 +25,81 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
 /**
  * gtaw — the deterministic side of gta (plan §11.2). Every command prints one JSON object (or human text with
  * --format human) and exits with the category exit code of plan §5.6.
  */
-@Command(name = "gtaw", mixinStandardHelpOptions = true, versionProvider = GtaCli.Version.class,
+@Command(
+        name = "gtaw",
+        mixinStandardHelpOptions = true,
+        versionProvider = GtaCli.Version.class,
         description = "Generic Testing Agent toolkit: spec-first test harness for Java/Spring services.",
-        subcommands = {GtaCli.Init.class, GtaCli.Upgrade.class, GtaCli.Doctor.class, GtaCli.Next.class, GtaCli.Check.class,
-                GtaCli.Submit.class, GtaCli.Answer.class, GtaCli.Status.class, GtaCli.Abort.class, GtaCli.Run.class,
-                GtaCli.Verify.class, GtaCli.Mutate.class, GtaCli.GateCmd.class, GtaCli.Relock.class, GtaCli.Report.class,
-                GtaCli.Env.class})
+        subcommands = {
+            GtaCli.Init.class,
+            GtaCli.Upgrade.class,
+            GtaCli.Doctor.class,
+            GtaCli.Next.class,
+            GtaCli.Check.class,
+            GtaCli.Submit.class,
+            GtaCli.Answer.class,
+            GtaCli.Status.class,
+            GtaCli.Abort.class,
+            GtaCli.Run.class,
+            GtaCli.Verify.class,
+            GtaCli.Mutate.class,
+            GtaCli.GateCmd.class,
+            GtaCli.Relock.class,
+            GtaCli.Report.class,
+            GtaCli.Cases.class,
+            GtaCli.Impact.class,
+            GtaCli.Env.class
+        })
 public final class GtaCli implements Callable<Integer> {
-    @Option(names = "--root", description = "Service repository root (default: current directory)", scope = CommandLine.ScopeType.INHERIT)
+    @Option(
+            names = "--root",
+            description = "Service repository root (default: current directory)",
+            scope = CommandLine.ScopeType.INHERIT)
     Path root = Path.of(".");
 
     @Option(names = "--format", description = "json | human (default: json)", scope = CommandLine.ScopeType.INHERIT)
     String format = "json";
 
     public static void main(String[] args) {
-        // JSON and prompts are UTF-8 regardless of the console code page (Windows cp1252/cp936), so agents read them intact.
+        // JSON and prompts are UTF-8 regardless of the console code page (Windows cp1252/cp936), so agents read them
+        // intact.
         System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out), true, StandardCharsets.UTF_8));
         System.setErr(new PrintStream(new FileOutputStream(FileDescriptor.err), true, StandardCharsets.UTF_8));
+        System.exit(commandLine().execute(args));
+    }
+
+    /** The command line with gtaw's error contract: every failure is one JSON error object and its exit code. */
+    static CommandLine commandLine() {
         CommandLine cli = new CommandLine(new GtaCli());
         cli.setExecutionExceptionHandler((ex, cmd, parsed) -> {
-            GtaException ge = ex instanceof GtaException g ? g
-                    : new GtaException(ErrorCode.INTERNAL_ERROR, String.valueOf(ex), "This is a gtaw bug; keep .gta/work/ and report it", ex);
+            GtaException ge = ex instanceof GtaException g
+                    ? g
+                    : new GtaException(
+                            ErrorCode.INTERNAL_ERROR,
+                            String.valueOf(ex),
+                            "This is a gtaw bug; keep .gta/work/ and report it",
+                            ex);
             System.out.println(Json.write(ge.toErrorObject()));
             return ge.code().exitCode();
         });
         cli.setParameterExceptionHandler((ex, args2) -> {
-            GtaException ge = new GtaException(ErrorCode.USAGE_INVALID_ARGUMENT, ex.getMessage(), "Run ./gtaw " + String.join(" ", args2.length > 0 ? args2[0] : "") + " --help");
+            GtaException ge = new GtaException(
+                    ErrorCode.USAGE_INVALID_ARGUMENT,
+                    ex.getMessage(),
+                    "Run ./gtaw " + String.join(" ", args2.length > 0 ? args2[0] : "") + " --help");
             System.out.println(Json.write(ge.toErrorObject()));
             return ErrorCode.USAGE_INVALID_ARGUMENT.exitCode();
         });
-        System.exit(cli.execute(args));
+        return cli;
     }
 
     @Override
@@ -114,8 +149,15 @@ public final class GtaCli implements Callable<Integer> {
                 if (List.of("id", "flowId", "itemId", "status").contains(k) || e.getValue() == null) {
                     continue;
                 }
-                sb.append(sb.length() > 0 ? "  " : "").append(k).append('=')
-                        .append(e.getValue() instanceof String str ? str : Json.write(e.getValue()).replace("\n", "").replaceAll("\\s+", " "));
+                sb.append(sb.length() > 0 ? "  " : "")
+                        .append(k)
+                        .append('=')
+                        .append(
+                                e.getValue() instanceof String str
+                                        ? str
+                                        : Json.write(e.getValue())
+                                                .replace("\n", "")
+                                                .replaceAll("\\s+", " "));
             }
             return sb.toString();
         }
@@ -129,7 +171,7 @@ public final class GtaCli implements Callable<Integer> {
     static final class Version implements CommandLine.IVersionProvider {
         @Override
         public String[] getVersion() {
-            return new String[]{"gta-cli " + version()};
+            return new String[] {"gta-cli " + version()};
         }
     }
 
@@ -147,14 +189,19 @@ public final class GtaCli implements Callable<Integer> {
 
     // ------------------------------------------------------------------ setup
 
-    @Command(name = "init", description = "Install the gta harness for one platform into the repository (tech lead, once).")
+    @Command(
+            name = "init",
+            description = "Install the gta harness for one platform into the repository (tech lead, once).")
     static final class Init implements Callable<Integer> {
         @CommandLine.ParentCommand
         GtaCli parent;
+
         @Option(names = "--platform", required = true, description = "copilot | opencode")
         String platform;
+
         @Option(names = "--distribution-url", description = "Nexus URL of gta-cli-<version>.jar for the wrapper")
         String distributionUrl;
+
         @Option(names = "--distribution-sha256", description = "sha256 of the jar at --distribution-url")
         String distributionSha;
 
@@ -164,10 +211,13 @@ public final class GtaCli implements Callable<Integer> {
         }
     }
 
-    @Command(name = "upgrade", description = "Re-install managed harness files; locally modified files are reported, not overwritten.")
+    @Command(
+            name = "upgrade",
+            description = "Re-install managed harness files; locally modified files are reported, not overwritten.")
     static final class Upgrade implements Callable<Integer> {
         @CommandLine.ParentCommand
         GtaCli parent;
+
         @Option(names = "--platform", description = "copilot | opencode (default: the installed one)")
         String platform;
 
@@ -196,19 +246,25 @@ public final class GtaCli implements Callable<Integer> {
     static final class Next implements Callable<Integer> {
         @CommandLine.ParentCommand
         GtaCli parent;
+
         @Option(names = "--mode", description = "explain | flow | pr | incident")
         String mode;
+
         @Option(names = "--target", description = "flowId (e.g. order.create) or a source file/class name")
         String target;
+
         @Option(names = "--base", description = "base ref for the session-end gate (default origin/main)")
         String base;
+
         @Option(names = "--takeover", description = "Take over the session of another chat (human only)")
         boolean takeover;
 
         @Override
         public Integer call() {
             if ("pr".equals(mode) || "incident".equals(mode)) {
-                throw new GtaException(ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE, "--mode " + mode + " arrives in P1",
+                throw new GtaException(
+                        ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE,
+                        "--mode " + mode + " arrives in P1",
                         "Use --mode explain or --mode flow with --target <flowId>");
             }
             return print(parent, engine(parent).next(mode, target, base, takeover));
@@ -219,8 +275,10 @@ public final class GtaCli implements Callable<Integer> {
     static final class Check implements Callable<Integer> {
         @CommandLine.ParentCommand
         GtaCli parent;
+
         @Option(names = "--item", required = true)
         String item;
+
         @Option(names = "--token", required = true)
         String token;
 
@@ -234,16 +292,22 @@ public final class GtaCli implements Callable<Integer> {
     static final class Submit implements Callable<Integer> {
         @CommandLine.ParentCommand
         GtaCli parent;
+
         @Option(names = "--item")
         String item;
+
         @Option(names = "--spec")
         String spec;
+
         @Option(names = "--review")
         String review;
+
         @Option(names = "--token")
         String token;
+
         @Option(names = "--verdict")
         String verdict;
+
         @Option(names = "--reason")
         String reason = "";
 
@@ -257,19 +321,28 @@ public final class GtaCli implements Callable<Integer> {
                 return print(parent, e.submitSpec(spec, require(token, "--token")));
             }
             if (review != null) {
-                return print(parent, e.submitReview(review, require(token, "--token"), require(verdict, "--verdict"), reason));
+                return print(
+                        parent,
+                        e.submitReview(review, require(token, "--token"), require(verdict, "--verdict"), reason));
             }
-            throw new GtaException(ErrorCode.USAGE_INVALID_ARGUMENT, "Nothing to submit", "Use --item, --spec or --review");
+            throw new GtaException(
+                    ErrorCode.USAGE_INVALID_ARGUMENT, "Nothing to submit", "Use --item, --spec or --review");
         }
     }
 
-    @Command(name = "answer", description = "Record the human's reply verbatim (answers, approval or a decision letter).")
+    @Command(
+            name = "answer",
+            description = "Record the human's reply verbatim (answers, approval or a decision letter).")
     static final class Answer implements Callable<Integer> {
         @CommandLine.ParentCommand
         GtaCli parent;
+
         @Parameters(arity = "0..*", description = "The human's reply, verbatim")
         List<String> words;
-        @Option(names = "--file", description = "Read the reply from a UTF-8 file (use when the terminal mangles non-ASCII text)")
+
+        @Option(
+                names = "--file",
+                description = "Read the reply from a UTF-8 file (use when the terminal mangles non-ASCII text)")
         Path file;
 
         @Override
@@ -280,7 +353,10 @@ public final class GtaCli implements Callable<Integer> {
             } else if (words != null && !words.isEmpty()) {
                 reply = String.join(" ", words);
             } else {
-                throw new GtaException(ErrorCode.USAGE_INVALID_ARGUMENT, "No reply given", "Run ./gtaw answer \"<reply>\" or ./gtaw answer --file <path>");
+                throw new GtaException(
+                        ErrorCode.USAGE_INVALID_ARGUMENT,
+                        "No reply given",
+                        "Run ./gtaw answer \"<reply>\" or ./gtaw answer --file <path>");
             }
             return print(parent, engine(parent).answer(reply));
         }
@@ -297,10 +373,13 @@ public final class GtaCli implements Callable<Integer> {
         }
     }
 
-    @Command(name = "abort", description = "Discard working state (human only). Specs, shards and committed tests are kept.")
+    @Command(
+            name = "abort",
+            description = "Discard working state (human only). Specs, shards and committed tests are kept.")
     static final class Abort implements Callable<Integer> {
         @CommandLine.ParentCommand
         GtaCli parent;
+
         @Option(names = "--flow")
         String flow;
 
@@ -316,8 +395,10 @@ public final class GtaCli implements Callable<Integer> {
     static final class Run implements Callable<Integer> {
         @CommandLine.ParentCommand
         GtaCli parent;
+
         @Option(names = "--smoke")
         boolean smoke;
+
         @Option(names = "--layer")
         String layer;
 
@@ -335,10 +416,13 @@ public final class GtaCli implements Callable<Integer> {
         }
     }
 
-    @Command(name = "verify", description = "Stability (pass^k, random order, Asia/Kolkata timezone, de-DE locale) for new tests.")
+    @Command(
+            name = "verify",
+            description = "Stability (pass^k, random order, another timezone and locale) for new tests.")
     static final class Verify implements Callable<Integer> {
         @CommandLine.ParentCommand
         GtaCli parent;
+
         @Option(names = "--new", description = "Only tests that passed in the current session")
         boolean onlyNew;
 
@@ -354,17 +438,27 @@ public final class GtaCli implements Callable<Integer> {
     static final class Mutate implements Callable<Integer> {
         @Override
         public Integer call() {
-            throw new GtaException(ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE, "Mutation testing arrives in P2", "Gate runs in advisory mode until then");
+            throw new GtaException(
+                    ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE,
+                    "Mutation testing arrives in P2",
+                    "Gate runs in advisory mode until then");
         }
     }
 
-    @Command(name = "gate", description = "Quality gate anchored on the base branch (no LLM).", subcommands = GtaCli.Waive.class)
+    @Command(
+            name = "gate",
+            description = "Quality gate anchored on the base branch (no LLM).",
+            subcommands = GtaCli.Waive.class)
     static final class GateCmd implements Callable<Integer> {
         @CommandLine.ParentCommand
         GtaCli parent;
+
         @Option(names = "--base")
         String base;
-        @Option(names = "--reports", description = "Surefire/Failsafe report directories from the CI build (repeatable)")
+
+        @Option(
+                names = "--reports",
+                description = "Surefire/Failsafe report directories from the CI build (repeatable)")
         List<Path> reports = new ArrayList<>();
 
         @Override
@@ -375,16 +469,22 @@ public final class GtaCli implements Callable<Integer> {
         }
     }
 
-    @Command(name = "waive", description = "Record a gate waiver in .gta/waivers.json (human only; merge it through PR review).")
+    @Command(
+            name = "waive",
+            description = "Record a gate waiver in .gta/waivers.json (human only; merge it through PR review).")
     static final class Waive implements Callable<Integer> {
         @CommandLine.ParentCommand
         GateCmd gate;
+
         @Parameters(index = "0", description = "condition code, e.g. GATE_SCENARIO_REGRESSED")
         String code;
+
         @Option(names = "--target", required = true, description = "scenario id or *")
         String target;
+
         @Option(names = "--reason", required = true)
         String reason;
+
         @Option(names = "--expires", required = true, description = "yyyy-mm-dd, at most 90 days ahead")
         String expires;
 
@@ -394,17 +494,21 @@ public final class GtaCli implements Callable<Integer> {
             try {
                 exp = LocalDate.parse(expires);
             } catch (DateTimeParseException e) {
-                throw new GtaException(ErrorCode.USAGE_INVALID_ARGUMENT, "--expires must be a date like 2026-12-31, got " + expires,
+                throw new GtaException(
+                        ErrorCode.USAGE_INVALID_ARGUMENT,
+                        "--expires must be a date like 2026-12-31, got " + expires,
                         "Use yyyy-mm-dd, at most 90 days ahead");
             }
             if (exp.isAfter(LocalDate.now().plusDays(90))) {
-                throw new GtaException(ErrorCode.USAGE_INVALID_ARGUMENT, "Waivers may last at most 90 days", "Pick an earlier --expires");
+                throw new GtaException(
+                        ErrorCode.USAGE_INVALID_ARGUMENT,
+                        "Waivers may last at most 90 days",
+                        "Pick an earlier --expires");
             }
             Path file = new GtaPaths(gate.parent.root).waivers();
             List<Map<String, Object>> list = new ArrayList<>();
             if (Files.exists(file)) {
-                list.addAll(Json.MAPPER.readValue(file.toFile(), new TypeReference<List<Map<String, Object>>>() {
-                }));
+                list.addAll(Json.MAPPER.readValue(file.toFile(), new TypeReference<List<Map<String, Object>>>() {}));
             }
             Map<String, Object> w = new LinkedHashMap<>();
             w.put("code", code);
@@ -414,7 +518,11 @@ public final class GtaCli implements Callable<Integer> {
             w.put("by", gitUser(gate.parent.root));
             list.add(w);
             Json.writeAtomic(file, list);
-            return print(gate.parent, Map.of("result", "waiver recorded in .gta/waivers.json; it applies after it is merged to the base branch"));
+            return print(
+                    gate.parent,
+                    Map.of(
+                            "result",
+                            "waiver recorded in .gta/waivers.json; it applies after it is merged to the base branch"));
         }
     }
 
@@ -422,8 +530,10 @@ public final class GtaCli implements Callable<Integer> {
     static final class Relock implements Callable<Integer> {
         @CommandLine.ParentCommand
         GtaCli parent;
+
         @Option(names = "--item", required = true)
         String item;
+
         @Option(names = "--reason", required = true)
         String reason;
 
@@ -437,6 +547,7 @@ public final class GtaCli implements Callable<Integer> {
     static final class Report implements Callable<Integer> {
         @CommandLine.ParentCommand
         GtaCli parent;
+
         @Option(names = "--kind", description = "md | pr-comment")
         String kind = "md";
 
@@ -447,11 +558,73 @@ public final class GtaCli implements Callable<Integer> {
         }
     }
 
+    @Command(
+            name = "cases",
+            description =
+                    "Test case ledgers (.gta/specs/<domain>/<flow>.cases.md): overview, or --rebuild from approved specs.",
+            subcommands = GtaCli.ConfirmRetired.class)
+    static final class Cases implements Callable<Integer> {
+        @CommandLine.ParentCommand
+        GtaCli parent;
+
+        @Option(names = "--rebuild", description = "Create or refresh the ledgers of every approved spec")
+        boolean rebuild;
+
+        @Override
+        public Integer call() {
+            return print(parent, engine(parent).cases(rebuild));
+        }
+    }
+
+    @Command(
+            name = "confirm-retired",
+            description = "Delete the tests of retired cases (human only; nothing is ever deleted automatically).")
+    static final class ConfirmRetired implements Callable<Integer> {
+        @CommandLine.ParentCommand
+        Cases cases;
+
+        @CommandLine.Parameters(description = "Case ids, e.g. order.create/s03")
+        List<String> ids = new ArrayList<>();
+
+        @Option(names = "--all", description = "Every retired case")
+        boolean all;
+
+        @Override
+        public Integer call() {
+            if (!all && ids.isEmpty()) {
+                throw new GtaException(
+                        ErrorCode.USAGE_INVALID_ARGUMENT,
+                        "Name the retired cases to delete, or pass --all",
+                        "The run report lists them; ./gtaw cases shows them too");
+            }
+            return print(cases.parent, engine(cases.parent).confirmRetired(ids, all));
+        }
+    }
+
+    @Command(
+            name = "impact",
+            description = "Cases whose code changed since --base need review; prints the regression scope (+ all P0).")
+    static final class Impact implements Callable<Integer> {
+        @CommandLine.ParentCommand
+        GtaCli parent;
+
+        @Option(names = "--base", description = "Base ref (default origin/main, main, ...)")
+        String base;
+
+        @Override
+        public Integer call() {
+            return print(parent, engine(parent).impact(base));
+        }
+    }
+
     @Command(name = "env", description = "Ephemeral cloud environments (P4).")
     static final class Env implements Callable<Integer> {
         @Override
         public Integer call() {
-            throw new GtaException(ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE, "Ephemeral environments arrive in P4", "Not needed for component tests");
+            throw new GtaException(
+                    ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE,
+                    "Ephemeral environments arrive in P4",
+                    "Not needed for component tests");
         }
     }
 
@@ -463,7 +636,7 @@ public final class GtaCli implements Callable<Integer> {
     }
 
     static String gitUser(Path root) {
-        Proc.Result r = Proc.run(root, Proc.cmd("git", "config", "user.email"));
+        ProcessRunner.Result r = ProcessRunner.run(root, ProcessRunner.cmd("git", "config", "user.email"));
         return r.ok() && !r.output().isBlank() ? r.output().trim() : System.getProperty("user.name", "unknown");
     }
 }

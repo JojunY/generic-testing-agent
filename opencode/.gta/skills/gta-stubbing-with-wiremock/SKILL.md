@@ -28,7 +28,7 @@ void shouldRespond503WhenGatewayTimesOut() {
 ## Workflow
 
 1. One WireMock server per downstream; inject its URL through `@DynamicPropertySource`.
-2. Stub only what the scenario needs; keep stubs in the test or under `src/test/resources/fixtures/<domain>/<flow-name>/`.
+2. Stub only what the scenario needs; keep stubs in the test or in its fixture folder `src/test/resources/<package path>/<TestClass>/`.
 3. Fault scenarios: `references/fault-injection.md`.
 4. Verify the requests the service sent (method, path, key headers, body fields) when the spec talks about them.
 

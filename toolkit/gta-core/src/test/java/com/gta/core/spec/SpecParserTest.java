@@ -1,18 +1,17 @@
 package com.gta.core.spec;
 
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
+import org.junit.jupiter.api.Test;
 
 class SpecParserTest {
 
     @Test
     void shouldParseHeaderRequirementsScenariosAndQuestions() {
-        Spec spec = SpecParser.parseText(SpecFixtures.CREATE_ORDER);
+        Spec spec = SpecParser.parseText(SpecTestData.CREATE_ORDER);
 
         assertEquals("order.create", spec.flowId());
         assertEquals("rest-api", spec.capability());
@@ -25,7 +24,9 @@ class SpecParserTest {
 
     @Test
     void shouldExtractBacktickThenLiteralsOnly() {
-        Spec.Scenario s01 = SpecParser.parseText(SpecFixtures.CREATE_ORDER).scenario("order.create/s01").orElseThrow();
+        Spec.Scenario s01 = SpecParser.parseText(SpecTestData.CREATE_ORDER)
+                .scenario("order.create/s01")
+                .orElseThrow();
 
         assertEquals(List.of("201", "50.00"), s01.thenLiterals());
         assertEquals("observed", s01.source());
@@ -33,7 +34,8 @@ class SpecParserTest {
 
     @Test
     void shouldRecogniseTheCurrentCodeOption() {
-        Spec.Question q = SpecParser.parseText(SpecFixtures.CREATE_ORDER).openQuestions().get(0);
+        Spec.Question q =
+                SpecParser.parseText(SpecTestData.CREATE_ORDER).openQuestions().get(0);
 
         assertTrue(q.options.get(0).isCurrentCode());
         assertFalse(q.options.get(1).isCurrentCode());

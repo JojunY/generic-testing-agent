@@ -17,7 +17,7 @@ class InvoiceImportJobIT {
     @Test
     @Tag("scenario:invoice.import/s04")
     void shouldSkipPoisonRecordsWhenImporting() throws Exception {
-        JobExecution run = jobs.startJob(new JobParametersBuilder().addString("file", "fixtures/invoice/import/poison.csv").toJobParameters());
+        JobExecution run = jobs.startJob(new JobParametersBuilder().addString("file", "com/acme/invoice/batch/InvoiceImportJobConfigIT/s04.poison.csv").toJobParameters());
         StepExecution step = run.getStepExecutions().iterator().next();
         assertThat(run.getExitStatus().getExitCode()).isEqualTo("COMPLETED");
         assertThat(step.getSkipCount()).isEqualTo(2);

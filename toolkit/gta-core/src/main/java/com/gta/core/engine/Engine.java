@@ -1,5 +1,10 @@
 package com.gta.core.engine;
 
+import static com.gta.core.engine.NodeResults.answerNode;
+import static com.gta.core.engine.NodeResults.done;
+import static com.gta.core.engine.NodeResults.node;
+import static com.gta.core.engine.NodeResults.result;
+
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
@@ -9,13 +14,13 @@ import com.gta.core.oracle.AssertionScanner;
 import com.gta.core.oracle.OracleLock;
 import com.gta.core.oracle.OracleShard;
 import com.gta.core.plan.PlanItem;
-import com.gta.core.plan.Planner;
 import com.gta.core.profile.Profiler;
 import com.gta.core.profile.ServiceProfile;
-import com.gta.core.registry.Registry;
+import com.gta.core.registry.CapabilityRegistry;
 import com.gta.core.run.RunResult;
 import com.gta.core.run.TestRunner;
 import com.gta.core.spec.AnswerParser;
+import com.gta.core.spec.Ref;
 import com.gta.core.spec.Spec;
 import com.gta.core.spec.SpecEditor;
 import com.gta.core.spec.SpecParser;
@@ -25,7 +30,6 @@ import com.gta.core.util.Git;
 import com.gta.core.util.Ids;
 import com.gta.core.util.Json;
 import com.gta.core.util.WorkLock;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -36,12 +40,8 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
-
-import static com.gta.core.engine.NodeResults.answerNode;
-import static com.gta.core.engine.NodeResults.done;
-import static com.gta.core.engine.NodeResults.node;
-import static com.gta.core.engine.NodeResults.result;
 
 /**
  * The deterministic blueprint (plan §4.2): {@code next → dispatch → check* → submit}. This facade is the only public entry
@@ -52,7 +52,7 @@ public final class Engine {
     private final EngineContext ctx;
     private final GtaPaths paths;
     private final GtaConfig config;
-    private final Registry registry;
+    private final CapabilityRegistry registry;
     private final StateStore store;
     private final Git git;
 
@@ -104,27 +104,50 @@ public final class Engine {
         }
         String flowId = st.activeFlow;
         Path specPath = paths.spec(flowId);
-        ServiceProfile.EntryPoint entry = profile.entrypoints.stream().filter(e -> e.flowId.equals(flowId)).findFirst().orElse(null);
+        ServiceProfile.EntryPoint entry = profile.entrypoints.stream()
+                .filter(e -> e.flowId.equals(flowId))
+                .findFirst()
+                .orElse(null);
         WorkState.SpecWork sw = st.specWork.computeIfAbsent(flowId, k -> new WorkState.SpecWork());
-        String capability = Files.exists(specPath) ? SpecParser.parse(specPath).capability()
-                : entry != null ? entry.capability : "rest-api";
-        Registry.Capability cap = registry.capability(capability);
-        boolean explainOnly = !cap.activeIn(Registry.CURRENT_PHASE);
+        if (!Files.exists(specPath) && entry == null) {
+            // guessing a capability would brief the analyst for the wrong kind of flow
+            st.activeFlow = null;
+            throw new GtaException(
+                    ErrorCode.USAGE_UNKNOWN_FLOW,
+                    "No entry point of " + flowId + " was found in the code",
+                    "Run ./gtaw next without --target to list the detected flows. For a flow gta cannot detect, create "
+                            + paths.rel(specPath) + " with a header naming its capability, then target it again");
+        }
+        String capability = Files.exists(specPath) ? SpecParser.parse(specPath).capability() : entry.capability;
+        CapabilityRegistry.Capability cap = registry.capability(capability);
+        boolean explainOnly = !cap.activeIn(CapabilityRegistry.CURRENT_PHASE);
 
-        if (!Files.exists(specPath) || sw.needsRevision || "draft".equals(SpecParser.parse(specPath).status())) {
+        if (!Files.exists(specPath)
+                || sw.needsRevision
+                || "draft".equals(SpecParser.parse(specPath).status())) {
             return ctx.specs.analyzeNode(st, sw, flowId, entry, capability, List.of());
         }
         Spec spec = SpecParser.parse(specPath);
         if ("approved".equals(spec.status())) {
             List<String> staleRefs = ctx.specs.staleRefs(spec);
             if (!staleRefs.isEmpty()) {
-                ctx.specs.writeSpec(specPath, new SpecEditor(spec.text).setHeader("status", "stale").text());
-                return ctx.specs.analyzeNode(st, sw, flowId, entry, capability,
-                        staleRefs.stream().map(r -> "ref changed since approval: " + r + " — re-check the affected scenarios").toList());
+                ctx.specs.writeSpec(
+                        specPath,
+                        new SpecEditor(spec.text).setHeader("status", "stale").text());
+                return ctx.specs.analyzeNode(
+                        st,
+                        sw,
+                        flowId,
+                        entry,
+                        capability,
+                        staleRefs.stream()
+                                .map(r -> "ref changed since approval: " + r + " — re-check the affected scenarios")
+                                .toList());
             }
         }
         if ("stale".equals(spec.status())) {
-            return ctx.specs.analyzeNode(st, sw, flowId, entry, capability, List.of("spec is stale: production code it references changed"));
+            return ctx.specs.analyzeNode(
+                    st, sw, flowId, entry, capability, List.of("spec is stale: production code it references changed"));
         }
         if ("in-review".equals(spec.status())) {
             WorkState.Pending p = new WorkState.Pending();
@@ -145,29 +168,40 @@ public final class Engine {
             return done("Flow " + flowId + " is " + spec.status() + "; nothing to do", null);
         }
         if (explainOnly) {
-            return done("Capability " + capability + " is explain-only in " + Registry.CURRENT_PHASE
-                    + " (active from " + cap.since + "). The approved spec is kept as documentation.", null);
+            return done(
+                    "Capability " + capability + " is explain-only in " + CapabilityRegistry.CURRENT_PHASE
+                            + " (active from " + cap.since + "). The approved spec is kept as documentation.",
+                    null);
         }
         if ("explain".equals(st.mode)) {
             st.mode = "flow"; // explain turns into flow mode once the human approved the spec (plan §6)
         }
-        List<PlanItem> flowItems = ctx.items.syncPlan(st, spec, profile);
+        List<PlanItem> flowItems = ctx.planSync.syncPlan(st, spec, profile);
         ItemWorkflow.Dispatch next = ctx.items.dispatch(st, spec, profile, flowItems);
         return next.node() != null ? next.node() : ctx.sessionEnd.finishSession(st, next.sessionOverReason(), base);
     }
 
     private Map<String, Object> chooseFlow(ServiceProfile profile) {
         List<Map<String, Object>> candidates = new ArrayList<>();
-        profile.entrypoints.stream().sorted(Comparator.comparingInt((ServiceProfile.EntryPoint e) -> -e.risk)).limit(8).forEach(e -> {
-            Map<String, Object> c = new LinkedHashMap<>();
-            c.put("flowId", e.flowId);
-            c.put("risk", e.risk);
-            c.put("entry", e.ref + (e.httpMethod != null ? " (" + e.httpMethod + " " + e.path + ")" : ""));
-            c.put("spec", Files.exists(paths.spec(e.flowId)) ? SpecParser.parse(paths.spec(e.flowId)).status() : "none");
-            candidates.add(c);
-        });
+        profile.entrypoints.stream()
+                .sorted(Comparator.comparingInt((ServiceProfile.EntryPoint e) -> -e.risk))
+                .limit(8)
+                .forEach(e -> {
+                    Map<String, Object> c = new LinkedHashMap<>();
+                    c.put("flowId", e.flowId);
+                    c.put("risk", e.risk);
+                    c.put("entry", e.ref + (e.httpMethod != null ? " (" + e.httpMethod + " " + e.path + ")" : ""));
+                    c.put(
+                            "spec",
+                            Files.exists(paths.spec(e.flowId))
+                                    ? SpecParser.parse(paths.spec(e.flowId)).status()
+                                    : "none");
+                    candidates.add(c);
+                });
         Map<String, Object> extra = new LinkedHashMap<>();
-        extra.put("message", "No flow selected. Ask the human which flow to work on, then run ./gtaw next --target <flowId>");
+        extra.put(
+                "message",
+                "No flow selected. Ask the human which flow to work on, then run ./gtaw next --target <flowId>");
         extra.put("candidates", candidates);
         return node("done", extra);
     }
@@ -176,16 +210,21 @@ public final class Engine {
         try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
             WorkState st = store.load();
             if (st.pending == null) {
-                throw new GtaException(ErrorCode.STATE_NOTHING_PENDING, "Nothing is waiting for an answer",
+                throw new GtaException(
+                        ErrorCode.STATE_NOTHING_PENDING,
+                        "Nothing is waiting for an answer",
                         "Run ./gtaw next; answers are only accepted while an 'answer' node is open");
             }
             WorkState.Pending p = st.pending;
-            Map<String, Object> out = switch (p.type) {
-                case "answer" -> ctx.specs.applyAnswers(st, p, AnswerParser.parse(text), text);
-                case "approve" -> approvalOrChangeRequest(st, p, text);
-                case "defect", "escalation" -> ctx.items.applyDecision(st, p, AnswerParser.parse(text), text);
-                default -> throw new GtaException(ErrorCode.INTERNAL_ERROR, "Unknown pending type " + p.type, "Run ./gtaw abort");
-            };
+            Map<String, Object> out =
+                    switch (p.type) {
+                        case "answer" -> ctx.specs.applyAnswers(st, p, AnswerParser.parse(text), text);
+                        case "approve" -> approvalOrChangeRequest(st, p, text);
+                        case "defect", "escalation", "naming-conflict" -> ctx.triage.applyDecision(
+                                st, p, AnswerParser.parse(text), text);
+                        default -> throw new GtaException(
+                                ErrorCode.INTERNAL_ERROR, "Unknown pending type " + p.type, "Run ./gtaw abort");
+                    };
             store.save(st);
             return out;
         }
@@ -199,7 +238,9 @@ public final class Engine {
         } catch (GtaException notAnApproval) {
             return ctx.specs.requestChanges(st, p, text);
         }
-        return parsed instanceof AnswerParser.Approval ? ctx.specs.applyApproval(st, p, parsed, text) : ctx.specs.requestChanges(st, p, text);
+        return parsed instanceof AnswerParser.Approval
+                ? ctx.specs.applyApproval(st, p, parsed, text)
+                : ctx.specs.requestChanges(st, p, text);
     }
 
     /** Read-only: never moves or rewrites working-state files. */
@@ -215,7 +256,9 @@ public final class Engine {
         List<Map<String, Object>> flows = new ArrayList<>();
         if (Files.isDirectory(paths.specs())) {
             try (Stream<Path> files = Files.walk(paths.specs())) {
-                for (Path f : files.filter(p -> p.toString().endsWith(".spec.md")).sorted().toList()) {
+                for (Path f : files.filter(p -> p.toString().endsWith(".spec.md"))
+                        .sorted()
+                        .toList()) {
                     Spec s = SpecParser.parse(f);
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("flowId", s.flowId());
@@ -258,6 +301,10 @@ public final class Engine {
         }
     }
 
+    /**
+     * Discards the working state of one flow, or of everything when {@code flowId} is null. Specs, shards, committed
+     * tests, run evidence and the backups in {@code .gta/work/recover/} are kept.
+     */
     public Map<String, Object> abort(String flowId) {
         try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
             WorkState st = store.load();
@@ -269,8 +316,10 @@ public final class Engine {
                 for (Path dir : List.of(paths.briefs(), paths.snapshots())) {
                     deleteTree(dir);
                 }
-                return result("working state discarded; specs, shards, committed tests, run evidence and "
-                        + paths.rel(paths.recover()) + " (backups of reverted files) are kept", null);
+                return result(
+                        "working state discarded; specs, shards, committed tests, run evidence and "
+                                + paths.rel(paths.recover()) + " (backups of reverted files) are kept",
+                        null);
             }
             List<PlanItem> plan = store.loadPlan();
             plan.stream().filter(i -> i.flowId.equals(flowId)).forEach(i -> st.items.remove(i.id));
@@ -296,7 +345,10 @@ public final class Engine {
      */
     public Map<String, Object> relock(String itemId, String reason, String by) {
         if (!Ids.ITEM_ID.matcher(itemId).matches() || !itemId.contains("/") || itemId.contains("#foundation")) {
-            throw new GtaException(ErrorCode.USAGE_UNKNOWN_ITEM, "Not a scenario item id: " + itemId, "Use an id like order.create/s01#component-01");
+            throw new GtaException(
+                    ErrorCode.USAGE_UNKNOWN_ITEM,
+                    "Not a scenario item id: " + itemId,
+                    "Use an id like order.create/s01#component-01");
         }
         String scenarioId = itemId.substring(0, itemId.indexOf('#'));
         String flowId = scenarioId.substring(0, scenarioId.indexOf('/'));
@@ -305,27 +357,42 @@ public final class Engine {
             Map<String, OracleShard.Entry> shard = OracleShard.read(shardPath);
             OracleShard.Entry e = shard.get(itemId);
             if (e == null || e.testClass == null) {
-                throw new GtaException(ErrorCode.USAGE_UNKNOWN_ITEM, "No committed oracle for " + itemId, "Only committed (passed) items can be relocked");
+                throw new GtaException(
+                        ErrorCode.USAGE_UNKNOWN_ITEM,
+                        "No committed oracle for " + itemId,
+                        "Only committed (passed) items can be relocked");
             }
             // the expected values come from the spec, never from the old lock: change the THEN first, then relock
-            Spec.Scenario scenario = SpecParser.parse(paths.spec(flowId)).scenario(scenarioId).orElseThrow(() -> new GtaException(
-                    ErrorCode.USAGE_UNKNOWN_ITEM, "Scenario " + scenarioId + " is not in " + paths.rel(paths.spec(flowId)),
-                    "Relock only scenarios of the current spec"));
-            AssertionScanner.ScenarioOracle oracle = AssertionScanner.scan(paths.testSource(e.testClass), scenarioId, paths.testResources());
+            Spec.Scenario scenario = SpecParser.parse(paths.spec(flowId))
+                    .scenario(scenarioId)
+                    .orElseThrow(() -> new GtaException(
+                            ErrorCode.USAGE_UNKNOWN_ITEM,
+                            "Scenario " + scenarioId + " is not in " + paths.rel(paths.spec(flowId)),
+                            "Relock only scenarios of the current spec"));
+            AssertionScanner.ScenarioOracle oracle =
+                    AssertionScanner.scan(paths.testSource(e.testClass), scenarioId, paths.testResources());
             List<String> then = scenario.thenLiterals();
             List<String> missing = AssertionScanner.missingThenLiterals(then, oracle.tokens());
             if (!scenario.reviewerChecked() && !missing.isEmpty()) {
-                throw new GtaException(ErrorCode.POLICY_ORACLE_MISMATCH, "The test does not assert the spec's expected values " + missing,
-                        "Make the assertions match the THEN clauses of " + scenarioId + " (or change the spec first), then relock");
+                throw new GtaException(
+                        ErrorCode.POLICY_ORACLE_MISMATCH,
+                        "The test does not assert the spec's expected values " + missing,
+                        "Make the assertions match the THEN clauses of " + scenarioId
+                                + " (or change the spec first), then relock");
             }
             e.tokens = new ArrayList<>(then);
-            e.fingerprint = OracleLock.fingerprint(oracle.assertionStatements().stream().filter(x -> e.tokens.stream().anyMatch(x::contains)).toList());
-            e.scenarioRevision = Planner.scenarioRevision(scenario);
+            e.fingerprint = OracleLock.fingerprint(oracle.assertionStatements().stream()
+                    .filter(x -> e.tokens.stream().anyMatch(x::contains))
+                    .toList());
+            e.scenarioRevision = scenario.revision();
             e.relockedBy = by;
             e.reason = reason;
             e.relockedAt = Instant.now().toString();
             OracleShard.write(shardPath, shard);
-            return result("relocked " + itemId + " by " + by + " on " + e.tokens + "; commit " + paths.rel(shardPath) + " so the PR shows it", null);
+            return result(
+                    "relocked " + itemId + " by " + by + " on " + e.tokens + "; commit " + paths.rel(shardPath)
+                            + " so the PR shows it",
+                    null);
         }
     }
 
@@ -345,13 +412,18 @@ public final class Engine {
         }
         String t = target.replace('\\', '/');
         for (ServiceProfile.EntryPoint e : profile.entrypoints) {
-            String fqcn = e.ref.substring(e.ref.indexOf(':') + 1, e.ref.indexOf('#'));
-            String simple = fqcn.substring(fqcn.lastIndexOf('.') + 1);
-            if (t.endsWith(fqcn.replace('.', '/') + ".java") || t.endsWith(simple + ".java") || t.equals(simple)) {
+            Optional<Ref> ref = Ref.parse(e.ref);
+            if (ref.isEmpty()) {
+                continue;
+            }
+            String simple = ref.get().simpleName();
+            if (t.endsWith(ref.get().sourcePath()) || t.endsWith(simple + ".java") || t.equals(simple)) {
                 return e.flowId;
             }
         }
-        throw new GtaException(ErrorCode.USAGE_UNKNOWN_FLOW, "No flow found for " + target,
+        throw new GtaException(
+                ErrorCode.USAGE_UNKNOWN_FLOW,
+                "No flow found for " + target,
                 "Use a flowId like order.create (see ./gtaw next without --target for candidates)");
     }
 
@@ -375,6 +447,22 @@ public final class Engine {
 
     public Map<String, Object> verify(boolean newOnly) {
         return ctx.sessionEnd.verify(newOnly);
+    }
+
+    /** {@code gtaw cases}: the test case ledgers (plan §10.6); {@code rebuild} creates them from the approved specs. */
+    public Map<String, Object> cases(boolean rebuild) {
+        return rebuild ? ctx.cases.rebuild() : ctx.cases.overview();
+    }
+
+    /** {@code gtaw cases confirm-retired}: deletes the tests of retired cases a human confirmed. */
+    public Map<String, Object> confirmRetired(List<String> ids, boolean all) {
+        return ctx.cases.confirmRetired(ids, all);
+    }
+
+    /** {@code gtaw impact --base <ref>}: cases whose code changed need review; returns the regression scope. */
+    public Map<String, Object> impact(String base) {
+        git.requireRepo();
+        return ctx.cases.impact(base == null ? ctx.sessionEnd.defaultBase() : base);
     }
 
     public Gate.Result gate(String base, List<Path> reportDirs) {

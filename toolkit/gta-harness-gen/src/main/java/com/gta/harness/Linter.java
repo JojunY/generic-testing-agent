@@ -1,10 +1,9 @@
 package com.gta.harness;
 
-import com.gta.core.registry.Registry;
+import com.gta.core.registry.CapabilityRegistry;
 import com.gta.core.util.Ids;
 import com.gta.core.util.Json;
 import com.gta.core.util.Yaml;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -24,7 +23,8 @@ public class Linter {
     static final Set<String> TIERS = Set.of("reasoning", "standard");
     static final List<String> AGENT_SECTIONS = List.of("Role", "Inputs", "Workflow", "Output contract", "Rules");
     static final List<String> SKILL_SECTIONS = List.of("Quick start", "Workflow", "Rules", "References");
-    static final Set<String> AGENT_FIELDS = Set.of("name", "description", "permissionProfile", "modelTier", "userInvocable", "subagents");
+    static final Set<String> AGENT_FIELDS =
+            Set.of("name", "description", "permissionProfile", "modelTier", "userInvocable", "subagents");
     static final Pattern REF_LINK = Pattern.compile("references/([A-Za-z0-9._-]+(?:/[A-Za-z0-9._/-]+)?)");
     static final int MAX_AGENT_CHARS = 30_000;
     static final int MAX_SKILL_LINES = 500;
@@ -75,12 +75,13 @@ public class Linter {
             if (!Ids.AGENT_NAME.matcher(name).matches()) {
                 errors.add(where + ": agent name '" + name + "' must match " + Ids.AGENT_NAME.pattern());
             }
-            if (!p.getFileName().toString().equals(name + ".md")) {
+            if (!fileName(p).equals(name + ".md")) {
                 errors.add(where + ": file name must be " + name + ".md");
             }
             for (String k : f.keySet()) {
                 if (!AGENT_FIELDS.contains(k)) {
-                    errors.add(where + ": unknown frontmatter field '" + k + "' (neutral fields only: " + AGENT_FIELDS + ")");
+                    errors.add(where + ": unknown frontmatter field '" + k + "' (neutral fields only: " + AGENT_FIELDS
+                            + ")");
                 }
             }
             description(where, f.get("description"));
@@ -102,12 +103,15 @@ public class Linter {
             if (fm.fields().get("subagents") instanceof List<?> subs) {
                 for (Object s : subs) {
                     if (!names.contains(String.valueOf(s))) {
-                        errors.add("core/agents/" + fm.fields().get("name") + ".md: subagent '" + s + "' does not exist");
+                        errors.add(
+                                "core/agents/" + fm.fields().get("name") + ".md: subagent '" + s + "' does not exist");
                     }
                 }
             }
         }
-        long invocable = parsed.stream().filter(f -> Boolean.TRUE.equals(f.fields().get("userInvocable"))).count();
+        long invocable = parsed.stream()
+                .filter(f -> Boolean.TRUE.equals(f.fields().get("userInvocable")))
+                .count();
         if (invocable != 1) {
             errors.add("core/agents: exactly one agent must be userInvocable (the orchestrator), found " + invocable);
         }
@@ -119,12 +123,13 @@ public class Linter {
         Path root = repo.resolve("core/skills");
         try (Stream<Path> dirs = Files.list(root)) {
             for (Path dir : dirs.filter(Files::isDirectory).sorted().toList()) {
-                String dirName = dir.getFileName().toString();
+                String dirName = fileName(dir);
                 names.add(dirName);
                 Path skill = dir.resolve("SKILL.md");
                 String where = rel(skill);
                 if (!Ids.SKILL_NAME.matcher(dirName).matches() || dirName.length() > 64) {
-                    errors.add(rel(dir) + ": skill directory must match " + Ids.SKILL_NAME.pattern() + " and be at most 64 characters");
+                    errors.add(rel(dir) + ": skill directory must match " + Ids.SKILL_NAME.pattern()
+                            + " and be at most 64 characters");
                 }
                 if (!Files.exists(skill)) {
                     errors.add(rel(dir) + ": missing SKILL.md");
@@ -149,7 +154,8 @@ public class Linter {
                 description(where, fm.fields().get("description"));
                 long lines = text.lines().count();
                 if (lines > MAX_SKILL_LINES) {
-                    errors.add(where + ": " + lines + " lines, limit " + MAX_SKILL_LINES + " (move detail to references/)");
+                    errors.add(where + ": " + lines + " lines, limit " + MAX_SKILL_LINES
+                            + " (move detail to references/)");
                 }
                 sections(where, fm.body(), SKILL_SECTIONS);
                 references(dir, fm.body());
@@ -168,9 +174,11 @@ public class Linter {
             String target = m.group(1).replaceAll("[.,;:)`]+$", "");
             linked.add(target);
             if (target.contains("/")) {
-                errors.add(rel(dir.resolve("SKILL.md")) + ": reference '" + target + "' is nested; keep references one level deep");
+                errors.add(rel(dir.resolve("SKILL.md")) + ": reference '" + target
+                        + "' is nested; keep references one level deep");
             } else if (!Files.exists(refs.resolve(target))) {
-                errors.add(rel(dir.resolve("SKILL.md")) + ": linked reference references/" + target + " does not exist");
+                errors.add(
+                        rel(dir.resolve("SKILL.md")) + ": linked reference references/" + target + " does not exist");
             }
         }
         if (Files.isDirectory(refs)) {
@@ -178,7 +186,7 @@ public class Linter {
                 for (Path p : s.sorted().toList()) {
                     if (Files.isDirectory(p)) {
                         errors.add(rel(p) + ": no subdirectories under references/");
-                    } else if (!linked.contains(p.getFileName().toString())) {
+                    } else if (!linked.contains(fileName(p))) {
                         warnings.add(rel(p) + ": not linked from SKILL.md");
                     }
                 }
@@ -213,15 +221,15 @@ public class Linter {
 
     private void lintRegistry(Set<String> skills) {
         Path file = repo.resolve("core/registry/capabilities.yaml");
-        Registry registry;
+        CapabilityRegistry registry;
         try {
-            registry = Yaml.MAPPER.readValue(file.toFile(), Registry.class);
+            registry = Yaml.MAPPER.readValue(file.toFile(), CapabilityRegistry.class);
         } catch (IOException e) {
             errors.add(rel(file) + ": " + e.getMessage());
             return;
         }
         Set<String> ids = new HashSet<>();
-        for (Registry.Capability c : registry.capabilities) {
+        for (CapabilityRegistry.Capability c : registry.capabilities) {
             if (!ids.add(c.id)) {
                 errors.add(rel(file) + ": duplicate capability " + c.id);
             }
@@ -234,10 +242,10 @@ public class Linter {
             for (String s : c.skills) {
                 if (!skills.contains(s)) {
                     String msg = rel(file) + ": capability " + c.id + " references missing skill " + s;
-                    if (c.activeIn(Registry.CURRENT_PHASE)) {
+                    if (c.activeIn(CapabilityRegistry.CURRENT_PHASE)) {
                         errors.add(msg);
                     } else {
-                        warnings.add(msg + " (capability not active in " + Registry.CURRENT_PHASE + ")");
+                        warnings.add(msg + " (capability not active in " + CapabilityRegistry.CURRENT_PHASE + ")");
                     }
                 }
             }
@@ -256,7 +264,9 @@ public class Linter {
                 continue;
             }
             @SuppressWarnings("unchecked")
-            Map<String, Object> profiles = (Map<String, Object>) Generator.yaml(repo.resolve("platforms/" + p + "/mapping.yaml")).get("profiles");
+            Map<String, Object> profiles =
+                    (Map<String, Object>) Generator.yaml(repo.resolve("platforms/" + p + "/mapping.yaml"))
+                            .get("profiles");
             for (String profile : PROFILES) {
                 if (profiles == null || !profiles.containsKey(profile)) {
                     errors.add("platforms/" + p + "/mapping.yaml: no mapping for permission profile " + profile);
@@ -266,7 +276,8 @@ public class Linter {
         Path schemas = repo.resolve("core/schemas");
         if (Files.isDirectory(schemas)) {
             for (Path p : Generator.list(schemas, ".json")) {
-                Matcher m = Pattern.compile("^([a-z0-9-]+)\\.v(\\d+)\\.schema\\.json$").matcher(p.getFileName().toString());
+                Matcher m = Pattern.compile("^([a-z0-9-]+)\\.v(\\d+)\\.schema\\.json$")
+                        .matcher(fileName(p));
                 if (!m.matches()) {
                     errors.add(rel(p) + ": schema names follow <artifact>.v<major>.schema.json");
                     continue;
@@ -284,7 +295,7 @@ public class Linter {
         }
         try (Stream<Path> s = Files.list(repo.resolve("core/templates"))) {
             for (Path t : s.toList()) {
-                if (!t.getFileName().toString().matches("^[a-z0-9-]+\\.[a-z]+\\.tmpl$")) {
+                if (!fileName(t).matches("^[a-z0-9-]+\\.[a-z]+\\.tmpl$")) {
                     errors.add(rel(t) + ": template names follow <artifact>.<ext>.tmpl");
                 }
             }
@@ -311,7 +322,10 @@ public class Linter {
     }
 
     private void sections(String where, String body, List<String> expected) {
-        List<String> found = body.lines().filter(l -> l.startsWith("## ")).map(l -> l.substring(3).replaceAll("\\s*\\(.*\\)\\s*$", "").strip()).toList();
+        List<String> found = body.lines()
+                .filter(l -> l.startsWith("## "))
+                .map(l -> l.substring(3).replaceAll("\\s*\\(.*\\)\\s*$", "").strip())
+                .toList();
         int last = -1;
         for (String s : expected) {
             int i = found.indexOf(s);
@@ -327,5 +341,10 @@ public class Linter {
 
     private String rel(Path p) {
         return repo.relativize(p).toString().replace('\\', '/');
+    }
+
+    /** The last path element; a listed entry always has one. */
+    private static String fileName(Path p) {
+        return String.valueOf(p.getFileName());
     }
 }

@@ -2,7 +2,6 @@ package com.gta.core.spec;
 
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -18,8 +17,7 @@ public final class SpecParser {
     private static final Pattern OPTION = Pattern.compile("^\\s*-\\s*\\[( |x|X)]\\s*([A-Z])\\)\\s*(.*)$");
     private static final Pattern BULLET = Pattern.compile("^\\s*-\\s*\\*\\*(GIVEN|WHEN|THEN|AND|BUT)\\*\\*\\s*(.*)$");
 
-    private SpecParser() {
-    }
+    private SpecParser() {}
 
     public static Spec parse(Path path) {
         try {
@@ -27,7 +25,8 @@ public final class SpecParser {
             spec.path = path;
             return spec;
         } catch (IOException e) {
-            throw new GtaException(ErrorCode.USAGE_UNKNOWN_FLOW, "Cannot read spec " + path, "Run ./gtaw next to create it");
+            throw new GtaException(
+                    ErrorCode.USAGE_UNKNOWN_FLOW, "Cannot read spec " + path, "Run ./gtaw next to create it");
         }
     }
 
@@ -90,7 +89,8 @@ public final class SpecParser {
                 case "requirements" -> {
                     if (trimmed.startsWith("### Requirement:")) {
                         req = new Spec.Requirement();
-                        req.title = trimmed.substring("### Requirement:".length()).trim();
+                        req.title =
+                                trimmed.substring("### Requirement:".length()).trim();
                         spec.requirements.add(req);
                         reqBlock = new StringBuilder(line).append('\n');
                         req.block = "";
@@ -98,12 +98,18 @@ public final class SpecParser {
                         bulletMode = null;
                     } else if (trimmed.startsWith("#### Scenario:") && req != null) {
                         scenario = new Spec.Scenario();
-                        scenario.title = trimmed.substring("#### Scenario:".length()).trim();
+                        scenario.title =
+                                trimmed.substring("#### Scenario:".length()).trim();
                         req.scenarios.add(scenario);
                         bulletMode = null;
-                    } else if (isComment && scenario != null && scenario.meta.entries().isEmpty()) {
+                    } else if (isComment
+                            && scenario != null
+                            && scenario.meta.entries().isEmpty()) {
                         scenario.meta = CommentMeta.parse(trimmed).orElseThrow();
-                    } else if (isComment && req != null && scenario == null && req.meta.entries().isEmpty()) {
+                    } else if (isComment
+                            && req != null
+                            && scenario == null
+                            && req.meta.entries().isEmpty()) {
                         req.meta = CommentMeta.parse(trimmed).orElseThrow();
                     } else if (scenario != null) {
                         Matcher b = BULLET.matcher(line);

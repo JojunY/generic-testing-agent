@@ -1,17 +1,16 @@
 package com.gta.junit;
 
-import org.junit.platform.engine.TestExecutionResult;
-import org.junit.platform.engine.TestTag;
-import org.junit.platform.engine.support.descriptor.MethodSource;
-import org.junit.platform.launcher.TestExecutionListener;
-import org.junit.platform.launcher.TestIdentifier;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.stream.Collectors;
+import org.junit.platform.engine.TestExecutionResult;
+import org.junit.platform.engine.TestTag;
+import org.junit.platform.engine.support.descriptor.MethodSource;
+import org.junit.platform.launcher.TestExecutionListener;
+import org.junit.platform.launcher.TestIdentifier;
 
 /**
  * Writes one JSON line per executed test (class, method, tags, display name, outcome) to
@@ -39,11 +38,14 @@ public final class GtaResultsListener implements TestExecutionListener {
             return;
         }
         String message = result.getThrowable().map(Throwable::getMessage).orElse(null);
-        String outcome = switch (result.getStatus()) {
-            case SUCCESSFUL -> "passed";
-            case ABORTED -> message != null && message.startsWith(KnownDefectExtension.ABORT_PREFIX) ? "known-defect" : "skipped";
-            case FAILED -> "failed";
-        };
+        String outcome =
+                switch (result.getStatus()) {
+                    case SUCCESSFUL -> "passed";
+                    case ABORTED -> message != null && message.startsWith(KnownDefectExtension.ABORT_PREFIX)
+                            ? "known-defect"
+                            : "skipped";
+                    case FAILED -> "failed";
+                };
         write(id, outcome, message);
     }
 
@@ -51,12 +53,19 @@ public final class GtaResultsListener implements TestExecutionListener {
         if (!(id.getSource().orElse(null) instanceof MethodSource m)) {
             return;
         }
-        String tags = id.getTags().stream().map(TestTag::getName).map(GtaResultsListener::quote).collect(Collectors.joining(","));
+        String tags = id.getTags().stream()
+                .map(TestTag::getName)
+                .map(GtaResultsListener::quote)
+                .collect(Collectors.joining(","));
         String line = "{\"className\":" + quote(m.getClassName()) + ",\"method\":" + quote(m.getMethodName())
-                + ",\"displayName\":" + quote(id.getDisplayName()) + ",\"tags\":[" + tags + "],\"outcome\":" + quote(outcome)
+                + ",\"displayName\":" + quote(id.getDisplayName()) + ",\"tags\":[" + tags + "],\"outcome\":"
+                + quote(outcome)
                 + ",\"message\":" + quote(message) + "}\n";
         try {
-            Files.createDirectories(file.getParent());
+            Path dir = file.toAbsolutePath().getParent();
+            if (dir != null) {
+                Files.createDirectories(dir);
+            }
             Files.writeString(file, line, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         } catch (IOException e) {
             // results are an optimisation for gtaw; never fail the build because of them

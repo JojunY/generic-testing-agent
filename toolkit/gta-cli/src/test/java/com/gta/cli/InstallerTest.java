@@ -1,22 +1,21 @@
 package com.gta.cli;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.gta.core.error.GtaException;
-import com.gta.core.util.Hashes;
-import com.gta.core.util.Json;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.gta.core.error.GtaException;
+import com.gta.core.util.Hashes;
+import com.gta.core.util.Json;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class InstallerTest {
     @TempDir
@@ -31,14 +30,17 @@ class InstallerTest {
 
     @Test
     void shouldMergePlainJsonAndKeepTeamFiles() throws Exception {
-        Files.writeString(root.resolve(".vscode/settings.json"), "{ \"editor.tabSize\": 4, \"files.exclude\": { \"a, }\": true } }\n");
+        Files.writeString(
+                root.resolve(".vscode/settings.json"),
+                "{ \"editor.tabSize\": 4, \"files.exclude\": { \"a, }\": true } }\n");
 
         new Installer(root).install("copilot", null, null, false);
 
         String agents = Files.readString(root.resolve("AGENTS.md"));
         assertTrue(agents.startsWith("# Team rules"), agents);
         assertTrue(agents.contains("<!-- gta:begin -->") && agents.contains("/gta"), agents);
-        JsonNode settings = Json.MAPPER.readTree(root.resolve(".vscode/settings.json").toFile());
+        JsonNode settings =
+                Json.MAPPER.readTree(root.resolve(".vscode/settings.json").toFile());
         assertEquals(4, settings.get("editor.tabSize").asInt());
         assertTrue(settings.get("files.exclude").has("a, }"), "string values must not be rewritten");
         assertTrue(settings.get("chat.tools.terminal.autoApprove").size() > 0);
@@ -48,7 +50,8 @@ class InstallerTest {
 
     @Test
     void shouldNotRewriteJsoncButReportTheKeysToAdd() throws Exception {
-        String jsonc = """
+        String jsonc =
+                """
                 {
                   // team setting
                   "java.jdt.ls.java.home": "C:/jdk17", // local

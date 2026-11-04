@@ -19,8 +19,8 @@ public final class KnownDefectExtension implements TestExecutionExceptionHandler
         context.getStore(NS).put("failed", Boolean.TRUE);
         String actual = Fingerprint.of(throwable);
         if (!kd.failure().isEmpty() && !kd.failure().equals(actual)) {
-            AssertionError e = new AssertionError("Known defect " + kd.id() + " now fails differently (fingerprint " + actual
-                    + ", expected " + kd.failure() + "): " + throwable);
+            AssertionError e = new AssertionError("Known defect " + kd.id() + " now fails differently (fingerprint "
+                    + actual + ", expected " + kd.failure() + "): " + throwable);
             e.initCause(throwable);
             throw e;
         }
@@ -33,7 +33,8 @@ public final class KnownDefectExtension implements TestExecutionExceptionHandler
         if (kd == null) {
             return;
         }
-        boolean failed = Boolean.TRUE.equals(context.getStore(NS).get("failed")) || context.getExecutionException().isPresent();
+        boolean failed = Boolean.TRUE.equals(context.getStore(NS).get("failed"))
+                || context.getExecutionException().isPresent();
         if (!failed) {
             throw new AssertionError("Known defect " + kd.id() + " no longer reproduces: the defect looks fixed. "
                     + "Remove @KnownDefect so the test becomes a regular regression test.");

@@ -23,4 +23,20 @@ sequenceDiagram
   API-->>C: 201
 ```
 
+Style (the linter enforces it):
+
+- No `%%{init}%%` theme: the viewer's light or dark theme must stay readable.
+- One accent: `classDef focus stroke:#bf4520,stroke-width:1.5px` on the entry point under test, and
+  `classDef external stroke-dasharray:4 4` on downstream systems. No other `classDef`, `style` or `linkStyle`.
+- About 9 nodes at most, sentence-case labels, verbs on edges, error branches drawn.
+
+```mermaid
+flowchart LR
+  C[Client] -->|posts an order| API[OrderController]:::focus
+  API -->|authorizes| PG[payment-gateway]:::external
+  API -->|times out after 3s| E[503 response]
+  classDef focus stroke:#bf4520,stroke-width:1.5px
+  classDef external stroke-dasharray:4 4
+```
+
 State names in `stateDiagram-v2` cannot contain hyphens: write `in_review`, not `in-review`. Gliffy and images are not used: they cannot be diffed or reviewed in a PR.

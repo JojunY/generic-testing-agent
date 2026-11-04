@@ -1,5 +1,6 @@
 package com.gta.core.spec;
 
+import com.gta.core.util.Hashes;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -120,6 +121,15 @@ public final class Spec {
         public boolean reviewerChecked() {
             return "reviewer".equals(meta.getOr("check", ""));
         }
+
+        /**
+         * Hash of what the scenario promises (title, WHEN, THEN, source). A test locked on one revision is re-verified when
+         * the revision changes; whitespace does not count.
+         */
+        public String revision() {
+            return Hashes.normalizedShort(
+                    title + "|" + String.join("|", whens) + "|" + String.join("|", thens) + "|" + source());
+        }
     }
 
     public static final class Invariant {
@@ -146,7 +156,10 @@ public final class Spec {
         }
 
         public List<String> affects() {
-            return List.of(meta.getOr("affects", "").split(",")).stream().map(String::trim).filter(s -> !s.isEmpty()).toList();
+            return List.of(meta.getOr("affects", "").split(",")).stream()
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toList();
         }
 
         public boolean answered() {
@@ -168,7 +181,8 @@ public final class Spec {
         public boolean checked;
 
         public boolean isCurrentCode() {
-            return text.toLowerCase().contains("= current code") || text.contains("= 代码现状"); // the Chinese marker is an accepted alias
+            return text.toLowerCase().contains("= current code")
+                    || text.contains("= 代码现状"); // the Chinese marker is an accepted alias
         }
     }
 

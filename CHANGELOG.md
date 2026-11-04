@@ -4,13 +4,40 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 
 ## [Unreleased] — 0.1.0 (P0)
 
+### Fixed (code review, round 3; see docs/reviews/round-3-plan.md §6.3)
+- Git failures (dubious ownership, a stale `index.lock`, an unknown base) fail closed instead of reading as "nothing changed"; git always runs with `LC_ALL=C`.
+- A failed item commit unstages its files and undoes gtaw's own shard write.
+- Parameterized and repeated tests keep their scenario tags; unreadable Surefire reports fail the run.
+- Timed-out processes keep their output; stale reports that cannot be deleted fail the run.
+- An out-of-scope file that was only staged is removed when it is restored.
+- Oracle shard keys are validated; error codes from older state files no longer crash.
+- The wrapper never puts Nexus credentials on a command line, and reports download failures as JSON.
+
+### Added (round 3)
+- Test case ledger per flow (`.gta/specs/<domain>/<flow>.cases.md`) and `.gta/specs/INDEX.md`, maintained row by row by gtaw; `gtaw cases [--rebuild]`, `gtaw cases confirm-retired`, `gtaw impact --base`.
+- Session reports are tracked in `.gta/reports/<date>-<session>.md` and committed with the ledger changes they list.
+- Scenario `priority=P0|P1|P2`; a `naming-conflict` decision when the test class gta would write belongs to a developer.
+- `docs/guides/test-naming.md`, `docs/guides/diagram-style.md`, the artifact-map and package-layer diagrams.
+
+### Changed (round 3)
+- Generated tests are named after the source class they test (`OrderControllerIT`, `OrderControllerSliceTest`, seed `OrderApplicationIT`), fixtures live in `src/test/resources/<package>/<TestClass>/`.
+- `ItemWorkflow` is split into `ItemWorkflow`, `Triage`, `ItemCommitter` and `PlanSync`; `Lock` and `Baseline` leave `WorkState`; renames `TestCase`→`TestOutcome`, `Briefs`→`BriefWriter`, `Proc`→`ProcessRunner`, `SurefireReports`→`SurefireReportParser`, `Registry`→`CapabilityRegistry`.
+- Doctor checks for Oracle and Pub/Sub run only for services that use them; managed files are protected by the scope check; a flow without an entry point is refused instead of being briefed as a REST API.
+- Spec diagrams: `%%` comments are allowed before the type; theme overrides and other styling than the `focus`/`external` classes are rejected.
+- `docs/` is split into `guides/`, `design/` and `reviews/`.
+
+### Added (engineering baseline, round 3)
+- Maven wrapper, enforcer, Spotless (palantir-java-format), SpotBugs, JaCoCo with a 90 % line gate on gta-core, CONTRIBUTING, SECURITY, a PR template and Dependabot; CI builds on JDK 17 and 21.
+- Every toolkit class has a mirrored `<Name>Test` (`MirroredTestNamesTest`); toolkit unit tests grew from 80 to about 300.
+- `qualityGates.stabilityTimezone` / `stabilityLocale` configure the stability variant run.
+
 ### Changed (documentation)
 - Documentation, agents, skills, templates and gtaw prompts are English. Chinese replies (`批准`, `其余默认`, `= 代码现状`) are still accepted.
 - `README.md` and `docs/design/plan.md` are English, with `README.zh-CN.md` and `docs/design/plan.zh-CN.md` copies and a language switch.
 - The explanatory diagrams (architecture, loop, item states, spec lifecycle) are rendered by `scripts/diagrams/render.py` into light and dark SVGs in the style of cathrynlavery/diagram-design; CI checks they are current.
 - A repository test keeps Chinese out of every file except the `*.zh-CN.md` copies, the alias parser and tests.
 
-### Fixed (code review, round 2; see docs/design/remediation-plan.md)
+### Fixed (code review, round 2; see docs/reviews/round-2-remediation.md)
 - Only an exact "approve <flow>@<rev>" (or its Chinese alias) approves. Negated or conditional replies become change requests.
 - A spec edited after it was shown for approval is not approved; it returns as a new revision.
 - Timed-out test runs count against the item's budgets and reach a human.

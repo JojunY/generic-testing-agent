@@ -46,7 +46,7 @@ gta 是一个面向 Java/Spring 服务、"先写规格再写测试"的测试 har
 
 ## 快速开始
 
-详见 [docs/quickstart.md](docs/quickstart.md)（英文）。简要步骤：
+详见 [docs/guides/quickstart.md](docs/guides/quickstart.md)（英文）。简要步骤：
 
 ```bash
 mvn -B install                      # 在本仓库：构建并测试 toolkit
@@ -77,7 +77,7 @@ toolkit/     Java 源码：gta-core、gta-cli、gta-junit、gta-harness-gen（Ma
 wrapper/     安装到服务中的文件：gtaw、gtaw.cmd、gtaw-download.ps1（从 Nexus 下载锁定版本的 jar 并校验 sha256）
 scripts/     维护脚本：generate.sh（平台文件夹）、diagrams/render.py（docs/diagrams）
 evals/       带预埋缺陷的 order-service 样例和脚本化端到端测试
-docs/        快速开始、CI 接入、新增能力、示意图；design/ 存放设计与评审记录
+docs/        guides/（快速开始、CI 接入、测试命名、图表风格、新增能力）、design/（设计）、reviews/（评审记录）、diagrams/
 ```
 
 ## 开发

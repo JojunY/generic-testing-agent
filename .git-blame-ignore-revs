@@ -1,0 +1,6 @@
+# Formatting-only commits; git blame skips them with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# (GitHub's blame view reads this file automatically.)
+
+# palantir-java-format over all Java sources (review round 3, step S3)
+5c45f288c216f500f7f098ba7fe8557767048132

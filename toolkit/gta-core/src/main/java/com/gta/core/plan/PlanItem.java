@@ -6,13 +6,13 @@ import java.util.List;
 /** One unit of test work, derived deterministically from an approved scenario (plan §10.2). */
 public class PlanItem {
     public String id;
-    public String kind;          // foundation | test
-    public String ref;           // scenarioId, invariantId or domain
+    public String kind; // foundation | test
+    public String ref; // scenarioId, invariantId or domain
     public String flowId;
     public String title;
     public String capability;
     public String layer;
-    public String intent;        // hardening | characterization | catching | reproducing
+    public String intent; // hardening | characterization | catching | reproducing
     public String agent = "gta-test-author";
     public List<String> skills = new ArrayList<>();
     public Oracle oracle = new Oracle();

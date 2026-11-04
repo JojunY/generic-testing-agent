@@ -13,7 +13,6 @@ import com.gta.core.error.GtaException;
 import com.gta.core.util.AtomicFiles;
 import com.gta.core.util.Hashes;
 import com.gta.core.util.Json;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -40,7 +39,9 @@ public final class Installer {
 
     /** Reads VS Code style JSONC (comments, trailing commas); used only to read, never to write. */
     private static final ObjectMapper JSONC = JsonMapper.builder()
-            .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS, JsonReadFeature.ALLOW_TRAILING_COMMA).build();
+            .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS, JsonReadFeature.ALLOW_TRAILING_COMMA)
+            .build();
+
     private static final ObjectWriter PRETTY = new ObjectMapper().writerWithDefaultPrettyPrinter();
 
     private final Path root;
@@ -51,17 +52,25 @@ public final class Installer {
         this.paths = new GtaPaths(this.root);
     }
 
-    public Map<String, Object> install(String platform, String distributionUrl, String distributionSha, boolean upgrade) {
+    public Map<String, Object> install(
+            String platform, String distributionUrl, String distributionSha, boolean upgrade) {
         Path managedFile = paths.managedFiles();
-        Map<String, Object> managed = Files.exists(managedFile) ? Json.read(managedFile, Map.class) : new LinkedHashMap<>();
+        Map<String, Object> managed =
+                Files.exists(managedFile) ? Json.read(managedFile, Map.class) : new LinkedHashMap<>();
         if (platform == null) {
             platform = (String) managed.getOrDefault("platform", null);
         }
         if (!"copilot".equals(platform) && !"opencode".equals(platform)) {
-            throw new GtaException(ErrorCode.USAGE_INVALID_ARGUMENT, "--platform must be copilot or opencode", "Pick the folder your team uses");
+            throw new GtaException(
+                    ErrorCode.USAGE_INVALID_ARGUMENT,
+                    "--platform must be copilot or opencode",
+                    "Pick the folder your team uses");
         }
         if (!Files.exists(root.resolve("pom.xml"))) {
-            throw new GtaException(ErrorCode.ENV_UNSUPPORTED_BUILD, "No pom.xml in " + root, "Run init in the Maven module of the service");
+            throw new GtaException(
+                    ErrorCode.ENV_UNSUPPORTED_BUILD,
+                    "No pom.xml in " + root,
+                    "Run init in the Maven module of the service");
         }
         @SuppressWarnings("unchecked")
         Map<String, String> previous = (Map<String, String>) managed.getOrDefault("files", new LinkedHashMap<>());
@@ -167,24 +176,32 @@ public final class Installer {
         out.put("written", written);
         if (!conflicts.isEmpty()) {
             out.put("conflicts", conflicts);
-            out.put("hint", "These managed files were edited locally and were not overwritten; diff them against the new version");
+            out.put(
+                    "hint",
+                    "These managed files were edited locally and were not overwritten; diff them against the new version");
         }
         if (!removed.isEmpty()) {
             out.put("removed", removed);
         }
         if (!obsoleteKept.isEmpty()) {
             out.put("obsoleteKept", obsoleteKept);
-            out.put("obsoleteHint", "These files are no longer shipped by gta but were edited locally; delete them when you no longer need them");
+            out.put(
+                    "obsoleteHint",
+                    "These files are no longer shipped by gta but were edited locally; delete them when you no longer need them");
         }
         if (!mergeManually.isEmpty()) {
             out.put("mergeManually", mergeManually);
-            out.put("mergeHint", "These files contain comments, so gta did not rewrite them; add the listed keys yourself");
+            out.put(
+                    "mergeHint",
+                    "These files contain comments, so gta did not rewrite them; add the listed keys yourself");
         }
-        out.put("next", List.of(
-                "Set distributionUrl / distributionSha256Sum in .gta/wrapper/gta-wrapper.properties to the Nexus jar",
-                "Add com.gta:gta-junit (test scope) to pom.xml, or let the first foundation item do it",
-                "Optional: add CODEOWNERS for .gta/** and the gta CI workflow (docs/ci-integration.md)",
-                "Commit, then developers type /gta in Copilot Chat or OpenCode"));
+        out.put(
+                "next",
+                List.of(
+                        "Set distributionUrl / distributionSha256Sum in .gta/wrapper/gta-wrapper.properties to the Nexus jar",
+                        "Add com.gta:gta-junit (test scope) to pom.xml, or let the first foundation item do it",
+                        "Optional: add CODEOWNERS for .gta/** and the gta CI workflow (docs/guides/ci-integration.md)",
+                        "Commit, then developers type /gta in Copilot Chat or OpenCode"));
         return out;
     }
 
@@ -204,10 +221,15 @@ public final class Installer {
         if (distributionSha != null) {
             p.setProperty("distributionSha256Sum", distributionSha);
         }
-        p.putIfAbsent("distributionUrl", "https://nexus.example.com/repository/maven-releases/com/gta/gta-cli/" + GtaCli.version()
-                + "/gta-cli-" + GtaCli.version() + ".jar");
-        StringBuilder sb = new StringBuilder("# gta wrapper: which gta-cli jar to download (from the company Nexus) and its sha256\n");
-        p.stringPropertyNames().stream().sorted().forEach(k -> sb.append(k).append('=').append(p.getProperty(k)).append('\n'));
+        p.putIfAbsent(
+                "distributionUrl",
+                "https://nexus.example.com/repository/maven-releases/com/gta/gta-cli/" + GtaCli.version() + "/gta-cli-"
+                        + GtaCli.version() + ".jar");
+        StringBuilder sb = new StringBuilder(
+                "# gta wrapper: which gta-cli jar to download (from the company Nexus) and its sha256\n");
+        p.stringPropertyNames().stream()
+                .sorted()
+                .forEach(k -> sb.append(k).append('=').append(p.getProperty(k)).append('\n'));
         return sb.toString();
     }
 
@@ -235,8 +257,7 @@ public final class Installer {
     }
 
     /** Result of merging gta keys into a JSON settings file: new content, nothing to do (both null), or keys to add by hand. */
-    record JsonMerge(String content, JsonNode manual) {
-    }
+    record JsonMerge(String content, JsonNode manual) {}
 
     /**
      * Deep-merges gta's keys into a JSON/JSONC settings file. Plain JSON is rewritten (only when something changes); a file
@@ -259,7 +280,8 @@ public final class Installer {
                 plainJson = false;
             }
             if (!(base instanceof ObjectNode baseObject)) {
-                throw new GtaException(ErrorCode.CONFIG_INVALID, target + " is not a JSON object", "Fix the file and re-run init");
+                throw new GtaException(
+                        ErrorCode.CONFIG_INVALID, target + " is not a JSON object", "Fix the file and re-run init");
             }
             ObjectNode merged = baseObject.deepCopy();
             merge(merged, add);
@@ -268,7 +290,9 @@ public final class Installer {
             }
             return plainJson ? new JsonMerge(PRETTY.writeValueAsString(merged) + "\n", null) : new JsonMerge(null, add);
         } catch (IOException e) {
-            throw new GtaException(ErrorCode.CONFIG_INVALID, "Cannot merge " + target + ": " + e.getMessage(),
+            throw new GtaException(
+                    ErrorCode.CONFIG_INVALID,
+                    "Cannot merge " + target + ": " + e.getMessage(),
                     "Fix the JSON file and re-run init; nothing was written");
         }
     }
@@ -298,10 +322,12 @@ public final class Installer {
 
     private Optional<String> gitignoreUpdate() {
         String text = read(root.resolve(".gitignore")).orElse("");
-        if (text.lines().anyMatch(l -> l.strip().equals(".gta/work/") || l.strip().equals(".gta/work"))) {
+        if (text.lines()
+                .anyMatch(l -> l.strip().equals(".gta/work/") || l.strip().equals(".gta/work"))) {
             return Optional.empty();
         }
-        return Optional.of(text.stripTrailing() + (text.isBlank() ? "" : "\n") + "\n# gta working state (rebuildable)\n.gta/work/\n");
+        return Optional.of(text.stripTrailing() + (text.isBlank() ? "" : "\n")
+                + "\n# gta working state (rebuildable)\n.gta/work/\n");
     }
 
     private static Optional<String> read(Path file) {
@@ -315,12 +341,14 @@ public final class Installer {
     private static String resource(String path) {
         try (InputStream in = Installer.class.getClassLoader().getResourceAsStream(path)) {
             if (in == null) {
-                throw new GtaException(ErrorCode.INTERNAL_ERROR, "Missing bundled resource " + path, "Rebuild gta-cli after generating copilot/ and opencode/");
+                throw new GtaException(
+                        ErrorCode.INTERNAL_ERROR,
+                        "Missing bundled resource " + path,
+                        "Rebuild gta-cli after generating copilot/ and opencode/");
             }
             return new String(in.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
-
 }

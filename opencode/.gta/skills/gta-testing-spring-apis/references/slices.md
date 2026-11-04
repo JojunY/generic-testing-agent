@@ -2,13 +2,13 @@
 
 ```java
 @WebMvcTest(OrderController.class)
-@Tag("slice") @Tag("flow:order.create") @Tag("gta")
-class OrderCreateTest {
+@Tag("slice") @Tag("gta")
+class OrderControllerSliceTest {                 // a slice test is named after the class it targets, not the annotation
     @Autowired MockMvcTester mvc;
     @MockitoBean OrderService service;
 
     @Test
-    @Tag("scenario:order.create/s01")
+    @Tag("flow:order.create") @Tag("scenario:order.create/s01")
     @DisplayName("[order.create/s01] missing amount is rejected")
     void shouldReturn400WhenAmountMissing() {
         var result = mvc.post().uri("/api/orders").contentType(MediaType.APPLICATION_JSON)

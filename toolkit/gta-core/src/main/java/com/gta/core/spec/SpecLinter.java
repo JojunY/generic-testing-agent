@@ -1,30 +1,31 @@
 package com.gta.core.spec;
 
 import com.gta.core.profile.RefResolver;
-import com.gta.core.registry.Registry;
+import com.gta.core.registry.CapabilityRegistry;
 import com.gta.core.util.Ids;
-
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** Deterministic spec rules (plan §3.3 "spec lint"). Returns human-readable issues; empty = valid. */
 public final class SpecLinter {
     private static final Set<Integer> RISK_VALUES = Set.of(1, 2, 3, 4, 6, 9);
     private static final List<String> LAYERS = List.of("unit", "slice", "component", "contract", "system");
-    private static final List<String> ORACLES = List.of("state", "response", "message", "property", "golden", "contract");
-    private static final List<String> DIAGRAMS = List.of("sequenceDiagram", "flowchart", "graph", "stateDiagram-v2",
-            "stateDiagram", "erDiagram");
+    private static final List<String> ORACLES =
+            List.of("state", "response", "message", "property", "golden", "contract");
+    private static final List<String> DIAGRAMS =
+            List.of("sequenceDiagram", "flowchart", "graph", "stateDiagram-v2", "stateDiagram", "erDiagram");
     private static final Set<String> API_CAPABILITIES = Set.of("rest-api", "grpc-api", "graphql-api");
 
-    private SpecLinter() {
-    }
+    private SpecLinter() {}
 
-    public static List<String> lint(Spec spec, String expectedFlowId, RefResolver refs, Registry registry, Path root) {
+    public static List<String> lint(
+            Spec spec, String expectedFlowId, RefResolver refs, CapabilityRegistry registry, Path root) {
         List<String> issues = new ArrayList<>();
         String flowId = spec.flowId();
         if (flowId == null) {
@@ -35,7 +36,8 @@ public final class SpecLinter {
             issues.add("header: flowId '" + flowId + "' must be <domain>.<flow-name>");
         }
         if (expectedFlowId != null && !expectedFlowId.equals(flowId)) {
-            issues.add("header: flowId '" + flowId + "' does not match the file location (expected " + expectedFlowId + ")");
+            issues.add("header: flowId '" + flowId + "' does not match the file location (expected " + expectedFlowId
+                    + ")");
         }
         if (registry.capabilities.stream().noneMatch(c -> c.id.equals(spec.capability()))) {
             issues.add("header: unknown capability '" + spec.capability() + "'");
@@ -47,7 +49,8 @@ public final class SpecLinter {
             issues.add("header: risk must be probability(1-3) x impact(1-3), i.e. one of " + RISK_VALUES);
         }
         if (API_CAPABILITIES.contains(spec.capability()) && !spec.sections.contains("access")) {
-            issues.add("access: flows with an external entry point need a '## Access' section (role x operation x ownership)");
+            issues.add(
+                    "access: flows with an external entry point need a '## Access' section (role x operation x ownership)");
         }
         if (spec.requirements.isEmpty()) {
             issues.add("requirements: at least one '### Requirement:' is required");
@@ -73,7 +76,8 @@ public final class SpecLinter {
             }
             for (String ref : r.refs()) {
                 if (refs != null && refs.hash(ref).isEmpty()) {
-                    issues.add(where + ": ref '" + ref + "' does not resolve (use method:<fqcn>#<method>, bean:<fqcn>#<method> or config:<key>)");
+                    issues.add(where + ": ref '" + ref
+                            + "' does not resolve (use method:<fqcn>#<method>, bean:<fqcn>#<method> or config:<key>)");
                 }
             }
             for (Spec.Scenario s : r.scenarios) {
@@ -90,17 +94,26 @@ public final class SpecLinter {
                     checkDocumented(issues, sw, s.meta.getOr("doc", ""), s.meta.getOr("quote", ""), root);
                 }
                 if (s.source().equals("assumed") && !affected.contains(s.id()) && !affected.contains(r.id())) {
-                    issues.add(sw + ": an assumed scenario must be covered by an open question (affects=" + s.id() + ")");
+                    issues.add(
+                            sw + ": an assumed scenario must be covered by an open question (affects=" + s.id() + ")");
                 }
                 if (s.thens.isEmpty()) {
                     issues.add(sw + ": needs at least one '- **THEN** ...' clause");
                 } else if (!s.reviewerChecked() && s.thenLiterals().isEmpty()) {
-                    issues.add(sw + ": THEN must contain at least one expected value in backticks, e.g. `503`, or mark check=reviewer");
+                    issues.add(
+                            sw
+                                    + ": THEN must contain at least one expected value in backticks, e.g. `503`, or mark check=reviewer");
                 }
-                s.meta.get("hint.layer").filter(l -> !LAYERS.contains(l))
+                s.meta.get("hint.layer")
+                        .filter(l -> !LAYERS.contains(l))
                         .ifPresent(l -> issues.add(sw + ": hint.layer must be one of " + LAYERS));
-                s.meta.get("hint.oracle").filter(o -> !ORACLES.contains(o))
+                s.meta.get("hint.oracle")
+                        .filter(o -> !ORACLES.contains(o))
                         .ifPresent(o -> issues.add(sw + ": hint.oracle must be one of " + ORACLES));
+                s.meta.get("priority")
+                        .filter(p -> !p.matches("P[012]"))
+                        .ifPresent(p -> issues.add(
+                                sw + ": priority must be P0 (core path), P1 (important branch) or P2 (edge case)"));
             }
         }
         for (Spec.Invariant inv : spec.invariants) {
@@ -119,11 +132,14 @@ public final class SpecLinter {
                 issues.add(qw + ": needs at least two options '- [ ] A) ...'");
             }
             if (q.impact().equals("normal") && q.currentCodeOption().isEmpty()) {
-                issues.add(qw + ": a normal-impact question needs an option marked '= current code' (picked by 'rest default')");
+                issues.add(
+                        qw
+                                + ": a normal-impact question needs an option marked '= current code' (picked by 'rest default')");
             }
             for (Spec.Option o : q.options) {
                 if (!o.isCurrentCode() && !o.text.contains("→") && !o.text.contains("->")) {
-                    issues.add(qw + " option " + o.letter + ": state the effect on THEN ('→ ...') or mark '= current code'");
+                    issues.add(qw + " option " + o.letter
+                            + ": state the effect on THEN ('→ ...') or mark '= current code'");
                 }
             }
             if (q.affects().isEmpty()) {
@@ -131,12 +147,42 @@ public final class SpecLinter {
             }
         }
         for (String block : spec.mermaidBlocks) {
-            String first = block.strip().split("\\R")[0].trim();
-            if (DIAGRAMS.stream().noneMatch(first::startsWith)) {
-                issues.add("diagram: unsupported mermaid type '" + first + "' (use " + DIAGRAMS + ")");
-            }
-            if (block.split("\\R").length > 40) {
-                issues.add("diagram: keep each diagram under 40 lines (only what the tests need)");
+            issues.addAll(lintDiagram(block));
+        }
+        return issues;
+    }
+
+    /** Diagram style for specs (docs/guides/diagram-style.md): one accent class, no theme override. */
+    static final Map<String, String> CLASS_DEFS =
+            Map.of("focus", "stroke:#bf4520,stroke-width:1.5px", "external", "stroke-dasharray:4 4");
+
+    static List<String> lintDiagram(String block) {
+        List<String> issues = new ArrayList<>();
+        List<String> lines = block.strip().lines().map(String::strip).toList();
+        // comments and directives may precede the diagram type
+        String type = lines.stream()
+                .filter(l -> !l.isEmpty() && !l.startsWith("%%"))
+                .findFirst()
+                .orElse("");
+        if (DIAGRAMS.stream().noneMatch(type::startsWith)) {
+            issues.add("diagram: unsupported mermaid type '" + type + "' (use " + DIAGRAMS + ")");
+        }
+        if (lines.size() > 40) {
+            issues.add("diagram: keep each diagram under 40 lines (only what the tests need)");
+        }
+        for (String l : lines) {
+            if (l.startsWith("%%{")) {
+                issues.add("diagram: no %%{init}%% theme override; GitHub and IDEs render light and dark themselves");
+            } else if (l.startsWith("classDef ")) {
+                String[] parts = l.split("\\s+", 3);
+                String name = parts.length > 1 ? parts[1] : "";
+                String style = parts.length > 2 ? parts[2].replace(";", "").strip() : "";
+                if (!style.equals(CLASS_DEFS.get(name))) {
+                    issues.add("diagram: only 'classDef focus " + CLASS_DEFS.get("focus") + "' and 'classDef external "
+                            + CLASS_DEFS.get("external") + "' are allowed, got '" + l + "'");
+                }
+            } else if (l.startsWith("style ") || l.startsWith("linkStyle ")) {
+                issues.add("diagram: style through the two classes only, not '" + l.split("\\s+")[0] + "'");
             }
         }
         return issues;
@@ -170,7 +216,8 @@ public final class SpecLinter {
                 issues.add(where + ": quote not found verbatim in " + doc + " (use source=observed instead)");
             }
         } catch (Exception e) {
-            issues.add(where + ": doc " + doc + " not readable (use source=observed instead)");
+            issues.add(
+                    where + ": source=documented, but doc " + doc + " is not readable (use source=observed instead)");
         }
     }
 }

@@ -10,8 +10,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 
 public final class Hashes {
-    private Hashes() {
-    }
+    private Hashes() {}
 
     public static String sha256(String text) {
         return sha256(text.getBytes(StandardCharsets.UTF_8));

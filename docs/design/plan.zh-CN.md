@@ -2,7 +2,7 @@
 
 [English](plan.md) | **简体中文**
 
-> 状态：**P0 已实现**（REST API；其余能力按 §15 路线图分阶段开放）· 版本：plan v9 · 日期：2026-11 · 代码审查与修复记录见 [remediation-plan.md](remediation-plan.md)
+> 状态：**P0 已实现**（REST API；其余能力按 §15 路线图分阶段开放）· 版本：plan v9 · 日期：2026-11 · 代码审查与修复记录见 [round-2-remediation.md](../reviews/round-2-remediation.md) · [round-3-plan.md](../reviews/round-3-plan.md)
 > 范围：面向 Java（以 Spring 为主）服务的通用测试 harness
 > 使用面：**VS Code Copilot、IntelliJ IDEA Copilot**（主），OpenCode（次）
 > 目标环境：Maven；Spring Boot 4.1 为主，少量 3.5；JUnit 跟随 Spring Boot parent；Java 17+；开发机为 Windows；数据存储为 Oracle 和 BigQuery；消息为 Pub/Sub、Kafka、MQ；本地不能使用任何容器；所有依赖都经过公司 Nexus 代理，平台团队可以向 Nexus 上传包；CI（alm-github）可以接入；多数服务只有代码，没有规范文档。不启用 CODEOWNERS 和分支保护，不开启 Copilot preview policy
@@ -392,7 +392,7 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
 | Agents | `gta-orchestrator` · `gta-analyst` · `gta-test-author` · `gta-reviewer` |
 | Skills | `.gta/skills/gta-*`（SKILL.md 格式，由 brief 按路径加载） |
 | Toolkit | `gtaw` → `gta-cli.jar`：调度、规格、计划、执行、分流、oracle lock、改动检查、门禁、报告 · `gta-junit`（测试期依赖） |
-| State | git：specs + oracle 分片 + escalations + tests \| `.gta/work/` |
+| State | git：specs + oracle 分片 + 用例台账 + 报告 + escalations + tests \| `.gta/work/`（临时） |
 | Gate | 会话结束时本地运行 `gtaw gate --base`（CI 可选） |
 
 ### 4.2 协议：`next` → 派发 → `check`（可多次）→ `submit`
@@ -569,6 +569,8 @@ P5 的可选增强：在 IntelliJ（hooks 已 GA）或开启 preview 后的 VS C
 |---|---|---|
 | `.gta/specs/<domain>/<flow-name>.spec.md` | 规格、答案（原话/轮次/渠道）、批准记录 | 提交 |
 | `.gta/specs/<domain>/<flow-name>.oracles.json` | 该 flow 下各条目的 oracle 指纹和 scenario 修订哈希 | 提交 |
+| `.gta/specs/<domain>/<flow-name>.cases.md` · `.gta/specs/INDEX.md` | 该 flow 的测试用例台账与总览（§10.6） | 提交 |
+| `.gta/reports/<yyyy-MM-dd>-<sessionId>.md` | 会话报告，即审计轨迹（§10.6） | 提交 |
 | `.gta/escalations/<itemKey>.md` | 升级资料包：做过的尝试、错误、假设、建议 | 提交 |
 | `.gta/skills/gta-*/` | 受管的 skills | 提交（受管） |
 | `.gta/config.json` · `.gta/waivers.json` · `.gta/wrapper/` · `.gta/managed-files.json` | 配置、豁免、wrapper、受管文件校验和 | 提交 |
@@ -1017,13 +1019,16 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | 对象 | 规则 |
 |---|---|
 | 规格 / oracle 分片 | `.gta/specs/<domain>/<flow-name>.spec.md` / `.oracles.json`；服务全景为 `.gta/specs/service-overview.md`。monorepo 中每个服务模块各有一个 `.gta/` |
-| unit / slice 测试类 | `<Subject>Test`（Surefire） |
-| component / contract 测试类 | `<Subject>IT`（Failsafe） |
+| 测试类 | `<源类名><后缀>`，与源类同包，每个源类每种后缀只有一个：`Test` 单元、`SliceTest` Spring slice、`IT` 组件、`ContractIT` 契约、`Karate` 系统（在 `src/test/karate/java`）、`E2ETest` 端到端（在 `src/test/e2e/java`）。源类是 flow 的入口（`api/OrderController` → `api/OrderControllerIT`），同一源类的多个 flow 共用一个测试类。种子测试为 `<@SpringBootApplication 类>IT`。完整规则、辅助代码后缀与例外见 [test-naming.md](../guides/test-naming.md) |
+| 测试选择 | 显式配置，不依赖插件默认值：gtaw 按后缀表传 `-Dtest`；服务自己的 Surefire 跑 `*Test`，Failsafe 跑 `*IT`；`Karate` 与 `E2ETest` 只在各自的 profile 中运行 |
+| 命名冲突 | gta 要写的测试类已存在且不是 gta 测试时，gtaw 询问开发者（共用文件、跳过或重新检查），从不自行决定 |
 | 测试方法 | `should<Outcome>When<Condition>()`，加 `@DisplayName("[<scenarioId>] …")` |
-| JUnit tag | 层级 + `flow:<flowId>` + `scenario:<scenarioId>` + `gta`；characterization 测试另加 `characterization` |
+| JUnit tag | 类上：层级 + `gta`；方法上：`flow:<flowId>` + `scenario:<scenarioId>`；characterization 测试另加 `characterization` |
 | 已知缺陷 | `@KnownDefect(id = "<findingId>", failure = "<指纹>")` |
-| Karate（P4） | `src/test/resources/karate/<domain>/<flow-name>.feature`；tag `@gta @system @flow=<flowId> @scenario=<scenarioId>`；runner 为 `<basePackage>.system.KarateSystemSuite`（不以 IT 结尾），由 `gtaw run --layer system` 执行 |
-| Fixtures / Golden | `src/test/resources/fixtures/<domain>/<flow-name>/<case>.json`；`…/golden/<domain>/<flow-name>/<case>.approved.json` |
+| Karate（P4） | runner 为 `src/test/karate/java/<包>/<源类名>Karate.java`，feature 在 `src/test/karate/resources/<包>/<源类名>Karate/<flow-name>.feature`；tag `@gta @system @flow=<flowId> @scenario=<scenarioId>`，由 `gtaw run --layer system` 执行 |
+| Fixtures / Golden | `src/test/resources/<包路径>/<测试类名>/<sNN>.<角色>.json`；golden 输出为同目录下的 `<sNN>.approved.json` |
+| 测试用例台账 | 与规格同目录的 `.gta/specs/<domain>/<flow-name>.cases.md`，总览为 `.gta/specs/INDEX.md`（§10.6） |
+| session 报告 | `.gta/reports/<yyyy-MM-dd>-<sessionId>.md`（纳入版本控制）；`.gta/work/` 只放临时文件 |
 
 ### 9.4 ID、Git 与云资源
 
@@ -1072,7 +1077,7 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
   "agent": "gta-test-author",
   "skills": [".gta/skills/gta-testing-spring-apis", ".gta/skills/gta-stubbing-with-wiremock"],
   "oracle": { "type": "state", "source": "observed", "then": ["503", "PENDING_PAYMENT", "order-created"] },
-  "ownsFiles": ["src/test/java/com/acme/order/api/OrderCreateIT.java"],
+  "ownsFiles": ["src/test/java/com/acme/order/api/OrderControllerIT.java"],
   "dependsOn": ["order#foundation-01"],
   "priority": "p1",
   "scenarioRevision": "3f9c…"
@@ -1096,7 +1101,7 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 
 ```json
 { "order.create/s03#component-01": { "scenarioRevision": "3f9c…", "fingerprint": "5be2…",
-    "tokens": ["503", "PENDING_PAYMENT"], "testClass": "com.acme.order.api.OrderCreateIT" } }
+    "tokens": ["503", "PENDING_PAYMENT"], "testClass": "com.acme.order.api.OrderControllerIT" } }
 ```
 
 | 枚举 | 取值 |
@@ -1161,8 +1166,45 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 
 - 优先级：`fail` > `waived` > `concerns` > `pass`。
 - **运行位置**：每次会话结束时，`next` 会在本地运行一次 gate。结果为 `fail` 时，`/gta` 不会报告完成，并在 PR 评论草稿（`.gta/work/runs/<runId>/pr-comment.md`）中标红。
-- **CI（P1 接入，已确认可以实现）**：本地 gate 可以被人跳过，比如没跑 `/gta` 就直接改代码提 PR，或者手工修改测试。所以 P1 提供 alm-github 的 workflow 模板 `gta-gate.yml`（见 `docs/ci-integration.md`），在 PR 上依次执行 `mvn verify` → `gtaw verify --new` → `gtaw gate --base` → 自动贴出 PR 评论。目前没有分支保护，所以它是一个状态检查加一条评论；以后设为 required check，就能真正阻断合入，设计本身不变。
+- **CI（P1 接入，已确认可以实现）**：本地 gate 可以被人跳过，比如没跑 `/gta` 就直接改代码提 PR，或者手工修改测试。所以 P1 提供 alm-github 的 workflow 模板 `gta-gate.yml`（见 `docs/guides/ci-integration.md`），在 PR 上依次执行 `mvn verify` → `gtaw verify --new` → `gtaw gate --base` → 自动贴出 PR 评论。目前没有分支保护，所以它是一个状态检查加一条评论；以后设为 required check，就能真正阻断合入，设计本身不变。
 - mutation 默认是 advisory，在试点仓库校准阈值后，再逐个仓库切换为 enforced。
+
+### 10.6 测试用例台账（`<flow>.cases.md`）与会话报告
+
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../diagrams/artifacts-dark.svg">
+  <img alt="gta 为每个 flow 保存的文件：规格是期望值的唯一来源；批准写入用例台账，测试断言 THEN 的值，gtaw 把它们锁进 oracle 分片，条目提交更新台账，INDEX.md 为派生文件，会话结束时根据临时的 .gta/work 写出纳入版本控制的报告。" src="../diagrams/artifacts-light.svg">
+</picture>
+
+规格是行为与期望值的唯一真理来源。**台账**是与之并列的测试资产索引：每个 scenario 一行，含一句话摘要、指向规格的链接、实现它的自动化测试、优先级、最近一次结果和状态。台账从不复制规格中的步骤或期望值。没有规格的手工或探索性用例是唯一完整书写的行，放在 `## Manual cases` 表中（id 为 `<flowId>/mNN`）。
+
+| 列 | 内容 |
+|---|---|
+| Test Case ID | scenario id（`order.create/s01`）；不另设 QA 风格的编号 |
+| Test Title · Test Content · Expect Result | scenario 标题；第一条 WHEN 与第一条 THEN 的缩写，后接“(+n more)” |
+| Linked Spec | `<flow>.spec.md#sNN` |
+| Automation | 测试提交后为 `<测试类>#<方法>`，手工用例为 `Manual`，此前为 `–` |
+| Priority | `P0` 核心路径（每次必跑）· `P1` 重要分支 · `P2` 边缘情况；取 scenario 的 `priority=`，默认 P1 |
+| Test Result | 只记录最近一次：`Pass` / `Fail` / `Known defect` + 日期 + 短 SHA，或 `Not run`；历史在报告中 |
+| Status | `Active` · `Needs Review` · `Retired` |
+
+**由 gtaw 逐行维护**（从不整体重写，因此人工修改的 Status 与手工用例都会保留）：
+
+| 时机 | 变化 | 随哪个 commit 提交 |
+|---|---|---|
+| 规格被批准 | 新 scenario → 新行；已锁定测试的修订与当前不同 → Needs Review；从规格中移除的 scenario → Retired | 批准 commit |
+| 条目提交 | Automation 与通过（或已知缺陷）结果；Active | 条目 commit |
+| 会话结束 | 用 gate 全量运行的结果更新每个自动化用例；失败或不稳定 → Needs Review | 会话报告 commit |
+| `gtaw impact --base <ref>` | 引用的代码有改动的用例 → Needs Review；输出回归范围（这些用例加全部 P0） | –（下一次 commit） |
+
+结果通过 gta-junit 监听器记录的 `scenario:` tag 对应到行，不需要其他机制。`.gta/specs/INDEX.md` 由所有台账派生：每个 flow 一行计数（覆盖矩阵）。
+
+**退役**：scenario 离开已批准规格，或有人把 Status 改为 `Retired`，用例即退役。它的测试继续运行，每份会话报告都会列出已退役用例。只有人工批量确认 `gtaw cases confirm-retired <ids>` 或 `--all` 才会删除测试（带该 scenario tag 的方法；没有测试剩下的类整体删除）、fixtures、锁定条目和台账行，并由 gtaw 一次提交。永远不会自动删除。
+
+**为已有服务首次建立台账**：`gtaw cases --rebuild` 根据已批准规格与已提交的锁定生成台账；结果在下一次会话或 `gtaw run` 后回填。
+
+**会话报告**是审计轨迹：`.gta/reports/<yyyy-MM-dd>-<sessionId>.md`，在会话结束时由 gtaw 与其列出的台账变化一起提交。`.gta/work/` 只保留临时文件（状态、brief、运行证据、PR 评论草稿）。
 
 ---
 
@@ -1199,6 +1241,8 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | `gtaw gate --base <ref> --reports <dir>` · `gtaw gate waive <GATE_CODE> …` | CI / 人 | 门禁；登记豁免（**仅限人**） |
 | `gtaw relock --item <id> --reason "<text>"` | **仅限人** | 按规格当前的期望值重新上锁 |
 | `gtaw report [--kind md\|pr-comment]` | gtaw 内部 / CI | 追踪矩阵、孤儿检查、新增确认项 |
+| `gtaw cases [--rebuild]` · `gtaw cases confirm-retired <ids>\|--all` | 人 / gtaw | 台账总览或重建；删除已退役用例的测试须由人批量确认（§10.6） |
+| `gtaw impact [--base <ref>]` | 人 / CI | 代码有改动的用例 → Needs Review；输出回归范围（加全部 P0） |
 | `gtaw env up\|down\|gc`（P4） | **仅限人** / system 条目 | 临时环境 |
 
 ### 11.3 本仓库结构
@@ -1228,7 +1272,7 @@ generic-testing-agent/
 ├── opencode/                # ★ 用户选择 OpenCode 时使用的完整文件夹（生成物，已提交）：.opencode/… · opencode.json · .gta/skills/…
 ├── evals/   fixtures/（带缺陷的样例服务） · e2e/（脚本化端到端；模型评测任务 P0a 加入）
 ├── scripts/ generate.sh · diagrams/render.py   # 维护脚本
-├── docs/    quickstart.md · adding-a-capability.md · ci-integration.md · diagrams/ · design/（plan.md、plan.zh-CN.md 本文档、remediation-plan.md）
+├── docs/    guides/（quickstart、ci-integration、test-naming、diagram-style、adding-a-capability）· design/（plan.md、plan.zh-CN.md 本文档）· reviews/ · diagrams/
 └── .github/workflows/ci.yml
 ```
 
@@ -1312,7 +1356,7 @@ GTA：共生成 6 个条目，本次会话先处理 5 个……
 - 只有一个命令。第一次运行是只读的。中断后再输入 `/gta` 就能继续。
 - `gtaw init` 只为 gtaw 的几个指定子命令写入 VS Code 的自动批准规则；IntelliJ 由 `gtaw doctor` 给出配置步骤。
 - 不需要任何容器。`gtaw doctor` 会检测可选的 gcloud 模拟器，没有安装也能运行，只是对应依赖改用 fake。
-- 每个错误都附带 hint。`docs/quickstart.md` 只有一页。
+- 每个错误都附带 hint。`docs/guides/quickstart.md` 只有一页。
 
 **前置条件**：JDK 17+、Maven、启用了 Copilot agent 模式（或 OpenCode）、Mermaid 预览；gcloud 模拟器可选。
 
@@ -1438,4 +1482,4 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 | v7 | 根据已确认的环境调整：<br>- 只支持 Maven，Boot 4.1 和 3.5 双基线，Java 17+；<br>- 新增 §4.0 原语选型：v1 不用 hooks 和 MCP，护栏改为 gtaw 改动检查加终端批准；<br>- 回答渠道简化为 `chat` 和 `editor`；<br>- 没有 CODEOWNERS 时，以 PR review 加上 PR 评论清单为准；<br>- 更新待确认问题 |
 | v8 | 按 Anthropic 的原语定义重新审计：<br>- 新增 agent / skill / workflow 的判定准则；<br>- 删去 system-tester（改为 test-author + skill），最终只有 4 个 agent；<br>- 不使用容器：新增 §7.0 依赖保真度策略；<br>- 门禁在本地运行，CI 可选；characterization 测试也受门禁保护；<br>- 根目录提供 `copilot/` 和 `opencode/` 两个文件夹；<br>- 增加模型映射；<br>- 针对只有代码、没有文档的现实做了调整 |
 | v9（最终版） | 按确认的环境定稿：<br>- Windows 开发机；<br>- Oracle（共享测试库 / H2 兼容模式）、BigQuery（fake，SQL 部分在 P4 测）；<br>- Pub/Sub 模拟器从 Nexus 分发、EmbeddedKafka、嵌入式 Artemis（MQ/JMS）；<br>- 所有依赖经 Nexus 代理，工具放在 Nexus 的 raw 仓库；<br>- P1 接入 alm-github CI 模板；<br>- 待确认问题清零 |
-| v9.1 | P0 已实现，完成两轮代码审查（见 [remediation-plan.md](remediation-plan.md)）：<br>- 只有精确的批准才算批准，其他回复作为修改意见，展示后被改动的规格不予批准；<br>- 用提交账本代替 trailer，分片和状态失败即关闭，规格循环有上限，review 带 token，超时计入次数；<br>- 文档统一为英文，README 和本设计另有中文版；示意图由 `scripts/diagrams/render.py` 按 diagram-design 风格生成 |
+| v9.1 | P0 已实现，完成两轮代码审查（见 [round-2-remediation.md](../reviews/round-2-remediation.md)）：<br>- 只有精确的批准才算批准，其他回复作为修改意见，展示后被改动的规格不予批准；<br>- 用提交账本代替 trailer，分片和状态失败即关闭，规格循环有上限，review 带 token，超时计入次数；<br>- 文档统一为英文，README 和本设计另有中文版；示意图由 `scripts/diagrams/render.py` 按 diagram-design 风格生成 |

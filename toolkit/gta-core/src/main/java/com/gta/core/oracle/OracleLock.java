@@ -1,8 +1,6 @@
 package com.gta.core.oracle;
 
-import com.gta.core.state.WorkState;
 import com.gta.core.util.Hashes;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -12,19 +10,22 @@ import java.util.Set;
  * them may not change or disappear; new assertions may be added. Inputs are watched, not locked.
  */
 public final class OracleLock {
-    public enum Verdict { OK, STRUCTURAL_CHANGE, MODIFIED }
-
-    public record Check(Verdict verdict, List<String> missingTokens) {
+    public enum Verdict {
+        OK,
+        STRUCTURAL_CHANGE,
+        MODIFIED
     }
 
-    private OracleLock() {
-    }
+    public record Check(Verdict verdict, List<String> missingTokens) {}
+
+    private OracleLock() {}
 
     /** Creates the lock from the first run that reached the system under test. */
-    public static WorkState.Lock create(AssertionScanner.ScenarioOracle oracle, List<String> thenLiterals, String runId) {
-        WorkState.Lock lock = new WorkState.Lock();
+    public static Lock create(AssertionScanner.ScenarioOracle oracle, List<String> thenLiterals, String runId) {
+        Lock lock = new Lock();
         for (String lit : thenLiterals) {
-            if (!AssertionScanner.missingThenLiterals(List.of(lit), oracle.tokens()).contains(lit)) {
+            if (!AssertionScanner.missingThenLiterals(List.of(lit), oracle.tokens())
+                    .contains(lit)) {
                 lock.tokens.add(lit);
             }
         }
@@ -39,13 +40,14 @@ public final class OracleLock {
         return lock;
     }
 
-    public static Check check(WorkState.Lock lock, AssertionScanner.ScenarioOracle current) {
+    public static Check check(Lock lock, AssertionScanner.ScenarioOracle current) {
         if (lock == null) {
             return new Check(Verdict.OK, List.of());
         }
         List<String> missing = new ArrayList<>();
         for (String token : lock.tokens) {
-            if (AssertionScanner.missingThenLiterals(List.of(token), current.tokens()).contains(token)) {
+            if (AssertionScanner.missingThenLiterals(List.of(token), current.tokens())
+                    .contains(token)) {
                 missing.add(token);
             }
         }

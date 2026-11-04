@@ -2,7 +2,6 @@ package com.gta.core.change;
 
 import com.gta.core.config.GtaPaths;
 import com.gta.core.util.AtomicFiles;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -31,13 +30,20 @@ public final class CommitLedger {
         return read().contains(sha);
     }
 
+    /** Every recorded SHA, read once (for checks over many commits). */
+    public Set<String> shas() {
+        return read();
+    }
+
     private Set<String> read() {
         Set<String> out = new LinkedHashSet<>();
         if (!Files.exists(paths.commitLedger())) {
             return out;
         }
         try {
-            Files.readAllLines(paths.commitLedger(), StandardCharsets.UTF_8).stream().map(String::strip).filter(l -> !l.isEmpty())
+            Files.readAllLines(paths.commitLedger(), StandardCharsets.UTF_8).stream()
+                    .map(String::strip)
+                    .filter(l -> !l.isEmpty())
                     .forEach(out::add);
         } catch (IOException e) {
             throw new UncheckedIOException(e);

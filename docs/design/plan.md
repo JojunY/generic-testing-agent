@@ -2,7 +2,7 @@
 
 **English** | [简体中文](plan.zh-CN.md)
 
-> Status: **P0 implemented** (REST APIs; other capabilities open phase by phase, see the §15 roadmap) · Version: plan v9 · Date: 2026-11 · Code review and remediation record: [remediation-plan.md](remediation-plan.md)
+> Status: **P0 implemented** (REST APIs; other capabilities open phase by phase, see the §15 roadmap) · Version: plan v9 · Date: 2026-11 · Code review and remediation record: [round-2-remediation.md](../reviews/round-2-remediation.md) · [round-3-plan.md](../reviews/round-3-plan.md)
 > Scope: a generic testing harness for Java services (mostly Spring)
 > Surfaces: **VS Code Copilot, IntelliJ IDEA Copilot** (primary), OpenCode (secondary)
 > Target environment: Maven; Spring Boot 4.1 mostly, a few 3.5; JUnit follows the Spring Boot parent; Java 17+; Windows developer machines; Oracle and BigQuery for data; Pub/Sub, Kafka and MQ for messaging; no containers locally; every dependency goes through the company Nexus proxy and the platform team can upload packages to Nexus; CI (alm-github) can be connected; most services have code but no specification documents. CODEOWNERS and branch protection are not enabled, and the Copilot preview policy is off
@@ -394,7 +394,7 @@ Users may reply in Chinese: gtaw accepts `批准` for approve and `其余默认`
 | Agents | `gta-orchestrator` · `gta-analyst` · `gta-test-author` · `gta-reviewer` |
 | Skills | `.gta/skills/gta-*` (SKILL.md format, loaded by path from the brief) |
 | Toolkit | `gtaw` → `gta-cli.jar`: scheduling, specs, planning, execution, triage, oracle lock, change check, gate, report · `gta-junit` (test-time dependency) |
-| State | git: specs + oracle shards + escalations + tests \| `.gta/work/` |
+| State | git: specs + oracle shards + case ledgers + reports + escalations + tests \| `.gta/work/` (temporary) |
 | Gate | `gtaw gate --base` locally at the end of every session (CI optional) |
 
 ### 4.2 Protocol: `next` → dispatch → `check` (any number of times) → `submit`
@@ -571,6 +571,8 @@ Optional enhancement for P5: in IntelliJ (hooks are GA) or in VS Code with the p
 |---|---|---|
 | `.gta/specs/<domain>/<flow-name>.spec.md` | spec, answers (original words / round / channel), approval records | yes |
 | `.gta/specs/<domain>/<flow-name>.oracles.json` | oracle fingerprints and scenario revision hashes of the flow's items | yes |
+| `.gta/specs/<domain>/<flow-name>.cases.md` · `.gta/specs/INDEX.md` | test case ledger of the flow and the overview (§10.6) | yes |
+| `.gta/reports/<yyyy-MM-dd>-<sessionId>.md` | session reports, the audit trail (§10.6) | yes |
 | `.gta/escalations/<itemKey>.md` | escalation package: attempts, errors, assumptions, suggestions | yes |
 | `.gta/skills/gta-*/` | managed skills | yes (managed) |
 | `.gta/config.json` · `.gta/waivers.json` · `.gta/wrapper/` · `.gta/managed-files.json` | configuration, waivers, wrapper, checksums of managed files | yes |
@@ -1019,13 +1021,16 @@ No containers run locally and every dependency comes through the company Nexus p
 | Object | Rule |
 |---|---|
 | spec / oracle shard | `.gta/specs/<domain>/<flow-name>.spec.md` / `.oracles.json`; the service overview is `.gta/specs/service-overview.md`. In a monorepo each service module has its own `.gta/` |
-| unit / slice test classes | `<Subject>Test` (Surefire) |
-| component / contract test classes | `<Subject>IT` (Failsafe; gtaw itself runs them through Surefire) |
+| test classes | `<SourceClass><Suffix>` in the source class's package, one per source class and suffix: `Test` unit, `SliceTest` Spring slice, `IT` component, `ContractIT` contract, `Karate` system (in `src/test/karate/java`), `E2ETest` end-to-end (in `src/test/e2e/java`). The source class is the flow's entry point (`api/OrderController` → `api/OrderControllerIT`); flows of one source share its test class. The seed test is `<@SpringBootApplication class>IT`. Full rules, support-code suffixes and exceptions: [test-naming.md](../guides/test-naming.md) |
+| test selection | explicit, never a plugin default: gtaw passes `-Dtest` from the suffix table; the service's Surefire runs `*Test`, Failsafe `*IT`; `Karate` and `E2ETest` run only in their profiles |
+| name conflicts | when the test class gta would write exists and is not a gta test, gtaw asks the developer (share the file, skip, or check again) and never decides itself |
 | test methods | `should<Outcome>When<Condition>()`, with `@DisplayName("[<scenarioId>] …")` |
-| JUnit tags | layer + `flow:<flowId>` + `scenario:<scenarioId>` + `gta`; characterization tests also `characterization` |
+| JUnit tags | class: layer + `gta`; method: `flow:<flowId>` + `scenario:<scenarioId>`; characterization tests also `characterization` |
 | known defects | `@KnownDefect(id = "<findingId>", failure = "<fingerprint>")` |
-| Karate (P4) | `src/test/resources/karate/<domain>/<flow-name>.feature`; tags `@gta @system @flow=<flowId> @scenario=<scenarioId>`; runner `<basePackage>.system.KarateSystemSuite` (not ending in IT), run by `gtaw run --layer system` |
-| fixtures / golden files | `src/test/resources/fixtures/<domain>/<flow-name>/<case>.json`; `…/golden/<domain>/<flow-name>/<case>.approved.json` |
+| Karate (P4) | runner `src/test/karate/java/<package>/<SourceClass>Karate.java`, features `src/test/karate/resources/<package>/<SourceClass>Karate/<flow-name>.feature`; tags `@gta @system @flow=<flowId> @scenario=<scenarioId>`, run by `gtaw run --layer system` |
+| fixtures / golden files | `src/test/resources/<package path>/<TestClass>/<sNN>.<role>.json`; golden output `<sNN>.approved.json` in the same folder |
+| test case ledger | `.gta/specs/<domain>/<flow-name>.cases.md` next to the spec, overview `.gta/specs/INDEX.md` (§10.6) |
+| session reports | `.gta/reports/<yyyy-MM-dd>-<sessionId>.md` (tracked); `.gta/work/` holds temporary files only |
 
 ### 9.4 Ids, git and cloud resources
 
@@ -1074,7 +1079,7 @@ No containers run locally and every dependency comes through the company Nexus p
   "agent": "gta-test-author",
   "skills": [".gta/skills/gta-testing-spring-apis", ".gta/skills/gta-stubbing-with-wiremock"],
   "oracle": { "type": "state", "source": "observed", "then": ["503", "PENDING_PAYMENT", "order-created"] },
-  "ownsFiles": ["src/test/java/com/acme/order/api/OrderCreateIT.java"],
+  "ownsFiles": ["src/test/java/com/acme/order/api/OrderControllerIT.java"],
   "dependsOn": ["order#foundation-01"],
   "priority": "p1",
   "scenarioRevision": "3f9c…"
@@ -1098,7 +1103,7 @@ The state of each item in `.gta/work/state.json`:
 
 ```json
 { "order.create/s03#component-01": { "scenarioRevision": "3f9c…", "fingerprint": "5be2…",
-    "tokens": ["503", "PENDING_PAYMENT"], "testClass": "com.acme.order.api.OrderCreateIT" } }
+    "tokens": ["503", "PENDING_PAYMENT"], "testClass": "com.acme.order.api.OrderControllerIT" } }
 ```
 
 | Enum | Values |
@@ -1163,8 +1168,55 @@ Unknown keys are rejected. Organisation floors cannot be loosened by a repositor
 
 - Precedence: `fail` > `waived` > `concerns` > `pass`.
 - **Where it runs**: `next` runs the gate locally at the end of every session. When the result is `fail`, `/gta` does not report done and marks it in red in the PR comment draft (`.gta/work/runs/<runId>/pr-comment.md`).
-- **CI (connected in P1; confirmed feasible)**: people can skip the local gate, for example by changing code and opening a PR without `/gta`, or by editing tests by hand. P1 therefore provides an alm-github workflow template `gta-gate.yml` (see `docs/ci-integration.md`) that runs `mvn verify` → `gtaw verify --new` → `gtaw gate --base` → posts the PR comment. Without branch protection it is a status check plus a comment; making it a required check later blocks merges without changing the design.
+- **CI (connected in P1; confirmed feasible)**: people can skip the local gate, for example by changing code and opening a PR without `/gta`, or by editing tests by hand. P1 therefore provides an alm-github workflow template `gta-gate.yml` (see `docs/guides/ci-integration.md`) that runs `mvn verify` → `gtaw verify --new` → `gtaw gate --base` → posts the PR comment. Without branch protection it is a status check plus a comment; making it a required check later blocks merges without changing the design.
 - Mutation is advisory by default; after calibrating thresholds on pilot repositories it switches to enforced repository by repository.
+
+### 10.6 Test case ledger (`<flow>.cases.md`) and session reports
+
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../diagrams/artifacts-dark.svg">
+  <img alt="What gta keeps per flow: the spec is the source of expected values; the approval writes the case ledger, tests assert the THEN values, gtaw locks them in the oracle shard, item commits update the ledger, INDEX.md is derived, and the session end writes a tracked report from the temporary .gta/work." src="../diagrams/artifacts-light.svg">
+</picture>
+
+The spec is the only source of behaviour and expected values. The **ledger** is the test asset index next to it: one row
+per scenario, a one-sentence summary, the link to the spec, the test that automates it, its priority, its latest result
+and its status. It never copies the spec's steps or expected values. Manual or exploratory cases without a spec are the
+only rows written in full, in its `## Manual cases` table (ids `<flowId>/mNN`).
+
+| Column | Content |
+|---|---|
+| Test Case ID | the scenario id (`order.create/s01`); no second, QA-style id |
+| Test Title · Test Content · Expect Result | the scenario title; the first WHEN and the first THEN, shortened, with "(+n more)" |
+| Linked Spec | `<flow>.spec.md#sNN` |
+| Automation | `<test class>#<method>` once a test is committed, `Manual` for manual cases, `–` before |
+| Priority | `P0` core path (run every time) · `P1` important branch · `P2` edge case; the scenario's `priority=`, default P1 |
+| Test Result | the latest result only: `Pass` / `Fail` / `Known defect` + date + short SHA, or `Not run`; history is in the reports |
+| Status | `Active` · `Needs Review` · `Retired` |
+
+**Maintained by gtaw, row by row** (never rewritten whole, so a human's Status edit and the manual cases stay):
+
+| When | Change | Committed with |
+|---|---|---|
+| a spec is approved | new scenario → new row; a scenario whose locked test is for another revision → Needs Review; a scenario that left the spec → Retired | the approval commit |
+| an item is committed | Automation and a passing (or known-defect) result; Active | the item commit |
+| the session ends | the result of every automated case from the gate's full run; a failing or unstable case → Needs Review | the session-report commit |
+| `gtaw impact --base <ref>` | cases whose referenced code changed → Needs Review; prints the regression scope (those cases plus every P0 case) | – (the next commit) |
+
+Results map to rows through the `scenario:` tags that gta-junit's listener records; no other mechanism is needed.
+`.gta/specs/INDEX.md` is derived from all ledgers: one line per flow with its counts (the coverage matrix).
+
+**Retiring.** A case is retired when its scenario leaves the approved spec or a human sets its Status to `Retired`. Its
+test keeps running, and every session report lists the retired cases. Only a human's batch confirmation,
+`gtaw cases confirm-retired <ids>` or `--all`, deletes the tests (the methods tagged with the scenario; a class left
+without tests is deleted), their fixtures, lock entries and rows, in one gtaw commit. Nothing is deleted automatically.
+
+**First ledger for an existing service**: `gtaw cases --rebuild` builds the ledgers from the approved specs and the
+committed locks; results follow with the next session or `gtaw run`.
+
+**Session reports** are the audit trail: `.gta/reports/<yyyy-MM-dd>-<sessionId>.md`, committed by gtaw at the end of
+the session together with the ledger changes they list. `.gta/work/` keeps only temporary files (state, briefs, run
+evidence, the PR comment draft).
 
 ---
 
@@ -1201,6 +1253,8 @@ Unknown keys are rejected. Organisation floors cannot be loosened by a repositor
 | `gtaw gate --base <ref> --reports <dir>` · `gtaw gate waive <GATE_CODE> …` | CI / person | the gate; registering a waiver (**people only**) |
 | `gtaw relock --item <id> --reason "<text>"` | **people only** | relocks an oracle on the spec's current expected values |
 | `gtaw report [--kind md\|pr-comment]` | gtaw internally / CI | traceability matrix, orphan check, new confirmations |
+| `gtaw cases [--rebuild]` · `gtaw cases confirm-retired <ids>\|--all` | people / gtaw | ledger overview or rebuild; deleting the tests of retired cases is a person's batch confirmation (§10.6) |
+| `gtaw impact [--base <ref>]` | people / CI | cases whose code changed → Needs Review; prints the regression scope (+ all P0) |
 | `gtaw env up\|down\|gc` (P4) | **people only** / system items | temporary environments |
 
 ### 11.3 Layout of this repository
@@ -1230,7 +1284,7 @@ generic-testing-agent/
 ├── opencode/                # ★ the complete folder for teams on OpenCode (generated, committed): .opencode/… · opencode.json · .gta/skills/…
 ├── evals/   fixtures/ (sample service with seeded defects) · e2e/ (scripted end-to-end run; model eval tasks come with P0a)
 ├── scripts/ generate.sh · diagrams/render.py   # maintainer scripts
-├── docs/    quickstart.md · adding-a-capability.md · ci-integration.md · diagrams/ · design/ (plan.md, plan.zh-CN.md, remediation-plan.md)
+├── docs/    guides/ (quickstart, ci-integration, test-naming, diagram-style, adding-a-capability) · design/ (plan.md, plan.zh-CN.md) · reviews/ · diagrams/
 └── .github/workflows/ci.yml
 ```
 
@@ -1316,7 +1370,7 @@ The same conversation works in Chinese: `R3: 1A 2A 其余默认` and `批准 ord
 - One command. The first run is read-only. After an interruption, typing `/gta` again continues.
 - `gtaw init` writes VS Code auto-approve rules only for a few named gtaw subcommands; for IntelliJ, `gtaw doctor` gives the steps.
 - No containers are needed. `gtaw doctor` detects optional gcloud emulators; without them gta still runs and uses fakes for those dependencies.
-- Every error carries a hint. `docs/quickstart.md` is a single page.
+- Every error carries a hint. `docs/guides/quickstart.md` is a single page.
 
 **Prerequisites**: JDK 17+, Maven, Copilot agent mode (or OpenCode), a Mermaid preview; gcloud emulators optional.
 
@@ -1441,4 +1495,4 @@ When an agent writes to these paths, the change check of §5.8 restores them. Ap
 | v7 | adjusted to the confirmed environment:<br>- Maven only, Boot 4.1 and 3.5 baselines, Java 17+;<br>- new §4.0 on primitives: no hooks or MCP in v1, guardrails are the gtaw change check plus terminal approval;<br>- answer channels simplified to `chat` and `editor`;<br>- without CODEOWNERS, PR review plus the PR comment list has the final word;<br>- open questions updated |
 | v8 | re-audited against Anthropic's primitive definitions:<br>- criteria for agent / skill / workflow;<br>- system-tester dropped (test-author + skill), 4 agents in the end;<br>- no containers: new §7.0 dependency fidelity strategy;<br>- the gate runs locally, CI optional; characterization tests protected by the gate too;<br>- `copilot/` and `opencode/` folders at the root;<br>- model mapping;<br>- adjusted to services that have code but no documentation |
 | v9 (final design) | finalised for the confirmed environment:<br>- Windows developer machines;<br>- Oracle (shared test database / H2 compatibility mode), BigQuery (fakes, SQL tested in P4);<br>- Pub/Sub emulator distributed through Nexus, EmbeddedKafka, embedded Artemis (MQ/JMS);<br>- every dependency through the Nexus proxy, tools in a Nexus raw repository;<br>- alm-github CI template in P1;<br>- no open questions left |
-| v9.1 | P0 implemented, two code reviews applied (see [remediation-plan.md](remediation-plan.md)):<br>- exact approvals only, change requests, approval refused after edits;<br>- commit ledger instead of trailers, fail-closed shards and state, bounded spec loop, review tokens, counted timeouts;<br>- English documentation with Chinese copies of README and this design; diagrams rendered by `scripts/diagrams/render.py` in the style of diagram-design |
+| v9.1 | P0 implemented, two code reviews applied (see [round-2-remediation.md](../reviews/round-2-remediation.md)):<br>- exact approvals only, change requests, approval refused after edits;<br>- commit ledger instead of trailers, fail-closed shards and state, bounded spec loop, review tokens, counted timeouts;<br>- English documentation with Chinese copies of README and this design; diagrams rendered by `scripts/diagrams/render.py` in the style of diagram-design |

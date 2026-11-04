@@ -6,8 +6,7 @@ import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
 import com.gta.core.util.AtomicFiles;
 import com.gta.core.util.Json;
-import com.gta.core.util.Proc;
-
+import com.gta.core.util.ProcessRunner;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,6 +14,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -26,7 +26,8 @@ import java.util.stream.Stream;
  * agent - decides what "passed" means. Cloud credentials are isolated for every run (plan §13).
  */
 public final class MavenRunner implements TestRunner {
-    private static final Pattern COMPILE_ERROR = Pattern.compile("\\[ERROR\\]\\s+(/?\\S+\\.java):\\[(\\d+),(\\d+)]\\s*(.*)");
+    private static final Pattern COMPILE_ERROR =
+            Pattern.compile("\\[ERROR\\]\\s+(/?\\S+\\.java):\\[(\\d+),(\\d+)]\\s*(.*)");
 
     private final GtaPaths paths;
     private final GtaConfig config;
@@ -42,7 +43,7 @@ public final class MavenRunner implements TestRunner {
         if (configured != null && !"auto".equals(configured)) {
             return new ArrayList<>(List.of(configured));
         }
-        if (Proc.isWindows()) {
+        if (ProcessRunner.isWindows()) {
             if (Files.exists(root.resolve("mvnw.cmd"))) {
                 return new ArrayList<>(List.of("cmd", "/c", "mvnw.cmd"));
             }
@@ -54,10 +55,15 @@ public final class MavenRunner implements TestRunner {
         return new ArrayList<>(List.of("mvn"));
     }
 
-    static final String ALL_TESTS = "**/*Test,**/*Tests,**/*TestCase,**/Test*,**/*IT";
+    /**
+     * Every gta test class by its suffix (docs/guides/test-naming.md): Test and SliceTest, IT and ContractIT. Karate and
+     * E2E tests run only through their own profiles, so they are excluded explicitly instead of relying on defaults.
+     */
+    static final String ALL_TESTS = "**/*Test,**/*IT,!**/*E2ETest";
 
     @Override
-    public RunResult run(String runId, String itemId, Options options, Set<String> productionClasses, Set<String> testClasses) {
+    public RunResult run(
+            String runId, String itemId, Options options, Set<String> productionClasses, Set<String> testClasses) {
         Path root = paths.root();
         Path surefire = root.resolve("target/surefire-reports");
         Path gtaResults = paths.gtaResults();
@@ -65,8 +71,12 @@ public final class MavenRunner implements TestRunner {
         deleteDir(gtaResults);
 
         List<String> cmd = mavenCommand();
-        cmd.addAll(List.of("-B", "-Dsurefire.failIfNoSpecifiedTests=false", "-DfailIfNoTests=false",
-                "-Djacoco.skip=true", "-Dgta.results.dir=" + gtaResults));
+        cmd.addAll(List.of(
+                "-B",
+                "-Dsurefire.failIfNoSpecifiedTests=false",
+                "-DfailIfNoTests=false",
+                "-Djacoco.skip=true",
+                "-Dgta.results.dir=" + gtaResults));
         if (options.testClass() != null) {
             cmd.add("-Dtest=" + options.testClass());
         } else {
@@ -86,7 +96,7 @@ public final class MavenRunner implements TestRunner {
             toolOptions.add(inherited);
         }
         if (options.stabilityVariant()) {
-            toolOptions.add("-Duser.timezone=Asia/Kolkata -Duser.language=de -Duser.country=DE");
+            toolOptions.add(stabilityVariantOptions(config.qualityGates));
         }
         if (options.randomOrder()) {
             toolOptions.add("-Djunit.jupiter.testmethod.order.default=org.junit.jupiter.api.MethodOrderer$Random");
@@ -96,20 +106,14 @@ public final class MavenRunner implements TestRunner {
         }
 
         long start = System.currentTimeMillis();
-        Proc.Result proc;
-        boolean timedOut = false;
+        ProcessRunner.Result proc;
         try {
-            proc = Proc.run(root, Duration.ofMinutes(config.budgets.nodeTimeoutMinutes), env, cmd);
-        } catch (GtaException e) {
-            if (e.code() != ErrorCode.TRANSIENT_PROCESS_TIMEOUT) {
-                throw e;
-            }
-            // a hanging test is a result, not an error: the caller counts it against the item's budgets
-            timedOut = true;
-            proc = new Proc.Result(-1, e.getMessage());
+            proc = ProcessRunner.run(root, Duration.ofMinutes(config.budgets.nodeTimeoutMinutes), env, cmd);
         } finally {
             isolated.close(); // the empty gcloud config dir exists for this run only
         }
+        // a hanging test is a result, not an error: the caller counts it against the item's budgets
+        boolean timedOut = proc.timedOut();
         RunResult result = new RunResult();
         result.runId = runId;
         result.itemId = itemId;
@@ -122,8 +126,8 @@ public final class MavenRunner implements TestRunner {
             result.compileError = true;
             result.compileMessage = compileSummary(output);
         }
-        result.cases = SurefireReports.parse(List.of(surefire), gtaResults);
-        for (TestCase c : result.cases) {
+        result.cases = SurefireReportParser.parse(List.of(surefire), gtaResults, timedOut);
+        for (TestOutcome c : result.cases) {
             FailureClassifier.classify(c, productionClasses, testClasses);
         }
         Path runDir = paths.runs().resolve(runId);
@@ -133,14 +137,33 @@ public final class MavenRunner implements TestRunner {
         return result;
     }
 
+    /** JVM options of the stability variant: another timezone and locale (plan §8). */
+    static String stabilityVariantOptions(GtaConfig.QualityGates gates) {
+        Locale locale = Locale.forLanguageTag(gates.stabilityLocale);
+        return "-Duser.timezone=" + gates.stabilityTimezone + " -Duser.language=" + locale.getLanguage()
+                + (locale.getCountry().isEmpty() ? "" : " -Duser.country=" + locale.getCountry());
+    }
+
+    /** How the stability variant is described in messages, e.g. "Asia/Kolkata timezone / de-DE locale". */
+    public static String stabilityVariantLabel(GtaConfig.QualityGates gates) {
+        return gates.stabilityTimezone + " timezone / " + gates.stabilityLocale + " locale";
+    }
+
     static String compileSummary(String output) {
         StringBuilder sb = new StringBuilder();
         Matcher m = COMPILE_ERROR.matcher(output);
         int n = 0;
         while (m.find() && n++ < 10) {
-            sb.append(m.group(1).replaceAll(".*/src/", "src/")).append(':').append(m.group(2)).append(' ').append(m.group(4)).append('\n');
+            sb.append(m.group(1).replaceAll(".*/src/", "src/"))
+                    .append(':')
+                    .append(m.group(2))
+                    .append(' ')
+                    .append(m.group(4))
+                    .append('\n');
         }
-        return sb.length() == 0 ? "compilation failed (see maven.log)" : sb.toString().trim();
+        return sb.length() == 0
+                ? "compilation failed (see maven.log)"
+                : sb.toString().trim();
     }
 
     private static void deleteDir(Path dir) {
@@ -148,9 +171,15 @@ public final class MavenRunner implements TestRunner {
             return;
         }
         try (Stream<Path> walk = Files.walk(dir)) {
-            walk.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
+            for (Path p : walk.sorted(Comparator.reverseOrder()).toList()) {
+                Files.deleteIfExists(p);
+            }
         } catch (IOException e) {
-            // stale reports are harmless; they are filtered by test class later
+            // reports left over from an earlier run would be read as this run's results
+            throw new GtaException(
+                    ErrorCode.ENV_TEST_REPORTS_UNUSABLE,
+                    "Cannot clear " + dir + ": " + e.getMessage(),
+                    "Close programs that hold files in it (IDE, antivirus scan), then run the command again");
         }
     }
 }

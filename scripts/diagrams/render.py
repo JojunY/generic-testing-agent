@@ -250,7 +250,53 @@ def spec_lifecycle():
     return d
 
 
-DIAGRAMS = [architecture, loop, item_states, spec_lifecycle]
+def artifacts():
+    d = Diagram("artifacts", "What gta keeps, and where", 968, 452,
+                "per flow, in the service repository · the spec is the only source of expected values")
+    d.group(12, 92, 944, 260, "tracked in git")
+    d.node("spec", 32, 128, 196, 56, "<flow>.spec.md", "behaviour · expected values", accent=True)
+    d.node("cases", 288, 128, 196, 56, "<flow>.cases.md", "ledger: one row per scenario")
+    d.node("index", 544, 128, 164, 56, "INDEX.md", "coverage matrix")
+    d.node("reports", 768, 128, 168, 56, "reports/", "one per session")
+    d.node("test", 32, 268, 196, 56, "<Source><Suffix>.java", "tests, tagged scenario:")
+    d.node("shard", 288, 268, 196, 56, "<flow>.oracles.json", "locked expected values")
+    d.node("work", 544, 380, 392, 52, ".gta/work/", "state · plan · briefs · runs · PR draft (temporary)")
+    d.edge([d.anchor("spec", "e"), d.anchor("cases", "w")], "approval", label_at=(258, 120))
+    d.edge([d.anchor("cases", "e"), d.anchor("index", "w")], "derived", label_at=(514, 120))
+    d.edge([d.anchor("spec", "s"), d.anchor("test", "n")], "tests assert THEN", label_at=(130, 228))
+    d.edge([d.anchor("test", "e"), d.anchor("shard", "w")], "gtaw locks", label_at=(258, 260))
+    d.edge([d.anchor("shard", "n"), d.anchor("cases", "s")], "item commit: test · result", label_at=(386, 228))
+    d.edge([d.anchor("work", "n", 112), d.anchor("reports", "s")], "session end", label_at=(852, 228))
+    d.note(24, 444, "Each change is committed by gtaw with its cause: the approval, the item commit or the session end.")
+    return d
+
+
+def layers():
+    rows = [
+        ("engine", "the only public facade: next · answer · submit"),
+        ("gate · report · brief", "quality gate · reports and case ledgers · agent briefs"),
+        ("state", "work state, made of the domain types below"),
+        ("oracle · change · run", "oracle lock · scope check and commit ledger · test runs"),
+        ("plan", "items from the approved spec"),
+        ("spec", "spec model, parser, linter, refs"),
+        ("registry · profile", "capabilities · code profile of the service"),
+        ("config", "GtaPaths · GtaConfig"),
+        ("util · error", "AtomicFiles · Git · ProcessRunner · ErrorCode"),
+    ]
+    d = Diagram("layers", "gta-core packages", 968, 96 + len(rows) * 52 + 48,
+                "a package imports only packages below it · no cycles")
+    x, w, h = 284, 400, 40
+    for i, (title, sub) in enumerate(rows):
+        y = 96 + i * 52
+        d.node(f"r{i}", x, y, w, h, title, sub, accent=(i == 0))
+        if i:
+            d.edge([d.anchor(f"r{i - 1}", "s"), d.anchor(f"r{i}", "n")])
+    d.note(24, 96 + len(rows) * 52 + 28,
+           "Domain packages never import state; the state file is made of their types (AGENTS.md).")
+    return d
+
+
+DIAGRAMS = [architecture, loop, item_states, spec_lifecycle, artifacts, layers]
 
 
 def main(check=False):

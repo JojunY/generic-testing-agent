@@ -1,11 +1,12 @@
 package com.gta.core.change;
 
 import com.gta.core.config.GtaPaths;
-import com.gta.core.state.WorkState;
+import com.gta.core.error.ErrorCode;
+import com.gta.core.error.GtaException;
 import com.gta.core.util.AtomicFiles;
 import com.gta.core.util.Git;
 import com.gta.core.util.Hashes;
-
+import com.gta.core.util.Json;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -14,7 +15,9 @@ import java.nio.file.PathMatcher;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The authoritative scope check (plan §5.8): everything an agent changed since dispatch must lie inside the node's
@@ -22,10 +25,31 @@ import java.util.Set;
  */
 public final class ChangeChecker {
     /** Paths no agent may change (plan §13, single list). */
-    public static final List<String> PROTECTED = List.of("gtaw", "gtaw.cmd", "**/.gta/wrapper/**", "**/.gta/config.json",
-            "**/.gta/waivers.json", "**/.gta/managed-files.json", "**/.gta/specs/**/*.oracles.json", "**/.gta/skills/**",
-            ".gta/wrapper/**", ".gta/config.json", ".gta/waivers.json", ".gta/managed-files.json", ".gta/specs/*/*.oracles.json",
-            ".gta/skills/**", ".github/agents/gta-*", ".github/prompts/gta*", ".vscode/settings.json", ".opencode/**",
+    public static final List<String> PROTECTED = List.of(
+            "gtaw",
+            "gtaw.cmd",
+            "**/.gta/wrapper/**",
+            "**/.gta/config.json",
+            "**/.gta/waivers.json",
+            "**/.gta/managed-files.json",
+            "**/.gta/specs/**/*.oracles.json",
+            "**/.gta/specs/**/*.cases.md",
+            "**/.gta/specs/INDEX.md",
+            "**/.gta/reports/**",
+            "**/.gta/skills/**",
+            ".gta/wrapper/**",
+            ".gta/config.json",
+            ".gta/waivers.json",
+            ".gta/managed-files.json",
+            ".gta/specs/*/*.oracles.json",
+            ".gta/specs/*/*.cases.md",
+            ".gta/specs/INDEX.md",
+            ".gta/reports/**",
+            ".gta/skills/**",
+            ".github/agents/gta-*",
+            ".github/prompts/gta*",
+            ".vscode/settings.json",
+            ".opencode/**",
             "opencode.json");
     /** Never considered agent changes: build output and gtaw's own working area. */
     private static final List<String> IGNORED = List.of("target/**", "**/target/**", ".gta/work/**", "**/.gta/work/**");
@@ -34,12 +58,18 @@ public final class ChangeChecker {
      * @param foreignCommits commits made since the baseline that gtaw did not make (see {@link CommitLedger});
      *                       gtaw never rewrites history, so their files are reported as out of scope and unrestorable
      */
-    public record Result(List<String> changed, List<String> outOfScope, List<String> restored, List<String> unrestorable,
-                         List<String> foreignCommits) {
+    public record Result(
+            List<String> changed,
+            List<String> outOfScope,
+            List<String> restored,
+            List<String> unrestorable,
+            List<String> foreignCommits) {
         public boolean ok() {
             return outOfScope.isEmpty();
         }
     }
+
+    private static final Map<String, PathMatcher> MATCHERS = new ConcurrentHashMap<>();
 
     private final GtaPaths paths;
     private final Git git;
@@ -49,8 +79,8 @@ public final class ChangeChecker {
         this.git = new Git(paths.root());
     }
 
-    public WorkState.Baseline capture() {
-        WorkState.Baseline b = new WorkState.Baseline();
+    public Baseline capture() {
+        Baseline b = new Baseline();
         b.head = git.head();
         for (String p : git.dirtyPaths()) {
             if (!matchesAny(p, IGNORED)) {
@@ -61,7 +91,7 @@ public final class ChangeChecker {
     }
 
     /** Files changed since the baseline (excluding pre-existing dirty files that are byte-identical). */
-    public List<String> changedSince(WorkState.Baseline baseline) {
+    public List<String> changedSince(Baseline baseline) {
         Set<String> changed = new LinkedHashSet<>();
         Set<String> dirtyNow = git.dirtyPaths();
         for (String p : dirtyNow) {
@@ -81,21 +111,22 @@ public final class ChangeChecker {
         return new ArrayList<>(changed);
     }
 
-    public Result check(WorkState.Baseline baseline, List<String> allowed, Path backupDir, boolean restore) {
+    public Result check(Baseline baseline, List<String> allowed, Path backupDir, boolean restore) {
         List<String> changed = changedSince(baseline);
         List<String> out = new ArrayList<>();
+        List<String> protectedPaths = protectedPaths();
         for (String p : changed) {
             boolean allowedPath = matchesAny(p, allowed);
-            if (!allowedPath || matchesAny(p, PROTECTED)) {
+            if (!allowedPath || matchesAny(p, protectedPaths)) {
                 out.add(p);
             }
         }
         List<String> restored = new ArrayList<>();
         List<String> unrestorable = new ArrayList<>();
         List<String> foreign = new ArrayList<>();
-        CommitLedger ledger = new CommitLedger(paths);
+        Set<String> gtawCommits = new CommitLedger(paths).shas();
         for (Git.Commit c : git.commitsSince(baseline.head)) {
-            if (ledger.contains(c.sha())) {
+            if (gtawCommits.contains(c.sha())) {
                 continue;
             }
             foreign.add(c.sha().substring(0, Math.min(12, c.sha().length())));
@@ -119,21 +150,55 @@ public final class ChangeChecker {
                     continue;
                 }
                 backup(p, backupDir);
-                Path file = paths.root().resolve(p);
-                if (git.isTracked(p)) {
-                    git.restoreFromHead(p);
+                if (restore(p)) {
+                    restored.add(p);
                 } else {
-                    try {
-                        Files.deleteIfExists(file);
-                    } catch (IOException e) {
-                        unrestorable.add(p);
-                        continue;
-                    }
+                    unrestorable.add(p);
                 }
-                restored.add(p);
             }
         }
         return new Result(changed, out, restored, unrestorable, foreign);
+    }
+
+    /** Puts one file back to HEAD: committed files are checked out, new ones (staged or not) are removed. */
+    private boolean restore(String rel) {
+        try {
+            if (git.inHead(rel)) {
+                git.restoreFromHead(rel);
+            } else {
+                if (git.isTracked(rel)) {
+                    git.unstage(rel); // staged but never committed: checking out HEAD cannot remove it
+                }
+                Files.deleteIfExists(paths.root().resolve(rel));
+            }
+            return true;
+        } catch (GtaException | IOException e) {
+            return false;
+        }
+    }
+
+    /**
+     * {@link #PROTECTED} plus every file gta installed ({@code .gta/managed-files.json}), so a file a new platform adds is
+     * protected without a code change. An unreadable list fails closed.
+     */
+    List<String> protectedPaths() {
+        List<String> out = new ArrayList<>(PROTECTED);
+        Path managed = paths.managedFiles();
+        if (Files.exists(managed)) {
+            Map<?, ?> m;
+            try {
+                m = Json.read(managed, Map.class);
+            } catch (RuntimeException unreadable) {
+                throw new GtaException(
+                        ErrorCode.CONFIG_INVALID,
+                        "Cannot read " + paths.rel(managed) + ": " + unreadable.getMessage(),
+                        "Restore it from git, or run ./gtaw upgrade to write it again");
+            }
+            if (m.get("files") instanceof Map<?, ?> files) {
+                files.keySet().forEach(k -> out.add(String.valueOf(k)));
+            }
+        }
+        return out;
     }
 
     public void backup(String rel, Path backupDir) {
@@ -155,8 +220,8 @@ public final class ChangeChecker {
             if (g.equals(rel)) {
                 return true;
             }
-            PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + g);
-            if (m.matches(p)) {
+            if (MATCHERS.computeIfAbsent(g, k -> FileSystems.getDefault().getPathMatcher("glob:" + k))
+                    .matches(p)) {
                 return true;
             }
         }

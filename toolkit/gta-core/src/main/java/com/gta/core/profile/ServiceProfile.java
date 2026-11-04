@@ -11,6 +11,9 @@ public class ServiceProfile {
     public int bootMajor;
     public int junitMajor;
     public String basePackage;
+    /** The @SpringBootApplication class, or null when there is none. */
+    public String applicationClass;
+
     public boolean mavenWrapper;
     public List<String> dependencies = new ArrayList<>();
     public List<String> capabilities = new ArrayList<>();

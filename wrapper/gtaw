@@ -23,11 +23,24 @@ else
   JAR="$CACHE/gta-cli-$VERSION.jar"
   if [ ! -f "$JAR" ]; then
     mkdir -p "$CACHE"
-    TMP="$JAR.part"
+    TMP=$(mktemp "$CACHE/gta-cli-$VERSION.XXXXXX") # one file per process: parallel first runs do not collide
+    # credentials never appear on a command line (visible in ps): curl reads them from stdin, wget from the environment
     if command -v curl >/dev/null 2>&1; then
-      if [ -n "$GTA_NEXUS_USER" ]; then curl -fsSL -u "$GTA_NEXUS_USER:$GTA_NEXUS_PASSWORD" -o "$TMP" "$URL"; else curl -fsSL -o "$TMP" "$URL"; fi
+      if [ -n "$GTA_NEXUS_USER" ]; then
+        printf 'user = "%s:%s"\n' "$GTA_NEXUS_USER" "$GTA_NEXUS_PASSWORD" | curl -fsSL -K - -o "$TMP" "$URL" && OK=1 || OK=0
+      else
+        curl -fsSL -o "$TMP" "$URL" && OK=1 || OK=0
+      fi
+    elif [ -n "$GTA_NEXUS_USER" ]; then
+      WGETRC=$(mktemp); printf 'user=%s\npassword=%s\n' "$GTA_NEXUS_USER" "$GTA_NEXUS_PASSWORD" > "$WGETRC"
+      WGETRC="$WGETRC" wget -q -O "$TMP" "$URL" && OK=1 || OK=0; rm -f "$WGETRC"
     else
-      wget -q -O "$TMP" "$URL"
+      wget -q -O "$TMP" "$URL" && OK=1 || OK=0
+    fi
+    if [ "$OK" != 1 ]; then
+      rm -f "$TMP"
+      echo '{"error":{"code":"ENV_TOOL_UNAVAILABLE","category":"environment","message":"cannot download the gta-cli jar from distributionUrl","hint":"check distributionUrl in .gta/wrapper/gta-wrapper.properties, the network and GTA_NEXUS_USER/GTA_NEXUS_PASSWORD","retryable":true}}'
+      exit 30
     fi
     mv "$TMP" "$JAR"
   fi

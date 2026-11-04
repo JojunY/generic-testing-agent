@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.util.Hashes;
 import com.gta.core.util.Yaml;
-
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
@@ -31,7 +30,8 @@ public final class RefResolver {
     }
 
     public static RefResolver of(Path root) {
-        return new RefResolver(JavaIndex.of(root.resolve(GtaPaths.MAIN_JAVA)), loadConfig(root.resolve(GtaPaths.MAIN_RESOURCES)));
+        return new RefResolver(
+                JavaIndex.of(root.resolve(GtaPaths.MAIN_JAVA)), loadConfig(root.resolve(GtaPaths.MAIN_RESOURCES)));
     }
 
     public JavaIndex mainIndex() {
@@ -56,7 +56,7 @@ public final class RefResolver {
         }
         try (Stream<Path> files = Files.list(resources)) {
             for (Path f : files.sorted().toList()) {
-                String name = f.getFileName().toString();
+                String name = String.valueOf(f.getFileName()); // a listed entry always has a file name
                 if (!name.startsWith("application")) {
                     continue;
                 }
@@ -67,7 +67,9 @@ public final class RefResolver {
                     }
                     p.forEach((k, v) -> out.putIfAbsent(k.toString(), v.toString()));
                 } else if (name.endsWith(".yml") || name.endsWith(".yaml")) {
-                    for (JsonNode doc : Yaml.MAPPER.readValues(Yaml.MAPPER.getFactory().createParser(f.toFile()), JsonNode.class).readAll()) {
+                    for (JsonNode doc : Yaml.MAPPER
+                            .readValues(Yaml.MAPPER.getFactory().createParser(f.toFile()), JsonNode.class)
+                            .readAll()) {
                         flatten("", doc, out);
                     }
                 }

@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 public record GtaPaths(Path root) {
     /** Maven source layout, relative to the module root (forward slashes, as git reports paths). */
     public static final String MAIN_JAVA = "src/main/java";
+
     public static final String MAIN_RESOURCES = "src/main/resources";
     public static final String TEST_JAVA = "src/test/java";
     public static final String TEST_RESOURCES = "src/test/resources";
@@ -41,6 +42,15 @@ public record GtaPaths(Path root) {
     /** Spec file location -> flow id (".gta/specs/order/create.spec.md" -> "order.create"); empty if it is not a spec. */
     public static Optional<String> flowIdOfSpecPath(String rel) {
         Matcher m = SPEC_PATH.matcher(rel.replace('\\', '/'));
+        return m.matches() ? Optional.of(m.group(1) + "." + m.group(2)) : Optional.empty();
+    }
+
+    private static final Pattern CASES_PATH =
+            Pattern.compile("(?:^|.*/)\\.gta/specs/([a-z][a-z0-9-]*)/([a-z][a-z0-9-]*)\\.cases\\.md$");
+
+    /** Ledger location -> flow id (".gta/specs/order/create.cases.md" -> "order.create"). */
+    public static Optional<String> flowIdOfCasesPath(String rel) {
+        Matcher m = CASES_PATH.matcher(rel.replace('\\', '/'));
         return m.matches() ? Optional.of(m.group(1) + "." + m.group(2)) : Optional.empty();
     }
 
@@ -80,6 +90,22 @@ public record GtaPaths(Path root) {
     public Path oracleShard(String flowId) {
         int dot = flowId.indexOf('.');
         return specs().resolve(flowId.substring(0, dot)).resolve(flowId.substring(dot + 1) + ".oracles.json");
+    }
+
+    /** Test case ledger of a flow, next to its spec (plan §10.6). */
+    public Path cases(String flowId) {
+        int dot = flowId.indexOf('.');
+        return specs().resolve(flowId.substring(0, dot)).resolve(flowId.substring(dot + 1) + ".cases.md");
+    }
+
+    /** Overview of every ledger with its coverage matrix. */
+    public Path casesIndex() {
+        return specs().resolve("INDEX.md");
+    }
+
+    /** Session reports, tracked: {@code <yyyy-MM-dd>-<sessionId>.md}. */
+    public Path reports() {
+        return gta().resolve("reports");
     }
 
     public Path work() {
@@ -143,6 +169,10 @@ public record GtaPaths(Path root) {
 
     /** Repo-relative path with forward slashes. */
     public String rel(Path p) {
-        return root.toAbsolutePath().normalize().relativize(p.toAbsolutePath().normalize()).toString().replace('\\', '/');
+        return root.toAbsolutePath()
+                .normalize()
+                .relativize(p.toAbsolutePath().normalize())
+                .toString()
+                .replace('\\', '/');
     }
 }

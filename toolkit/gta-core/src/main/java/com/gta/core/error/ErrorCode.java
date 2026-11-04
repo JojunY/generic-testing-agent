@@ -1,5 +1,7 @@
 package com.gta.core.error;
 
+import java.util.Optional;
+
 /**
  * Every error and gate condition gtaw can report. The prefix of the name is the category prefix (plan §5.6); the exit code
  * is shared by all codes of a category. Hints are given where a {@link GtaException} is thrown: every exception requires one.
@@ -45,8 +47,9 @@ public enum ErrorCode {
     ENV_UNSUPPORTED_BUILD(Category.ENVIRONMENT),
     ENV_EMULATOR_UNAVAILABLE(Category.ENVIRONMENT),
     ENV_WRAPPER_CHECKSUM_MISMATCH(Category.ENVIRONMENT),
+    ENV_GIT_FAILED(Category.ENVIRONMENT),
+    ENV_TEST_REPORTS_UNUSABLE(Category.ENVIRONMENT),
     // transient (31)
-    TRANSIENT_PROCESS_TIMEOUT(Category.TRANSIENT),
     TRANSIENT_REGISTRY_TIMEOUT(Category.TRANSIENT),
     // build (40)
     BUILD_COMPILE_ERROR(Category.BUILD),
@@ -104,6 +107,18 @@ public enum ErrorCode {
         this.retryable = retryable;
     }
 
+    /** The code with this name; empty for a name this version does not know (e.g. read from an older state file). */
+    public static Optional<ErrorCode> find(String name) {
+        if (name == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(valueOf(name));
+        } catch (IllegalArgumentException unknown) {
+            return Optional.empty();
+        }
+    }
+
     /** Whether running the same command again can succeed without changing anything. */
     public boolean retryable() {
         return retryable;
@@ -120,7 +135,9 @@ public enum ErrorCode {
 
     /** Failures the author may repair freely (oracle stays locked). */
     public boolean isMechanical() {
-        return this == BUILD_COMPILE_ERROR || this == TEST_CODE_ERROR || this == TEST_SETUP_ERROR
+        return this == BUILD_COMPILE_ERROR
+                || this == TEST_CODE_ERROR
+                || this == TEST_SETUP_ERROR
                 || this == TEST_NOT_FOUND;
     }
 }

@@ -8,9 +8,8 @@ import com.github.javaparser.ast.expr.MemberValuePair;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.expr.SingleMemberAnnotationExpr;
 import com.gta.core.config.GtaPaths;
-import com.gta.core.registry.Registry;
+import com.gta.core.registry.CapabilityRegistry;
 import com.gta.core.util.Ids;
-
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -20,22 +19,31 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** Deterministic service profile: build info, detected capabilities and the entrypoint inventory (plan §4.4). */
 public final class Profiler {
     private static final Map<String, String> HTTP = Map.of(
-            "GetMapping", "GET", "PostMapping", "POST", "PutMapping", "PUT",
-            "PatchMapping", "PATCH", "DeleteMapping", "DELETE", "RequestMapping", "ANY");
-    private static final List<String> SUFFIXES = List.of("Controller", "Resource", "Endpoint", "Api", "Listener",
-            "Consumer", "Job", "Scheduler", "Task", "Handler");
+            "GetMapping",
+            "GET",
+            "PostMapping",
+            "POST",
+            "PutMapping",
+            "PUT",
+            "PatchMapping",
+            "PATCH",
+            "DeleteMapping",
+            "DELETE",
+            "RequestMapping",
+            "ANY");
+    private static final List<String> SUFFIXES = List.of(
+            "Controller", "Resource", "Endpoint", "Api", "Listener", "Consumer", "Job", "Scheduler", "Task", "Handler");
 
-    private Profiler() {
-    }
+    private Profiler() {}
 
-    public static ServiceProfile profile(Path root, Registry registry, String configuredBasePackage) {
+    public static ServiceProfile profile(Path root, CapabilityRegistry registry, String configuredBasePackage) {
         PomInfo pom = PomInfo.read(root);
         JavaIndex main = JavaIndex.of(root.resolve(GtaPaths.MAIN_JAVA));
         ServiceProfile p = new ServiceProfile();
@@ -46,26 +54,44 @@ public final class Profiler {
         p.mavenWrapper = Files.exists(root.resolve("mvnw")) || Files.exists(root.resolve("mvnw.cmd"));
         p.dependencies.addAll(pom.dependencies);
         p.basePackage = "auto".equals(configuredBasePackage) || configuredBasePackage == null
-                ? detectBasePackage(main) : configuredBasePackage;
+                ? detectBasePackage(main)
+                : configuredBasePackage;
 
         String sources = allSources(main);
-        for (Registry.Capability c : registry.capabilities) {
+        for (CapabilityRegistry.Capability c : registry.capabilities) {
             boolean hit = c.detect.buildDeps.stream().anyMatch(pom.dependencies::contains)
                     || c.detect.annotations.stream().anyMatch(sources::contains)
                     || c.detect.files.stream().anyMatch(g -> anyFileMatches(root, g));
             if (hit) {
-                (c.activeIn(Registry.CURRENT_PHASE) || !c.dispatch ? p.capabilities : p.explainOnlyCapabilities).add(c.id);
+                (c.activeIn(CapabilityRegistry.CURRENT_PHASE) || !c.dispatch
+                                ? p.capabilities
+                                : p.explainOnlyCapabilities)
+                        .add(c.id);
             }
         }
+        p.applicationClass = applicationClass(main);
         p.entrypoints.addAll(entrypoints(main));
         return p;
+    }
+
+    static String applicationClass(JavaIndex main) {
+        for (JavaIndex.Unit u : main.units()) {
+            for (ClassOrInterfaceDeclaration c : u.cu().findAll(ClassOrInterfaceDeclaration.class)) {
+                if (c.getAnnotationByName("SpringBootApplication").isPresent()) {
+                    return c.getFullyQualifiedName().orElse(c.getNameAsString());
+                }
+            }
+        }
+        return null;
     }
 
     static String detectBasePackage(JavaIndex main) {
         for (JavaIndex.Unit u : main.units()) {
             for (ClassOrInterfaceDeclaration c : u.cu().findAll(ClassOrInterfaceDeclaration.class)) {
                 if (c.getAnnotationByName("SpringBootApplication").isPresent()) {
-                    return u.cu().getPackageDeclaration().map(d -> d.getNameAsString()).orElse("");
+                    return u.cu().getPackageDeclaration()
+                            .map(d -> d.getNameAsString())
+                            .orElse("");
                 }
             }
         }
@@ -100,7 +126,8 @@ public final class Profiler {
     private static boolean anyFileMatches(Path root, String glob) {
         PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + glob);
         try (Stream<Path> files = Files.walk(root, 8)) {
-            return files.filter(f -> !f.toString().contains("/.git/") && !f.toString().contains("/target/"))
+            return files.filter(f ->
+                            !f.toString().contains("/.git/") && !f.toString().contains("/target/"))
                     .anyMatch(f -> m.matches(root.relativize(f)));
         } catch (IOException e) {
             return false;
@@ -113,8 +140,13 @@ public final class Profiler {
         for (JavaIndex.Unit u : main.units()) {
             for (ClassOrInterfaceDeclaration c : u.cu().findAll(ClassOrInterfaceDeclaration.class)) {
                 String fqcn = c.getFullyQualifiedName().orElse(c.getNameAsString());
-                boolean controller = c.getAnnotationByName("RestController").isPresent() || c.getAnnotationByName("Controller").isPresent();
-                String classPath = c.getAnnotationByName("RequestMapping").flatMap(Profiler::pathOf).orElse("");
+                boolean controller = c.getAnnotationByName("RestController").isPresent()
+                        || c.getAnnotationByName("Controller").isPresent();
+                String classPath = c.getAnnotationByName("RequestMapping")
+                        .map(Profiler::pathsOf)
+                        .filter(p -> !p.isEmpty())
+                        .map(p -> p.get(0))
+                        .orElse("");
                 for (MethodDeclaration m : c.getMethods()) {
                     ServiceProfile.EntryPoint e = null;
                     if (controller) {
@@ -123,7 +155,11 @@ public final class Profiler {
                             if (verb != null) {
                                 e = base(c, fqcn, m, "rest-api", "http");
                                 e.httpMethod = verb;
-                                e.path = (classPath + pathOf(a).orElse("")).replaceAll("//+", "/");
+                                List<String> paths = pathsOf(a);
+                                e.path = (paths.isEmpty() ? List.of("") : paths)
+                                        .stream()
+                                                .map(p -> (classPath + p).replaceAll("//+", "/"))
+                                                .collect(Collectors.joining(" | "));
                                 e.risk = verb.equals("GET") ? 2 : 6;
                             }
                         }
@@ -154,8 +190,8 @@ public final class Profiler {
         return out;
     }
 
-    private static ServiceProfile.EntryPoint base(ClassOrInterfaceDeclaration c, String fqcn, MethodDeclaration m,
-                                                  String capability, String kind) {
+    private static ServiceProfile.EntryPoint base(
+            ClassOrInterfaceDeclaration c, String fqcn, MethodDeclaration m, String capability, String kind) {
         ServiceProfile.EntryPoint e = new ServiceProfile.EntryPoint();
         String name = c.getNameAsString();
         for (String suffix : SUFFIXES) {
@@ -175,23 +211,27 @@ public final class Profiler {
         return e;
     }
 
-    private static Optional<String> pathOf(AnnotationExpr a) {
+    /** Every path of a mapping annotation ({@code @GetMapping({"/a", "/b"})} has two). */
+    static List<String> pathsOf(AnnotationExpr a) {
         Expression value = null;
         if (a instanceof SingleMemberAnnotationExpr s) {
             value = s.getMemberValue();
         } else if (a instanceof NormalAnnotationExpr n) {
             for (MemberValuePair pair : n.getPairs()) {
-                if (pair.getNameAsString().equals("value") || pair.getNameAsString().equals("path")) {
+                if (pair.getNameAsString().equals("value")
+                        || pair.getNameAsString().equals("path")) {
                     value = pair.getValue();
                 }
             }
         }
         if (value == null) {
-            return Optional.empty();
+            return List.of();
         }
-        if (value.isArrayInitializerExpr() && !value.asArrayInitializerExpr().getValues().isEmpty()) {
-            value = value.asArrayInitializerExpr().getValues().get(0);
-        }
-        return value.isStringLiteralExpr() ? Optional.of(value.asStringLiteralExpr().getValue()) : Optional.empty();
+        List<Expression> values =
+                value.isArrayInitializerExpr() ? value.asArrayInitializerExpr().getValues() : List.of(value);
+        return values.stream()
+                .filter(Expression::isStringLiteralExpr)
+                .map(v -> v.asStringLiteralExpr().getValue())
+                .toList();
     }
 }

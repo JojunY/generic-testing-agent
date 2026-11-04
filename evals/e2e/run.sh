@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Scripted end-to-end run of gtaw against evals/fixtures/order-service (plan §12, P0 exit criteria).
 #
-# The agentic nodes are played by canned outputs in evals/e2e/agent/ (what a correct analyst/author/reviewer would
+# The agentic nodes are played by canned outputs in evals/e2e/scripted-output/ (what a correct analyst/author/reviewer would
 # produce), so this checks gtaw's deterministic side: spec lint and rounds, approval commits, planning, the oracle
 # lock, the change check, triage, @KnownDefect pinning, verify, the gate and regression detection.
 #
@@ -10,7 +10,7 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
-AGENT="$REPO/evals/e2e/agent"
+AGENT="$REPO/evals/e2e/scripted-output"
 WORK="${1:-$(mktemp -d)}"
 export GTA_CLI_JAR="$REPO/toolkit/gta-cli/target/gta-cli.jar"
 export GIT_AUTHOR_NAME=gta-e2e GIT_AUTHOR_EMAIL=gta-e2e@example.com GIT_COMMITTER_NAME=gta-e2e GIT_COMMITTER_EMAIL=gta-e2e@example.com
@@ -19,13 +19,13 @@ export GIT_AUTHOR_NAME=gta-e2e GIT_AUTHOR_EMAIL=gta-e2e@example.com GIT_COMMITTE
 step() { printf '\n== %s\n' "$*"; }
 fail() { echo "E2E FAILED: $*" >&2; exit 1; }
 gtaw() { ./gtaw "$@" 2>/dev/null; }
-# jget <json> <python expression on d>
+# jget <json> <python expression on d>; the expressions are literals of this script, never input
 jget() { python3 -c 'import json,sys; d=json.loads(sys.argv[1]); print(eval(sys.argv[2]))' "$1" "$2"; }
 expect() { # expect <actual> <expected> <what>
   [ "$1" = "$2" ] || fail "$3: expected '$2', got '$1'"
   echo "ok   $3 = $2"
 }
-TEST=src/test/java/com/example/order/api/OrderCreateOrderIT.java
+TEST=src/test/java/com/example/order/api/OrderControllerIT.java
 add_method() { python3 - "$TEST" "$1" <<'EOF'
 import sys
 path, part = sys.argv[1], open(sys.argv[2]).read()
@@ -88,7 +88,7 @@ dep = """    <dependency>
   </dependencies>"""
 open("pom.xml", "w").write(s.replace("  </dependencies>", dep, 1))
 EOF
-cp "$AGENT/OrderSeedIT.java" src/test/java/com/example/order/OrderSeedIT.java
+cp "$AGENT/OrderApplicationIT.java.txt" src/test/java/com/example/order/OrderApplicationIT.java
 OUT=$(gtaw submit --item "order#foundation-01" --token "$TOKEN")
 jget "$OUT" 'd["result"]' | grep -q '^passed' || fail "foundation: $OUT"
 echo "ok   foundation passed"
@@ -112,7 +112,7 @@ review_accept() {
 
 step "s01: oracle lock and change check"
 ITEM="order.create-order/s01#component-01"; TOKEN=$(author s01)
-mkdir -p "$(dirname "$TEST")" && { cat "$AGENT/OrderCreateOrderIT.head.java.txt"; echo "}"; } > "$TEST" && add_method "$AGENT/s01.method.java.txt"
+mkdir -p "$(dirname "$TEST")" && { cat "$AGENT/OrderControllerIT.head.java.txt"; echo "}"; } > "$TEST" && add_method "$AGENT/s01.method.java.txt"
 OUT=$(gtaw check --item "$ITEM" --token "$TOKEN")
 expect "$(jget "$OUT" 'd["passed"]')" 1 "s01 check"
 expect "$(jget "$OUT" '",".join(d["oracleLocked"])')" "201,0.00,50.00,CREATED" "locked oracle"
@@ -172,6 +172,12 @@ OUT=$(gtaw next)
 expect "$(jget "$OUT" 'd["node"]')" done "final node"
 expect "$(jget "$OUT" 'd["gate"]')" concerns "gate on the feature branch"
 grep -q "Product defects found" "$(jget "$OUT" 'd["report"]')" || fail "report lacks the known defect"
+case "$(jget "$OUT" 'd["report"]')" in .gta/reports/*) echo "ok   session report is tracked in .gta/reports" ;; *) fail "report outside .gta/reports: $OUT" ;; esac
+git ls-files --error-unmatch "$(jget "$OUT" 'd["report"]')" >/dev/null 2>&1 || fail "session report not committed"
+LEDGER=.gta/specs/order/create-order.cases.md
+expect "$(grep -c '^| order.create-order/s0' "$LEDGER")" 4 "ledger rows, one per scenario"
+grep -q '^| order.create-order/s01 .*OrderControllerIT#.* | Pass .* | Active |$' "$LEDGER" || fail "s01 ledger row: $(grep s01 "$LEDGER")"
+grep -q 'order.create-order' .gta/specs/INDEX.md || fail "INDEX.md lacks the flow"
 echo "ok   report lists the known defect"
 
 step "rebuild: lost working state, adopted tests are verified and repaired"

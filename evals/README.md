@@ -12,7 +12,7 @@ A small Spring Boot 4.1 REST service: create, get, cancel and ship orders, plus 
 
 ## Scripted end-to-end run: `e2e/run.sh`
 
-`e2e/agent/` holds what a correct analyst, author and reviewer would produce for `order.create-order`. The script plays those nodes and asserts each decision gtaw makes:
+`e2e/scripted-output/` holds what a correct analyst, author and reviewer would produce for `order.create-order`. The script plays those nodes and asserts each decision gtaw makes:
 
 - spec rounds and approval commits;
 - the seed test;
