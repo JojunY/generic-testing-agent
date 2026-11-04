@@ -1173,6 +1173,12 @@ Unknown keys are rejected. Organisation floors cannot be loosened by a repositor
 
 ### 10.6 Test case ledger (`<flow>.cases.md`) and session reports
 
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../diagrams/artifacts-dark.svg">
+  <img alt="What gta keeps per flow: the spec is the source of expected values; the approval writes the case ledger, tests assert the THEN values, gtaw locks them in the oracle shard, item commits update the ledger, INDEX.md is derived, and the session end writes a tracked report from the temporary .gta/work." src="../diagrams/artifacts-light.svg">
+</picture>
+
 The spec is the only source of behaviour and expected values. The **ledger** is the test asset index next to it: one row
 per scenario, a one-sentence summary, the link to the spec, the test that automates it, its priority, its latest result
 and its status. It never copies the spec's steps or expected values. Manual or exploratory cases without a spec are the

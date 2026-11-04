@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** Deterministic spec rules (plan §3.3 "spec lint"). Returns human-readable issues; empty = valid. */
@@ -146,12 +147,42 @@ public final class SpecLinter {
             }
         }
         for (String block : spec.mermaidBlocks) {
-            String first = block.strip().split("\\R")[0].trim();
-            if (DIAGRAMS.stream().noneMatch(first::startsWith)) {
-                issues.add("diagram: unsupported mermaid type '" + first + "' (use " + DIAGRAMS + ")");
-            }
-            if (block.split("\\R").length > 40) {
-                issues.add("diagram: keep each diagram under 40 lines (only what the tests need)");
+            issues.addAll(lintDiagram(block));
+        }
+        return issues;
+    }
+
+    /** Diagram style for specs (docs/guides/diagram-style.md): one accent class, no theme override. */
+    static final Map<String, String> CLASS_DEFS =
+            Map.of("focus", "stroke:#bf4520,stroke-width:1.5px", "external", "stroke-dasharray:4 4");
+
+    static List<String> lintDiagram(String block) {
+        List<String> issues = new ArrayList<>();
+        List<String> lines = block.strip().lines().map(String::strip).toList();
+        // comments and directives may precede the diagram type
+        String type = lines.stream()
+                .filter(l -> !l.isEmpty() && !l.startsWith("%%"))
+                .findFirst()
+                .orElse("");
+        if (DIAGRAMS.stream().noneMatch(type::startsWith)) {
+            issues.add("diagram: unsupported mermaid type '" + type + "' (use " + DIAGRAMS + ")");
+        }
+        if (lines.size() > 40) {
+            issues.add("diagram: keep each diagram under 40 lines (only what the tests need)");
+        }
+        for (String l : lines) {
+            if (l.startsWith("%%{")) {
+                issues.add("diagram: no %%{init}%% theme override; GitHub and IDEs render light and dark themselves");
+            } else if (l.startsWith("classDef ")) {
+                String[] parts = l.split("\\s+", 3);
+                String name = parts.length > 1 ? parts[1] : "";
+                String style = parts.length > 2 ? parts[2].replace(";", "").strip() : "";
+                if (!style.equals(CLASS_DEFS.get(name))) {
+                    issues.add("diagram: only 'classDef focus " + CLASS_DEFS.get("focus") + "' and 'classDef external "
+                            + CLASS_DEFS.get("external") + "' are allowed, got '" + l + "'");
+                }
+            } else if (l.startsWith("style ") || l.startsWith("linkStyle ")) {
+                issues.add("diagram: style through the two classes only, not '" + l.split("\\s+")[0] + "'");
             }
         }
         return issues;

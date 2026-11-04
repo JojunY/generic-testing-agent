@@ -111,6 +111,11 @@ If your terminal mangles Chinese characters, gta says so. Use the ASCII forms ab
 
 ## What gta keeps in the repository
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../diagrams/artifacts-dark.svg">
+  <img alt="What gta keeps per flow: the spec is the source of expected values; the approval writes the case ledger, tests assert the THEN values, gtaw locks them in the oracle shard, item commits update the ledger, INDEX.md is derived, and the session end writes a tracked report from the temporary .gta/work." src="../diagrams/artifacts-light.svg">
+</picture>
+
 | File | What it is |
 |---|---|
 | `.gta/specs/<domain>/<flow>.spec.md` | the behaviour spec you approved: the only source of expected values |

@@ -1,5 +1,6 @@
 package com.gta.core.spec;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.gta.core.profile.RefResolver;
@@ -67,5 +68,46 @@ class SpecLinterTest {
         List<String> issues = lint(unasked);
 
         assertTrue(issues.stream().anyMatch(i -> i.contains("s02")), issues.toString());
+    }
+
+    @Test
+    void shouldAcceptCommentsBeforeTheDiagramTypeAndTheTwoStyleClasses() {
+        String diagram =
+                """
+                %% order.create: the client creates an order
+                flowchart LR
+                  C[Client] --> API[OrderController]:::focus
+                  API --> PG[payment-gateway]:::external
+                  classDef focus stroke:#bf4520,stroke-width:1.5px
+                  classDef external stroke-dasharray:4 4
+                """;
+
+        assertTrue(
+                SpecLinter.lintDiagram(diagram).isEmpty(),
+                SpecLinter.lintDiagram(diagram).toString());
+    }
+
+    @Test
+    void shouldRejectThemeOverridesAndOtherStyling() {
+        String diagram =
+                """
+                %%{init: {'theme':'dark'}}%%
+                flowchart TD
+                  A --> B
+                  classDef loud fill:#ff0000
+                  style A fill:#00ff00
+                """;
+
+        java.util.List<String> issues = SpecLinter.lintDiagram(diagram);
+
+        assertEquals(3, issues.size(), issues.toString());
+        assertTrue(issues.get(0).contains("theme override"), issues.toString());
+    }
+
+    @Test
+    void shouldRejectAnUnsupportedDiagramType() {
+        assertTrue(SpecLinter.lintDiagram("pie title Pets\n  \"Dogs\" : 386\n")
+                .get(0)
+                .contains("unsupported mermaid type"));
     }
 }

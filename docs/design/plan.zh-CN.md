@@ -1171,6 +1171,12 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 
 ### 10.6 测试用例台账（`<flow>.cases.md`）与会话报告
 
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../diagrams/artifacts-dark.svg">
+  <img alt="gta 为每个 flow 保存的文件：规格是期望值的唯一来源；批准写入用例台账，测试断言 THEN 的值，gtaw 把它们锁进 oracle 分片，条目提交更新台账，INDEX.md 为派生文件，会话结束时根据临时的 .gta/work 写出纳入版本控制的报告。" src="../diagrams/artifacts-light.svg">
+</picture>
+
 规格是行为与期望值的唯一真理来源。**台账**是与之并列的测试资产索引：每个 scenario 一行，含一句话摘要、指向规格的链接、实现它的自动化测试、优先级、最近一次结果和状态。台账从不复制规格中的步骤或期望值。没有规格的手工或探索性用例是唯一完整书写的行，放在 `## Manual cases` 表中（id 为 `<flowId>/mNN`）。
 
 | 列 | 内容 |

@@ -8,10 +8,16 @@ These are the rules for working on this repository. They do not apply to service
 - `copilot/` and `opencode/` are **generated**. Never edit them. Run `scripts/generate.sh` and commit the result. `mvn install` fails when they are stale.
 - `docs/design/plan.md` is the design. Code comments cite it as `plan §N`; keep section numbers stable when you edit it.
 - Documentation, agents, skills, templates and gtaw output are English. `README.md` and `docs/design/plan.md` have a `*.zh-CN.md` copy with a language switch at the top: change both copies in the same PR. Chinese appears elsewhere only as the reply aliases gtaw accepts (`批准`, `其余默认`, `代码现状`); `RepositoryHarnessTest` enforces this.
-- Explanatory diagrams are data in `scripts/diagrams/render.py` (diagram-design style, light and dark). Edit the script, run it, commit the SVGs in `docs/diagrams/`; CI runs it with `--check`. Spec diagrams stay Mermaid.
+- Explanatory diagrams are data in `scripts/diagrams/render.py`, styled as [docs/guides/diagram-style.md](docs/guides/diagram-style.md) says (light and dark). Edit the script, run it, commit the SVGs in `docs/diagrams/`; CI runs it with `--check`. Spec diagrams stay Mermaid, with the style rules the linter enforces.
 - Platform differences (tool names, permissions, models, file locations) live only in `platforms/<platform>/mapping.yaml`.
 - `pom.xml` at the root is the single source of the version.
 - Module builds read harness content from outside their own folder (`core/`, `platforms/`, `wrapper/`, `copilot/`, `opencode/`): build from the root, not one module on its own.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/layers-dark.svg">
+  <img alt="gta-core package layers from engine at the top to util and error at the bottom; a package imports only packages below it." src="docs/diagrams/layers-light.svg">
+</picture>
+
 - Dependencies point down the layers `util`/`error` → `config` → `registry`/`profile` → `spec` → `plan` → `oracle`/`change`/`run` → `state` → `gate`/`report`/`brief` → `engine`. Domain packages never import `state`; the state file is made of their types.
 
 ## gta-core packages
