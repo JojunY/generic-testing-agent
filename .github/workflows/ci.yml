@@ -34,7 +34,8 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: "21", cache: maven }
       - name: Build and unit tests on Windows
-        run: ./mvnw.cmd -B install
+        # the coverage gate is enforced on Linux, where the POSIX-only tests (stand-in Maven) run
+        run: ./mvnw.cmd -B install -D"gta.coverage.haltOnFailure=false"
       - name: gtaw.cmd runs the local jar
         shell: cmd
         run: |

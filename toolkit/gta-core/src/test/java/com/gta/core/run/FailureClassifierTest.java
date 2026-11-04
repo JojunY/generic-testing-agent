@@ -1,6 +1,7 @@
 package com.gta.core.run;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import com.gta.core.error.ErrorCode;
@@ -95,5 +96,83 @@ class FailureClassifierTest {
         FailureClassifier.classify(c, prod, Set.of("org.apache.billing.InvoiceIT"));
 
         assertEquals(ErrorCode.TEST_SUT_ERROR.name(), c.code, "the failure came from the service's own code");
+    }
+
+    @Test
+    void shouldClassifyTimeoutsFromTheTypeOrTheCauseChain() {
+        TestOutcome awaitility = failing("error", "org.awaitility.core.ConditionTimeoutException", "");
+        TestOutcome nested = failing(
+                "error", "java.lang.RuntimeException", "Caused by: org.awaitility.core.ConditionTimeoutException");
+        TestOutcome concurrent = failing("error", "java.util.concurrent.TimeoutException", "");
+
+        for (TestOutcome c : java.util.List.of(awaitility, nested, concurrent)) {
+            FailureClassifier.classify(c, PROD, TESTS);
+            assertEquals(ErrorCode.TEST_TIMEOUT.name(), c.code, c.failureType);
+        }
+    }
+
+    @Test
+    void shouldTreatAnAssertionInTheCauseChainAsAnAssertion() {
+        TestOutcome c =
+                failing("error", "java.lang.RuntimeException", "x\nCaused by: org.opentest4j.AssertionFailedError: y");
+
+        FailureClassifier.classify(c, PROD, TESTS);
+
+        assertEquals(ErrorCode.TEST_ASSERTION_FAILED.name(), c.code);
+    }
+
+    @Test
+    void shouldCallAFailureWithOnlyFrameworkFramesASetupError() {
+        TestOutcome c = failing(
+                "error",
+                "org.springframework.beans.factory.BeanCreationException",
+                "\tat org.springframework.beans.Factory.create(Factory.java:1)\n\tat org.junit.Runner.run(Runner.java:2)");
+
+        FailureClassifier.classify(c, PROD, TESTS);
+
+        assertEquals(ErrorCode.TEST_SETUP_ERROR.name(), c.code);
+        assertFalse(c.sutReached, "the system under test was never reached");
+    }
+
+    @Test
+    void shouldBlameProductionCodeWhenTheTestFailsOnAProductionRootCause() {
+        TestOutcome c = failing(
+                "error",
+                "java.lang.IllegalStateException",
+                "\tat com.acme.order.OrderIT.setUp(OrderIT.java:5)\nCaused by: java.lang.Error\n"
+                        + "\tat com.acme.order.OrderService.init(OrderService.java:9)");
+
+        FailureClassifier.classify(c, PROD, TESTS);
+
+        assertEquals(ErrorCode.TEST_SUT_ERROR.name(), c.code, "e.g. the context failed in production code");
+    }
+
+    @Test
+    void shouldSendAFailureOfUnknownOriginToTriage() {
+        TestOutcome c = failing("error", "java.lang.IllegalStateException", "\tat com.vendor.Lib.call(Lib.java:3)");
+
+        FailureClassifier.classify(c, PROD, TESTS);
+
+        assertEquals(ErrorCode.TEST_SUT_ERROR.name(), c.code, "triage is the safe default");
+    }
+
+    @Test
+    void shouldLeavePassedAndSkippedTestsAlone() {
+        TestOutcome passed = failing("passed", null, null);
+        TestOutcome skipped = failing("skipped", null, null);
+
+        FailureClassifier.classify(passed, PROD, TESTS);
+        FailureClassifier.classify(skipped, PROD, TESTS);
+
+        assertEquals(null, passed.code);
+        assertEquals(null, skipped.code);
+    }
+
+    @Test
+    void shouldFingerprintMissingTypesAndMessages() {
+        assertEquals(
+                FailureClassifier.knownDefectFingerprint(null, null), FailureClassifier.knownDefectFingerprint("", ""));
+        assertEquals(FailureClassifier.fingerprint("X", null), FailureClassifier.fingerprint("X", "  "));
+        assertEquals("com.acme.Order", FailureClassifier.outerClass("com.acme.Order$Line"));
     }
 }

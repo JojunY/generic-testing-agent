@@ -69,13 +69,6 @@ public final class Ids {
         return "r" + ZonedDateTime.now(ZoneOffset.UTC).format(TS) + "-" + sha + "-" + rand4();
     }
 
-    /** mmddhhmmss-rand4 extracted from a runId (used for cloud resources and Oracle schemas). */
-    public static String shortRunId(String runId) {
-        String[] parts = runId.split("-");
-        String ts = parts[0].substring(1);
-        return ts.substring(4) + "-" + parts[parts.length - 1];
-    }
-
     public static String kebab(String camel) {
         return camel.replaceAll("([a-z0-9])([A-Z])", "$1-$2")
                 .replaceAll("[^A-Za-z0-9]+", "-")

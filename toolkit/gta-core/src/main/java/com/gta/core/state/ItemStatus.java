@@ -58,9 +58,4 @@ public enum ItemStatus {
     public boolean terminal() {
         return this == PASSED || this == DEFECT_FOUND || this == CANCELLED;
     }
-
-    /** States an interrupted session can leave behind; takeover resets them to pending. */
-    public boolean active() {
-        return this == AUTHORING || this == VERIFYING || this == REPAIRING || this == TRIAGING || this == REVIEWING;
-    }
 }

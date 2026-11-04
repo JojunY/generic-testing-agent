@@ -124,7 +124,7 @@ public final class Spec {
 
         /**
          * Hash of what the scenario promises (title, WHEN, THEN, source). A test locked on one revision is re-verified when
-         * the revision changes; whitespace and case do not count.
+         * the revision changes; whitespace does not count.
          */
         public String revision() {
             return Hashes.normalizedShort(

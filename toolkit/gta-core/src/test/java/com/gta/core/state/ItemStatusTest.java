@@ -1,5 +1,6 @@
 package com.gta.core.state;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,5 +43,41 @@ class ItemStatusTest {
     @Test
     void shouldAllowAdoptingAnExistingTestOnRebuild() {
         assertTrue(ItemStatus.PENDING.canMoveTo(ItemStatus.VERIFYING));
+    }
+
+    @Test
+    void shouldUseKebabCaseIdsInTheStateFile() {
+        for (ItemStatus st : ItemStatus.values()) {
+            assertEquals(st, ItemStatus.of(st.id()));
+        }
+        assertEquals("needs-human", ItemStatus.NEEDS_HUMAN.id());
+        assertEquals(ItemStatus.DEFECT_FOUND, ItemStatus.of("defect-found"));
+    }
+
+    @Test
+    void shouldNeverLeaveCancelledAndOnlyLetHumansDecideOnNeedsHuman() {
+        for (ItemStatus to : ItemStatus.values()) {
+            assertFalse(ItemStatus.CANCELLED.canMoveTo(to), "cancelled is final: " + to);
+        }
+        assertTrue(ItemStatus.NEEDS_HUMAN.canMoveTo(ItemStatus.DEFECT_FOUND));
+        assertTrue(ItemStatus.NEEDS_HUMAN.canMoveTo(ItemStatus.PENDING));
+        assertFalse(ItemStatus.NEEDS_HUMAN.canMoveTo(ItemStatus.PASSED), "a human cannot declare a test passed");
+        assertTrue(ItemStatus.PASSED.canMoveTo(ItemStatus.TRIAGING), "stability runs can reopen a passed item");
+        assertTrue(ItemStatus.DEFECT_FOUND.canMoveTo(ItemStatus.PASSED), "a fixed defect makes the pin pass");
+    }
+
+    @Test
+    void shouldMoveAlongALegalTransitionAndIgnoreAMoveToTheSameState() {
+        WorkState st = new WorkState();
+        WorkState.ItemState s = new WorkState.ItemState();
+        s.id = "order.create/s01#component-01";
+        st.items.put(s.id, s);
+
+        st.move(s, ItemStatus.PENDING);
+        st.move(s, ItemStatus.AUTHORING);
+
+        assertEquals(ItemStatus.AUTHORING, s.status);
+        assertEquals(s, st.item(s.id));
+        assertThrows(RuntimeException.class, () -> st.item("order.create/s09#component-01"));
     }
 }

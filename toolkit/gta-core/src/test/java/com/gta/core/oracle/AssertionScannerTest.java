@@ -83,4 +83,75 @@ class AssertionScannerTest {
         assertEquals(OracleLock.Verdict.OK, OracleLock.check(lock, now).verdict());
         assertFalse(lock.watched.equals(now.watchedHash()), "input change must change the watched hash");
     }
+
+    private AssertionScanner.ScenarioOracle scanSource(String body) throws Exception {
+        Path f = dir.resolve("ScanIT.java");
+        Files.writeString(
+                f, "import static org.assertj.core.api.Assertions.assertThat;\n" + "class ScanIT {\n" + body + "\n}\n");
+        return AssertionScanner.scan(f, "order.create/s01", dir.resolve("resources"));
+    }
+
+    @Test
+    void shouldResolveConstantsStatusNamesAndMatchers() throws Exception {
+        AssertionScanner.ScenarioOracle o = scanSource(
+                """
+                    static final String TOTAL = "50.00";
+                    @Test @Tag("scenario:order.create/s01")
+                    void shouldCreate() throws Exception {
+                        assertThat(response.total()).isEqualTo(TOTAL);
+                        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+                        mvc.perform(post("/api/orders").content("{\\"subtotal\\":50}")).andExpect(status().isCreated());
+                        assertThat(response.body()).isEqualTo(\"\"\"
+                            {"id": 1}
+                            \"\"\");
+                        assertThat(response.count()).isEqualTo(3L);
+                    }
+                """);
+
+        assertTrue(
+                o.tokens().containsAll(java.util.List.of("50.00", "201", "CREATED", "3")),
+                o.tokens().toString());
+        assertTrue(o.tokens().stream().anyMatch(t -> t.contains("\"id\": 1")), "text blocks are expected values");
+        assertEquals(1, o.methods());
+    }
+
+    @Test
+    void shouldWatchFixturesSqlAndSetupAsInputs() throws Exception {
+        Files.createDirectories(dir.resolve("resources"));
+        Files.writeString(dir.resolve("resources/s01.request.json"), "{\"subtotal\": 50}");
+        String body =
+                """
+                    @BeforeEach void seed() { repo.save(order()); }
+                    @Test @Tag("scenario:order.create/s01") @Sql("classpath:/s01.data.sql")
+                    void shouldCreate() { post(fixture("s01.request.json")); assertThat(status).isEqualTo(201); }
+                """;
+        String before = scanSource(body).watchedHash();
+
+        Files.writeString(dir.resolve("resources/s01.request.json"), "{\"subtotal\": 51}");
+
+        assertFalse(before.equals(scanSource(body).watchedHash()), "a changed fixture changes the watched inputs");
+        assertFalse(
+                before.equals(scanSource(body.replace("order()", "order(2)")).watchedHash()), "so does the setup");
+    }
+
+    @Test
+    void shouldFindNothingInAMissingOrBrokenFile() throws Exception {
+        assertFalse(AssertionScanner.scan(dir.resolve("None.java"), "order.create/s01", null)
+                .found());
+        Path broken = dir.resolve("Broken.java");
+        Files.writeString(broken, "class Broken { void x( { }");
+        assertFalse(AssertionScanner.scan(broken, "order.create/s01", null).found());
+    }
+
+    @Test
+    void shouldMatchLongThenValuesInsideALargerToken() {
+        assertEquals(
+                java.util.List.of(),
+                AssertionScanner.missingThenLiterals(
+                        java.util.List.of("PENDING"), java.util.Set.of("status PENDING_PAYMENT")));
+        assertEquals(
+                java.util.List.of("5"),
+                AssertionScanner.missingThenLiterals(java.util.List.of("5"), java.util.Set.of("50")),
+                "short values must match exactly");
+    }
 }

@@ -13,8 +13,6 @@ import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.LiteralExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
-import com.github.javaparser.ast.expr.NormalAnnotationExpr;
-import com.github.javaparser.ast.expr.SingleMemberAnnotationExpr;
 import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.expr.TextBlockLiteralExpr;
 import com.github.javaparser.ast.stmt.ExpressionStmt;
@@ -384,16 +382,5 @@ public final class AssertionScanner {
             }
         }
         return missing;
-    }
-
-    /** Annotation helper used by other scanners. */
-    static String annotationValue(AnnotationExpr a) {
-        if (a instanceof SingleMemberAnnotationExpr s) {
-            return s.getMemberValue().toString();
-        }
-        if (a instanceof NormalAnnotationExpr n && !n.getPairs().isEmpty()) {
-            return n.getPairs().get(0).getValue().toString();
-        }
-        return "";
     }
 }

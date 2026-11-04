@@ -478,7 +478,9 @@ class EngineTest {
                 r.cases.add(seed);
                 return r;
             } else {
-                scenarios.addAll(outcomes.keySet()); // every gta test (gate, smoke)
+                for (int n = 1; n <= 4; n++) {
+                    scenarios.add(FLOW + "/s0" + n); // every gta test (gate, layer runs)
+                }
             }
             for (String sc : scenarios) {
                 TestOutcome c = new TestOutcome();
@@ -557,6 +559,84 @@ class EngineTest {
 
         @Test
         void shouldTakeAFlowFromCodeToCommittedTestsAndAReport() throws Exception {
+            session();
+
+            // status, report and abort as a human uses them
+            Map<String, Object> status = loop().status();
+            assertTrue(status.toString().contains("defect-found"), status.toString());
+            assertTrue(loop().report("pr-comment").contains("behaviour & test report"));
+            assertTrue(loop().cases(false).toString().contains(FLOW));
+            loop().abort(FLOW);
+            assertEquals(null, store.load().activeFlow);
+        }
+
+        @Test
+        void shouldServeTheHumanCommandsAfterASession() throws Exception {
+            session();
+            Engine e = loop();
+
+            assertEquals(
+                    3,
+                    ((Number) e.verify(false).get("checked")).intValue(),
+                    "every passed item; s03 is a pinned defect");
+            assertEquals("concerns", e.gate(null, List.of()).decision);
+            assertEquals(1, e.runTests(true, null).cases.size(), "the smoke run is the seed test");
+            assertEquals(4, e.runTests(false, "component").cases.size());
+            assertEquals(
+                    ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE,
+                    assertThrows(GtaException.class, () -> e.runTests(false, "system"))
+                            .code());
+            assertTrue(e.cases(true).toString().contains("1 approved spec"));
+            assertTrue(((List<?>) e.impact(null).get("needsReview")).isEmpty(), "nothing changed since the base");
+
+            // relock after an intended change of an expected value in spec and test
+            String s01 = FLOW + "/s01#component-01";
+            assertEquals(
+                    ErrorCode.USAGE_UNKNOWN_ITEM,
+                    assertThrows(GtaException.class, () -> e.relock("order#foundation-01", "x", "me"))
+                            .code());
+            assertEquals(
+                    ErrorCode.USAGE_UNKNOWN_ITEM,
+                    assertThrows(GtaException.class, () -> e.relock(FLOW + "/s09#component-01", "x", "me"))
+                            .code());
+            assertTrue(String.valueOf(
+                            e.relock(s01, "same values, renamed test", "me").get("result"))
+                    .startsWith("relocked"));
+            Path test = root.resolve(TEST);
+            Files.writeString(test, Files.readString(test).replace("value(50.00)", "value(49.00)"));
+            assertEquals(
+                    ErrorCode.POLICY_ORACLE_MISMATCH,
+                    assertThrows(GtaException.class, () -> e.relock(s01, "values changed", "me"))
+                            .code(),
+                    "the test must assert the spec's values");
+
+            // a new conversation: choose a flow, target it by file
+            e.abort(FLOW);
+            Map<String, Object> choose = e.next(null, null, null, false);
+            assertTrue(String.valueOf(choose.get("message")).startsWith("No flow selected"), choose.toString());
+            assertTrue(choose.get("candidates").toString().contains(FLOW));
+            assertEquals(
+                    ErrorCode.USAGE_UNKNOWN_FLOW,
+                    assertThrows(GtaException.class, () -> e.next(null, "NoSuchController.java", null, false))
+                            .code());
+
+            // production code the spec refers to changed: the approved spec turns stale and goes back to the analyst
+            Path pricing = root.resolve("src/main/java/com/example/order/service/PricingService.java");
+            Files.writeString(
+                    pricing,
+                    Files.readString(pricing).replace("compareTo(threshold) > 0", "compareTo(threshold) >= 0"));
+            git("commit", "-qam", "fix threshold discount");
+            Map<String, Object> stale = e.next(null, FLOW, null, false);
+            assertEquals("analyze", stale.get("node"), stale.toString());
+            assertEquals("stale", SpecParser.parse(paths.spec(FLOW)).status());
+
+            // abort everything: state goes, evidence and specs stay
+            assertTrue(String.valueOf(e.abort(null).get("result")).startsWith("working state discarded"));
+            assertTrue(Files.exists(paths.spec(FLOW)));
+            assertEquals(null, store.load().session);
+        }
+
+        private void session() throws Exception {
             // analyze: spec R1 with one high-impact question
             Map<String, Object> out = loop().next("flow", FLOW, null, false);
             assertEquals("analyze", out.get("node"), out.toString());
@@ -668,14 +748,6 @@ class EngineTest {
             assertTrue(
                     ledger.lines().anyMatch(l -> l.startsWith("| " + FLOW + "/s03") && l.contains("| Known defect ")),
                     ledger);
-
-            // status, report and abort as a human uses them
-            Map<String, Object> status = loop().status();
-            assertTrue(status.toString().contains("defect-found"), status.toString());
-            assertTrue(loop().report("pr-comment").contains("behaviour & test report"));
-            assertTrue(loop().cases(false).toString().contains(FLOW));
-            loop().abort(FLOW);
-            assertEquals(null, store.load().activeFlow);
         }
     }
 }

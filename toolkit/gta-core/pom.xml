@@ -34,6 +34,11 @@
     </dependency>
   </dependencies>
 
+  <properties>
+    <!-- the Windows CI job sets false: its POSIX-only tests (stand-in Maven) are skipped there -->
+    <gta.coverage.haltOnFailure>true</gta.coverage.haltOnFailure>
+  </properties>
+
   <build>
     <resources>
       <resource>
@@ -49,5 +54,55 @@
         <targetPath>gta/templates</targetPath>
       </resource>
     </resources>
+    <plugins>
+      <plugin>
+        <!-- coverage gate (docs/reviews/round-3-plan.md §3.3): the build fails below it -->
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>coverage-gate</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <configuration>
+              <haltOnFailure>${gta.coverage.haltOnFailure}</haltOnFailure>
+              <rules>
+                <rule>
+                  <element>BUNDLE</element>
+                  <limits>
+                    <limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>0.90</minimum></limit>
+                  </limits>
+                </rule>
+                <rule>
+                  <!-- the core decisions: oracle lock, item state, test runs and their classification -->
+                  <element>PACKAGE</element>
+                  <includes>
+                    <include>com.gta.core.oracle</include>
+                    <include>com.gta.core.state</include>
+                    <include>com.gta.core.run</include>
+                  </includes>
+                  <limits>
+                    <limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>0.90</minimum></limit>
+                    <limit><counter>BRANCH</counter><value>COVEREDRATIO</value><minimum>0.80</minimum></limit>
+                  </limits>
+                </rule>
+                <rule>
+                  <element>CLASS</element>
+                  <includes>
+                    <include>com.gta.core.engine.Triage</include>
+                  </includes>
+                  <limits>
+                    <limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>0.90</minimum></limit>
+                    <limit><counter>BRANCH</counter><value>COVEREDRATIO</value><minimum>0.80</minimum></limit>
+                  </limits>
+                </rule>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
   </build>
 </project>

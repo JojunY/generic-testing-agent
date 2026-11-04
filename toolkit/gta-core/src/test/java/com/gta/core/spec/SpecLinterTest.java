@@ -110,4 +110,134 @@ class SpecLinterTest {
                 .get(0)
                 .contains("unsupported mermaid type"));
     }
+
+    private static final String BROKEN =
+            """
+            # Order.Create — broken on purpose
+            <!-- gta: flowId=Order.Create capability=teleport risk=5 status=sketch -->
+
+            ## Requirements
+
+            ### Requirement: No EARS
+            <!-- gta: id=order.create/x01 ref=method:com.acme.order.Missing#gone -->
+            IF something happens the service reacts.
+
+            ### Requirement: Empty
+            <!-- gta: id=order.create/r02 -->
+            THE service SHALL exist.
+
+            ### Requirement: Bad scenarios
+            <!-- gta: id=order.create/r03 -->
+            THE service SHALL validate.
+
+            #### Scenario: invented source
+            <!-- gta: id=order.create/s01 source=rumour hint.layer=moon hint.oracle=vibes priority=P9 -->
+            - **WHEN** a client posts
+            - **THEN** something happens
+
+            #### Scenario: self-confirmed
+            <!-- gta: source=confirmed by=R9 -->
+            - **WHEN** a client posts
+
+            #### Scenario: documented without a quote
+            <!-- gta: id=order.create/s03 source=documented doc=README.md -->
+            - **WHEN** a client posts
+            - **THEN** status `201`
+
+            #### Scenario: quote not in the doc
+            <!-- gta: id=order.create/s04 source=documented doc=README.md#api quote="returns 418" -->
+            - **WHEN** a client posts
+            - **THEN** status `201`
+
+            #### Scenario: unanswered assumption
+            <!-- gta: id=order.create/s05 source=assumed -->
+            - **WHEN** a client posts
+            - **THEN** status `201`
+
+            ## Invariants
+            - totals are never negative <!-- gta: id=order.create/i01 source=assumed -->
+
+            ## Open questions
+            <!-- gta: id=order.create/q01 impact=medium -->
+            1. [medium] Retry?
+               - [ ] A) Yes
+
+            ## Findings
+            """;
+
+    @Test
+    void shouldReportEveryBrokenRule() throws Exception {
+        Files.writeString(root.resolve("README.md"), "# API\nIt returns 201.\n");
+
+        String issues = String.join(
+                "\n",
+                SpecLinter.lint(
+                        SpecParser.parseText(BROKEN),
+                        "order.create",
+                        RefResolver.of(root),
+                        CapabilityRegistry.loadBundled(),
+                        root));
+
+        for (String expected : List.of(
+                "flowId 'Order.Create' must be <domain>.<flow-name>",
+                "does not match the file location",
+                "unknown capability 'teleport'",
+                "status must be one of",
+                "risk must be probability",
+                "id 'order.create/x01' must look like Order.Create/r01",
+                "use EARS wording with SHALL",
+                "an 'IF' requirement needs 'THEN'",
+                "needs at least one '#### Scenario:'",
+                "does not resolve",
+                "source must be one of",
+                "hint.layer must be one of",
+                "hint.oracle must be one of",
+                "priority must be P0",
+                "THEN must contain at least one expected value",
+                "missing <!-- gta: id=",
+                "can only be written by gtaw from an answer record",
+                "needs at least one '- **THEN** ...' clause",
+                "needs doc=<path>#<anchor> and quote=",
+                "quote not found verbatim in README.md#api",
+                "an assumed scenario must be covered by an open question",
+                "an assumed invariant must be covered by an open question",
+                "impact must be high or normal",
+                "needs at least two options",
+                "state the effect on THEN",
+                "needs affects=")) {
+            assertTrue(issues.contains(expected), "missing issue '" + expected + "' in:\n" + issues);
+        }
+    }
+
+    @Test
+    void shouldStopAtAMissingHeader() {
+        List<String> issues = SpecLinter.lint(
+                SpecParser.parseText("# no header\n"), null, null, CapabilityRegistry.loadBundled(), null);
+
+        assertEquals(List.of("header: missing <!-- gta: flowId=... --> comment under the title"), issues);
+    }
+
+    @Test
+    void shouldRequireAnAccessSectionAndACurrentCodeOptionForNormalQuestions() {
+        String spec = SpecTestData.CREATE_ORDER
+                .replaceAll("(?s)## Access.*?## Requirements", "## Requirements")
+                .replace("impact=high", "impact=normal");
+
+        String issues = String.join(
+                "\n", SpecLinter.lint(SpecParser.parseText(spec), null, null, CapabilityRegistry.loadBundled(), null));
+
+        assertTrue(issues.contains("need a '## Access' section"), issues);
+    }
+
+    @Test
+    void shouldReportAnUnreadableDocument() {
+        String spec = SpecTestData.CREATE_ORDER.replace(
+                "source=observed hint.layer=component hint.oracle=response",
+                "source=documented doc=missing.md#x quote=\"returns 201\" hint.layer=component");
+
+        String issues = String.join(
+                "\n", SpecLinter.lint(SpecParser.parseText(spec), null, null, CapabilityRegistry.loadBundled(), root));
+
+        assertTrue(issues.contains("doc missing.md#x is not readable"), issues);
+    }
 }

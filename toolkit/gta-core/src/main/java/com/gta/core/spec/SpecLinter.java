@@ -216,7 +216,8 @@ public final class SpecLinter {
                 issues.add(where + ": quote not found verbatim in " + doc + " (use source=observed instead)");
             }
         } catch (Exception e) {
-            issues.add(where + ": doc " + doc + " not readable (use source=observed instead)");
+            issues.add(
+                    where + ": source=documented, but doc " + doc + " is not readable (use source=observed instead)");
         }
     }
 }
