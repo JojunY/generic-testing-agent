@@ -191,7 +191,7 @@ public final class Engine {
         }
     }
 
-    /** Only an exact "批准 flow@rev" approves; any other reply is the human asking for changes. */
+    /** Only an exact "approve flow@rev" approves; any other reply is the human asking for changes. */
     private Map<String, Object> approvalOrChangeRequest(WorkState st, WorkState.Pending p, String text) {
         AnswerParser.Parsed parsed;
         try {

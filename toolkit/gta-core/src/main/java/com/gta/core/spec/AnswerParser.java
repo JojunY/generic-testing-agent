@@ -11,8 +11,8 @@ import java.util.regex.Pattern;
 /**
  * Parses what the human typed (plan §3.5), passed verbatim by the orchestrator to {@code gtaw answer}.
  * <ul>
- *   <li>Answers: {@code "R3: 1A 2B 其余默认"} (round prefix optional, "rest default" accepted)</li>
- *   <li>Approval: {@code "批准 order.create@R4"} / {@code "approve order.create@R4"}</li>
+ *   <li>Answers: {@code "R3: 1A 2B rest default"} (round prefix optional; the Chinese aliases 其余默认/其他默认 are accepted)</li>
+ *   <li>Approval: {@code "approve order.create@R4"} (the Chinese alias 批准 is accepted)</li>
  *   <li>Choice for a pending decision (defect confirmation, escalation): a single letter, e.g. {@code "A"}</li>
  * </ul>
  */
@@ -52,8 +52,8 @@ public final class AnswerParser {
         }
         if (APPROVAL_MENTION.matcher(text).find() && !ROUND.matcher(text).find()) {
             throw new GtaException(ErrorCode.USAGE_UNPARSEABLE_ANSWER, "Not an approval: " + text,
-                    "To approve, reply with exactly '批准 <flow>@<rev>' (or 'approve <flow>@<rev>') and nothing else;"
-                            + " to ask for changes, say what to change without the word 批准/approve");
+                    "To approve, reply with exactly 'approve <flow>@<rev>' and nothing else;"
+                            + " to ask for changes, say what to change without the word approve");
         }
         Matcher c = CHOICE.matcher(text);
         if (c.find()) {
@@ -78,7 +78,7 @@ public final class AnswerParser {
                     garbled
                             ? "The terminal passed non-ASCII text in another encoding. Use the ASCII forms ('approve order.create@R4',"
                               + " 'R3: 1A 2B rest default') or write the reply to a UTF-8 file and run ./gtaw answer --file <path>"
-                            : "Answer like 'R3: 1A 2B 其余默认', approve like '批准 order.create@R4', or pick an option letter like 'A'");
+                            : "Answer like 'R3: 1A 2B rest default', approve like 'approve order.create@R4', or pick an option letter like 'A'");
         }
         return new Answers(round, picks, rest);
     }

@@ -4,8 +4,14 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 
 ## [Unreleased] — 0.1.0 (P0)
 
+### Changed (documentation)
+- Documentation, agents, skills, templates and gtaw prompts are English. Chinese replies (`批准`, `其余默认`, `= 代码现状`) are still accepted.
+- `README.md` and `docs/design/plan.md` are English, with `README.zh-CN.md` and `docs/design/plan.zh-CN.md` copies and a language switch.
+- The explanatory diagrams (architecture, loop, item states, spec lifecycle) are rendered by `scripts/diagrams/render.py` into light and dark SVGs in the style of cathrynlavery/diagram-design; CI checks they are current.
+- A repository test keeps Chinese out of every file except the `*.zh-CN.md` copies, the alias parser and tests.
+
 ### Fixed (code review, round 2; see docs/design/remediation-plan.md)
-- Only an exact "批准/approve <flow>@<rev>" approves. Negated or conditional replies become change requests.
+- Only an exact "approve <flow>@<rev>" (or its Chinese alias) approves. Negated or conditional replies become change requests.
 - A spec edited after it was shown for approval is not approved; it returns as a new revision.
 - Timed-out test runs count against the item's budgets and reach a human.
 - A clean session end no longer resets items waiting for triage. Takeover resets only items being edited.

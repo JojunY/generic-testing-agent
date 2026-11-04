@@ -91,7 +91,7 @@ final class SpecWorkflow {
     Map<String, Object> applyAnswers(WorkState st, WorkState.Pending p, AnswerParser.Parsed parsed, String text) {
         if (!(parsed instanceof AnswerParser.Answers a)) {
             throw new GtaException(ErrorCode.USAGE_UNPARSEABLE_ANSWER, "Expected answers to " + p.round,
-                    "Reply like '" + p.round + ": 1A 2B 其余默认'");
+                    "Reply like '" + p.round + ": 1A 2B rest default'");
         }
         if (a.round() != null && !a.round().equals(p.round)) {
             throw new GtaException(ErrorCode.USAGE_UNPARSEABLE_ANSWER, "These answers are for " + a.round() + " but the open round is " + p.round,
@@ -169,7 +169,7 @@ final class SpecWorkflow {
     Map<String, Object> applyApproval(WorkState st, WorkState.Pending p, AnswerParser.Parsed parsed, String text) {
         if (!(parsed instanceof AnswerParser.Approval a) || !a.flowId().equals(p.flowId) || !a.rev().equals(p.rev)) {
             throw new GtaException(ErrorCode.USAGE_UNPARSEABLE_ANSWER, "Approval must name the current revision",
-                    "Reply exactly '批准 " + p.flowId + "@" + p.rev + "' (or 'approve " + p.flowId + "@" + p.rev + "')");
+                    "Reply exactly 'approve " + p.flowId + "@" + p.rev + "'");
         }
         Path specPath = paths.spec(p.flowId);
         if (!matchesSnapshot(p.flowId)) {

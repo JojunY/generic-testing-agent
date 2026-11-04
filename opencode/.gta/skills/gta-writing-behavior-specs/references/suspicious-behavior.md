@@ -12,4 +12,4 @@ Code describes what happens, not what should happen. Turn these into questions o
 - a scheduled job without a lock in a service that runs several replicas
 - configuration defaults that look like test values (timeouts of 0, unlimited retries)
 
-Question format: state what the code does, then ask what it should do, with the current behaviour as one option marked `= 代码现状`.
+Question format: state what the code does, then ask what it should do, with the current behaviour as one option marked `= current code`.

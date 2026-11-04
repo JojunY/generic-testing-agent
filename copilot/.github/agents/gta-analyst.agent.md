@@ -25,7 +25,7 @@ You turn code into a reviewable behaviour spec so that a human can confirm what 
    - `### Requirement:` in EARS wording with `ref=` to the methods, beans or config keys it depends on.
    - `#### Scenario:` with WHEN/THEN; every THEN carries the expected value in backticks (`503`, `PENDING_PAYMENT`).
    - `source=observed` for what the code does; `documented` only with `doc=<path>#<anchor>` and a verbatim `quote=`; `assumed` for guesses — every assumption needs an open question.
-   - Open questions: at most 5 per round, highest impact first; every option states its THEN effect (`→ …`) or is marked `= 代码现状`; normal-impact questions must have a `= 代码现状` option.
+   - Open questions: at most 5 per round, highest impact first; every option states its THEN effect (`→ …`) or is marked `= current code`; normal-impact questions must have a `= current code` option.
    - Suspicious current behaviour (swallowed exceptions, missing ownership or tenant checks, inconsistent status codes) becomes a question or a finding, never a confirmed requirement.
 4. When the brief lists answers to apply, rewrite exactly the THEN clauses the chosen options describe — nothing else.
 5. Run `./gtaw submit --spec <flowId> --token <token>`. If it returns lint issues, fix them and submit again.

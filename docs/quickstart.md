@@ -87,18 +87,20 @@ gta stops and waits for you at three points.
 **Questions.** Reply with the round code it shows:
 
 ```
-R1: 1B 2A 其余默认
+R1: 1B 2A rest default
 ```
 
-High-impact questions need an explicit answer. `其余默认` (or `rest default`) picks the "= 代码现状" (current code) option for the rest. Those scenarios become *characterization* tests: they lock today's behaviour and do not prove it is correct.
+High-impact questions need an explicit answer. `rest default` picks the "= current code" option for the rest. Those scenarios become *characterization* tests: they lock today's behaviour and do not prove it is correct.
 
 **Approval.** Reply with the revision it shows:
 
 ```
-批准 order.create@R2
+approve order.create@R2
 ```
 
-`approve order.create@R2` also works. Approval is committed with your words as the record.
+The reply must be exactly that line: "don't approve …" or "approve … after q2 is fixed" is treated as a change request, never as an approval. Approval is committed with your words as the record.
+
+**Replying in Chinese.** You can talk to the agent in any language. gtaw also accepts these Chinese forms of the fixed replies: `批准 order.create@R2` for approve, `其余默认` (or `其他默认`) for rest default, and the option marker `= 代码现状` for `= current code`.
 
 **Defects and escalations.** Reply with a letter (A, B, C). A confirmed defect is pinned with `@KnownDefect`:
 

@@ -33,7 +33,7 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
    ```markdown
    <!-- gta: id=order.create/q01 impact=high affects=order.create/s03 -->
    1. [high impact] Should a gateway timeout be retried?
-      - [ ] A) No retry (= 代码现状)
+      - [ ] A) No retry (= current code)
       - [ ] B) Retry once → s03 THEN adds "the gateway is called `2` times"
    ```
 7. Findings (`## Findings`): `doc-drift` (docs disagree with code) or `behavior-suspect` (code looks wrong).
@@ -44,7 +44,7 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
 - Never write `source=confirmed`/`defaulted`, ticks, `status`, `rev`, `refHash` or `## Answers`; gtaw writes them from the human's replies.
 - Suspicious behaviour becomes a question or finding (`references/suspicious-behavior.md`), never an approved requirement.
 - Generated OpenAPI (springdoc) is `observed`, not `documented`.
-- Normal-impact questions need a `= 代码现状` option: "其余默认" picks it and yields a characterization test.
+- Normal-impact questions need a `= current code` option: "rest default" picks it and yields a characterization test.
 
 ## References
 

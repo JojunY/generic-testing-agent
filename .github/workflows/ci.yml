@@ -16,6 +16,8 @@ jobs:
         with: { distribution: temurin, java-version: "21", cache: maven }
       - name: Build, unit tests, harness lint and generated-folder sync check (RepositoryHarnessTest)
         run: mvn -B install
+      - name: Diagrams are up to date
+        run: python3 scripts/diagrams/render.py --check
       - name: Scripted end-to-end run
         run: evals/e2e/run.sh "$RUNNER_TEMP/gta-e2e"
 

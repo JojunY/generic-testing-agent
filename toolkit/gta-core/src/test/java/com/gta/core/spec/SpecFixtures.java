@@ -46,7 +46,7 @@ public final class SpecFixtures {
             ## Open questions
             <!-- gta: id=order.create/q01 impact=high affects=order.create/s02 -->
             1. [high impact] Should an order of exactly 100.00 get the discount?
-               - [ ] A) No (= 代码现状)
+               - [ ] A) No (= current code)
                - [ ] B) Yes → s02 THEN discount `10.00`
 
             ## Findings
