@@ -3,7 +3,7 @@
 Allowed in `pom.xml`:
 
 - `<dependency>` with `<scope>test</scope>`. Omit `<version>` when the Spring Boot parent manages it (spring-boot-starter-test, spring-kafka-test, h2, awaitility, assertj, mockito). Use a `<properties>` version for others (gta-junit, wiremock, instancio, artemis embedded server).
-- `maven-failsafe-plugin` so `*IT` classes run in `mvn verify` in CI. Add the explicit includes below only when the pom has no Surefire/Failsafe configuration of its own; never rewrite the developer's configuration (`./gtaw doctor` reports a mismatch instead).
+- `maven-failsafe-plugin` so `*IT` classes run in `mvn verify` in CI. Add the explicit includes below only when the pom has no Surefire/Failsafe configuration of its own; never rewrite the developer's configuration.
 
 Not allowed: changing production dependencies, plugin versions of the build, compiler settings, profiles used for deployment.
 

@@ -49,7 +49,7 @@ So nothing relies on these defaults:
   - Failsafe `includes` = `**/*IT.java`;
   - `karate` and `e2e` profiles add their source roots with `build-helper-maven-plugin`.
 
-  An existing configuration is never rewritten; `gtaw doctor` reports a mismatch. The snippet is in
+  An existing configuration is never rewritten (`gtaw doctor` warns when Failsafe is missing). The snippet is in
   `core/skills/gta-writing-tests/references/build-files.md`.
 - **This repository** sets Surefire `includes` to `**/*Test.java`. The toolkit has unit tests only.
 
