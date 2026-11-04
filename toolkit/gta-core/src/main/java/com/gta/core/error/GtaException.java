@@ -45,7 +45,7 @@ public class GtaException extends RuntimeException {
         error.put("category", code.category.id);
         error.put("message", getMessage());
         error.put("hint", hint);
-        error.put("retryable", code.category.retryable);
+        error.put("retryable", code.retryable());
         if (!details.isEmpty()) {
             error.put("details", details);
         }

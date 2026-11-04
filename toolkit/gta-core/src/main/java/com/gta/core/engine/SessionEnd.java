@@ -7,7 +7,6 @@ import com.gta.core.error.GtaException;
 import com.gta.core.gate.Gate;
 import com.gta.core.plan.PlanItem;
 import com.gta.core.report.Reporter;
-import com.gta.core.run.MavenRunner;
 import com.gta.core.run.RunResult;
 import com.gta.core.run.SurefireReports;
 import com.gta.core.run.TestCase;
@@ -86,7 +85,7 @@ final class SessionEnd {
         for (String id : ids) {
             PlanItem item;
             try {
-                item = ctx.items.planItem(id);
+                item = store.planItem(id);
             } catch (GtaException e) {
                 continue;
             }
@@ -94,12 +93,12 @@ final class SessionEnd {
                 continue;
             }
             for (int i = 0; i < config.qualityGates.stabilityRepeat; i++) {
-                RunResult r = ctx.items.runItem(Ids.newRunId(git.head()), item, i == 0, true);
-                if (!r.allPassed()) {
+                RunResult r = ctx.runs.runItem(Ids.newRunId(git.head()), item, i == 0, true);
+                if (r.timedOut || !r.allPassed()) {
                     unstable.add(id);
                     WorkState.ItemState s = st.items.get(id);
                     if (s != null && s.status == ItemStatus.PASSED) {
-                        s.lastError = ctx.items.lastError(s, ErrorCode.TEST_ASSERTION_FAILED, "unstable under pass^k / Asia/Kolkata timezone / de-DE locale / random order");
+                        s.lastError = ItemWorkflow.lastError(s, ErrorCode.TEST_ASSERTION_FAILED, "unstable under pass^k / Asia/Kolkata timezone / de-DE locale / random order");
                         s.verdict = "flaky";
                         st.move(s, ItemStatus.TRIAGING);
                     }
@@ -111,7 +110,7 @@ final class SessionEnd {
         out.put("checked", classesDone.size());
         out.put("repeat", config.qualityGates.stabilityRepeat);
         out.put("unstable", unstable);
-        Json.writeAtomic(paths.runs().resolve("verify-latest.json"), out);
+        Json.writeAtomic(paths.verifyLatest(), out);
         return out;
     }
 
@@ -123,14 +122,12 @@ final class SessionEnd {
     Gate.Result gateInternal(String base, List<Path> reportDirs) {
         List<TestCase> cases;
         if (reportDirs == null || reportDirs.isEmpty()) {
-            RunResult all = new MavenRunner(paths, config).run(Ids.newRunId(git.head()), null,
-                    new MavenRunner.Options(null, "gta", false, false), ctx.items.productionClasses(), ctx.items.testClasses());
-            cases = all.cases;
+            cases = ctx.runs.runAll().cases;
         } else {
-            cases = SurefireReports.parse(reportDirs, paths.root().resolve("target/gta-results"));
+            cases = SurefireReports.parse(reportDirs, paths.gtaResults());
         }
         List<String> unstable = new ArrayList<>();
-        Path verify = paths.runs().resolve("verify-latest.json");
+        Path verify = paths.verifyLatest();
         if (Files.exists(verify)) {
             Map<String, Object> v = Json.read(verify, Map.class);
             Object u = v.get("unstable");
@@ -139,18 +136,19 @@ final class SessionEnd {
             }
         }
         Gate.Result r = new Gate(paths, config).evaluate(base, cases, unstable);
-        Json.writeAtomic(paths.runs().resolve("gate-latest.json"), r);
+        Json.writeAtomic(paths.gateLatest(), r);
         return r;
     }
 
+    /** Read-only: never moves or rewrites working-state files. */
     public String report(String format) {
-        WorkState st = store.load();
+        WorkState st = store.peek();
         Gate.Result gate = null;
-        Path latest = paths.runs().resolve("gate-latest.json");
+        Path latest = paths.gateLatest();
         if (Files.exists(latest)) {
             gate = Json.read(latest, Gate.Result.class);
         }
-        return new Reporter(paths).markdown(st, store.loadPlan(), gate, "pr-comment".equals(format));
+        return new Reporter(paths).markdown(st, store.peekPlan(), gate, "pr-comment".equals(format));
     }
 
     String defaultBase() {

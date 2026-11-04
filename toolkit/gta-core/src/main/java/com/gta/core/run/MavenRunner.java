@@ -2,17 +2,18 @@ package com.gta.core.run;
 
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
+import com.gta.core.error.ErrorCode;
+import com.gta.core.error.GtaException;
+import com.gta.core.util.AtomicFiles;
 import com.gta.core.util.Json;
 import com.gta.core.util.Proc;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,11 +25,8 @@ import java.util.stream.Stream;
  * Runs tests through Maven Surefire with -Dtest/-Dgroups. All test execution goes through here, so gtaw - not the
  * agent - decides what "passed" means. Cloud credentials are isolated for every run (plan §13).
  */
-public final class MavenRunner {
+public final class MavenRunner implements TestRunner {
     private static final Pattern COMPILE_ERROR = Pattern.compile("\\[ERROR\\]\\s+(/?\\S+\\.java):\\[(\\d+),(\\d+)]\\s*(.*)");
-
-    public record Options(String testClass, String scenarioTag, boolean stabilityVariant, boolean randomOrder) {
-    }
 
     private final GtaPaths paths;
     private final GtaConfig config;
@@ -58,10 +56,11 @@ public final class MavenRunner {
 
     static final String ALL_TESTS = "**/*Test,**/*Tests,**/*TestCase,**/Test*,**/*IT";
 
+    @Override
     public RunResult run(String runId, String itemId, Options options, Set<String> productionClasses, Set<String> testClasses) {
         Path root = paths.root();
         Path surefire = root.resolve("target/surefire-reports");
-        Path gtaResults = root.resolve("target/gta-results");
+        Path gtaResults = paths.gtaResults();
         deleteDir(surefire);
         deleteDir(gtaResults);
 
@@ -79,7 +78,8 @@ public final class MavenRunner {
         }
         cmd.add("test");
 
-        Map<String, String> env = isolatedEnv();
+        IsolatedEnv isolated = IsolatedEnv.create();
+        Map<String, String> env = isolated.variables();
         List<String> toolOptions = new ArrayList<>();
         String inherited = System.getenv("JAVA_TOOL_OPTIONS");
         if (inherited != null && !inherited.isBlank()) {
@@ -97,16 +97,25 @@ public final class MavenRunner {
 
         long start = System.currentTimeMillis();
         Proc.Result proc;
+        boolean timedOut = false;
         try {
             proc = Proc.run(root, Duration.ofMinutes(config.budgets.nodeTimeoutMinutes), env, cmd);
+        } catch (GtaException e) {
+            if (e.code() != ErrorCode.TRANSIENT_PROCESS_TIMEOUT) {
+                throw e;
+            }
+            // a hanging test is a result, not an error: the caller counts it against the item's budgets
+            timedOut = true;
+            proc = new Proc.Result(-1, e.getMessage());
         } finally {
-            deleteDir(Path.of(env.get(CLOUDSDK_CONFIG))); // the empty gcloud config dir exists for this run only
+            isolated.close(); // the empty gcloud config dir exists for this run only
         }
         RunResult result = new RunResult();
         result.runId = runId;
         result.itemId = itemId;
         result.command = cmd;
         result.exitCode = proc.exitCode();
+        result.timedOut = timedOut;
         result.durationMs = System.currentTimeMillis() - start;
         String output = proc.output();
         if (proc.exitCode() != 0 && (output.contains("COMPILATION ERROR") || output.contains("Compilation failure"))) {
@@ -118,36 +127,10 @@ public final class MavenRunner {
             FailureClassifier.classify(c, productionClasses, testClasses);
         }
         Path runDir = paths.runs().resolve(runId);
-        try {
-            Files.createDirectories(runDir);
-            Files.writeString(runDir.resolve("maven.log"), output);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        AtomicFiles.write(runDir.resolve("maven.log"), output);
         result.logFile = paths.rel(runDir.resolve("maven.log"));
         Json.writeAtomic(runDir.resolve("run.json"), result);
         return result;
-    }
-
-    static final String CLOUDSDK_CONFIG = "CLOUDSDK_CONFIG";
-
-    /**
-     * Environment with cloud credentials cut off so non-system tests can never reach real GCP (plan §13). The caller owns
-     * the temporary {@code CLOUDSDK_CONFIG} directory and deletes it after the run.
-     */
-    static Map<String, String> isolatedEnv() {
-        Map<String, String> env = new LinkedHashMap<>();
-        try {
-            env.put(CLOUDSDK_CONFIG, Files.createTempDirectory("gta-gcloud-empty").toString());
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-        env.put("GOOGLE_APPLICATION_CREDENTIALS", null);
-        env.put("KUBECONFIG", null);
-        env.put("NO_GCE_CHECK", "true");
-        env.put("GCE_METADATA_HOST", "localhost:1");
-        env.put("GCE_METADATA_IP", "127.0.0.1:1");
-        return env;
     }
 
     static String compileSummary(String output) {

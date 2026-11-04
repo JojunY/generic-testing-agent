@@ -9,10 +9,12 @@ import com.gta.core.oracle.AssertionScanner;
 import com.gta.core.oracle.OracleLock;
 import com.gta.core.oracle.OracleShard;
 import com.gta.core.plan.PlanItem;
+import com.gta.core.plan.Planner;
 import com.gta.core.profile.Profiler;
 import com.gta.core.profile.ServiceProfile;
 import com.gta.core.registry.Registry;
 import com.gta.core.run.RunResult;
+import com.gta.core.run.TestRunner;
 import com.gta.core.spec.AnswerParser;
 import com.gta.core.spec.Spec;
 import com.gta.core.spec.SpecEditor;
@@ -55,20 +57,17 @@ public final class Engine {
     private final Git git;
 
     public Engine(Path root) {
-        this.ctx = new EngineContext(root);
+        this(root, null);
+    }
+
+    /** For tests of gta: a fake {@link TestRunner} instead of Maven. */
+    Engine(Path root, TestRunner runner) {
+        this.ctx = new EngineContext(root, runner);
         this.paths = ctx.paths;
         this.config = ctx.config;
         this.registry = ctx.registry;
         this.store = ctx.store;
         this.git = ctx.git;
-    }
-
-    public GtaPaths paths() {
-        return paths;
-    }
-
-    public GtaConfig config() {
-        return config;
     }
 
     public Map<String, Object> next(String mode, String target, String base, boolean takeover) {
@@ -85,6 +84,9 @@ public final class Engine {
                 st.pending = null;
             }
             Map<String, Object> out = step(st, profile, base);
+            if (List.of("analyze", "author", "review").contains(String.valueOf(out.get("node")))) {
+                out.put("dispatch", config.dispatch); // subagent | inline: how the orchestrator runs the node
+            }
             if (!recovered.isEmpty()) {
                 out.put("recovered", recovered);
             }
@@ -150,7 +152,8 @@ public final class Engine {
             st.mode = "flow"; // explain turns into flow mode once the human approved the spec (plan §6)
         }
         List<PlanItem> flowItems = ctx.items.syncPlan(st, spec, profile);
-        return ctx.items.dispatch(st, spec, profile, flowItems, base);
+        ItemWorkflow.Dispatch next = ctx.items.dispatch(st, spec, profile, flowItems);
+        return next.node() != null ? next.node() : ctx.sessionEnd.finishSession(st, next.sessionOverReason(), base);
     }
 
     private Map<String, Object> chooseFlow(ServiceProfile profile) {
@@ -172,17 +175,15 @@ public final class Engine {
     public Map<String, Object> answer(String text) {
         try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
             WorkState st = store.load();
-            ctx.sessions.touch(st);
             if (st.pending == null) {
-                throw new GtaException(ErrorCode.USAGE_UNPARSEABLE_ANSWER, "Nothing is waiting for an answer",
+                throw new GtaException(ErrorCode.STATE_NOTHING_PENDING, "Nothing is waiting for an answer",
                         "Run ./gtaw next; answers are only accepted while an 'answer' node is open");
             }
-            AnswerParser.Parsed parsed = AnswerParser.parse(text);
             WorkState.Pending p = st.pending;
             Map<String, Object> out = switch (p.type) {
-                case "answer" -> ctx.specs.applyAnswers(st, p, parsed, text);
-                case "approve" -> ctx.specs.applyApproval(st, p, parsed, text);
-                case "defect", "escalation" -> ctx.items.applyDecision(st, p, parsed, text);
+                case "answer" -> ctx.specs.applyAnswers(st, p, AnswerParser.parse(text), text);
+                case "approve" -> approvalOrChangeRequest(st, p, text);
+                case "defect", "escalation" -> ctx.items.applyDecision(st, p, AnswerParser.parse(text), text);
                 default -> throw new GtaException(ErrorCode.INTERNAL_ERROR, "Unknown pending type " + p.type, "Run ./gtaw abort");
             };
             store.save(st);
@@ -190,8 +191,20 @@ public final class Engine {
         }
     }
 
+    /** Only an exact "approve flow@rev" approves; any other reply is the human asking for changes. */
+    private Map<String, Object> approvalOrChangeRequest(WorkState st, WorkState.Pending p, String text) {
+        AnswerParser.Parsed parsed;
+        try {
+            parsed = AnswerParser.parse(text);
+        } catch (GtaException notAnApproval) {
+            return ctx.specs.requestChanges(st, p, text);
+        }
+        return parsed instanceof AnswerParser.Approval ? ctx.specs.applyApproval(st, p, parsed, text) : ctx.specs.requestChanges(st, p, text);
+    }
+
+    /** Read-only: never moves or rewrites working-state files. */
     public Map<String, Object> status() {
-        WorkState st = store.load();
+        WorkState st = store.peek();
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("session", st.session == null ? null : st.session.id);
         out.put("mode", st.mode);
@@ -239,7 +252,7 @@ public final class Engine {
             return;
         }
         try (Stream<Path> walk = Files.walk(dir)) {
-            for (Path p : walk.sorted(java.util.Comparator.reverseOrder()).toList()) {
+            for (Path p : walk.sorted(Comparator.reverseOrder()).toList()) {
                 Files.delete(p);
             }
         }
@@ -251,11 +264,13 @@ public final class Engine {
             if (flowId == null) {
                 store.save(new WorkState());
                 Files.deleteIfExists(paths.plan());
-                // brief numbers restart with the new state; stale briefs, snapshots and backups would be misleading
-                for (Path dir : List.of(paths.briefs(), paths.work().resolve("snapshots"), paths.recover())) {
+                // brief numbers restart with the new state, so old briefs and snapshots would be misleading;
+                // .gta/work/recover/ is kept: it may hold the only copy of files gtaw reverted or deleted
+                for (Path dir : List.of(paths.briefs(), paths.snapshots())) {
                     deleteTree(dir);
                 }
-                return result("working state discarded; specs, shards, committed tests and run evidence are kept", null);
+                return result("working state discarded; specs, shards, committed tests, run evidence and "
+                        + paths.rel(paths.recover()) + " (backups of reverted files) are kept", null);
             }
             List<PlanItem> plan = store.loadPlan();
             plan.stream().filter(i -> i.flowId.equals(flowId)).forEach(i -> st.items.remove(i.id));
@@ -280,24 +295,38 @@ public final class Engine {
      * it also runs on a fresh checkout without working state.
      */
     public Map<String, Object> relock(String itemId, String reason, String by) {
-        if (!Ids.ITEM_ID.matcher(itemId).matches() || itemId.contains("#foundation")) {
+        if (!Ids.ITEM_ID.matcher(itemId).matches() || !itemId.contains("/") || itemId.contains("#foundation")) {
             throw new GtaException(ErrorCode.USAGE_UNKNOWN_ITEM, "Not a scenario item id: " + itemId, "Use an id like order.create/s01#component-01");
         }
         String scenarioId = itemId.substring(0, itemId.indexOf('#'));
         String flowId = scenarioId.substring(0, scenarioId.indexOf('/'));
-        Path shardPath = paths.oracleShard(flowId);
-        Map<String, OracleShard.Entry> shard = OracleShard.read(shardPath);
-        OracleShard.Entry e = shard.get(itemId);
-        if (e == null || e.testClass == null) {
-            throw new GtaException(ErrorCode.USAGE_UNKNOWN_ITEM, "No committed oracle for " + itemId, "Only committed (passed) items can be relocked");
+        try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
+            Path shardPath = paths.oracleShard(flowId);
+            Map<String, OracleShard.Entry> shard = OracleShard.read(shardPath);
+            OracleShard.Entry e = shard.get(itemId);
+            if (e == null || e.testClass == null) {
+                throw new GtaException(ErrorCode.USAGE_UNKNOWN_ITEM, "No committed oracle for " + itemId, "Only committed (passed) items can be relocked");
+            }
+            // the expected values come from the spec, never from the old lock: change the THEN first, then relock
+            Spec.Scenario scenario = SpecParser.parse(paths.spec(flowId)).scenario(scenarioId).orElseThrow(() -> new GtaException(
+                    ErrorCode.USAGE_UNKNOWN_ITEM, "Scenario " + scenarioId + " is not in " + paths.rel(paths.spec(flowId)),
+                    "Relock only scenarios of the current spec"));
+            AssertionScanner.ScenarioOracle oracle = AssertionScanner.scan(paths.testSource(e.testClass), scenarioId, paths.testResources());
+            List<String> then = scenario.thenLiterals();
+            List<String> missing = AssertionScanner.missingThenLiterals(then, oracle.tokens());
+            if (!scenario.reviewerChecked() && !missing.isEmpty()) {
+                throw new GtaException(ErrorCode.POLICY_ORACLE_MISMATCH, "The test does not assert the spec's expected values " + missing,
+                        "Make the assertions match the THEN clauses of " + scenarioId + " (or change the spec first), then relock");
+            }
+            e.tokens = new ArrayList<>(then);
+            e.fingerprint = OracleLock.fingerprint(oracle.assertionStatements().stream().filter(x -> e.tokens.stream().anyMatch(x::contains)).toList());
+            e.scenarioRevision = Planner.scenarioRevision(scenario);
+            e.relockedBy = by;
+            e.reason = reason;
+            e.relockedAt = Instant.now().toString();
+            OracleShard.write(shardPath, shard);
+            return result("relocked " + itemId + " by " + by + " on " + e.tokens + "; commit " + paths.rel(shardPath) + " so the PR shows it", null);
         }
-        AssertionScanner.ScenarioOracle oracle = AssertionScanner.scan(paths.testSource(e.testClass), scenarioId, paths.testResources());
-        e.fingerprint = OracleLock.fingerprint(oracle.assertionStatements().stream().filter(x -> e.tokens.stream().anyMatch(x::contains)).toList());
-        e.relockedBy = by;
-        e.reason = reason;
-        e.relockedAt = Instant.now().toString();
-        OracleShard.write(shardPath, shard);
-        return result("relocked " + itemId + " by " + by + "; commit " + paths.rel(shardPath) + " so the PR shows it", null);
     }
 
     private ServiceProfile ensureProfile(boolean refresh) {
@@ -340,8 +369,8 @@ public final class Engine {
         return ctx.items.submitItem(itemId, token);
     }
 
-    public Map<String, Object> submitReview(String itemId, String verdict, String reason) {
-        return ctx.items.submitReview(itemId, verdict, reason);
+    public Map<String, Object> submitReview(String itemId, String token, String verdict, String reason) {
+        return ctx.items.submitReview(itemId, token, verdict, reason);
     }
 
     public Map<String, Object> verify(boolean newOnly) {
@@ -358,6 +387,6 @@ public final class Engine {
 
     /** {@code gtaw run}: the seed tests (smoke) or every gta test, optionally one layer. */
     public RunResult runTests(boolean smoke, String layer) {
-        return ctx.items.runTests(smoke, layer);
+        return ctx.runs.runTests(smoke, layer);
     }
 }

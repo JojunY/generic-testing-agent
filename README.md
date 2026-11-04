@@ -1,5 +1,7 @@
 # gta — Generic Testing Agent
 
+**English** | [简体中文](README.zh-CN.md)
+
 gta is a spec-first testing harness for Java/Spring services. It runs inside **GitHub Copilot** (VS Code, IntelliJ) or **OpenCode**.
 
 You type `/gta` and it runs this loop:
@@ -11,10 +13,15 @@ You type `/gta` and it runs this loop:
 
 Coverage is not the goal. Tests should check what the service is *supposed* to do, catch regressions, and expose defects instead of locking them in.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/architecture-dark.svg">
+  <img alt="How gta fits together: core/ and platforms/ generate copilot/ and opencode/; in a service, the orchestrator relays between the developer, subagents and gtaw, which runs tests, locks oracles and commits." src="docs/diagrams/architecture-light.svg">
+</picture>
+
 ```
 /gta order.create
   → analyst writes .gta/specs/order/create.spec.md (EARS requirements, scenarios, Mermaid diagram, questions)
-  → you answer "R1: 1B 其余默认", then "批准 order.create@R2"
+  → you answer "R1: 1B rest default", then "approve order.create@R2"   (Chinese replies such as 批准 work too)
   → test author writes OrderCreateIT; gtaw runs it, locks the expected values and commits it
   → a test that fails against a confirmed expectation is triaged; a confirmed defect is pinned with @KnownDefect
   → session end: stability runs, the quality gate against the base branch, and a report
@@ -30,7 +37,12 @@ Coverage is not the goal. Tests should check what the service is *supposed* to d
 | `gta-junit` (`toolkit/gta-junit`) | `@KnownDefect` (strict expected-failure) and a listener that maps test results to scenarios. |
 | `copilot/`, `opencode/` | Ready-to-install harness folders, generated from `core/` + `platforms/` by `gta-harness-gen`. |
 
-[`docs/design/plan.md`](docs/design/plan.md) has the full design.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/loop-dark.svg">
+  <img alt="One step of the loop: the orchestrator asks gtaw for the next node, hands it to a subagent or the developer, and passes check, submit and answer back to gtaw." src="docs/diagrams/loop-light.svg">
+</picture>
+
+[`docs/design/plan.md`](docs/design/plan.md) has the full design ([简体中文](docs/design/plan.zh-CN.md)).
 
 ## Quick start
 
@@ -47,7 +59,7 @@ Then open the service in VS Code, IntelliJ or OpenCode and type `/gta`.
 ## Supported now (P0)
 
 - **Supported:** Maven services on Spring Boot 4.1 (and 3.5), Java 17+, on Windows, macOS and Linux.
-- **Writes tests for:** REST APIs. Other capabilities (scheduler, Batch, messaging, workflows, Beam, deployed systems) are detected and can be explained and specified now; their test authoring switches on in later phases (see `core/registry/capabilities.yaml` and plan §12).
+- **Writes tests for:** REST APIs. Other capabilities (scheduler, Batch, messaging, workflows, Beam, deployed systems) are detected and can be explained and specified now; their test authoring switches on in later phases (see `core/registry/capabilities.yaml` and plan §15).
 - **No containers needed:**
   - Oracle runs against a shared test schema or H2 in Oracle mode;
   - BigQuery and GCS use fakes;
@@ -63,17 +75,18 @@ copilot/     GENERATED from core/ + platforms/copilot (committed so teams can pi
 opencode/    GENERATED from core/ + platforms/opencode (committed so teams can pick it): never edit by hand
 toolkit/     Java sources: gta-core, gta-cli, gta-junit, gta-harness-gen (Maven reactor; pom.xml holds the version)
 wrapper/     files installed into services: gtaw, gtaw.cmd, gtaw-download.ps1 (pinned jar from Nexus, sha256-verified)
-scripts/     maintainer scripts for this repository (generate.sh)
+scripts/     maintainer scripts: generate.sh (platform folders), diagrams/render.py (docs/diagrams)
 evals/       order-service fixture with seeded defects and a scripted end-to-end run
-docs/        quickstart, CI integration, adding a capability; design/plan.md is the full design
+docs/        quickstart, CI integration, adding a capability, diagrams; design/ holds the design and review records
 ```
 
 ## Development
 
 ```bash
-mvn -B install                 # build + unit tests (also checks that copilot/ and opencode/ are in sync)
-scripts/generate.sh            # regenerate copilot/ and opencode/ after editing core/ or platforms/
-evals/e2e/run.sh               # scripted end-to-end run against evals/fixtures/order-service
+mvn -B install                       # build + unit tests (also checks that copilot/ and opencode/ are in sync)
+scripts/generate.sh                  # regenerate copilot/ and opencode/ after editing core/ or platforms/
+scripts/diagrams/render.py           # regenerate docs/diagrams after editing a diagram (--check in CI)
+evals/e2e/run.sh                     # scripted end-to-end run against evals/fixtures/order-service
 ```
 
 [AGENTS.md](AGENTS.md) has the contributor rules.

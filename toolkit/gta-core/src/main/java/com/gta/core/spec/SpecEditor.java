@@ -3,6 +3,7 @@ package com.gta.core.spec;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,7 +27,7 @@ public final class SpecEditor {
     }
 
     /** Rewrites the first gta comment for which the predicate matches. */
-    private boolean rewriteComment(java.util.function.Predicate<CommentMeta> match, UnaryOperator<CommentMeta> change) {
+    private boolean rewriteComment(Predicate<CommentMeta> match, UnaryOperator<CommentMeta> change) {
         Matcher m = COMMENT.matcher(text);
         while (m.find()) {
             CommentMeta meta = CommentMeta.parseInner(m.group(1));

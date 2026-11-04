@@ -7,13 +7,14 @@ import java.io.UncheckedIOException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /** A markdown file with a YAML frontmatter block: parse it, and emit frontmatter in a stable, readable form. */
 public record Frontmatter(Map<String, Object> fields, String body) {
 
     private static final Pattern PLAIN = Pattern.compile("^[A-Za-z0-9][A-Za-z0-9 _./()+,-]*$");
-    private static final java.util.Set<String> RESERVED = java.util.Set.of("true", "false", "null", "yes", "no", "on", "off", "~");
+    private static final Set<String> RESERVED = Set.of("true", "false", "null", "yes", "no", "on", "off", "~");
 
     @SuppressWarnings("unchecked")
     public static Frontmatter parse(String text) {

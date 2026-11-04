@@ -14,6 +14,11 @@ else
   URL=$(prop distributionUrl)
   SHA=$(prop distributionSha256Sum)
   [ -n "$VERSION" ] || { echo '{"error":{"code":"CONFIG_NOT_INITIALIZED","category":"config","message":"missing .gta/wrapper/gta-wrapper.properties","hint":"run gta-cli init --platform copilot|opencode","retryable":false}}'; exit 21; }
+  # fail closed: never download or run a jar whose checksum is not pinned
+  if [ -z "$SHA" ] || [ -z "$URL" ]; then
+    echo '{"error":{"code":"CONFIG_NOT_INITIALIZED","category":"config","message":"distributionUrl and distributionSha256Sum must be set in .gta/wrapper/gta-wrapper.properties","hint":"set both to the Nexus gta-cli jar and its sha256 (or GTA_CLI_JAR to a local jar for development)","retryable":false}}'
+    exit 21
+  fi
   CACHE="${GTA_HOME:-$HOME/.gta}/wrapper/dists"
   JAR="$CACHE/gta-cli-$VERSION.jar"
   if [ ! -f "$JAR" ]; then
@@ -26,16 +31,14 @@ else
     fi
     mv "$TMP" "$JAR"
   fi
-  if [ -n "$SHA" ]; then
-    if command -v sha256sum >/dev/null 2>&1; then ACTUAL=$(sha256sum "$JAR" | cut -d' ' -f1); else ACTUAL=$(shasum -a 256 "$JAR" | cut -d' ' -f1); fi
-    if [ "$ACTUAL" != "$SHA" ]; then
-      rm -f "$JAR"
-      echo '{"error":{"code":"ENV_WRAPPER_CHECKSUM_MISMATCH","category":"environment","message":"gta-cli jar checksum mismatch","hint":"check distributionUrl/distributionSha256Sum in .gta/wrapper/gta-wrapper.properties","retryable":false}}'
-      exit 30
-    fi
+  if command -v sha256sum >/dev/null 2>&1; then ACTUAL=$(sha256sum "$JAR" | cut -d' ' -f1); else ACTUAL=$(shasum -a 256 "$JAR" | cut -d' ' -f1); fi
+  if [ "$ACTUAL" != "$SHA" ]; then
+    rm -f "$JAR"
+    echo '{"error":{"code":"ENV_WRAPPER_CHECKSUM_MISMATCH","category":"environment","message":"gta-cli jar checksum mismatch","hint":"check distributionUrl/distributionSha256Sum in .gta/wrapper/gta-wrapper.properties","retryable":false}}'
+    exit 30
   fi
 fi
-# The JVM decodes arguments with the locale; make sure replies such as "批准 order.create@R2" arrive intact.
+# The JVM decodes arguments with the locale; make sure non-ASCII replies (e.g. Chinese) arrive intact.
 case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
   *UTF-8*|*utf-8*|*UTF8*|*utf8*) ;;
   *) if [ "$(uname -s)" = Darwin ]; then export LC_CTYPE=UTF-8; else export LC_ALL=C.UTF-8; fi ;;

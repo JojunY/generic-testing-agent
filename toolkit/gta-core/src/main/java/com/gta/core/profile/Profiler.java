@@ -16,6 +16,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -108,7 +109,7 @@ public final class Profiler {
 
     static List<ServiceProfile.EntryPoint> entrypoints(JavaIndex main) {
         Set<String> seenFlowIds = new LinkedHashSet<>();
-        List<ServiceProfile.EntryPoint> out = new java.util.ArrayList<>();
+        List<ServiceProfile.EntryPoint> out = new ArrayList<>();
         for (JavaIndex.Unit u : main.units()) {
             for (ClassOrInterfaceDeclaration c : u.cu().findAll(ClassOrInterfaceDeclaration.class)) {
                 String fqcn = c.getFullyQualifiedName().orElse(c.getNameAsString());

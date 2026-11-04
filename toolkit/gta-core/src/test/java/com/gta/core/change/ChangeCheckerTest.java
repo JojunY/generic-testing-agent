@@ -2,6 +2,7 @@ package com.gta.core.change;
 
 import com.gta.core.config.GtaPaths;
 import com.gta.core.state.WorkState;
+import com.gta.core.util.Git;
 import com.gta.core.util.Proc;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -23,7 +25,7 @@ class ChangeCheckerTest {
     ChangeChecker checker;
 
     private void git(String... args) {
-        List<String> cmd = new java.util.ArrayList<>(List.of("git", "-c", "user.email=t@example.com", "-c", "user.name=t"));
+        List<String> cmd = new ArrayList<>(List.of("git", "-c", "user.email=t@example.com", "-c", "user.name=t"));
         cmd.addAll(List.of(args));
         Proc.run(root, Duration.ofSeconds(30), Map.of(), cmd);
     }
@@ -79,15 +81,28 @@ class ChangeCheckerTest {
     }
 
     @Test
-    void shouldIgnoreCommitsMadeByGtaw() throws Exception {
+    void shouldIgnoreCommitsInGtawsLedger() throws Exception {
         WorkState.Baseline baseline = checker.capture();
         Files.writeString(root.resolve("src/test/java/AppIT.java"), "class AppIT {}\n");
         git("add", "-A");
-        git("commit", "-qm", "test(app): x\n\nGta-Item: app.x/s01#component-01");
+        git("commit", "-qm", "test(app): x");
+        new CommitLedger(new GtaPaths(root)).record(new Git(root).head());
 
         ChangeChecker.Result r = checker.check(baseline, List.of(), root.resolve("backup"), true);
 
         assertTrue(r.ok(), r.toString());
+    }
+
+    @Test
+    void shouldNotTrustAForgedGtawTrailer() throws Exception {
+        WorkState.Baseline baseline = checker.capture();
+        Files.writeString(root.resolve("src/main/java/App.java"), "class App { int bent; }\n");
+        git("commit", "-qam", "fix\n\nGta-Item: app.x/s01#component-01");
+
+        ChangeChecker.Result r = checker.check(baseline, List.of("src/test/java/**"), root.resolve("backup"), true);
+
+        assertFalse(r.ok());
+        assertEquals(List.of("src/main/java/App.java"), r.unrestorable());
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.gta.core.spec;
 import com.gta.core.error.GtaException;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,5 +45,14 @@ class AnswerParserTest {
         GtaException e = assertThrows(GtaException.class, () -> AnswerParser.parse("?? order.create@R2"));
 
         assertTrue(e.hint().contains("approve order.create@R4"), e.hint());
+    }
+
+    @Test
+    void shouldNeverReadANegatedOrConditionalReplyAsApproval() {
+        for (String reply : List.of("不批准 order.create@R2", "不批准 order.create@R2，q2 还要改",
+                "don't approve order.create@R2 yet", "approve order.create@R2 after q2 is fixed")) {
+            assertThrows(GtaException.class, () -> AnswerParser.parse(reply), reply);
+        }
+        assertEquals(new AnswerParser.Approval("order.create", "R2"), AnswerParser.parse("  批准 order.create@R2。 "));
     }
 }

@@ -12,7 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/** Deterministic spec rules (plan §3.3 "规格 lint"). Returns human-readable issues; empty = valid. */
+/** Deterministic spec rules (plan §3.3 "spec lint"). Returns human-readable issues; empty = valid. */
 public final class SpecLinter {
     private static final Set<Integer> RISK_VALUES = Set.of(1, 2, 3, 4, 6, 9);
     private static final List<String> LAYERS = List.of("unit", "slice", "component", "contract", "system");
@@ -77,7 +77,7 @@ public final class SpecLinter {
                 }
             }
             for (Spec.Scenario s : r.scenarios) {
-                String sw = "scenario '" + s.title + "'";
+                String sw = scenarioLabel(s);
                 checkId(issues, sw, s.id(), flowId, 's');
                 if (!Spec.SOURCES.contains(s.source())) {
                     issues.add(sw + ": source must be one of " + Spec.SOURCES);
@@ -119,11 +119,11 @@ public final class SpecLinter {
                 issues.add(qw + ": needs at least two options '- [ ] A) ...'");
             }
             if (q.impact().equals("normal") && q.currentCodeOption().isEmpty()) {
-                issues.add(qw + ": a normal-impact question needs an option marked '= 代码现状' (used by 其余默认)");
+                issues.add(qw + ": a normal-impact question needs an option marked '= current code' (picked by 'rest default')");
             }
             for (Spec.Option o : q.options) {
                 if (!o.isCurrentCode() && !o.text.contains("→") && !o.text.contains("->")) {
-                    issues.add(qw + " option " + o.letter + ": state the effect on THEN ('→ ...') or mark '= 代码现状'");
+                    issues.add(qw + " option " + o.letter + ": state the effect on THEN ('→ ...') or mark '= current code'");
                 }
             }
             if (q.affects().isEmpty()) {
@@ -148,6 +148,11 @@ public final class SpecLinter {
         } else if (!Ids.SPEC_ELEMENT_ID.matcher(id).matches() || !id.startsWith(flowId + "/" + kind)) {
             issues.add(where + ": id '" + id + "' must look like " + flowId + "/" + kind + "01");
         }
+    }
+
+    /** How lint issues name a scenario; callers match issues by this prefix, never by title substring. */
+    public static String scenarioLabel(Spec.Scenario s) {
+        return "scenario " + (s.id() == null ? "(no id)" : s.id()) + " '" + s.title + "'";
     }
 
     private static void checkDocumented(List<String> issues, String where, String doc, String quote, Path root) {

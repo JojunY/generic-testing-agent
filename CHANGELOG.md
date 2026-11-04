@@ -4,7 +4,30 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 
 ## [Unreleased] — 0.1.0 (P0)
 
-### Fixed (code review)
+### Changed (documentation)
+- Documentation, agents, skills, templates and gtaw prompts are English. Chinese replies (`批准`, `其余默认`, `= 代码现状`) are still accepted.
+- `README.md` and `docs/design/plan.md` are English, with `README.zh-CN.md` and `docs/design/plan.zh-CN.md` copies and a language switch.
+- The explanatory diagrams (architecture, loop, item states, spec lifecycle) are rendered by `scripts/diagrams/render.py` into light and dark SVGs in the style of cathrynlavery/diagram-design; CI checks they are current.
+- A repository test keeps Chinese out of every file except the `*.zh-CN.md` copies, the alias parser and tests.
+
+### Fixed (code review, round 2; see docs/design/remediation-plan.md)
+- Only an exact "approve <flow>@<rev>" (or its Chinese alias) approves. Negated or conditional replies become change requests.
+- A spec edited after it was shown for approval is not approved; it returns as a new revision.
+- Timed-out test runs count against the item's budgets and reach a human.
+- A clean session end no longer resets items waiting for triage. Takeover resets only items being edited.
+- The scope check trusts only commits recorded in gtaw's commit ledger, so a forged `Gta-*` trailer does not count.
+- Unreadable oracle shards fail closed, both in commits and in the gate.
+- `relock` re-derives tokens from the spec and holds the work lock.
+- Review verdicts need the review node's token.
+- The spec loop is bounded (`spec.maxSubmitAttempts`, questions per round, clarify rounds).
+- Retry resets the check budget.
+- Wrappers refuse to run an unpinned jar.
+- `abort` keeps `.gta/work/recover/`.
+- `upgrade` removes or reports managed files the new version no longer ships.
+- `.gta/config.json` rejects unknown keys.
+- `oracleReview` is an organisation floor.
+
+### Fixed (code review, round 1)
 - A reviewer `reject` no longer fails with an illegal transition.
 - Items adopted after a rebuild get a token, so they can be repaired instead of deadlocking.
 - The scope check sees commits made outside gtaw and the source of a rename. Such commits go to a human.

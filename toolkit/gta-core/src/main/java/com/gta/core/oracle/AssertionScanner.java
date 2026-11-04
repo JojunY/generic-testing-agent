@@ -2,8 +2,8 @@ package com.gta.core.oracle;
 
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.Modifier;
+import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
@@ -26,11 +26,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * Extracts the oracle of a scenario's test methods (methods tagged {@code @Tag("scenario:<id>")}):
@@ -170,7 +172,7 @@ public final class AssertionScanner {
     }
 
     /** True when the node sits inside the arguments (not the scope) of an enclosing call matching the predicate. */
-    static boolean inArgumentsOf(Node node, java.util.function.Predicate<MethodCallExpr> predicate) {
+    static boolean inArgumentsOf(Node node, Predicate<MethodCallExpr> predicate) {
         Node child = node;
         Optional<Node> parent = node.getParentNode();
         while (parent.isPresent() && !(parent.get() instanceof Statement)) {
@@ -253,7 +255,7 @@ public final class AssertionScanner {
 
     /** static final fields with a literal initialiser, resolved by simple name. */
     static Map<String, String> constants(CompilationUnit cu) {
-        Map<String, String> out = new java.util.HashMap<>();
+        Map<String, String> out = new HashMap<>();
         for (FieldDeclaration f : cu.findAll(FieldDeclaration.class)) {
             if (!f.hasModifier(Modifier.Keyword.STATIC) || !f.hasModifier(Modifier.Keyword.FINAL)) {
                 continue;

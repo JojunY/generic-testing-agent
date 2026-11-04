@@ -2,6 +2,7 @@ package com.gta.core.engine;
 
 import com.gta.core.state.WorkState;
 
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -54,6 +55,6 @@ final class NodeResults {
             return "";
         }
         String[] lines = text.split("\\R");
-        return String.join("\n", java.util.Arrays.copyOf(lines, Math.min(n, lines.length)));
+        return String.join("\n", Arrays.copyOf(lines, Math.min(n, lines.length)));
     }
 }

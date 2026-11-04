@@ -9,12 +9,15 @@ import com.gta.core.util.Hashes;
 import com.gta.core.util.Json;
 import com.gta.core.util.Proc;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 /** Environment and installation checks with actionable hints (plan §11.2). */
 public final class DoctorChecks {
@@ -68,6 +71,19 @@ public final class DoctorChecks {
         } catch (GtaException e) {
             add("config", "fail", e.getMessage(), e.hint());
         }
+
+        Properties wrapper = new Properties();
+        if (Files.exists(paths.wrapperProperties())) {
+            try (var in = Files.newInputStream(paths.wrapperProperties())) {
+                wrapper.load(in);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+        String url = wrapper.getProperty("distributionUrl", "");
+        boolean pinned = !wrapper.getProperty("distributionSha256Sum", "").isBlank() && !url.isBlank() && !url.contains("nexus.example.com");
+        add("wrapper", pinned ? "ok" : "fail", pinned ? "gta-cli pinned to " + url : "distributionUrl/distributionSha256Sum not set",
+                "Set both in " + paths.rel(paths.wrapperProperties()) + " (gtaw refuses to run an unpinned jar; GTA_CLI_JAR overrides for development)");
 
         Path managed = paths.managedFiles();
         if (Files.exists(managed)) {

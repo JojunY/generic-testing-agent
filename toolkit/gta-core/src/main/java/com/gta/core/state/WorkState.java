@@ -19,7 +19,6 @@ public class WorkState {
     public int consecutiveFailures;
     public Pending pending;
     public Map<String, ItemState> items = new LinkedHashMap<>();
-    public List<String> sessionRuns = new ArrayList<>();
     public List<String> sessionPassed = new ArrayList<>();
     public List<String> newConfirmations = new ArrayList<>();
     public List<String> pendingReview = new ArrayList<>();

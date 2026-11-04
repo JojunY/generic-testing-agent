@@ -30,8 +30,8 @@ final class HumanPrompts {
             b.append("Findings:\n");
             spec.findings.forEach(f -> b.append("  - ").append(f.meta.getOr("kind", "finding")).append(": ").append(f.text).append('\n'));
         }
-        b.append("Reply like \"").append(round).append(": 1A 2B 其余默认\". High-impact questions need an explicit answer; ")
-                .append("\"其余默认\" picks the \"= 代码现状\" option and only produces characterization tests.");
+        b.append("Reply like \"").append(round).append(": 1A 2B rest default\". High-impact questions need an explicit answer; ")
+                .append("\"rest default\" picks the \"= current code\" option and only produces characterization tests.");
         return b.toString();
     }
 
@@ -45,8 +45,8 @@ final class HumanPrompts {
                 .append(spec.scenarios().size()).append(" scenarios (confirmed/documented ").append(confirmed).append(", observed ")
                 .append(observed).append(", defaulted ").append(defaulted).append(")\n");
         b.append("Observed and defaulted scenarios become characterization tests (they lock current behaviour, not correctness).\n");
-        b.append("Reply \"批准 ").append(spec.flowId()).append("@").append(spec.rev()).append("\" (or \"approve ")
-                .append(spec.flowId()).append("@").append(spec.rev()).append("\") to approve, or say what to change.");
+        b.append("Reply \"approve ").append(spec.flowId()).append("@").append(spec.rev())
+                .append("\" to approve, or say what to change.");
         return b.toString();
     }
 
@@ -62,7 +62,7 @@ final class HumanPrompts {
         if (s.lastError != null && s.lastError.message != null) {
             b.append("Last failure (").append(s.lastError.code).append("): ").append(firstLines(s.lastError.message, 6)).append('\n');
         }
-        b.append("Escalation file: ").append(".gta/escalations/").append(Ids.itemKey(item.id)).append(".md\n");
+        b.append("Escalation file: ").append(paths.rel(paths.escalations().resolve(Ids.itemKey(item.id) + ".md"))).append("\n");
         if (defect) {
             b.append("  A) Confirm it is a defect (pin it with @KnownDefect and draft an issue)\n");
             b.append("  B) The spec is wrong (back to review)\n");

@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,8 +51,39 @@ public final class StateStore {
                         + " Pending answers or approvals will be asked again", cause);
     }
 
+    /** Saves the state; the session counts as active until this moment (a long Maven run is not idle time). */
     public void save(WorkState state) {
+        if (state.session != null) {
+            state.session.lastSeenAt = Instant.now().toString();
+        }
         Json.writeAtomic(paths.state(), state);
+    }
+
+    /** Read-only load for status and reports: an unreadable file is reported but left where it is. */
+    public WorkState peek() {
+        if (!Files.exists(paths.state())) {
+            return new WorkState();
+        }
+        try {
+            return Json.MAPPER.readValue(paths.state().toFile(), WorkState.class);
+        } catch (IOException e) {
+            throw new GtaException(ErrorCode.STATE_CORRUPT, "Cannot read " + paths.rel(paths.state()) + ": " + e.getMessage(),
+                    "Run ./gtaw next: it keeps a copy of the file and rebuilds the working state", e);
+        }
+    }
+
+    /** Read-only plan load, see {@link #peek()}. */
+    public List<PlanItem> peekPlan() {
+        if (!Files.exists(paths.plan())) {
+            return new ArrayList<>();
+        }
+        try {
+            return Json.MAPPER.readValue(paths.plan().toFile(), new TypeReference<List<PlanItem>>() {
+            });
+        } catch (IOException e) {
+            throw new GtaException(ErrorCode.STATE_CORRUPT, "Cannot read " + paths.rel(paths.plan()) + ": " + e.getMessage(),
+                    "Run ./gtaw next: it keeps a copy of the file and rebuilds the working state", e);
+        }
     }
 
     public List<PlanItem> loadPlan() {
@@ -64,6 +96,12 @@ public final class StateStore {
         } catch (IOException e) {
             throw corrupt(paths.plan(), e);
         }
+    }
+
+    /** The plan item with this id; USAGE_UNKNOWN_ITEM if the plan does not contain it. */
+    public PlanItem planItem(String id) {
+        return loadPlan().stream().filter(i -> i.id.equals(id)).findFirst()
+                .orElseThrow(() -> new GtaException(ErrorCode.USAGE_UNKNOWN_ITEM, "Unknown item " + id, "Run ./gtaw status"));
     }
 
     public void savePlan(List<PlanItem> plan) {

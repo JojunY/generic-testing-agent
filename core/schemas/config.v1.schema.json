@@ -6,41 +6,78 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "$schema": { "type": "string" },
-    "schemaVersion": { "const": "1.0" },
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": "1.0"
+    },
     "build": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "tool": { "enum": ["maven"] },
-        "basePackage": { "type": "string", "description": "\"auto\" = package of the @SpringBootApplication class" },
-        "maven": { "type": "string", "description": "\"auto\" = mvnw if present, else mvn" }
+        "tool": {
+          "enum": [
+            "maven"
+          ]
+        },
+        "basePackage": {
+          "type": "string",
+          "description": "\"auto\" = package of the @SpringBootApplication class"
+        },
+        "maven": {
+          "type": "string",
+          "description": "\"auto\" = mvnw if present, else mvn"
+        }
       }
     },
-    "dispatch": { "enum": ["subagent", "inline"] },
+    "dispatch": {
+      "enum": [
+        "subagent",
+        "inline"
+      ],
+      "description": "how the orchestrator runs analyze/author/review nodes; inline when the IDE cannot run subagents"
+    },
     "spec": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "source": { "enum": ["gta"] },
-        "maxQuestionsPerRound": { "type": "integer", "minimum": 1, "maximum": 5 },
-        "maxClarifyRounds": { "type": "integer", "minimum": 1, "maximum": 5 }
+        "maxQuestionsPerRound": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "maxClarifyRounds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "maxSubmitAttempts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "rejected spec submissions in a row before the flow escalates to a human"
+        }
       }
     },
     "environments": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "allowCloud": { "type": "boolean" },
-        "gcpProject": { "type": "string" },
-        "region": { "type": "string" },
         "oracle": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "testUrl": { "type": "string", "pattern": "^jdbc:oracle:" },
-            "userEnv": { "type": "string" },
-            "passwordEnv": { "type": "string" }
+            "testUrl": {
+              "type": "string",
+              "pattern": "^jdbc:oracle:"
+            },
+            "userEnv": {
+              "type": "string"
+            },
+            "passwordEnv": {
+              "type": "string"
+            }
           }
         }
       }
@@ -48,34 +85,76 @@
     "distribution": {
       "type": "object",
       "additionalProperties": false,
-      "properties": { "toolsUrl": { "type": "string", "format": "uri" } }
+      "properties": {
+        "toolsUrl": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
     },
     "budgets": {
       "type": "object",
       "additionalProperties": false,
       "description": "Lower values are allowed; values below the floors are raised to them.",
       "properties": {
-        "maxChecksPerItem": { "type": "integer", "minimum": 1 },
-        "maxAttemptsPerItem": { "type": "integer", "minimum": 1 },
-        "maxConsecutiveFailures": { "type": "integer", "minimum": 1 },
-        "maxItemsPerSession": { "type": "integer", "minimum": 1 },
-        "nodeTimeoutMinutes": { "type": "integer", "minimum": 1 },
-        "sessionIdleMinutes": { "type": "integer", "minimum": 1 }
+        "maxChecksPerItem": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maxAttemptsPerItem": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maxConsecutiveFailures": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maxItemsPerSession": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "nodeTimeoutMinutes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sessionIdleMinutes": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
     "qualityGates": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "stabilityRepeat": { "type": "integer", "minimum": 1 },
-        "oracleReview": { "type": "boolean" },
-        "concernsCharacterizationRatio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "stabilityRepeat": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "oracleReview": {
+          "const": true,
+          "description": "organisation floor: the independent oracle review cannot be switched off"
+        },
+        "concernsCharacterizationRatio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
         "mutation": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "mode": { "enum": ["off", "advisory", "required"] },
-            "minStrength": { "type": "number", "minimum": 0, "maximum": 1 }
+            "mode": {
+              "enum": [
+                "advisory",
+                "enforced"
+              ]
+            },
+            "minStrength": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
           }
         }
       }

@@ -16,6 +16,31 @@ public final class AtomicFiles {
     private AtomicFiles() {
     }
 
+    /** Atomic copy of any file (binary-safe), e.g. backups of files gtaw is about to revert. */
+    public static void copy(Path source, Path target) {
+        try {
+            Path parent = target.toAbsolutePath().getParent();
+            Files.createDirectories(parent);
+            Path tmp = Files.createTempFile(parent, "." + target.getFileName(), ".tmp");
+            try {
+                Files.copy(source, tmp, StandardCopyOption.REPLACE_EXISTING);
+                move(tmp, target);
+            } finally {
+                Files.deleteIfExists(tmp);
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private static void move(Path tmp, Path target) throws IOException {
+        try {
+            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
     public static void write(Path path, String content) {
         try {
             Path parent = path.toAbsolutePath().getParent();
@@ -23,11 +48,7 @@ public final class AtomicFiles {
             Path tmp = Files.createTempFile(parent, "." + path.getFileName(), ".tmp");
             try {
                 Files.writeString(tmp, content, StandardCharsets.UTF_8);
-                try {
-                    Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-                } catch (AtomicMoveNotSupportedException e) {
-                    Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING);
-                }
+                move(tmp, path);
             } finally {
                 Files.deleteIfExists(tmp);
             }

@@ -135,4 +135,24 @@ class GateTest {
         assertTrue(failedWith(r, ErrorCode.GATE_SCENARIO_REGRESSED));
         assertEquals("fail", r.decision);
     }
+
+    @Test
+    void shouldFailClosedWhenTheBaseShardIsUnreadable() throws Exception {
+        git("checkout", "-q", "main");
+        Files.writeString(paths.oracleShard("order.create"), "{ <<<<<<< conflict");
+        git("commit", "-qam", "broken shard on base");
+        git("checkout", "-q", "-b", "feature-2");
+        writeShard("alice@corp", "first relock", "2026-10-01T10:00:00Z");
+
+        assertTrue(failedWith(gate(), ErrorCode.GATE_SHARD_UNREADABLE));
+    }
+
+    @Test
+    void shouldRaiseAConcernWhenASpecWithLockedScenariosIsDeleted() throws Exception {
+        Files.delete(paths.spec("order.create"));
+
+        Gate.Result r = gate();
+
+        assertTrue(r.concerns.stream().anyMatch(c -> c.code.equals(ErrorCode.GATE_SCENARIOS_UNLOCKED.name())), r.concerns.toString());
+    }
 }

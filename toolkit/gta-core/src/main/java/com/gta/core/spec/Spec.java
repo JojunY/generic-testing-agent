@@ -168,7 +168,7 @@ public final class Spec {
         public boolean checked;
 
         public boolean isCurrentCode() {
-            return text.contains("= 代码现状") || text.toLowerCase().contains("= current code");
+            return text.toLowerCase().contains("= current code") || text.contains("= 代码现状"); // the Chinese marker is an accepted alias
         }
     }
 

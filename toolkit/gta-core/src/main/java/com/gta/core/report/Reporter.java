@@ -3,10 +3,12 @@ package com.gta.core.report;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
 import com.gta.core.gate.Gate;
+import com.gta.core.oracle.OracleShard;
 import com.gta.core.plan.PlanItem;
 import com.gta.core.spec.Spec;
 import com.gta.core.spec.SpecParser;
 import com.gta.core.state.WorkState;
+import com.gta.core.util.Ids;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -62,7 +64,7 @@ public final class Reporter {
                     List<PlanItem> items = plan.stream().filter(i -> s.id() != null && s.id().equals(i.ref)).toList();
                     if (items.isEmpty()) {
                         // no working state (e.g. in CI): fall back to the committed oracle shard
-                        String locked = com.gta.core.oracle.OracleShard.read(paths.oracleShard(spec.flowId())).keySet().stream()
+                        String locked = OracleShard.read(paths.oracleShard(spec.flowId())).keySet().stream()
                                 .filter(k -> s.id() != null && k.startsWith(s.id() + "#")).findFirst().orElse(null);
                         b.append("| ").append(spec.flowId()).append(" | ").append(r.title).append(" | ").append(s.id()).append(' ')
                                 .append(s.title).append(" | ").append(s.source()).append(" | ")
@@ -97,7 +99,7 @@ public final class Reporter {
         }
         List<String> defects = state.items.values().stream().filter(i -> i.status.id().equals("defect-found"))
                 .map(i -> "`" + i.id + "` — pinned with `@KnownDefect`; details in `.gta/escalations/"
-                        + com.gta.core.util.Ids.itemKey(i.id) + ".md`").toList();
+                        + Ids.itemKey(i.id) + ".md`").toList();
         if (!defects.isEmpty()) {
             b.append("### Product defects found\n\n");
             defects.forEach(d -> b.append("- ").append(d).append('\n'));

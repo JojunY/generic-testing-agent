@@ -67,7 +67,7 @@ IF the customer id is blank, THEN THE order service SHALL respond 400 and store 
 ## Open questions
 <!-- gta: id=order.create-order/q01 impact=high affects=order.create-order/s03 -->
 1. [high impact] PricingService documents "Orders of at least the threshold get the discount" but compares with `>`. Should an order of exactly 100.00 get the discount?
-   - [ ] A) No discount at exactly 100.00 (= 代码现状)
+   - [ ] A) No discount at exactly 100.00 (= current code)
    - [ ] B) Discount applies at 100.00 → s03 THEN discount `10.00` and total `90.00`
 
 ## Findings

@@ -5,7 +5,6 @@ import com.gta.core.plan.PlanItem;
 import com.gta.core.state.ItemStatus;
 import com.gta.core.state.WorkState;
 import com.gta.core.util.AtomicFiles;
-import com.gta.core.util.Git;
 import com.gta.core.util.Ids;
 
 import java.nio.file.Path;
@@ -15,12 +14,15 @@ import static com.gta.core.engine.NodeResults.firstLines;
 
 /** Writes and commits {@code .gta/escalations/<item>.md}, the durable record of everything that needed a human. */
 final class EscalationWriter {
+    /** The line that marks a human-confirmed, pinned defect; ItemWorkflow.confirmedPin looks for it in the committed record. */
+    static final String DEFECT_FOUND_MARKER = "- Status: `defect-found`";
+
+    private final EngineContext ctx;
     private final GtaPaths paths;
-    private final Git git;
 
     EscalationWriter(EngineContext ctx) {
+        this.ctx = ctx;
         this.paths = ctx.paths;
-        this.git = ctx.git;
     }
 
     void writeEscalation(PlanItem item, WorkState.ItemState s, String reason) {
@@ -46,6 +48,6 @@ final class EscalationWriter {
         }
         AtomicFiles.write(f, b.toString());
         String verb = s.status == ItemStatus.DEFECT_FOUND ? "record known defect " : "escalate ";
-        git.commit(List.of(paths.rel(f)), "docs(gta): " + verb + item.id + "\n\nGta-Item: " + item.id);
+        ctx.commit(List.of(paths.rel(f)), "docs(gta): " + verb + item.id + "\n\nGta-Item: " + item.id);
     }
 }
