@@ -74,6 +74,11 @@ public final class GtaCli implements Callable<Integer> {
         // intact.
         System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out), true, StandardCharsets.UTF_8));
         System.setErr(new PrintStream(new FileOutputStream(FileDescriptor.err), true, StandardCharsets.UTF_8));
+        System.exit(commandLine().execute(args));
+    }
+
+    /** The command line with gtaw's error contract: every failure is one JSON error object and its exit code. */
+    static CommandLine commandLine() {
         CommandLine cli = new CommandLine(new GtaCli());
         cli.setExecutionExceptionHandler((ex, cmd, parsed) -> {
             GtaException ge = ex instanceof GtaException g
@@ -94,7 +99,7 @@ public final class GtaCli implements Callable<Integer> {
             System.out.println(Json.write(ge.toErrorObject()));
             return ErrorCode.USAGE_INVALID_ARGUMENT.exitCode();
         });
-        System.exit(cli.execute(args));
+        return cli;
     }
 
     @Override

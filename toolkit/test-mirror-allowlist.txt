@@ -1,0 +1,16 @@
+# Sources without their own <Name>Test, and tests that map back to no source (docs/guides/test-naming.md, E1 and E3).
+# One entry per line: <path under src/main/java or src/test/java> | reason. MirroredTestNamesTest enforces this list.
+
+# E1: types with no behaviour of their own, tested through their users
+com/gta/core/change/Baseline.java | persisted data of ChangeChecker (ChangeCheckerTest)
+com/gta/core/oracle/Lock.java | persisted data of OracleLock (OracleLockTest)
+com/gta/core/plan/PlanItem.java | persisted data of Planner (PlannerTest)
+com/gta/core/profile/ServiceProfile.java | persisted data of the profiler (ProfilerTest)
+com/gta/core/run/TestRunner.java | interface; MavenRunnerTest and TestRunnerFake implement it
+com/gta/core/engine/EngineContext.java | wiring only; every engine test builds one
+com/gta/core/util/Yaml.java | a configured ObjectMapper constant (CapabilityRegistryTest, FrontmatterTest)
+com/gta/junit/KnownDefect.java | annotation; KnownDefectExtensionTest covers its behaviour
+
+# E3: tests with no single source
+com/gta/harness/RepositoryHarnessTest.java | the repository's layout, language and generated-folder sync
+com/gta/harness/MirroredTestNamesTest.java | this naming rule itself
