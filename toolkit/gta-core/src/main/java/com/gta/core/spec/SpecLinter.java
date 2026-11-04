@@ -24,6 +24,14 @@ public final class SpecLinter {
 
     private SpecLinter() {}
 
+    /** Scenarios without {@code priority=}: not an error, they count as P1 (plan §10.6). */
+    public static List<String> missingPriority(Spec spec) {
+        return spec.scenarios().stream()
+                .filter(s -> s.meta.get("priority").isEmpty())
+                .map(Spec.Scenario::id)
+                .toList();
+    }
+
     public static List<String> lint(
             Spec spec, String expectedFlowId, RefResolver refs, CapabilityRegistry registry, Path root) {
         List<String> issues = new ArrayList<>();

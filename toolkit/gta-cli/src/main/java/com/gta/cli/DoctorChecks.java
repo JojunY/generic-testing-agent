@@ -66,6 +66,11 @@ public final class DoctorChecks {
                     pom.bootMajor() >= 3 ? "ok" : "warn",
                     "Spring Boot " + pom.bootVersion + " → JUnit " + pom.junitMajor(),
                     "gta targets Spring Boot 3.5 and 4.x");
+            add(
+                    "modules",
+                    pom.modules.isEmpty() ? "ok" : "warn",
+                    pom.modules.isEmpty() ? "single module" : "multi-module: " + pom.modules,
+                    "gta supports single-module services only for now; run it in the module that holds the service");
             boolean junit = pom.dependencies.contains("gta-junit");
             add(
                     "gta-junit",

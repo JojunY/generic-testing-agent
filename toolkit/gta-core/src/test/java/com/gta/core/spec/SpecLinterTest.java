@@ -40,6 +40,18 @@ class SpecLinterTest {
     }
 
     @Test
+    void shouldListScenariosWithoutAPriorityWithoutCallingThemInvalid() throws Exception {
+        assertTrue(lint(SpecTestData.CREATE_ORDER).isEmpty(), "a missing priority is not a lint error");
+
+        List<String> missing = SpecLinter.missingPriority(SpecParser.parseText(SpecTestData.CREATE_ORDER));
+        List<String> withPriority = SpecLinter.missingPriority(SpecParser.parseText(
+                SpecTestData.CREATE_ORDER.replace("hint.layer=component", "priority=P0 hint.layer=component")));
+
+        assertTrue(missing.contains("order.create/s01"), missing.toString());
+        assertTrue(missing.size() > withPriority.size(), "a scenario with priority= is no longer listed");
+    }
+
+    @Test
     void shouldRejectAnAgentWrittenConfirmation() throws Exception {
         String forged = SpecTestData.CREATE_ORDER.replace(
                 "source=observed hint.layer=component hint.oracle=response",

@@ -86,5 +86,6 @@ All ten are decided. "Now" is what the code does today.
 | Q-R9 | No scheduled enum migration. Persisted strings stay strings; migrate a field when its code is touched anyway. | as decided |
 | Q-R10 | Manual case ids are `<flowId>/mNN`. | as decided |
 
-Two small follow-ups came out of these decisions and are **not implemented yet**: a linter warning (not an error) for a
-scenario without `priority=` (Q-R3), and a clear "multi-module is not supported yet" message from `gtaw doctor` (Q-R7).
+Two small follow-ups came out of these decisions and are implemented: a spec submit notes each scenario without
+`priority=` ("has no priority=; it counts as P1"; not an error, tests `SpecLinterTest`, `SpecWorkflowTest`), and
+`gtaw doctor` warns that a multi-module pom is not supported yet (`DoctorChecksTest`).
