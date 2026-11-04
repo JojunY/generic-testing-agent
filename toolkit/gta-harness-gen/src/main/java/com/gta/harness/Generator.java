@@ -219,8 +219,10 @@ public class Generator {
         return repo.resolve("platforms/" + platform + "/" + name);
     }
 
+    /** The path relative to the repository; a path outside it (e.g. a temp folder on another drive) stays as given. */
     String rel(Path p) {
-        return repo.relativize(p).toString().replace('\\', '/');
+        Path shown = p.startsWith(repo) ? repo.relativize(p) : p;
+        return shown.toString().replace('\\', '/');
     }
 
     static List<Path> list(Path dir, String suffix) {
