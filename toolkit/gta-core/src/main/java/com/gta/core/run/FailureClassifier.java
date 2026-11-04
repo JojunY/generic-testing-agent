@@ -54,7 +54,7 @@ public final class FailureClassifier {
         }
         String type = c.failureType == null ? "" : c.failureType;
         String stack = c.stack == null ? "" : c.stack;
-        String firstApp = firstNonFramework(stack);
+        String firstApp = firstNonFramework(stack, productionClasses, testClasses);
         boolean productionInChain = anyProductionFrame(stack, productionClasses);
         c.sutReached = productionInChain || "failed".equals(c.outcome);
 
@@ -84,11 +84,18 @@ public final class FailureClassifier {
         }
     }
 
-    static String firstNonFramework(String stack) {
+    /**
+     * The first frame that is not framework code. A class of the service itself never counts as framework, even when its
+     * package starts like one (a service under {@code com.google.} or {@code org.apache.}).
+     */
+    static String firstNonFramework(String stack, Set<String> productionClasses, Set<String> testClasses) {
         Matcher m = FRAME.matcher(stack);
         while (m.find()) {
             String cls = m.group(1);
-            if (FRAMEWORK.stream().noneMatch(cls::startsWith)) {
+            String outer = outerClass(cls);
+            if (productionClasses.contains(outer)
+                    || testClasses.contains(outer)
+                    || FRAMEWORK.stream().noneMatch(cls::startsWith)) {
                 return cls;
             }
         }
@@ -110,8 +117,8 @@ public final class FailureClassifier {
         return dollar > 0 ? cls.substring(0, dollar) : cls;
     }
 
-    /** Same as com.gta.junit.Fingerprint.VOLATILE (gta-core does not depend on gta-junit). */
-    static final String VOLATILE =
+    /** Same as com.gta.junit.Fingerprint.VOLATILE; gta-junit's FingerprintTest proves both copies agree. */
+    public static final String VOLATILE =
             "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?|0x[0-9a-fA-F]+|@[0-9a-fA-F]{4,}\\b|\\b[0-9a-f]{8,}\\b|\\b\\d{6,}\\b";
 
     /** Same algorithm as com.gta.junit.Fingerprint, so @KnownDefect(failure=...) can be compared at test time. */

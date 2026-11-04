@@ -1,11 +1,12 @@
 package com.gta.core.change;
 
 import com.gta.core.config.GtaPaths;
+import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
-import com.gta.core.state.WorkState;
 import com.gta.core.util.AtomicFiles;
 import com.gta.core.util.Git;
 import com.gta.core.util.Hashes;
+import com.gta.core.util.Json;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -72,8 +73,8 @@ public final class ChangeChecker {
         this.git = new Git(paths.root());
     }
 
-    public WorkState.Baseline capture() {
-        WorkState.Baseline b = new WorkState.Baseline();
+    public Baseline capture() {
+        Baseline b = new Baseline();
         b.head = git.head();
         for (String p : git.dirtyPaths()) {
             if (!matchesAny(p, IGNORED)) {
@@ -84,7 +85,7 @@ public final class ChangeChecker {
     }
 
     /** Files changed since the baseline (excluding pre-existing dirty files that are byte-identical). */
-    public List<String> changedSince(WorkState.Baseline baseline) {
+    public List<String> changedSince(Baseline baseline) {
         Set<String> changed = new LinkedHashSet<>();
         Set<String> dirtyNow = git.dirtyPaths();
         for (String p : dirtyNow) {
@@ -104,12 +105,13 @@ public final class ChangeChecker {
         return new ArrayList<>(changed);
     }
 
-    public Result check(WorkState.Baseline baseline, List<String> allowed, Path backupDir, boolean restore) {
+    public Result check(Baseline baseline, List<String> allowed, Path backupDir, boolean restore) {
         List<String> changed = changedSince(baseline);
         List<String> out = new ArrayList<>();
+        List<String> protectedPaths = protectedPaths();
         for (String p : changed) {
             boolean allowedPath = matchesAny(p, allowed);
-            if (!allowedPath || matchesAny(p, PROTECTED)) {
+            if (!allowedPath || matchesAny(p, protectedPaths)) {
                 out.add(p);
             }
         }
@@ -167,6 +169,30 @@ public final class ChangeChecker {
         } catch (GtaException | IOException e) {
             return false;
         }
+    }
+
+    /**
+     * {@link #PROTECTED} plus every file gta installed ({@code .gta/managed-files.json}), so a file a new platform adds is
+     * protected without a code change. An unreadable list fails closed.
+     */
+    List<String> protectedPaths() {
+        List<String> out = new ArrayList<>(PROTECTED);
+        Path managed = paths.managedFiles();
+        if (Files.exists(managed)) {
+            Map<?, ?> m;
+            try {
+                m = Json.read(managed, Map.class);
+            } catch (RuntimeException unreadable) {
+                throw new GtaException(
+                        ErrorCode.CONFIG_INVALID,
+                        "Cannot read " + paths.rel(managed) + ": " + unreadable.getMessage(),
+                        "Restore it from git, or run ./gtaw upgrade to write it again");
+            }
+            if (m.get("files") instanceof Map<?, ?> files) {
+                files.keySet().forEach(k -> out.add(String.valueOf(k)));
+            }
+        }
+        return out;
     }
 
     public void backup(String rel, Path backupDir) {

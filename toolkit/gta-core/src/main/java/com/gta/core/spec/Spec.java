@@ -1,5 +1,6 @@
 package com.gta.core.spec;
 
+import com.gta.core.util.Hashes;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -119,6 +120,15 @@ public final class Spec {
 
         public boolean reviewerChecked() {
             return "reviewer".equals(meta.getOr("check", ""));
+        }
+
+        /**
+         * Hash of what the scenario promises (title, WHEN, THEN, source). A test locked on one revision is re-verified when
+         * the revision changes; whitespace and case do not count.
+         */
+        public String revision() {
+            return Hashes.normalizedShort(
+                    title + "|" + String.join("|", whens) + "|" + String.join("|", thens) + "|" + source());
         }
     }
 

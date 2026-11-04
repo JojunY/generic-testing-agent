@@ -1,6 +1,5 @@
 package com.gta.core.oracle;
 
-import com.gta.core.state.WorkState;
 import com.gta.core.util.Hashes;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,9 +21,8 @@ public final class OracleLock {
     private OracleLock() {}
 
     /** Creates the lock from the first run that reached the system under test. */
-    public static WorkState.Lock create(
-            AssertionScanner.ScenarioOracle oracle, List<String> thenLiterals, String runId) {
-        WorkState.Lock lock = new WorkState.Lock();
+    public static Lock create(AssertionScanner.ScenarioOracle oracle, List<String> thenLiterals, String runId) {
+        Lock lock = new Lock();
         for (String lit : thenLiterals) {
             if (!AssertionScanner.missingThenLiterals(List.of(lit), oracle.tokens())
                     .contains(lit)) {
@@ -42,7 +40,7 @@ public final class OracleLock {
         return lock;
     }
 
-    public static Check check(WorkState.Lock lock, AssertionScanner.ScenarioOracle current) {
+    public static Check check(Lock lock, AssertionScanner.ScenarioOracle current) {
         if (lock == null) {
             return new Check(Verdict.OK, List.of());
         }

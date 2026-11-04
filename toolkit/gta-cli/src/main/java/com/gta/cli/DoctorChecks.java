@@ -57,8 +57,10 @@ public final class DoctorChecks {
                 mvnw ? "Maven wrapper" : mvn ? "mvn on PATH" : "no Maven",
                 "Install Maven or add the Maven wrapper");
 
+        List<String> dependencies = List.of();
         try {
             PomInfo pom = PomInfo.read(root);
+            dependencies = pom.dependencies;
             add(
                     "spring-boot",
                     pom.bootMajor() >= 3 ? "ok" : "warn",
@@ -88,18 +90,23 @@ public final class DoctorChecks {
                     "ok",
                     Files.exists(paths.config()) ? ".gta/config.json valid" : "defaults (no .gta/config.json)",
                     "");
-            boolean oracle = config.environments.oracle.testUrl != null;
-            add(
-                    "oracle-test-db",
-                    oracle ? "ok" : "warn",
-                    oracle ? "shared Oracle test schema configured" : "not configured",
-                    "Set environments.oracle.testUrl for high-fidelity Oracle tests; otherwise H2 MODE=Oracle (low fidelity) is used");
-            boolean tools = config.distribution.toolsUrl != null;
-            add(
-                    "emulators",
-                    tools ? "ok" : "warn",
-                    tools ? "tools from " + config.distribution.toolsUrl : "no tools URL",
-                    "Upload the Pub/Sub emulator to the Nexus raw repository and set distribution.toolsUrl; otherwise fakes are used");
+            // dependency-specific checks only run for services that use the dependency
+            if (uses(dependencies, "ojdbc")) {
+                boolean oracle = config.environments.oracle.testUrl != null;
+                add(
+                        "oracle-test-db",
+                        oracle ? "ok" : "warn",
+                        oracle ? "shared Oracle test schema configured" : "not configured",
+                        "Set environments.oracle.testUrl for high-fidelity Oracle tests; otherwise H2 MODE=Oracle (low fidelity) is used");
+            }
+            if (uses(dependencies, "pubsub")) {
+                boolean tools = config.distribution.toolsUrl != null;
+                add(
+                        "emulators",
+                        tools ? "ok" : "warn",
+                        tools ? "tools from " + config.distribution.toolsUrl : "no tools URL",
+                        "Upload the Pub/Sub emulator to the Nexus raw repository and set distribution.toolsUrl; otherwise fakes are used");
+            }
         } catch (GtaException e) {
             add("config", "fail", e.getMessage(), e.hint());
         }
@@ -177,5 +184,10 @@ public final class DoctorChecks {
             c.put("hint", hint);
         }
         checks.add(c);
+    }
+
+    /** Whether any dependency's artifactId contains {@code fragment} (e.g. ojdbc11, spring-cloud-gcp-starter-pubsub). */
+    static boolean uses(List<String> dependencies, String fragment) {
+        return dependencies.stream().anyMatch(a -> a != null && a.contains(fragment));
     }
 }

@@ -14,7 +14,6 @@ import com.gta.core.oracle.AssertionScanner;
 import com.gta.core.oracle.OracleLock;
 import com.gta.core.oracle.OracleShard;
 import com.gta.core.plan.PlanItem;
-import com.gta.core.plan.Planner;
 import com.gta.core.profile.Profiler;
 import com.gta.core.profile.ServiceProfile;
 import com.gta.core.registry.CapabilityRegistry;
@@ -110,9 +109,16 @@ public final class Engine {
                 .findFirst()
                 .orElse(null);
         WorkState.SpecWork sw = st.specWork.computeIfAbsent(flowId, k -> new WorkState.SpecWork());
-        String capability = Files.exists(specPath)
-                ? SpecParser.parse(specPath).capability()
-                : entry != null ? entry.capability : "rest-api";
+        if (!Files.exists(specPath) && entry == null) {
+            // guessing a capability would brief the analyst for the wrong kind of flow
+            st.activeFlow = null;
+            throw new GtaException(
+                    ErrorCode.USAGE_UNKNOWN_FLOW,
+                    "No entry point of " + flowId + " was found in the code",
+                    "Run ./gtaw next without --target to list the detected flows. For a flow gta cannot detect, create "
+                            + paths.rel(specPath) + " with a header naming its capability, then target it again");
+        }
+        String capability = Files.exists(specPath) ? SpecParser.parse(specPath).capability() : entry.capability;
         CapabilityRegistry.Capability cap = registry.capability(capability);
         boolean explainOnly = !cap.activeIn(CapabilityRegistry.CURRENT_PHASE);
 
@@ -170,7 +176,7 @@ public final class Engine {
         if ("explain".equals(st.mode)) {
             st.mode = "flow"; // explain turns into flow mode once the human approved the spec (plan §6)
         }
-        List<PlanItem> flowItems = ctx.items.syncPlan(st, spec, profile);
+        List<PlanItem> flowItems = ctx.planSync.syncPlan(st, spec, profile);
         ItemWorkflow.Dispatch next = ctx.items.dispatch(st, spec, profile, flowItems);
         return next.node() != null ? next.node() : ctx.sessionEnd.finishSession(st, next.sessionOverReason(), base);
     }
@@ -214,7 +220,7 @@ public final class Engine {
                     switch (p.type) {
                         case "answer" -> ctx.specs.applyAnswers(st, p, AnswerParser.parse(text), text);
                         case "approve" -> approvalOrChangeRequest(st, p, text);
-                        case "defect", "escalation" -> ctx.items.applyDecision(st, p, AnswerParser.parse(text), text);
+                        case "defect", "escalation" -> ctx.triage.applyDecision(st, p, AnswerParser.parse(text), text);
                         default -> throw new GtaException(
                                 ErrorCode.INTERNAL_ERROR, "Unknown pending type " + p.type, "Run ./gtaw abort");
                     };
@@ -377,7 +383,7 @@ public final class Engine {
             e.fingerprint = OracleLock.fingerprint(oracle.assertionStatements().stream()
                     .filter(x -> e.tokens.stream().anyMatch(x::contains))
                     .toList());
-            e.scenarioRevision = Planner.scenarioRevision(scenario);
+            e.scenarioRevision = scenario.revision();
             e.relockedBy = by;
             e.reason = reason;
             e.relockedAt = Instant.now().toString();

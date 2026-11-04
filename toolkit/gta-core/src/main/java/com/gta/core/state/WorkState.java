@@ -1,7 +1,9 @@
 package com.gta.core.state;
 
+import com.gta.core.change.Baseline;
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
+import com.gta.core.oracle.Lock;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -65,19 +67,6 @@ public class WorkState {
         public boolean inputsChangedAfterAssertion;
         public boolean structuralOracleChange;
         public String intentOverride;
-    }
-
-    public static class Baseline {
-        public String head;
-        public Map<String, String> dirty = new LinkedHashMap<>();
-    }
-
-    public static class Lock {
-        public List<String> tokens = new ArrayList<>();
-        public List<String> statements = new ArrayList<>();
-        public String fingerprint;
-        public String watched;
-        public String reachedInRun;
     }
 
     public static class LastError {

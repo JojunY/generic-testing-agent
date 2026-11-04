@@ -19,8 +19,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** Deterministic service profile: build info, detected capabilities and the entrypoint inventory (plan §4.4). */
@@ -131,7 +131,9 @@ public final class Profiler {
                 boolean controller = c.getAnnotationByName("RestController").isPresent()
                         || c.getAnnotationByName("Controller").isPresent();
                 String classPath = c.getAnnotationByName("RequestMapping")
-                        .flatMap(Profiler::pathOf)
+                        .map(Profiler::pathsOf)
+                        .filter(p -> !p.isEmpty())
+                        .map(p -> p.get(0))
                         .orElse("");
                 for (MethodDeclaration m : c.getMethods()) {
                     ServiceProfile.EntryPoint e = null;
@@ -141,7 +143,11 @@ public final class Profiler {
                             if (verb != null) {
                                 e = base(c, fqcn, m, "rest-api", "http");
                                 e.httpMethod = verb;
-                                e.path = (classPath + pathOf(a).orElse("")).replaceAll("//+", "/");
+                                List<String> paths = pathsOf(a);
+                                e.path = (paths.isEmpty() ? List.of("") : paths)
+                                        .stream()
+                                                .map(p -> (classPath + p).replaceAll("//+", "/"))
+                                                .collect(Collectors.joining(" | "));
                                 e.risk = verb.equals("GET") ? 2 : 6;
                             }
                         }
@@ -193,7 +199,8 @@ public final class Profiler {
         return e;
     }
 
-    private static Optional<String> pathOf(AnnotationExpr a) {
+    /** Every path of a mapping annotation ({@code @GetMapping({"/a", "/b"})} has two). */
+    static List<String> pathsOf(AnnotationExpr a) {
         Expression value = null;
         if (a instanceof SingleMemberAnnotationExpr s) {
             value = s.getMemberValue();
@@ -206,14 +213,13 @@ public final class Profiler {
             }
         }
         if (value == null) {
-            return Optional.empty();
+            return List.of();
         }
-        if (value.isArrayInitializerExpr()
-                && !value.asArrayInitializerExpr().getValues().isEmpty()) {
-            value = value.asArrayInitializerExpr().getValues().get(0);
-        }
-        return value.isStringLiteralExpr()
-                ? Optional.of(value.asStringLiteralExpr().getValue())
-                : Optional.empty();
+        List<Expression> values =
+                value.isArrayInitializerExpr() ? value.asArrayInitializerExpr().getValues() : List.of(value);
+        return values.stream()
+                .filter(Expression::isStringLiteralExpr)
+                .map(v -> v.asStringLiteralExpr().getValue())
+                .toList();
     }
 }

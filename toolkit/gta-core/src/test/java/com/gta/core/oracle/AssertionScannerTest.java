@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.gta.core.state.WorkState;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -63,7 +62,7 @@ class AssertionScannerTest {
 
     @Test
     void shouldDetectAModifiedLockedValue() throws Exception {
-        WorkState.Lock lock = OracleLock.create(scan(TEST), List.of("201", "50.00", "CREATED"), "r1");
+        Lock lock = OracleLock.create(scan(TEST), List.of("201", "50.00", "CREATED"), "r1");
 
         OracleLock.Check check = OracleLock.check(lock, scan(TEST.replace("value(50.00)", "value(51.00)")));
 
@@ -73,7 +72,7 @@ class AssertionScannerTest {
 
     @Test
     void shouldAllowChangedInputsAndAddedAssertions() throws Exception {
-        WorkState.Lock lock = OracleLock.create(scan(TEST), List.of("201", "50.00", "CREATED"), "r1");
+        Lock lock = OracleLock.create(scan(TEST), List.of("201", "50.00", "CREATED"), "r1");
         String changed = TEST.replace("\\\"subtotal\\\":50.00", "\\\"subtotal\\\":50.000")
                 .replace(
                         ".andExpect(jsonPath(\"$.status\").value(CREATED));",

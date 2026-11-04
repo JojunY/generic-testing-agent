@@ -5,7 +5,6 @@ import com.gta.core.profile.ServiceProfile;
 import com.gta.core.registry.CapabilityRegistry;
 import com.gta.core.spec.Ref;
 import com.gta.core.spec.Spec;
-import com.gta.core.util.Hashes;
 import com.gta.core.util.Ids;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -65,7 +64,7 @@ public final class Planner {
                 item.ownsFiles.add(GtaPaths.testSourceRel(item.testClass));
                 item.ownsFiles.add(GtaPaths.TEST_RESOURCES + "/fixtures/" + domain + "/" + flowName + "/**");
                 item.priority = priority(spec.risk());
-                item.scenarioRevision = scenarioRevision(s);
+                item.scenarioRevision = s.revision();
                 items.add(item);
             }
         }
@@ -113,11 +112,6 @@ public final class Planner {
             return "p2";
         }
         return "p3";
-    }
-
-    public static String scenarioRevision(Spec.Scenario s) {
-        return Hashes.normalizedShort(
-                s.title + "|" + String.join("|", s.whens) + "|" + String.join("|", s.thens) + "|" + s.source());
     }
 
     /** Package of the first referenced production class, falling back to the service base package. */

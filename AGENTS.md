@@ -11,14 +11,16 @@ These are the rules for working on this repository. They do not apply to service
 - Explanatory diagrams are data in `scripts/diagrams/render.py` (diagram-design style, light and dark). Edit the script, run it, commit the SVGs in `docs/diagrams/`; CI runs it with `--check`. Spec diagrams stay Mermaid.
 - Platform differences (tool names, permissions, models, file locations) live only in `platforms/<platform>/mapping.yaml`.
 - `pom.xml` at the root is the single source of the version.
+- Module builds read harness content from outside their own folder (`core/`, `platforms/`, `wrapper/`, `copilot/`, `opencode/`): build from the root, not one module on its own.
+- Dependencies point down the layers `util`/`error` → `config` → `registry`/`profile` → `spec` → `plan` → `oracle`/`change`/`run` → `state` → `gate`/`report`/`brief` → `engine`. Domain packages never import `state`; the state file is made of their types.
 
 ## gta-core packages
 
 | Package | Responsibility |
 |---|---|
-| `engine` | `Engine` is the only public facade and routes `next`/`answer`. `SpecWorkflow` (specs, answers, approval), `ItemWorkflow` (items), `TestRuns` (every test run), `SessionManager` and `SessionEnd` do the work; `HumanPrompts` renders the question, approval and decision prompts and `EscalationWriter` the escalation records. They share one `EngineContext`; `ItemWorkflow` never calls `SessionEnd`. |
+| `engine` | `Engine` is the only public facade and routes `next`/`answer`. `SpecWorkflow` (specs, answers, approval), `ItemWorkflow` (dispatch, check, submit, oracle review), `Triage` (triage verdicts, auto-correction, human decisions on items), `ItemCommitter` (item commits with their oracle lock), `PlanSync` (plan from the approved spec), `TestRuns` (every test run), `SessionManager` and `SessionEnd` do the work; `HumanPrompts` renders the question, approval and decision prompts and `EscalationWriter` the escalation records. They share one `EngineContext`; the item classes never call `SessionEnd`. |
 | `spec` · `plan` · `state` | spec model, parser, linter and editor · planning · item state machine and the state store |
-| `oracle` · `change` · `run` · `gate` · `report` | oracle lock and shards · scope check and the commit ledger · `TestRunner` (Maven, or a fake in tests) and triage · the gate · reports |
+| `oracle` · `change` · `run` · `gate` · `report` | oracle lock (`Lock`) and shards · scope check (`Baseline`) and the commit ledger · `TestRunner` (Maven, or `TestRunnerFake` in tests) and failure classification · the gate · reports |
 | `profile` · `registry` · `brief` | code profiling · capability registry · agent briefs |
 | `config` · `error` · `util` | `GtaPaths` (every well-known location; never hard-code paths) · `ErrorCode` · `AtomicFiles`, `Json`, `Yaml`, `Git`, `ProcessRunner`, `Ids` |
 

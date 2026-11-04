@@ -8,7 +8,6 @@ import com.gta.core.error.GtaException;
 import com.gta.core.oracle.AssertionScanner;
 import com.gta.core.oracle.OracleLock;
 import com.gta.core.oracle.OracleShard;
-import com.gta.core.plan.Planner;
 import com.gta.core.run.TestOutcome;
 import com.gta.core.spec.CommentMeta;
 import com.gta.core.spec.Ref;
@@ -129,8 +128,8 @@ public final class Gate {
                 r.checkedScenarios++;
                 String scenarioId = itemId.substring(0, itemId.indexOf('#'));
                 Optional<Spec.Scenario> scenario = spec == null ? Optional.empty() : spec.scenario(scenarioId);
-                boolean changedInPr = scenario.isEmpty()
-                        || !Planner.scenarioRevision(scenario.get()).equals(e.getValue().scenarioRevision);
+                boolean changedInPr =
+                        scenario.isEmpty() || !scenario.get().revision().equals(e.getValue().scenarioRevision);
                 TestOutcome tc = byScenario.get(scenarioId);
                 if (!changedInPr && (tc == null || !tc.passed())) {
                     r.failures.add(new Condition(
@@ -186,7 +185,7 @@ public final class Gate {
                 if ("assumed".equals(s.source())) {
                     continue;
                 }
-                String rev = Planner.scenarioRevision(s);
+                String rev = s.revision();
                 boolean inBase = base.values().stream().anyMatch(e -> rev.equals(e.scenarioRevision));
                 boolean verifiedNow = shard.entrySet().stream()
                         .anyMatch(

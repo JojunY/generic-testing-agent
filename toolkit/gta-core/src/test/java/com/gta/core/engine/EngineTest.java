@@ -9,9 +9,9 @@ import com.gta.core.change.ChangeChecker;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
+import com.gta.core.oracle.Lock;
 import com.gta.core.oracle.OracleShard;
 import com.gta.core.plan.PlanItem;
-import com.gta.core.plan.Planner;
 import com.gta.core.run.RunResult;
 import com.gta.core.run.TestOutcome;
 import com.gta.core.run.TestRunnerFake;
@@ -194,7 +194,7 @@ class EngineTest {
     @Test
     void shouldLeaveNoShardBehindWhenTheCommitFails() throws Exception {
         WorkState st = state(ItemStatus.REVIEWING);
-        st.items.get(ITEM).lock = new WorkState.Lock();
+        st.items.get(ITEM).lock = new Lock();
         st.items.get(ITEM).lock.tokens.add("201");
         st.items.get(ITEM).evidenceRunId = "r1";
         store.save(st);
@@ -230,7 +230,7 @@ class EngineTest {
         store.savePlan(List.of(old));
         EngineContext ctx = new EngineContext(root, runner);
 
-        ctx.items.syncPlan(
+        ctx.planSync.syncPlan(
                 st, SpecParser.parseText(SpecTestData.CREATE_ORDER), new com.gta.core.profile.ServiceProfile());
 
         assertEquals(null, st.pending, "the human decision was about the old scenario");
@@ -368,9 +368,10 @@ class EngineTest {
                 OracleShard.read(paths.oracleShard("order.create")).get(ITEM);
         assertEquals(List.of("201", "50.00"), now.tokens, "tokens come from the spec, not the old lock");
         assertEquals(
-                Planner.scenarioRevision(SpecParser.parse(paths.spec("order.create"))
+                SpecParser.parse(paths.spec("order.create"))
                         .scenario("order.create/s01")
-                        .orElseThrow()),
+                        .orElseThrow()
+                        .revision(),
                 now.scenarioRevision);
         assertTrue(now.relockedAt != null);
     }
@@ -380,5 +381,14 @@ class EngineTest {
         GtaException e = assertThrows(GtaException.class, () -> engine().relock("order#component-01", "x", "alice"));
 
         assertEquals(ErrorCode.USAGE_UNKNOWN_ITEM, e.code());
+    }
+
+    @Test
+    void shouldRefuseToGuessTheCapabilityOfAFlowThatIsNotInTheCode() {
+        GtaException e =
+                assertThrows(GtaException.class, () -> engine().next(null, "billing.recalculate", null, false));
+
+        assertEquals(ErrorCode.USAGE_UNKNOWN_FLOW, e.code(), "a guessed capability would brief the analyst wrongly");
+        assertEquals(null, store.load().activeFlow, "nothing is saved");
     }
 }

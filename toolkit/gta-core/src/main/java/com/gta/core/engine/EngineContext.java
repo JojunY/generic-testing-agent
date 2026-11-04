@@ -28,6 +28,9 @@ final class EngineContext {
     final EscalationWriter escalations;
     final SpecWorkflow specs;
     final ItemWorkflow items;
+    final Triage triage;
+    final ItemCommitter committer;
+    final PlanSync planSync;
     final SessionEnd sessionEnd;
     final TestRuns runs;
 
@@ -50,6 +53,9 @@ final class EngineContext {
         this.escalations = new EscalationWriter(this);
         this.specs = new SpecWorkflow(this);
         this.items = new ItemWorkflow(this);
+        this.triage = new Triage(this);
+        this.committer = new ItemCommitter(this);
+        this.planSync = new PlanSync(this);
         this.sessionEnd = new SessionEnd(this);
     }
 

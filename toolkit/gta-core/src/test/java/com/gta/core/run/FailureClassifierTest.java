@@ -82,4 +82,18 @@ class FailureClassifierTest {
                 FailureClassifier.knownDefectFingerprint(
                         "java.lang.AssertionError", "total expected 90.00 but was 100.00"));
     }
+
+    @Test
+    void shouldNotMistakeAServiceUnderAFrameworkLikePackageForFramework() {
+        Set<String> prod = Set.of("org.apache.billing.InvoiceService");
+        TestOutcome c = failing(
+                "error",
+                "java.lang.IllegalStateException",
+                "java.lang.IllegalStateException: no rate\n\tat org.apache.billing.InvoiceService.total(InvoiceService.java:42)\n"
+                        + "\tat org.apache.billing.InvoiceIT.shouldTotal(InvoiceIT.java:12)");
+
+        FailureClassifier.classify(c, prod, Set.of("org.apache.billing.InvoiceIT"));
+
+        assertEquals(ErrorCode.TEST_SUT_ERROR.name(), c.code, "the failure came from the service's own code");
+    }
 }

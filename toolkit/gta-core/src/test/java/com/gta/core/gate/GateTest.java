@@ -12,7 +12,6 @@ import com.gta.core.error.GtaException;
 import com.gta.core.oracle.AssertionScanner;
 import com.gta.core.oracle.OracleLock;
 import com.gta.core.oracle.OracleShard;
-import com.gta.core.plan.Planner;
 import com.gta.core.run.TestOutcome;
 import com.gta.core.spec.SpecParser;
 import com.gta.core.spec.SpecTestData;
@@ -65,9 +64,10 @@ class GateTest {
 
     private void writeShard(String relockedBy, String reason, String relockedAt) {
         OracleShard.Entry e = new OracleShard.Entry();
-        e.scenarioRevision = Planner.scenarioRevision(SpecParser.parseText(SpecTestData.CREATE_ORDER)
+        e.scenarioRevision = SpecParser.parseText(SpecTestData.CREATE_ORDER)
                 .scenario("order.create/s01")
-                .orElseThrow());
+                .orElseThrow()
+                .revision();
         e.fingerprint = fingerprint();
         e.tokens = List.of("201", "50.00");
         e.testClass = TEST_CLASS;

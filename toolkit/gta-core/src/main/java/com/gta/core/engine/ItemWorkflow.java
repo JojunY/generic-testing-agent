@@ -13,59 +13,29 @@ import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
 import com.gta.core.oracle.AssertionScanner;
 import com.gta.core.oracle.OracleLock;
-import com.gta.core.oracle.OracleShard;
 import com.gta.core.plan.PlanItem;
-import com.gta.core.plan.Planner;
 import com.gta.core.profile.ServiceProfile;
-import com.gta.core.registry.CapabilityRegistry;
 import com.gta.core.run.FailureClassifier;
 import com.gta.core.run.RunResult;
 import com.gta.core.run.TestOutcome;
-import com.gta.core.spec.AnswerParser;
 import com.gta.core.spec.Spec;
-import com.gta.core.spec.SpecEditor;
-import com.gta.core.spec.SpecParser;
 import com.gta.core.state.ItemStatus;
 import com.gta.core.state.StateStore;
 import com.gta.core.state.WorkState;
-import com.gta.core.util.AtomicFiles;
 import com.gta.core.util.Git;
 import com.gta.core.util.Ids;
 import com.gta.core.util.WorkLock;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-/** Item lifecycle (plan §5): dispatch, check, submit, oracle review, triage, repair, known-defect pins, commits and plan sync. */
+/** Item lifecycle (plan §5): dispatch, check, submit and oracle review. Triage, commits and plan sync are their own classes. */
 final class ItemWorkflow {
-    private static final Pattern EXPECTED_ACTUAL = Pattern.compile(
-            "expected:\\s*<?\"?([^>\"\\n]+?)\"?>?\\s*but was:\\s*<?\"?([^>\"\\n]+?)\"?>?\\s*$",
-            Pattern.MULTILINE | Pattern.DOTALL);
-    private static final Pattern ASSERTJ =
-            Pattern.compile("expected:\\s*\"?(.+?)\"?\\s*\\n\\s*but was:\\s*\"?(.+?)\"?\\s*(\\n|$)");
-    private static final List<String> TRIAGE_VERDICTS = List.of(
-            "test-defect",
-            "oracle-defect",
-            "product-defect",
-            "spec-error",
-            "spec-gap",
-            "flaky",
-            "environment",
-            "expected-change");
-
     private final EngineContext ctx;
     private final GtaPaths paths;
     private final GtaConfig config;
-    private final CapabilityRegistry registry;
     private final StateStore store;
     private final Git git;
     private final BriefWriter briefs;
@@ -74,7 +44,6 @@ final class ItemWorkflow {
         this.ctx = ctx;
         this.paths = ctx.paths;
         this.config = ctx.config;
-        this.registry = ctx.registry;
         this.store = ctx.store;
         this.git = ctx.git;
         this.briefs = ctx.briefs;
@@ -204,60 +173,6 @@ final class ItemWorkflow {
         extra.put("brief", paths.rel(brief));
         extra.put("token", s.token);
         return node("review", extra);
-    }
-
-    Map<String, Object> applyDecision(WorkState st, WorkState.Pending p, AnswerParser.Parsed parsed, String text) {
-        if (!(parsed instanceof AnswerParser.Choice c)) {
-            throw new GtaException(
-                    ErrorCode.USAGE_UNPARSEABLE_ANSWER, "Expected a single option letter", "Reply A, B or C");
-        }
-        WorkState.ItemState s = st.item(p.itemId);
-        PlanItem item = store.planItem(p.itemId);
-        String letter = c.letter();
-        String msg;
-        if ("defect".equals(p.type) && letter.equals("A")) {
-            s.intentOverride = "known-defect";
-            s.reason = "confirmed product defect: pin with @KnownDefect";
-            st.move(s, ItemStatus.PENDING);
-            ctx.escalations.writeEscalation(
-                    item,
-                    s,
-                    "Confirmed as a product defect by a human: \"" + text + "\". Issue draft: the behaviour of "
-                            + item.ref + " violates the approved spec.");
-            msg = "defect confirmed; the test will be pinned with @KnownDefect";
-        } else if ("defect".equals(p.type) && letter.equals("B")) {
-            st.move(s, ItemStatus.CANCELLED);
-            WorkState.SpecWork sw = st.specWork.computeIfAbsent(item.flowId, k -> new WorkState.SpecWork());
-            sw.needsRevision = true;
-            sw.answersToApply = List.of("Human says the expectation of " + item.ref
-                    + " is wrong: revise it and add an open question if unsure");
-            Path specPath = paths.spec(item.flowId);
-            ctx.specs.writeSpec(
-                    specPath,
-                    new SpecEditor(SpecParser.parse(specPath).text)
-                            .setHeader("status", "in-review")
-                            .text());
-            msg = "spec sent back for revision";
-        } else if (("defect".equals(p.type) && letter.equals("C"))
-                || ("escalation".equals(p.type) && letter.equals("A"))) {
-            st.move(s, ItemStatus.PENDING);
-            s.attempts = 0;
-            s.checks = 0; // a retry is a fresh start: the check budget too
-            s.lastError = null;
-            st.consecutiveFailures = 0;
-            msg = "item reset; it will be retried";
-        } else if ("escalation".equals(p.type) && letter.equals("B")) {
-            st.move(s, ItemStatus.CANCELLED);
-            msg = "item cancelled";
-        } else {
-            throw new GtaException(
-                    ErrorCode.USAGE_UNPARSEABLE_ANSWER,
-                    "Option " + letter + " is not available",
-                    "Pick one of the listed letters");
-        }
-        st.newConfirmations.add(p.itemId + ": \"" + text + "\" (" + msg + ")");
-        st.pending = null;
-        return result(msg, null);
     }
 
     public Map<String, Object> check(String itemId, String token) {
@@ -411,7 +326,7 @@ final class ItemWorkflow {
                 && !run.cases.isEmpty()
                 && run.cases.stream().allMatch(c -> "known-defect".equals(c.outcome))) {
             st.move(s, ItemStatus.DEFECT_FOUND);
-            commitItem(st, item, s, runId, "pin known defect " + item.ref);
+            ctx.committer.commitItem(st, item, s, runId, "pin known defect " + item.ref);
             ctx.escalations.writeEscalation(
                     item,
                     s,
@@ -426,7 +341,7 @@ final class ItemWorkflow {
         if (anyPinned && !"known-defect".equals(s.intentOverride)) {
             // @KnownDefect turns a failure green, so only a human's confirmation may introduce it
             boolean pinnedOnly = run.cases.stream().allMatch(c -> "known-defect".equals(c.outcome));
-            if (rebuilt && pinnedOnly && confirmedPin(item)) {
+            if (rebuilt && pinnedOnly && ctx.committer.confirmedPin(item)) {
                 st.move(s, ItemStatus.DEFECT_FOUND);
                 return result(
                         "defect-found: " + item.id + " (adopted; the pin was confirmed earlier)",
@@ -503,13 +418,13 @@ final class ItemWorkflow {
                             "Use --verdict accept|reject");
                 }
             } else if (s.status == ItemStatus.TRIAGING) {
-                if (!TRIAGE_VERDICTS.contains(verdict)) {
+                if (!Triage.VERDICTS.contains(verdict)) {
                     throw new GtaException(
                             ErrorCode.USAGE_INVALID_ARGUMENT,
                             "Unknown triage verdict " + verdict,
-                            "Use one of " + TRIAGE_VERDICTS);
+                            "Use one of " + Triage.VERDICTS);
                 }
-                out = applyTriage(st, item, s, verdict, reason);
+                out = ctx.triage.applyTriage(st, item, s, verdict, reason);
             } else {
                 throw new GtaException(
                         ErrorCode.STATE_ILLEGAL_TRANSITION,
@@ -520,105 +435,6 @@ final class ItemWorkflow {
             store.save(st);
             return out;
         }
-    }
-
-    Map<String, Object> applyTriage(WorkState st, PlanItem item, WorkState.ItemState s, String verdict, String reason) {
-        boolean humanBacked = "confirmed".equals(item.oracle.source) || "documented".equals(item.oracle.source);
-        s.verdict = verdict;
-        switch (verdict) {
-            case "test-defect", "flaky" -> {
-                st.move(s, ItemStatus.REPAIRING);
-                s.attempts++;
-                s.reason =
-                        ("flaky".equals(verdict) ? "flaky: only waiting/synchronisation may change. " : "test defect: ")
-                                + reason;
-                if (s.attempts >= config.budgets.maxAttemptsPerItem) {
-                    return needsHuman(st, item, s, "repair attempts exhausted after triage: " + reason);
-                }
-                return result(item.id + " back to the author (" + verdict + "); oracle stays locked", null);
-            }
-            case "product-defect" -> {
-                if (!humanBacked) {
-                    throw new GtaException(
-                            ErrorCode.USAGE_INVALID_ARGUMENT,
-                            "The oracle of " + item.id + " is " + item.oracle.source
-                                    + "; it cannot prove a product defect",
-                            "Use spec-error (observation was wrong) or test-defect");
-                }
-                Map<String, Object> out = needsHuman(st, item, s, "defect: " + reason);
-                st.consecutiveFailures = 0; // a suspected product defect is a finding, not an authoring failure
-                return out;
-            }
-            case "spec-error" -> {
-                if (!humanBacked) {
-                    return autoCorrect(st, item, s, reason);
-                }
-                return needsHuman(st, item, s, "spec-error on a " + item.oracle.source + " expectation: " + reason);
-            }
-            default -> {
-                return needsHuman(st, item, s, verdict + ": " + reason);
-            }
-        }
-    }
-
-    /** Observed/defaulted expectation proved wrong by the code: correct the THEN from the actual value (plan §3.2 rule 1). */
-    Map<String, Object> autoCorrect(WorkState st, PlanItem item, WorkState.ItemState s, String reason) {
-        String msg = s.lastError == null ? "" : s.lastError.message;
-        Matcher m = EXPECTED_ACTUAL.matcher(msg == null ? "" : msg);
-        Matcher a = ASSERTJ.matcher(msg == null ? "" : msg);
-        String expected = null;
-        String actual = null;
-        if (m.find()) {
-            expected = m.group(1).trim();
-            actual = m.group(2).trim();
-        } else if (a.find()) {
-            expected = a.group(1).trim();
-            actual = a.group(2).trim();
-        }
-        if (expected == null || !item.oracle.then.contains(expected)) {
-            return needsHuman(
-                    st,
-                    item,
-                    s,
-                    "spec-error on an observed expectation, but the actual value could not be read from the failure: "
-                            + reason);
-        }
-        Path specPath = paths.spec(item.flowId);
-        Spec spec = SpecParser.parse(specPath);
-        String newRev = SpecWorkflow.bump(spec.rev());
-        ctx.specs.writeSpec(
-                specPath,
-                new SpecEditor(spec.text)
-                        .replaceThenLiteral(item.ref, expected, actual)
-                        .setHeader("rev", newRev)
-                        .text());
-        List<PlanItem> plan = store.loadPlan();
-        for (PlanItem p : plan) {
-            if (p.id.equals(item.id)) {
-                p.oracle.then = new ArrayList<>(p.oracle.then);
-                int idx = p.oracle.then.indexOf(expected);
-                if (idx >= 0) {
-                    p.oracle.then.set(idx, actual);
-                }
-                Spec revised = SpecParser.parse(specPath);
-                revised.scenario(p.ref).ifPresent(sc -> p.scenarioRevision = Planner.scenarioRevision(sc));
-            }
-        }
-        store.savePlan(plan);
-        if (s.lock != null) {
-            String exp = expected;
-            s.lock.tokens.removeIf(exp::equals);
-            s.lock.tokens.add(actual);
-            s.lock.statements.removeIf(stmt -> stmt.contains(exp));
-        }
-        st.move(s, ItemStatus.REPAIRING);
-        s.reason = "spec corrected from the actual behaviour: `" + expected + "` → `" + actual
-                + "`; update the assertion to the new expected value";
-        st.pendingReview.add(item.ref + ": `" + expected + "` → `" + actual + "` (" + reason + ")");
-        return result(
-                item.id + ": observed THEN corrected to `" + actual + "` (" + item.flowId + "@" + newRev
-                        + "); listed for re-confirmation; back to the author",
-                null);
     }
 
     Map<String, Object> fail(WorkState st, PlanItem item, WorkState.ItemState s, ErrorCode code, String message) {
@@ -663,7 +479,7 @@ final class ItemWorkflow {
         if ("known-defect".equals(s.intentOverride)) {
             s.intentOverride = null;
         }
-        commitItem(st, item, s, runId, item.title);
+        ctx.committer.commitItem(st, item, s, runId, item.title);
         st.sessionPassed.add(item.id);
         st.itemsThisSession++;
         st.consecutiveFailures = 0;
@@ -671,86 +487,6 @@ final class ItemWorkflow {
                 "passed: " + item.id + " (run " + runId + ", commit "
                         + (s.commit == null ? "-" : s.commit.substring(0, 7)) + ")",
                 null);
-    }
-
-    void commitItem(WorkState st, PlanItem item, WorkState.ItemState s, String runId, String summary) {
-        WorkState.Baseline baseline = s.baseline == null ? new ChangeChecker(paths).capture() : s.baseline;
-        List<String> files = new ArrayList<>();
-        List<String> mixed = new ArrayList<>();
-        for (String changed : new ChangeChecker(paths).changedSince(baseline)) {
-            if (!ChangeChecker.matchesAny(changed, item.ownsFiles)) {
-                continue;
-            }
-            boolean testCode =
-                    changed.startsWith(GtaPaths.TEST_JAVA + "/") || changed.startsWith(GtaPaths.TEST_RESOURCES + "/");
-            if (baseline.dirty.containsKey(changed) && !testCode) {
-                // e.g. pom.xml with the developer's own uncommitted edits: never commit those on their behalf.
-                // Test classes are shared by the items of a flow, so earlier items' uncommitted work is gta's own.
-                mixed.add(changed);
-            } else {
-                files.add(changed);
-            }
-        }
-        if (!mixed.isEmpty()) {
-            s.reason = "not committed because they also contain your uncommitted edits: " + mixed
-                    + " — commit them yourself";
-        }
-        Path shardPath = paths.oracleShard(item.flowId);
-        String shardBefore = readIfExists(shardPath);
-        if (!item.isFoundation() && s.lock != null) {
-            Map<String, OracleShard.Entry> shard = OracleShard.read(shardPath);
-            OracleShard.Entry e = new OracleShard.Entry();
-            e.scenarioRevision = item.scenarioRevision;
-            e.fingerprint = OracleLock.fingerprint(ctx.runs.scanOracle(item).assertionStatements().stream()
-                    .filter(x -> s.lock.tokens.stream().anyMatch(x::contains))
-                    .toList());
-            e.tokens = s.lock.tokens;
-            e.testClass = item.testClass;
-            e.intent = item.intent;
-            e.source = item.oracle.source;
-            shard.put(item.id, e);
-            OracleShard.write(shardPath, shard);
-            files.add(paths.rel(shardPath));
-        }
-        if (files.isEmpty()) {
-            return;
-        }
-        String msg = "test(" + item.domain() + "): " + summary + "\n\nGta-Item: " + item.id + "\nGta-Run: " + runId;
-        try {
-            ctx.commit(files, msg).ifPresent(sha -> s.commit = sha);
-        } catch (GtaException e) {
-            // keep the shard and the commit together: the next submit must not see gtaw's own write as an agent change
-            restore(shardPath, shardBefore);
-            throw e;
-        }
-    }
-
-    private static String readIfExists(Path file) {
-        try {
-            return Files.exists(file) ? Files.readString(file, StandardCharsets.UTF_8) : null;
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    private static void restore(Path file, String content) {
-        try {
-            if (content == null) {
-                Files.deleteIfExists(file);
-            } else {
-                AtomicFiles.write(file, content);
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    /** A pin is confirmed when gtaw committed the item's known-defect record (see EscalationWriter); the working tree does not count. */
-    boolean confirmedPin(PlanItem item) {
-        String rel = paths.rel(paths.escalations().resolve(Ids.itemKey(item.id) + ".md"));
-        return git.show("HEAD", rel)
-                .map(text -> text.contains(EscalationWriter.DEFECT_FOUND_MARKER))
-                .orElse(false);
     }
 
     WorkState.ItemState requireToken(WorkState st, String itemId, String token, ItemStatus... allowed) {
@@ -766,76 +502,5 @@ final class ItemWorkflow {
                     ErrorCode.STATE_ILLEGAL_TRANSITION, itemId + " is " + s.status.id(), "Run ./gtaw next");
         }
         return s;
-    }
-
-    private static void dropPendingDecision(WorkState st, String itemId) {
-        if (st.pending != null && itemId.equals(st.pending.itemId)) {
-            st.pending = null;
-        }
-    }
-
-    List<PlanItem> syncPlan(WorkState st, Spec spec, ServiceProfile profile) {
-        List<PlanItem> fresh = Planner.plan(spec, registry, profile);
-        List<PlanItem> plan = store.loadPlan();
-        Map<String, PlanItem> existing = new LinkedHashMap<>();
-        plan.stream().filter(i -> i.flowId.equals(spec.flowId())).forEach(i -> existing.put(i.id, i));
-        List<PlanItem> result = new ArrayList<>();
-        for (PlanItem f : fresh) {
-            PlanItem old = existing.remove(f.id);
-            WorkState.ItemState s = st.items.get(f.id);
-            if (old != null && s != null && old.scenarioRevision.equals(f.scenarioRevision)) {
-                result.add(old);
-                continue;
-            }
-            dropPendingDecision(st, f.id); // a human decision about the old item no longer applies
-            WorkState.ItemState ns = new WorkState.ItemState();
-            ns.id = f.id;
-            st.items.put(f.id, ns);
-            result.add(f);
-        }
-        for (PlanItem gone : existing.values()) {
-            WorkState.ItemState s = st.items.get(gone.id);
-            if (s != null && !s.status.terminal()) {
-                st.move(s, ItemStatus.CANCELLED);
-            }
-            dropPendingDecision(st, gone.id);
-        }
-        plan.removeIf(i -> i.flowId.equals(spec.flowId()));
-        plan.addAll(result);
-        store.savePlan(plan);
-        // rebuild: tests that already exist for a fresh pending item are verified first
-        Map<String, OracleShard.Entry> shard = OracleShard.read(paths.oracleShard(spec.flowId()));
-        for (PlanItem i : result) {
-            WorkState.ItemState s = st.items.get(i.id);
-            Path test = paths.testSource(i.testClass);
-            if (i.isFoundation()
-                    && s.status == ItemStatus.PENDING
-                    && s.attempts == 0
-                    && Files.exists(test)
-                    && git.isTracked(paths.rel(test))) {
-                // the committed seed test is adopted after one verification run instead of being written again
-                s.baseline = new ChangeChecker(paths).capture();
-                st.move(s, ItemStatus.VERIFYING); // adopt: verify the existing test before trusting it
-                continue;
-            }
-            if (s.status == ItemStatus.PENDING
-                    && s.attempts == 0
-                    && Files.exists(test)
-                    && shard.containsKey(i.id)
-                    && i.scenarioRevision.equals(shard.get(i.id).scenarioRevision)) {
-                WorkState.Lock lock = new WorkState.Lock();
-                lock.tokens = new ArrayList<>(shard.get(i.id).tokens);
-                AssertionScanner.ScenarioOracle o = ctx.runs.scanOracle(i);
-                lock.statements = o.assertionStatements().stream()
-                        .filter(x -> lock.tokens.stream().anyMatch(x::contains))
-                        .toList();
-                lock.watched = o.watchedHash();
-                lock.fingerprint = shard.get(i.id).fingerprint;
-                s.lock = lock;
-                s.baseline = new ChangeChecker(paths).capture();
-                st.move(s, ItemStatus.VERIFYING); // adopt: verify the existing test before trusting it
-            }
-        }
-        return result;
     }
 }
