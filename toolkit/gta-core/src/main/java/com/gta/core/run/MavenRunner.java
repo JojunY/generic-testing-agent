@@ -55,7 +55,11 @@ public final class MavenRunner implements TestRunner {
         return new ArrayList<>(List.of("mvn"));
     }
 
-    static final String ALL_TESTS = "**/*Test,**/*Tests,**/*TestCase,**/Test*,**/*IT";
+    /**
+     * Every gta test class by its suffix (docs/guides/test-naming.md): Test and SliceTest, IT and ContractIT. Karate and
+     * E2E tests run only through their own profiles, so they are excluded explicitly instead of relying on defaults.
+     */
+    static final String ALL_TESTS = "**/*Test,**/*IT,!**/*E2ETest";
 
     @Override
     public RunResult run(

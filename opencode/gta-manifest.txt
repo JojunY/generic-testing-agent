@@ -80,6 +80,7 @@
 .gta/skills/gta-writing-tests/references/build-files.md
 .gta/skills/gta-writing-tests/references/gta-junit.md
 .gta/skills/gta-writing-tests/references/junit.md
+.gta/skills/gta-writing-tests/references/naming.md
 .gta/skills/gta-writing-tests/references/seams.md
 .gta/skills/gta-writing-tests/references/test-data.md
 .opencode/agents/gta-analyst.md

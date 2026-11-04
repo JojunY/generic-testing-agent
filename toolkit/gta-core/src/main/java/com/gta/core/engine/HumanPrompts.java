@@ -116,4 +116,21 @@ final class HumanPrompts {
         p.prompt = b.toString();
         return p;
     }
+
+    /** Decision when the test class gta would write already exists and is not a gta test (plan §9.3, rule E5). */
+    WorkState.Pending namingConflict(PlanItem item, String lastAuthor) {
+        WorkState.Pending p = new WorkState.Pending();
+        p.type = "naming-conflict";
+        p.itemId = item.id;
+        p.flowId = item.flowId;
+        String file = GtaPaths.testSourceRel(item.testClass);
+        p.prompt = "── " + item.id + ": the test class name is taken ──\n"
+                + "gta names this test " + file + " (one test class per source class and kind),\n"
+                + "but that file already exists and is not a gta test (last change by " + lastAuthor + ").\n"
+                + "  A) Let gta add its tests to that file (tagged gta; the diff shows every change to it)\n"
+                + "  B) Skip this test for now (the item is cancelled)\n"
+                + "  C) I renamed or moved my file: check again\n"
+                + "Reply with the letter.";
+        return p;
+    }
 }

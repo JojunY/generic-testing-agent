@@ -220,7 +220,8 @@ public final class Engine {
                     switch (p.type) {
                         case "answer" -> ctx.specs.applyAnswers(st, p, AnswerParser.parse(text), text);
                         case "approve" -> approvalOrChangeRequest(st, p, text);
-                        case "defect", "escalation" -> ctx.triage.applyDecision(st, p, AnswerParser.parse(text), text);
+                        case "defect", "escalation", "naming-conflict" -> ctx.triage.applyDecision(
+                                st, p, AnswerParser.parse(text), text);
                         default -> throw new GtaException(
                                 ErrorCode.INTERNAL_ERROR, "Unknown pending type " + p.type, "Run ./gtaw abort");
                     };

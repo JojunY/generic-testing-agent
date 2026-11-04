@@ -1,5 +1,6 @@
 
     @Test
+    @Tag("flow:order.create-order")
     @Tag("scenario:order.create-order/s02")
     @Tag("characterization")
     @DisplayName("[order.create-order/s02] large order gets the discount")

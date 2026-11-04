@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Tag("component")
 @Tag("gta")
 @SpringBootTest
-class OrderSeedIT {
+class OrderApplicationIT {
 
     @Autowired
     ApplicationContext context;

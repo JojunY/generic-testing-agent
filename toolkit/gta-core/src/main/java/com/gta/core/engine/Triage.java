@@ -59,7 +59,23 @@ final class Triage {
         PlanItem item = store.planItem(p.itemId);
         String letter = c.letter();
         String msg;
-        if ("defect".equals(p.type) && letter.equals("A")) {
+        if ("naming-conflict".equals(p.type)) {
+            msg = switch (letter) {
+                case "A" -> {
+                    s.sharesDeveloperFile = true;
+                    yield "gta will add its tests to " + GtaPaths.testSourceRel(item.testClass);
+                }
+                case "B" -> {
+                    st.move(s, ItemStatus.CANCELLED);
+                    yield "item cancelled; the developer's test class is left alone";
+                }
+                case "C" -> "the name is checked again on the next step";
+                default -> throw new GtaException(
+                        ErrorCode.USAGE_UNPARSEABLE_ANSWER,
+                        "Option " + letter + " is not available",
+                        "Reply A, B or C");
+            };
+        } else if ("defect".equals(p.type) && letter.equals("A")) {
             s.intentOverride = "known-defect";
             s.reason = "confirmed product defect: pin with @KnownDefect";
             st.move(s, ItemStatus.PENDING);

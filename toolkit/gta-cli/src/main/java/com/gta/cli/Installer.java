@@ -200,7 +200,7 @@ public final class Installer {
                 List.of(
                         "Set distributionUrl / distributionSha256Sum in .gta/wrapper/gta-wrapper.properties to the Nexus jar",
                         "Add com.gta:gta-junit (test scope) to pom.xml, or let the first foundation item do it",
-                        "Optional: add CODEOWNERS for .gta/** and the gta CI workflow (docs/ci-integration.md)",
+                        "Optional: add CODEOWNERS for .gta/** and the gta CI workflow (docs/guides/ci-integration.md)",
                         "Commit, then developers type /gta in Copilot Chat or OpenCode"));
         return out;
     }

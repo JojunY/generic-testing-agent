@@ -16,10 +16,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @Tag("component")
 @Tag("gta")
-@Tag("flow:order.create-order")
 @SpringBootTest
 @AutoConfigureMockMvc
-class OrderCreateOrderIT {
+class OrderControllerIT {
 
     @Autowired
     MockMvc mvc;

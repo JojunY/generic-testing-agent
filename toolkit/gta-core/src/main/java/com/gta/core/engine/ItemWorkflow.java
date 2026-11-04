@@ -24,12 +24,18 @@ import com.gta.core.state.StateStore;
 import com.gta.core.state.WorkState;
 import com.gta.core.util.Git;
 import com.gta.core.util.Ids;
+import com.gta.core.util.ProcessRunner;
 import com.gta.core.util.WorkLock;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 /** Item lifecycle (plan §5): dispatch, check, submit and oracle review. Triage, commits and plan sync are their own classes. */
 final class ItemWorkflow {
@@ -107,6 +113,7 @@ final class ItemWorkflow {
             return Dispatch.sessionOver(
                     "session budget reached (" + st.itemsThisSession + " items); run /gta again to continue");
         }
+        PlanItem conflict = null;
         for (PlanItem item : items) {
             WorkState.ItemState s = st.items.get(item.id);
             if (s.status != ItemStatus.PENDING) {
@@ -117,6 +124,13 @@ final class ItemWorkflow {
             if (!depsOk) {
                 continue;
             }
+            if (!s.sharesDeveloperFile && takenByDeveloper(item)) {
+                // never decide for the developer: ask once the items without a conflict are done (plan §9.3)
+                if (conflict == null) {
+                    conflict = item;
+                }
+                continue;
+            }
             st.seq++;
             s.token = BriefWriter.token(st.session.id, st.seq);
             s.baseline = new ChangeChecker(paths).capture();
@@ -124,12 +138,39 @@ final class ItemWorkflow {
             Path brief = briefs.author(st.seq, s, item, spec, profile);
             return Dispatch.of(authorNode(item, s, brief));
         }
+        if (conflict != null) {
+            st.pending = ctx.prompts.namingConflict(conflict, lastAuthor(conflict));
+            return Dispatch.of(NodeResults.answerNode(st.pending));
+        }
         boolean blocked =
                 items.stream().anyMatch(i -> !st.items.get(i.id).status.terminal());
         return Dispatch.sessionOver(
                 blocked
                         ? "remaining items are blocked by dependencies that did not pass"
                         : "all items of " + spec.flowId() + " are done");
+    }
+
+    private static final Pattern GTA_TAG = Pattern.compile("@Tag\\(\\s*\"gta\"\\s*\\)");
+
+    /** The item's test class exists and is not a gta test (no {@code @Tag("gta")}): a developer owns that name. */
+    boolean takenByDeveloper(PlanItem item) {
+        Path test = paths.testSource(item.testClass);
+        if (!Files.isRegularFile(test)) {
+            return false;
+        }
+        try {
+            return !GTA_TAG.matcher(Files.readString(test, StandardCharsets.UTF_8))
+                    .find();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private String lastAuthor(PlanItem item) {
+        ProcessRunner.Result r = ProcessRunner.run(
+                paths.root(),
+                ProcessRunner.cmd("git", "log", "-1", "--format=%an", "--", GtaPaths.testSourceRel(item.testClass)));
+        return r.ok() && !r.output().isBlank() ? r.output().strip() : "not committed yet";
     }
 
     Map<String, Object> authorNode(PlanItem item, WorkState.ItemState s, Path brief) {

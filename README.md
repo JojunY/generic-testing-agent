@@ -46,7 +46,7 @@ Coverage is not the goal. Tests should check what the service is *supposed* to d
 
 ## Quick start
 
-See [docs/quickstart.md](docs/quickstart.md). In short:
+See [docs/guides/quickstart.md](docs/guides/quickstart.md). In short:
 
 ```bash
 mvn -B install                      # in this repo: builds and tests the toolkit
@@ -77,7 +77,7 @@ toolkit/     Java sources: gta-core, gta-cli, gta-junit, gta-harness-gen (Maven 
 wrapper/     files installed into services: gtaw, gtaw.cmd, gtaw-download.ps1 (pinned jar from Nexus, sha256-verified)
 scripts/     maintainer scripts: generate.sh (platform folders), diagrams/render.py (docs/diagrams)
 evals/       order-service fixture with seeded defects and a scripted end-to-end run
-docs/        quickstart, CI integration, adding a capability, diagrams; design/ holds the design and review records
+docs/        guides/ (quickstart, CI integration, test naming, diagram style, adding a capability), design/ (the design), reviews/ (review records), diagrams/
 ```
 
 ## Development

@@ -1,5 +1,6 @@
 
     @Test
+    @Tag("flow:order.create-order")
     @Tag("scenario:order.create-order/s03")
     @Tag("hardening")
     @DisplayName("[order.create-order/s03] order exactly at the threshold")

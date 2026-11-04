@@ -391,4 +391,58 @@ class EngineTest {
         assertEquals(ErrorCode.USAGE_UNKNOWN_FLOW, e.code(), "a guessed capability would brief the analyst wrongly");
         assertEquals(null, store.load().activeFlow, "nothing is saved");
     }
+
+    private ItemWorkflow.Dispatch dispatchWithDeveloperTest(WorkState st) throws Exception {
+        Path test = root.resolve(GtaPaths.testSourceRel("com.acme.OrderCreateIT"));
+        Files.createDirectories(test.getParent());
+        Files.writeString(test, "class OrderCreateIT { @org.junit.jupiter.api.Test void mine() {} }\n");
+        EngineContext ctx = new EngineContext(root, runner);
+        return ctx.items.dispatch(
+                st,
+                SpecParser.parseText(SpecTestData.CREATE_ORDER),
+                new com.gta.core.profile.ServiceProfile(),
+                store.loadPlan());
+    }
+
+    @Test
+    void shouldAskBeforeWritingIntoADevelopersTestClass() throws Exception {
+        WorkState st = state(ItemStatus.PENDING);
+
+        ItemWorkflow.Dispatch d = dispatchWithDeveloperTest(st);
+
+        assertEquals("naming-conflict", st.pending.type, "gta never decides for the developer");
+        assertEquals("answer", d.node().get("node"));
+        assertTrue(st.pending.prompt.contains("src/test/java/com/acme/OrderCreateIT.java"), st.pending.prompt);
+        assertEquals(ItemStatus.PENDING, st.items.get(ITEM).status, "nothing was written");
+    }
+
+    @Test
+    void shouldShareTheDevelopersTestClassOnlyWhenTheHumanSaysSo() throws Exception {
+        WorkState st = state(ItemStatus.PENDING);
+        dispatchWithDeveloperTest(st);
+        store.save(st);
+
+        engine().answer("A");
+
+        assertTrue(item().sharesDeveloperFile);
+        WorkState again = store.load();
+        ItemWorkflow.Dispatch d = new EngineContext(root, runner)
+                .items.dispatch(
+                        again,
+                        SpecParser.parseText(SpecTestData.CREATE_ORDER),
+                        new com.gta.core.profile.ServiceProfile(),
+                        store.loadPlan());
+        assertEquals("author", d.node().get("node"), "the item is briefed after the human agreed");
+    }
+
+    @Test
+    void shouldCancelTheItemWhenTheHumanSkipsIt() throws Exception {
+        WorkState st = state(ItemStatus.PENDING);
+        dispatchWithDeveloperTest(st);
+        store.save(st);
+
+        engine().answer("B");
+
+        assertEquals(ItemStatus.CANCELLED, item().status);
+    }
 }

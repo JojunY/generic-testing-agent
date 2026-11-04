@@ -10,19 +10,19 @@ description: Tests Spring MVC, WebFlux, gRPC and GraphQL endpoints at the slice 
 ```java
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
-@Tag("component") @Tag("flow:order.create") @Tag("gta")
-class OrderCreateIT {
+@Tag("component") @Tag("gta")
+class OrderControllerIT {
     @Autowired MockMvcTester mvc;
     @Autowired OrderRepository orders;
 
     @Test
-    @Tag("scenario:order.create/s03")
+    @Tag("flow:order.create") @Tag("scenario:order.create/s03")
     @DisplayName("[order.create/s03] gateway silent for 3 seconds")
     void shouldRespond503WhenGatewayTimesOut() {
         gateway.stubFor(post("/authorize").willReturn(ok().withFixedDelay(3_500)));   // WireMock, see stubbing skill
 
         var result = mvc.post().uri("/api/orders").contentType(APPLICATION_JSON)
-                .content(fixture("order/create/valid.json")).exchange();
+                .content(fixture("s03.request.json")).exchange();
 
         assertThat(result).hasStatus(503);
         assertThat(orders.findAll()).singleElement()

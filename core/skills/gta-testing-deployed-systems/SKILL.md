@@ -7,14 +7,14 @@ description: Writes system-layer tests against deployed services on Cloud Run an
 
 ## Quick start
 
-Karate feature under `src/test/resources/karate/<domain>/<flow-name>.feature`, run only by `gtaw run --layer system`:
+Karate feature `src/test/karate/resources/<package path>/<SourceClass>Karate/<flow-name>.feature`, run only by `gtaw run --layer system` (`references/karate.md`):
 
 ```gherkin
 @gta @system @flow=order.create @scenario=order.create/s09
 Scenario: order is visible to the owner after creation
   Given url baseUrl
   And path '/api/orders'
-  And request read('classpath:fixtures/order/create/valid.json')
+  And request read('s09.request.json')
   When method post
   Then status 201
   And match response.id == '#uuid'

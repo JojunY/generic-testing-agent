@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 class RepositoryHarnessTest {
     static final Path REPO = Path.of("../..").toAbsolutePath().normalize();
     static final Pattern CJK = Pattern.compile("[\\u3000-\\u303f\\u4e00-\\u9fff\\uff00-\\uffef]+");
-    /** Chinese replies gtaw accepts (see docs/quickstart.md) and the label of the language switch. */
+    /** Chinese replies gtaw accepts (see docs/guides/quickstart.md) and the label of the language switch. */
     static final Set<String> ALLOWED = Set.of("批准", "不批准", "其余默认", "其他默认", "代码现状", "简体中文");
 
     static final Set<String> TEXT =

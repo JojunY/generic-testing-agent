@@ -67,6 +67,8 @@ public class WorkState {
         public boolean inputsChangedAfterAssertion;
         public boolean structuralOracleChange;
         public String intentOverride;
+        /** A human allowed gta to add its tests to a developer's existing test class of the same name (plan §9.3). */
+        public boolean sharesDeveloperFile;
     }
 
     public static class LastError {

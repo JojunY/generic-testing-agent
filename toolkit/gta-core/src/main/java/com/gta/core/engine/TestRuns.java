@@ -9,6 +9,7 @@ import com.gta.core.profile.JavaIndex;
 import com.gta.core.run.RunResult;
 import com.gta.core.run.TestOutcome;
 import com.gta.core.run.TestRunner;
+import com.gta.core.state.StateStore;
 import com.gta.core.util.Git;
 import com.gta.core.util.Ids;
 import java.util.ArrayList;
@@ -22,6 +23,7 @@ final class TestRuns {
     private final GtaPaths paths;
     private final Git git;
     private final TestRunner runner;
+    private final StateStore store;
     private Set<String> productionClasses;
     private Set<String> testClasses;
 
@@ -29,6 +31,7 @@ final class TestRuns {
         this.paths = ctx.paths;
         this.git = ctx.git;
         this.runner = ctx.runner;
+        this.store = ctx.store;
     }
 
     RunResult runItem(String runId, PlanItem item, boolean variant, boolean random) {
@@ -60,10 +63,27 @@ final class TestRuns {
                     "Run component tests instead");
         }
         String tag = smoke ? null : layer != null ? layer : "gta";
+        String testClass = null;
+        if (smoke) {
+            // the seed tests of the plan: one per application (docs/guides/test-naming.md)
+            testClass = String.join(
+                    ",",
+                    store.loadPlan().stream()
+                            .filter(PlanItem::isFoundation)
+                            .map(i -> i.testClass)
+                            .distinct()
+                            .toList());
+            if (testClass.isEmpty()) {
+                throw new GtaException(
+                        ErrorCode.USAGE_INVALID_ARGUMENT,
+                        "No seed test is planned yet",
+                        "Run /gta on a flow first; its plan adds the seed test (<Application>IT)");
+            }
+        }
         return runner.run(
                 Ids.newRunId(git.head()),
                 null,
-                new TestRunner.Options(smoke ? "*SeedIT" : null, tag, false, false),
+                new TestRunner.Options(testClass, tag, false, false),
                 productionClasses(),
                 testClasses());
     }

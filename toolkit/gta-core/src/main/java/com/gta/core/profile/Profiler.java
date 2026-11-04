@@ -69,8 +69,20 @@ public final class Profiler {
                         .add(c.id);
             }
         }
+        p.applicationClass = applicationClass(main);
         p.entrypoints.addAll(entrypoints(main));
         return p;
+    }
+
+    static String applicationClass(JavaIndex main) {
+        for (JavaIndex.Unit u : main.units()) {
+            for (ClassOrInterfaceDeclaration c : u.cu().findAll(ClassOrInterfaceDeclaration.class)) {
+                if (c.getAnnotationByName("SpringBootApplication").isPresent()) {
+                    return c.getFullyQualifiedName().orElse(c.getNameAsString());
+                }
+            }
+        }
+        return null;
     }
 
     static String detectBasePackage(JavaIndex main) {
