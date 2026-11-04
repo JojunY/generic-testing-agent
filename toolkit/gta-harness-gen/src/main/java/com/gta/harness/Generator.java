@@ -227,7 +227,7 @@ public class Generator {
 
     static List<Path> list(Path dir, String suffix) {
         try (Stream<Path> s = Files.list(dir)) {
-            return s.filter(p -> p.getFileName().toString().endsWith(suffix))
+            return s.filter(p -> String.valueOf(p.getFileName()).endsWith(suffix))
                     .sorted()
                     .toList();
         } catch (IOException e) {

@@ -303,7 +303,7 @@ final class CaseLedgers {
             return out;
         }
         try (Stream<Path> files = Files.walk(specs, 2)) {
-            for (Path f : files.filter(p -> p.getFileName().toString().endsWith(".cases.md"))
+            for (Path f : files.filter(p -> String.valueOf(p.getFileName()).endsWith(".cases.md"))
                     .sorted()
                     .toList()) {
                 GtaPaths.flowIdOfCasesPath(paths.rel(f)).ifPresent(flowId -> out.add(CaseLedger.read(f, flowId)));
@@ -321,7 +321,7 @@ final class CaseLedgers {
             return out;
         }
         try (Stream<Path> files = Files.walk(specs, 2)) {
-            for (Path f : files.filter(p -> p.getFileName().toString().endsWith(".spec.md"))
+            for (Path f : files.filter(p -> String.valueOf(p.getFileName()).endsWith(".spec.md"))
                     .sorted()
                     .toList()) {
                 Optional<String> flowId = GtaPaths.flowIdOfSpecPath(paths.rel(f));
@@ -386,7 +386,7 @@ final class CaseLedgers {
             String prefix = scenarioId.substring(scenarioId.indexOf('/') + 1) + ".";
             if (Files.isDirectory(fixtures)) {
                 try (Stream<Path> fs = Files.list(fixtures)) {
-                    for (Path f : fs.filter(p -> p.getFileName().toString().startsWith(prefix))
+                    for (Path f : fs.filter(p -> String.valueOf(p.getFileName()).startsWith(prefix))
                             .toList()) {
                         Files.delete(f);
                         out.add(paths.rel(f));

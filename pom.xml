@@ -40,9 +40,10 @@
     <picocli.version>4.7.7</picocli.version>
     <javaparser.version>3.28.2</javaparser.version>
     <junit.version>6.1.3</junit.version>
-    <!-- gta-junit is compiled against JUnit 5 so it also works with Spring Boot 3.5 projects -->
+    <!-- gta-junit is compiled against JUnit 5 so it also works with Spring Boot 3.5 projects.
+         Keep 5.x (and junit-platform 1.14.x in gta-junit); Dependabot ignores major versions. -->
     <junit5.version>5.14.4</junit5.version>
-    <spotbugs.version>4.9.3.0</spotbugs.version>
+    <spotbugs.version>4.10.5.0</spotbugs.version>
     <jacoco.version>0.8.16</jacoco.version>
   </properties>
 
@@ -92,7 +93,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>3.5.3</version>
+          <version>3.6.1</version>
           <configuration>
             <!-- explicit, not Surefire's defaults: the toolkit has unit tests only (naming rules: docs/guides/test-naming.md) -->
             <includes>
@@ -103,7 +104,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>3.4.2</version>
+          <version>3.5.1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -113,7 +114,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-resources-plugin</artifactId>
-          <version>3.3.1</version>
+          <version>3.5.0</version>
         </plugin>
         <plugin>
           <groupId>org.jacoco</groupId>
@@ -128,7 +129,7 @@
         <!-- formatting is checked in every build: run ./mvnw spotless:apply to fix it -->
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
-        <version>2.44.4</version>
+        <version>2.46.1</version>
         <configuration>
           <java>
             <includes>
@@ -136,6 +137,8 @@
               <include>src/test/java/**/*.java</include>
             </includes>
             <palantirJavaFormat>
+              <!-- A new formatter version reformats the code: bump it together with a reformat commit
+                   listed in .git-blame-ignore-revs -->
               <version>2.50.0</version>
               <style>PALANTIR</style>
             </palantirJavaFormat>
@@ -153,7 +156,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.5.0</version>
+        <version>3.7.0</version>
         <executions>
           <execution>
             <id>enforce</id>
