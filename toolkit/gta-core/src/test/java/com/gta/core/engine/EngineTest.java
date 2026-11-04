@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -61,10 +62,10 @@ class EngineTest {
     StateStore store;
     TestRunnerFake runner;
 
-    private void git(String... args) {
+    private ProcessRunner.Result git(String... args) {
         List<String> cmd = new ArrayList<>(List.of("git"));
         cmd.addAll(List.of(args));
-        ProcessRunner.run(root, Duration.ofSeconds(30), Map.of(), cmd);
+        return ProcessRunner.run(root, Duration.ofSeconds(30), Map.of(), cmd);
     }
 
     @BeforeEach
@@ -444,5 +445,237 @@ class EngineTest {
         engine().answer("B");
 
         assertEquals(ItemStatus.CANCELLED, item().status);
+    }
+
+    /**
+     * The whole loop of plan §5 in-process, as the scripted e2e drives it through the CLI: spec, questions, approval,
+     * foundation, oracle lock, scope check, oracle review, triage of a confirmed defect, pinning, reject and session end.
+     * Test runs are answered by scenario, so every gtaw decision is exercised without Maven.
+     */
+    @Nested
+    class FullLoop {
+        static final Path REPO = Path.of("../..").toAbsolutePath().normalize();
+        static final Path SCRIPTED = REPO.resolve("evals/e2e/scripted-output");
+        static final String FLOW = "order.create-order";
+        static final String TEST = "src/test/java/com/example/order/api/OrderControllerIT.java";
+
+        /** Scenario id -> outcome its test run reports ("passed", "failed" or "known-defect"). */
+        final Map<String, String> outcomes = new java.util.HashMap<>();
+
+        final com.gta.core.run.TestRunner byScenario = (runId, itemId, options, prod, tests) -> {
+            RunResult r = new RunResult();
+            r.runId = runId;
+            List<String> scenarios = new ArrayList<>();
+            String tag = options.scenarioTag();
+            if (tag != null && tag.startsWith("scenario:")) {
+                scenarios.add(tag.substring("scenario:".length()));
+            } else if (options.testClass() != null && options.testClass().endsWith("ApplicationIT")) {
+                TestOutcome seed = new TestOutcome();
+                seed.className = options.testClass();
+                seed.method = "shouldStartContextWhenApplicationBoots";
+                seed.outcome = "passed";
+                seed.tags = new ArrayList<>(List.of("gta", "scenario:order"));
+                r.cases.add(seed);
+                return r;
+            } else {
+                scenarios.addAll(outcomes.keySet()); // every gta test (gate, smoke)
+            }
+            for (String sc : scenarios) {
+                TestOutcome c = new TestOutcome();
+                c.className = "com.example.order.api.OrderControllerIT";
+                c.method = "should" + sc.substring(sc.indexOf('/') + 1);
+                c.outcome = outcomes.getOrDefault(sc, "passed");
+                c.tags = new ArrayList<>(List.of("gta", "scenario:" + sc));
+                if ("failed".equals(c.outcome)) {
+                    c.failureType = "java.lang.AssertionError";
+                    c.message = "JSON path \"$.discount\" expected:<10.0> but was:<0.0>";
+                    c.code = ErrorCode.TEST_ASSERTION_FAILED.name();
+                    c.sutReached = true;
+                }
+                r.cases.add(c);
+            }
+            return r;
+        };
+
+        private Engine loop() {
+            return new Engine(root, byScenario);
+        }
+
+        @BeforeEach
+        void orderService() throws Exception {
+            try (var files = Files.walk(REPO.resolve("evals/fixtures/order-service"))) {
+                for (Path f : files.filter(Files::isRegularFile).toList()) {
+                    Path rel = REPO.resolve("evals/fixtures/order-service").relativize(f);
+                    if (rel.startsWith("target")) {
+                        continue;
+                    }
+                    Path to = root.resolve(rel);
+                    Files.createDirectories(to.getParent());
+                    Files.copy(f, to, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+            Files.deleteIfExists(paths.mainJava().resolve("App.java"));
+            Files.deleteIfExists(paths.plan());
+            Files.writeString(root.resolve(".gitignore"), "target/\n.gta/work/\n");
+            git("add", "-A");
+            git("commit", "-qm", "order-service fixture");
+            git("branch", "-M", "main");
+            git("checkout", "-q", "-b", "feature/gta-tests");
+        }
+
+        private void addMethod(String fragment) throws Exception {
+            Path test = root.resolve(TEST);
+            String text = Files.readString(test);
+            int end = text.lastIndexOf('}');
+            Files.writeString(test, text.substring(0, end) + Files.readString(SCRIPTED.resolve(fragment)) + "}\n");
+        }
+
+        private String token(Map<String, Object> node) {
+            return String.valueOf(node.get("token"));
+        }
+
+        /** next until the author node of a scenario; a session that ends on its budget is followed by the next one. */
+        private Map<String, Object> author(String scenario) {
+            Map<String, Object> out = loop().next(null, null, null, false);
+            if ("done".equals(out.get("node"))) {
+                out = loop().next(null, null, null, false);
+            }
+            assertEquals(FLOW + "/" + scenario + "#component-01", out.get("itemId"), out.toString());
+            return out;
+        }
+
+        private void reviewAccept(String scenario) {
+            Map<String, Object> review = loop().next(null, null, null, false);
+            assertEquals("oracle-review", review.get("kind"), review.toString());
+            Map<String, Object> out = loop().submitReview(
+                            FLOW + "/" + scenario + "#component-01",
+                            token(review),
+                            "accept",
+                            "asserts the THEN values");
+            assertTrue(String.valueOf(out.get("result")).startsWith("passed"), out.toString());
+        }
+
+        @Test
+        void shouldTakeAFlowFromCodeToCommittedTestsAndAReport() throws Exception {
+            // analyze: spec R1 with one high-impact question
+            Map<String, Object> out = loop().next("flow", FLOW, null, false);
+            assertEquals("analyze", out.get("node"), out.toString());
+            Files.createDirectories(paths.spec(FLOW).getParent());
+            Files.copy(SCRIPTED.resolve("create-order.spec.md"), paths.spec(FLOW));
+            assertEquals("R1", loop().submitSpec(FLOW, token(out)).get("rev"));
+            assertEquals("answer", loop().next(null, null, null, false).get("type"));
+
+            // the human answers: the threshold discount is a bug
+            loop().answer("R1: 1B");
+            assertTrue(Files.readString(paths.spec(FLOW)).contains("id=order.create-order/s03 source=confirmed"));
+            out = loop().next(null, null, null, false);
+            assertEquals("analyze", out.get("node"), "revision node");
+            String spec = Files.readString(paths.spec(FLOW));
+            Files.writeString(
+                    paths.spec(FLOW),
+                    spec.replace("discount `0.00` and total `100.00`", "discount `10.00` and total `90.00`"));
+            assertEquals("R2", loop().submitSpec(FLOW, token(out)).get("rev"));
+
+            // approval commits the spec and creates the case ledger
+            out = loop().next(null, null, null, false);
+            assertEquals("approve", out.get("type"), out.toString());
+            loop().answer("approve " + FLOW + "@R2");
+            assertTrue(git("log", "-1", "--format=%s").output().contains(FLOW + " R2 approved"));
+            assertTrue(Files.exists(paths.cases(FLOW)), "the ledger is committed with the approval");
+
+            // foundation: the seed test of the application
+            out = loop().next(null, null, null, false);
+            assertEquals("order#foundation-01", out.get("itemId"), out.toString());
+            Path seed = root.resolve("src/test/java/com/example/order/OrderApplicationIT.java");
+            Files.createDirectories(seed.getParent());
+            Files.copy(SCRIPTED.resolve("OrderApplicationIT.java.txt"), seed);
+            out = loop().submitItem("order#foundation-01", token(out));
+            assertTrue(String.valueOf(out.get("result")).startsWith("passed"), out.toString());
+
+            // s01: the oracle locks on the THEN values; a production edit is reverted
+            out = author("s01");
+            String s01 = FLOW + "/s01#component-01";
+            Path test = root.resolve(TEST);
+            Files.createDirectories(test.getParent());
+            Files.writeString(test, Files.readString(SCRIPTED.resolve("OrderControllerIT.head.java.txt")) + "}\n");
+            addMethod("s01.method.java.txt");
+            Map<String, Object> check = loop().check(s01, token(out));
+            assertEquals(List.of("201", "0.00", "50.00", "CREATED"), check.get("oracleLocked"));
+            Files.writeString(test, Files.readString(test).replace("value(50.00)", "value(51.00)"));
+            assertEquals("modified", loop().check(s01, token(out)).get("oracleLock"), "a locked value was changed");
+            Files.writeString(test, Files.readString(test).replace("value(51.00)", "value(50.00)"));
+            Path app = root.resolve("src/main/java/com/example/order/OrderApplication.java");
+            Files.writeString(app, Files.readString(app) + "// out of scope\n");
+            assertEquals(
+                    ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE.name(),
+                    loop().submitItem(s01, token(out)).get("code"));
+            assertTrue(git("diff", "--quiet", "--", "src/main").ok(), "the production edit was reverted");
+            loop().submitItem(s01, token(author("s01")));
+            reviewAccept("s01");
+
+            // s02
+            out = author("s02");
+            addMethod("s02.method.java.txt");
+            loop().submitItem(FLOW + "/s02#component-01", token(out));
+            reviewAccept("s02");
+
+            // s03: the confirmed expectation exposes the seeded defect; a human confirms it and it is pinned
+            String s03 = FLOW + "/s03#component-01";
+            outcomes.put(FLOW + "/s03", "failed");
+            out = author("s03");
+            addMethod("s03.method.java.txt");
+            assertEquals(
+                    ErrorCode.TEST_ASSERTION_FAILED.name(),
+                    loop().submitItem(s03, token(out)).get("code"));
+            out = loop().next(null, null, null, false);
+            assertEquals("triage", out.get("kind"), out.toString());
+            loop().submitReview(s03, token(out), "product-defect", "PricingService#discount uses > instead of >=");
+            assertEquals("defect", loop().next(null, null, null, false).get("type"));
+            loop().answer("A");
+            out = loop().next(null, null, null, false);
+            assertEquals(s03, out.get("itemId"), "the pin is briefed");
+            outcomes.put(FLOW + "/s03", "known-defect");
+            out = loop().submitItem(s03, token(out));
+            assertTrue(String.valueOf(out.get("result")).startsWith("defect-found"), out.toString());
+
+            // s04: the reviewer rejects the first oracle, the author resubmits
+            String s04 = FLOW + "/s04#component-01";
+            out = author("s04");
+            addMethod("s04.method.java.txt");
+            loop().submitItem(s04, token(out));
+            out = loop().next(null, null, null, false);
+            assertEquals("oracle-review", out.get("kind"));
+            out = loop().submitReview(s04, token(out), "reject", "also assert that nothing was stored");
+            assertTrue(String.valueOf(out.get("result")).contains("fix it"), out.toString());
+            loop().submitItem(s04, token(author("s04")));
+            reviewAccept("s04");
+
+            // session end: stability, gate, tracked report, ledger results
+            out = loop().next(null, null, null, false);
+            assertEquals("done", out.get("node"), out.toString());
+            assertEquals("concerns", out.get("gate"), "new tests on a feature branch");
+            String report = String.valueOf(out.get("report"));
+            assertTrue(report.startsWith(".gta/reports/"), report);
+            assertTrue(Files.readString(root.resolve(report)).contains("Product defects found"));
+            assertTrue(git("ls-files", "--error-unmatch", report).ok(), "the report is committed");
+            String ledger = Files.readString(paths.cases(FLOW));
+            assertEquals(
+                    4,
+                    ledger.lines()
+                            .filter(l -> l.startsWith("| " + FLOW + "/s0"))
+                            .count(),
+                    ledger);
+            assertTrue(
+                    ledger.lines().anyMatch(l -> l.startsWith("| " + FLOW + "/s03") && l.contains("| Known defect ")),
+                    ledger);
+
+            // status, report and abort as a human uses them
+            Map<String, Object> status = loop().status();
+            assertTrue(status.toString().contains("defect-found"), status.toString());
+            assertTrue(loop().report("pr-comment").contains("behaviour & test report"));
+            assertTrue(loop().cases(false).toString().contains(FLOW));
+            loop().abort(FLOW);
+            assertEquals(null, store.load().activeFlow);
+        }
     }
 }

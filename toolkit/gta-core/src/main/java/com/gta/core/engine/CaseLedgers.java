@@ -83,12 +83,16 @@ final class CaseLedgers {
     Map<String, Object> afterSession(List<TestOutcome> cases, List<String> unstableItems) {
         Map<String, Boolean> passedByScenario = new LinkedHashMap<>();
         Map<String, String> testByScenario = new LinkedHashMap<>();
+        Set<String> pinned = new LinkedHashSet<>();
         for (TestOutcome c : cases) {
             String scenario = c.scenarioId();
             if (scenario == null) {
                 continue;
             }
             boolean ok = c.passed() || "known-defect".equals(c.outcome);
+            if ("known-defect".equals(c.outcome)) {
+                pinned.add(scenario); // a pinned defect stays a known defect, never "Pass"
+            }
             passedByScenario.merge(scenario, ok, Boolean::logicalAnd);
             testByScenario.putIfAbsent(scenario, c.className + "#" + c.method);
         }
@@ -103,11 +107,10 @@ final class CaseLedgers {
                     continue;
                 }
                 boolean ok = passed && !unstable.contains(row.id);
-                ledger.recordResult(
-                        row.id,
-                        testByScenario.get(row.id),
-                        CaseLedger.result(ok, today(), sha7()),
-                        ok ? null : CaseLedger.NEEDS_REVIEW);
+                String result = ok && pinned.contains(row.id)
+                        ? "Known defect " + today() + " " + sha7()
+                        : CaseLedger.result(ok, today(), sha7());
+                ledger.recordResult(row.id, testByScenario.get(row.id), result, ok ? null : CaseLedger.NEEDS_REVIEW);
             }
             changes.addAll(ledger.changes());
             if (!ledger.changes().isEmpty()) {
