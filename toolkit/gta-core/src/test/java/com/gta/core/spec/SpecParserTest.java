@@ -2,6 +2,8 @@ package com.gta.core.spec;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,7 +27,7 @@ class SpecParserTest {
     void shouldExtractBacktickThenLiteralsOnly() {
         Spec.Scenario s01 = SpecParser.parseText(SpecFixtures.CREATE_ORDER).scenario("order.create/s01").orElseThrow();
 
-        assertEquals(java.util.List.of("201", "50.00"), s01.thenLiterals());
+        assertEquals(List.of("201", "50.00"), s01.thenLiterals());
         assertEquals("observed", s01.source());
     }
 

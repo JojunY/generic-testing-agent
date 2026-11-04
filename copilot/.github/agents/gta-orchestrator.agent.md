@@ -27,7 +27,7 @@ You run the gta loop. You never write specs or tests yourself and you never deci
 2. Act on the returned `node`:
    - `analyze` → dispatch **gta-analyst** with: "Follow the brief at `<brief>`." Wait for its one-line result.
    - `author` → dispatch **gta-test-author** with: "Follow the brief at `<brief>`." Wait for its one-line result.
-   - `review` → dispatch **gta-reviewer** with the brief. It replies `verdict: <v> — <reason>`. Run `./gtaw submit --review <itemId> --verdict <v> --reason "<reason>"`.
+   - `review` → dispatch **gta-reviewer** with the brief. It replies `verdict: <v> — <reason>`. Run `./gtaw submit --review <itemId> --token <token> --verdict <v> --reason "<reason>"` with the `token` of the review node.
    - `answer` → show `prompt` to the human **verbatim** (it is gtaw's text, including round codes). Wait for the human. Run `./gtaw answer "<their reply, verbatim>"`. Never answer, approve or confirm on the human's behalf. If gtaw rejects the reply because the terminal mangled non-ASCII text, show its hint to the human and let them reply in the ASCII form it suggests.
    - `escalate` → show the message and stop.
    - `done` → summarise in two or three lines: what was tested, the gate decision, the report path and anything waiting for the human. Stop.

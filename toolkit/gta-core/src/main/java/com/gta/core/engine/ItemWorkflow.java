@@ -11,11 +11,9 @@ import com.gta.core.oracle.OracleLock;
 import com.gta.core.oracle.OracleShard;
 import com.gta.core.plan.PlanItem;
 import com.gta.core.plan.Planner;
-import com.gta.core.profile.JavaIndex;
 import com.gta.core.profile.ServiceProfile;
 import com.gta.core.registry.Registry;
 import com.gta.core.run.FailureClassifier;
-import com.gta.core.run.MavenRunner;
 import com.gta.core.run.RunResult;
 import com.gta.core.run.TestCase;
 import com.gta.core.spec.AnswerParser;
@@ -29,14 +27,12 @@ import com.gta.core.util.Git;
 import com.gta.core.util.Ids;
 import com.gta.core.util.WorkLock;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -71,10 +67,24 @@ final class ItemWorkflow {
         this.briefs = ctx.briefs;
     }
 
-    Map<String, Object> dispatch(WorkState st, Spec spec, ServiceProfile profile, List<PlanItem> items, String base) {
+    /**
+     * The next node for the items of one flow, or {@link Dispatch#sessionOver(String)} when nothing is left for this session;
+     * the engine then runs the session end. Keeping that decision out of here keeps this class independent of {@link SessionEnd}.
+     */
+    record Dispatch(Map<String, Object> node, String sessionOverReason) {
+        static Dispatch of(Map<String, Object> node) {
+            return new Dispatch(node, null);
+        }
+
+        static Dispatch sessionOver(String reason) {
+            return new Dispatch(null, reason);
+        }
+    }
+
+    Dispatch dispatch(WorkState st, Spec spec, ServiceProfile profile, List<PlanItem> items) {
         if (st.consecutiveFailures >= config.budgets.maxConsecutiveFailures) {
-            return node("escalate", Map.of("message", st.consecutiveFailures
-                    + " items in a row needed a human; the run is paused. Resolve them (see ./gtaw status), then run /gta again."));
+            return Dispatch.of(node("escalate", Map.of("message", st.consecutiveFailures
+                    + " items in a row needed a human; the run is paused. Resolve them (see ./gtaw status), then run /gta again.")));
         }
         for (PlanItem item : items) {
             WorkState.ItemState s = st.items.get(item.id);
@@ -85,21 +95,21 @@ final class ItemWorkflow {
                     st.seq++;
                     s.token = Briefs.token(st.session.id, st.seq);
                     Path brief = briefs.author(st.seq, s, item, spec, profile);
-                    return authorNode(item, s, brief);
+                    return Dispatch.of(authorNode(item, s, brief));
                 }
                 case TRIAGING -> {
-                    return reviewNode(st, s, item, spec, "triage");
+                    return Dispatch.of(reviewNode(st, s, item, spec, "triage"));
                 }
                 case REVIEWING -> {
-                    return reviewNode(st, s, item, spec, "oracle-review");
+                    return Dispatch.of(reviewNode(st, s, item, spec, "oracle-review"));
                 }
                 case NEEDS_HUMAN -> {
                     st.pending = ctx.prompts.humanDecision(s, item);
-                    return answerNode(st.pending);
+                    return Dispatch.of(answerNode(st.pending));
                 }
                 case VERIFYING -> {
                     // rebuilt after a lost work dir: verify the existing test first
-                    return submitInternal(st, item, s, true);
+                    return Dispatch.of(submitInternal(st, item, s, true));
                 }
                 default -> {
                     // terminal or pending: handled below
@@ -107,7 +117,7 @@ final class ItemWorkflow {
             }
         }
         if (st.itemsThisSession >= config.budgets.maxItemsPerSession) {
-            return ctx.sessionEnd.finishSession(st, "session budget reached (" + st.itemsThisSession + " items); run /gta again to continue", base);
+            return Dispatch.sessionOver("session budget reached (" + st.itemsThisSession + " items); run /gta again to continue");
         }
         for (PlanItem item : items) {
             WorkState.ItemState s = st.items.get(item.id);
@@ -123,10 +133,11 @@ final class ItemWorkflow {
             s.baseline = new ChangeChecker(paths).capture();
             st.move(s, ItemStatus.AUTHORING);
             Path brief = briefs.author(st.seq, s, item, spec, profile);
-            return authorNode(item, s, brief);
+            return Dispatch.of(authorNode(item, s, brief));
         }
         boolean blocked = items.stream().anyMatch(i -> !st.items.get(i.id).status.terminal());
-        return ctx.sessionEnd.finishSession(st, blocked ? "remaining items are blocked by dependencies that did not pass" : "all items of " + spec.flowId() + " are done", base);
+        return Dispatch.sessionOver(blocked ? "remaining items are blocked by dependencies that did not pass"
+                : "all items of " + spec.flowId() + " are done");
     }
 
     Map<String, Object> authorNode(PlanItem item, WorkState.ItemState s, Path brief) {
@@ -140,11 +151,13 @@ final class ItemWorkflow {
     }
 
     Map<String, Object> reviewNode(WorkState st, WorkState.ItemState s, PlanItem item, Spec spec, String kind) {
+        // the verdict must come back with this token: it binds the verdict to this review round
         st.seq++;
+        s.token = Briefs.token(st.session.id, st.seq);
         String details;
         if (kind.equals("oracle-review")) {
             details = "The test passed. Check that it asserts exactly what the THEN clauses say, on the right object, "
-                    + "and that inputs really exercise the WHEN. Test file: `src/test/java/" + item.testClass.replace('.', '/') + ".java`."
+                    + "and that inputs really exercise the WHEN. Test file: `" + GtaPaths.testSourceRel(item.testClass) + "`."
                     + (s.structuralOracleChange ? "\n\n**Locked assertions were restructured (values unchanged): confirm the meaning is the same.**" : "")
                     + (s.inputsChangedAfterAssertion ? "\n\n**Inputs/fixtures changed after an assertion failure: make sure they were not bent to make the test pass.**" : "");
         } else {
@@ -159,6 +172,7 @@ final class ItemWorkflow {
         extra.put("agent", "gta-reviewer");
         extra.put("kind", kind);
         extra.put("brief", paths.rel(brief));
+        extra.put("token", s.token);
         return node("review", extra);
     }
 
@@ -167,7 +181,7 @@ final class ItemWorkflow {
             throw new GtaException(ErrorCode.USAGE_UNPARSEABLE_ANSWER, "Expected a single option letter", "Reply A, B or C");
         }
         WorkState.ItemState s = st.item(p.itemId);
-        PlanItem item = planItem(p.itemId);
+        PlanItem item = store.planItem(p.itemId);
         String letter = c.letter();
         String msg;
         if ("defect".equals(p.type) && letter.equals("A")) {
@@ -184,11 +198,11 @@ final class ItemWorkflow {
             sw.answersToApply = List.of("Human says the expectation of " + item.ref + " is wrong: revise it and add an open question if unsure");
             Path specPath = paths.spec(item.flowId);
             ctx.specs.writeSpec(specPath, new SpecEditor(SpecParser.parse(specPath).text).setHeader("status", "in-review").text());
-            ctx.specs.snapshot(item.flowId);
             msg = "spec sent back for revision";
         } else if (("defect".equals(p.type) && letter.equals("C")) || ("escalation".equals(p.type) && letter.equals("A"))) {
             st.move(s, ItemStatus.PENDING);
             s.attempts = 0;
+            s.checks = 0; // a retry is a fresh start: the check budget too
             s.lastError = null;
             st.consecutiveFailures = 0;
             msg = "item reset; it will be retried";
@@ -206,25 +220,24 @@ final class ItemWorkflow {
     public Map<String, Object> check(String itemId, String token) {
         try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
             WorkState st = store.load();
-            ctx.sessions.touch(st);
             WorkState.ItemState s = requireToken(st, itemId, token, ItemStatus.AUTHORING, ItemStatus.REPAIRING);
             if (s.checks >= config.budgets.maxChecksPerItem) {
                 throw new GtaException(ErrorCode.STATE_BUDGET_EXHAUSTED, "Check budget used (" + s.checks + ")",
                         "Submit with ./gtaw submit --item " + itemId + " --token " + token);
             }
             s.checks++;
-            PlanItem item = planItem(itemId);
+            PlanItem item = store.planItem(itemId);
             String runId = Ids.newRunId(git.head());
-            RunResult run = runItem(runId, item, false, false);
-            AssertionScanner.ScenarioOracle oracle = scanOracle(item);
+            RunResult run = ctx.runs.runItem(runId, item, false, false);
+            AssertionScanner.ScenarioOracle oracle = ctx.runs.scanOracle(item);
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("runId", runId);
             out.put("checksLeft", config.budgets.maxChecksPerItem - s.checks);
-            out.putAll(summarize(run));
+            out.putAll(TestRuns.summarize(run));
             if (!item.isFoundation() && !item.oracle.reviewerChecked && oracle.found()) {
                 out.put("missingExpectedValues", AssertionScanner.missingThenLiterals(item.oracle.then, oracle.tokens()));
             }
-            if (s.lock == null && reached(run) && !item.isFoundation()) {
+            if (s.lock == null && TestRuns.reached(run) && !item.isFoundation()) {
                 s.lock = OracleLock.create(oracle, item.oracle.then, runId);
                 out.put("oracleLocked", s.lock.tokens);
             } else if (s.lock != null) {
@@ -242,9 +255,8 @@ final class ItemWorkflow {
     public Map<String, Object> submitItem(String itemId, String token) {
         try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
             WorkState st = store.load();
-            ctx.sessions.touch(st);
             WorkState.ItemState s = requireToken(st, itemId, token, ItemStatus.AUTHORING, ItemStatus.REPAIRING);
-            Map<String, Object> out = submitInternal(st, planItem(itemId), s, false);
+            Map<String, Object> out = submitInternal(st, store.planItem(itemId), s, false);
             store.save(st);
             return out;
         }
@@ -269,8 +281,13 @@ final class ItemWorkflow {
             }
         }
         String runId = Ids.newRunId(git.head());
-        RunResult run = runItem(runId, item, false, false);
+        RunResult run = ctx.runs.runItem(runId, item, false, false);
         s.evidenceRunId = runId;
+        if (run.timedOut) {
+            // counted like any other failure, so a hanging test reaches a human instead of being resubmitted forever
+            return fail(st, item, s, ErrorCode.TEST_TIMEOUT, "The test run exceeded budgets.nodeTimeoutMinutes ("
+                    + config.budgets.nodeTimeoutMinutes + " min); look for missing timeouts (Awaitility, embedded brokers) — see " + run.logFile);
+        }
         if (run.compileError) {
             return fail(st, item, s, ErrorCode.BUILD_COMPILE_ERROR, run.compileMessage);
         }
@@ -278,9 +295,9 @@ final class ItemWorkflow {
             return fail(st, item, s, ErrorCode.TEST_NOT_FOUND, "No test ran for " + item.testClass
                     + (item.isFoundation() ? "" : " with @Tag(\"scenario:" + item.ref + "\")"));
         }
-        AssertionScanner.ScenarioOracle oracle = scanOracle(item);
+        AssertionScanner.ScenarioOracle oracle = ctx.runs.scanOracle(item);
         if (!item.isFoundation()) {
-            if (s.lock == null && reached(run)) {
+            if (s.lock == null && TestRuns.reached(run)) {
                 s.lock = OracleLock.create(oracle, item.oracle.then, runId);
             }
             if (!item.oracle.reviewerChecked) {
@@ -340,8 +357,8 @@ final class ItemWorkflow {
         // assertion / SUT error / timeout: re-run twice before triage (plan §5.3)
         int consistent = 0;
         for (int i = 0; i < 2; i++) {
-            RunResult again = runItem(Ids.newRunId(git.head()), item, false, false);
-            if (!again.failures().isEmpty()) {
+            RunResult again = ctx.runs.runItem(Ids.newRunId(git.head()), item, false, false);
+            if (again.timedOut || !again.failures().isEmpty()) {
                 consistent++;
             }
         }
@@ -357,12 +374,11 @@ final class ItemWorkflow {
                 + "); waiting for the reviewer's triage", Map.of("runId", runId, "code", code.name()));
     }
 
-    public Map<String, Object> submitReview(String itemId, String verdict, String reason) {
+    public Map<String, Object> submitReview(String itemId, String token, String verdict, String reason) {
         try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
             WorkState st = store.load();
-            ctx.sessions.touch(st);
-            WorkState.ItemState s = st.item(itemId);
-            PlanItem item = planItem(itemId);
+            WorkState.ItemState s = requireToken(st, itemId, token, ItemStatus.REVIEWING, ItemStatus.TRIAGING);
+            PlanItem item = store.planItem(itemId);
             Map<String, Object> out;
             if (s.status == ItemStatus.REVIEWING) {
                 if ("accept".equals(verdict)) {
@@ -381,6 +397,7 @@ final class ItemWorkflow {
                 throw new GtaException(ErrorCode.STATE_ILLEGAL_TRANSITION, itemId + " is " + s.status.id() + ", not under review",
                         "Run ./gtaw next");
             }
+            s.token = null; // one verdict per review round
             store.save(st);
             return out;
         }
@@ -442,7 +459,6 @@ final class ItemWorkflow {
         Spec spec = SpecParser.parse(specPath);
         String newRev = SpecWorkflow.bump(spec.rev());
         ctx.specs.writeSpec(specPath, new SpecEditor(spec.text).replaceThenLiteral(item.ref, expected, actual).setHeader("rev", newRev).text());
-        ctx.specs.snapshot(item.flowId);
         List<PlanItem> plan = store.loadPlan();
         for (PlanItem p : plan) {
             if (p.id.equals(item.id)) {
@@ -487,7 +503,7 @@ final class ItemWorkflow {
         return result(code.name() + ": fix it, check, then submit again", more);
     }
 
-    WorkState.LastError lastError(WorkState.ItemState s, ErrorCode code, String message) {
+    static WorkState.LastError lastError(WorkState.ItemState s, ErrorCode code, String message) {
         WorkState.LastError e = new WorkState.LastError();
         e.code = code.name();
         e.message = message;
@@ -520,18 +536,31 @@ final class ItemWorkflow {
     }
 
     void commitItem(WorkState st, PlanItem item, WorkState.ItemState s, String runId, String summary) {
+        WorkState.Baseline baseline = s.baseline == null ? new ChangeChecker(paths).capture() : s.baseline;
         List<String> files = new ArrayList<>();
-        for (String changed : new ChangeChecker(paths).changedSince(s.baseline == null ? new ChangeChecker(paths).capture() : s.baseline)) {
-            if (ChangeChecker.matchesAny(changed, item.ownsFiles)) {
+        List<String> mixed = new ArrayList<>();
+        for (String changed : new ChangeChecker(paths).changedSince(baseline)) {
+            if (!ChangeChecker.matchesAny(changed, item.ownsFiles)) {
+                continue;
+            }
+            boolean testCode = changed.startsWith(GtaPaths.TEST_JAVA + "/") || changed.startsWith(GtaPaths.TEST_RESOURCES + "/");
+            if (baseline.dirty.containsKey(changed) && !testCode) {
+                // e.g. pom.xml with the developer's own uncommitted edits: never commit those on their behalf.
+                // Test classes are shared by the items of a flow, so earlier items' uncommitted work is gta's own.
+                mixed.add(changed);
+            } else {
                 files.add(changed);
             }
+        }
+        if (!mixed.isEmpty()) {
+            s.reason = "not committed because they also contain your uncommitted edits: " + mixed + " — commit them yourself";
         }
         if (!item.isFoundation() && s.lock != null) {
             Path shardPath = paths.oracleShard(item.flowId);
             Map<String, OracleShard.Entry> shard = OracleShard.read(shardPath);
             OracleShard.Entry e = new OracleShard.Entry();
             e.scenarioRevision = item.scenarioRevision;
-            e.fingerprint = OracleLock.fingerprint(scanOracle(item).assertionStatements().stream()
+            e.fingerprint = OracleLock.fingerprint(ctx.runs.scanOracle(item).assertionStatements().stream()
                     .filter(x -> s.lock.tokens.stream().anyMatch(x::contains)).toList());
             e.tokens = s.lock.tokens;
             e.testClass = item.testClass;
@@ -545,17 +574,13 @@ final class ItemWorkflow {
             return;
         }
         String msg = "test(" + item.domain() + "): " + summary + "\n\nGta-Item: " + item.id + "\nGta-Run: " + runId;
-        git.commit(files, msg).ifPresent(sha -> s.commit = sha);
+        ctx.commit(files, msg).ifPresent(sha -> s.commit = sha);
     }
 
-    /** A pin is confirmed when gtaw committed the known-defect record for the item (see writeEscalation). */
+    /** A pin is confirmed when gtaw committed the item's known-defect record (see EscalationWriter); the working tree does not count. */
     boolean confirmedPin(PlanItem item) {
-        Path f = paths.escalations().resolve(Ids.itemKey(item.id) + ".md");
-        try {
-            return Files.exists(f) && git.isTracked(paths.rel(f)) && Files.readString(f).contains("- Status: `defect-found`");
-        } catch (IOException e) {
-            return false;
-        }
+        String rel = paths.rel(paths.escalations().resolve(Ids.itemKey(item.id) + ".md"));
+        return git.show("HEAD", rel).map(text -> text.contains(EscalationWriter.DEFECT_FOUND_MARKER)).orElse(false);
     }
 
     WorkState.ItemState requireToken(WorkState st, String itemId, String token, ItemStatus... allowed) {
@@ -588,9 +613,6 @@ final class ItemWorkflow {
             }
             WorkState.ItemState ns = new WorkState.ItemState();
             ns.id = f.id;
-            if (s != null && s.status == ItemStatus.PASSED && old != null && old.scenarioRevision.equals(f.scenarioRevision)) {
-                ns = s;
-            }
             st.items.put(f.id, ns);
             result.add(f);
         }
@@ -604,6 +626,7 @@ final class ItemWorkflow {
         plan.addAll(result);
         store.savePlan(plan);
         // rebuild: tests that already exist for a fresh pending item are verified first
+        Map<String, OracleShard.Entry> shard = OracleShard.read(paths.oracleShard(spec.flowId()));
         for (PlanItem i : result) {
             WorkState.ItemState s = st.items.get(i.id);
             Path test = paths.testSource(i.testClass);
@@ -614,12 +637,11 @@ final class ItemWorkflow {
                 st.move(s, ItemStatus.VERIFYING); // adopt: verify the existing test before trusting it
                 continue;
             }
-            Map<String, OracleShard.Entry> shard = OracleShard.read(paths.oracleShard(i.flowId));
             if (s.status == ItemStatus.PENDING && s.attempts == 0 && Files.exists(test) && shard.containsKey(i.id)
                     && i.scenarioRevision.equals(shard.get(i.id).scenarioRevision)) {
                 WorkState.Lock lock = new WorkState.Lock();
                 lock.tokens = new ArrayList<>(shard.get(i.id).tokens);
-                AssertionScanner.ScenarioOracle o = scanOracle(i);
+                AssertionScanner.ScenarioOracle o = ctx.runs.scanOracle(i);
                 lock.statements = o.assertionStatements().stream().filter(x -> lock.tokens.stream().anyMatch(x::contains)).toList();
                 lock.watched = o.watchedHash();
                 lock.fingerprint = shard.get(i.id).fingerprint;
@@ -629,66 +651,5 @@ final class ItemWorkflow {
             }
         }
         return result;
-    }
-
-    PlanItem planItem(String id) {
-        return store.loadPlan().stream().filter(i -> i.id.equals(id)).findFirst()
-                .orElseThrow(() -> new GtaException(ErrorCode.USAGE_UNKNOWN_ITEM, "Unknown item " + id, "Run ./gtaw status"));
-    }
-
-    /** {@code gtaw run}: the seed tests (smoke) or every gta test, optionally one layer. */
-    public RunResult runTests(boolean smoke, String layer) {
-        if ("system".equals(layer)) {
-            throw new GtaException(ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE, "The system layer arrives in P4", "Run component tests instead");
-        }
-        String tag = smoke ? null : layer != null ? layer : "gta";
-        return new MavenRunner(paths, config).run(Ids.newRunId(git.head()), null,
-                new MavenRunner.Options(smoke ? "*SeedIT" : null, tag, false, false), productionClasses(), testClasses());
-    }
-
-    RunResult runItem(String runId, PlanItem item, boolean variant, boolean random) {
-        String tag = item.isFoundation() ? null : "scenario:" + item.ref;
-        return new MavenRunner(paths, config).run(runId, item.id, new MavenRunner.Options(item.testClass, tag, variant, random),
-                productionClasses(), testClasses());
-    }
-
-    AssertionScanner.ScenarioOracle scanOracle(PlanItem item) {
-        return AssertionScanner.scan(paths.testSource(item.testClass), item.isFoundation() ? null : item.ref, paths.testResources());
-    }
-
-    boolean reached(RunResult run) {
-        if (run.compileError || run.cases.isEmpty()) {
-            return false;
-        }
-        return run.cases.stream().anyMatch(c -> c.passed() || c.sutReached);
-    }
-
-    Set<String> productionClasses() {
-        return JavaIndex.of(paths.mainJava()).classNames();
-    }
-
-    Set<String> testClasses() {
-        return JavaIndex.of(paths.testJava()).classNames();
-    }
-
-    Map<String, Object> summarize(RunResult run) {
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("compileError", run.compileError);
-        if (run.compileError) {
-            out.put("compile", run.compileMessage);
-        }
-        out.put("tests", run.cases.size());
-        out.put("passed", run.cases.stream().filter(TestCase::passed).count());
-        List<Map<String, Object>> failures = new ArrayList<>();
-        for (TestCase c : run.failures()) {
-            Map<String, Object> f = new LinkedHashMap<>();
-            f.put("test", c.className + "#" + c.method);
-            f.put("code", c.code);
-            f.put("message", c.message);
-            failures.add(f);
-        }
-        out.put("failures", failures);
-        out.put("log", run.logFile);
-        return out;
     }
 }

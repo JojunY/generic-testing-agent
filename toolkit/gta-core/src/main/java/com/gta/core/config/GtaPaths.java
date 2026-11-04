@@ -1,6 +1,9 @@
 package com.gta.core.config;
 
 import java.nio.file.Path;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** All well-known locations inside a service repository (plan §5.2, §10.1). */
 public record GtaPaths(Path root) {
@@ -12,10 +15,6 @@ public record GtaPaths(Path root) {
 
     public Path mainJava() {
         return root.resolve(MAIN_JAVA);
-    }
-
-    public Path mainResources() {
-        return root.resolve(MAIN_RESOURCES);
     }
 
     public Path testJava() {
@@ -36,11 +35,13 @@ public record GtaPaths(Path root) {
         return TEST_JAVA + "/" + fqcn.replace('.', '/') + ".java";
     }
 
+    private static final Pattern SPEC_PATH = Pattern.compile(
+            "(?:^|.*/)\\.gta/specs/([a-z][a-z0-9-]*)/([a-z][a-z0-9-]*)\\.(?:spec\\.md|oracles\\.json)$");
+
     /** Spec file location -> flow id (".gta/specs/order/create.spec.md" -> "order.create"); empty if it is not a spec. */
-    public static java.util.Optional<String> flowIdOfSpecPath(String rel) {
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:^|.*/)\\.gta/specs/([a-z][a-z0-9-]*)/([a-z][a-z0-9-]*)\\.(?:spec\\.md|oracles\\.json)$")
-                .matcher(rel.replace('\\', '/'));
-        return m.matches() ? java.util.Optional.of(m.group(1) + "." + m.group(2)) : java.util.Optional.empty();
+    public static Optional<String> flowIdOfSpecPath(String rel) {
+        Matcher m = SPEC_PATH.matcher(rel.replace('\\', '/'));
+        return m.matches() ? Optional.of(m.group(1) + "." + m.group(2)) : Optional.empty();
     }
 
     public Path gta() {
@@ -65,10 +66,6 @@ public record GtaPaths(Path root) {
 
     public Path specs() {
         return gta().resolve("specs");
-    }
-
-    public Path skills() {
-        return gta().resolve("skills");
     }
 
     public Path escalations() {
@@ -109,16 +106,35 @@ public record GtaPaths(Path root) {
         return work().resolve("briefs");
     }
 
+    /** SHAs of the commits gtaw made (see CommitLedger). */
+    public Path commitLedger() {
+        return work().resolve("gtaw-commits.txt");
+    }
+
+    /** Copies of gtaw-owned spec fields, taken after every gtaw write (owned-field check). */
+    public Path snapshots() {
+        return work().resolve("snapshots");
+    }
+
+    /** Where gta-junit writes scenario results during a test run. */
+    public Path gtaResults() {
+        return root.resolve("target/gta-results");
+    }
+
+    public Path verifyLatest() {
+        return runs().resolve("verify-latest.json");
+    }
+
+    public Path gateLatest() {
+        return runs().resolve("gate-latest.json");
+    }
+
     public Path runs() {
         return work().resolve("runs");
     }
 
     public Path recover() {
         return work().resolve("recover");
-    }
-
-    public Path session() {
-        return work().resolve(".session");
     }
 
     public Path lock() {

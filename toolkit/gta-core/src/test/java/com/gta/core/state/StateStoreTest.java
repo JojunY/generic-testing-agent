@@ -8,6 +8,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -45,5 +46,29 @@ class StateStoreTest {
         GtaException e = assertThrows(GtaException.class, () -> new StateStore(paths).loadPlan());
 
         assertEquals(ErrorCode.STATE_CORRUPT, e.code());
+    }
+
+    @Test
+    void shouldCountTheSessionAsActiveUntilTheCommandSaves() throws Exception {
+        GtaPaths paths = new GtaPaths(root);
+        StateStore store = new StateStore(paths);
+        WorkState st = new WorkState();
+        st.session = new WorkState.Session();
+        st.session.lastSeenAt = "2026-01-01T00:00:00Z";
+
+        store.save(st);
+
+        assertTrue(Instant.parse(store.load().session.lastSeenAt).isAfter(Instant.parse("2026-11-01T00:00:00Z")));
+    }
+
+    @Test
+    void shouldReportButNotMoveACorruptFileWhenOnlyReading() throws Exception {
+        GtaPaths paths = new GtaPaths(root);
+        Files.createDirectories(paths.work());
+        Files.writeString(paths.state(), "{ broken");
+
+        assertThrows(GtaException.class, () -> new StateStore(paths).peek());
+
+        assertTrue(Files.exists(paths.state()), "status and report must not move files aside");
     }
 }

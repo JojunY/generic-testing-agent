@@ -17,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /** Parsed view of a source root (src/main/java or src/test/java). */
@@ -81,7 +82,7 @@ public final class JavaIndex {
         return Optional.ofNullable(classFiles.get(fqcn));
     }
 
-    public java.util.Set<String> classNames() {
+    public Set<String> classNames() {
         return classFiles.keySet();
     }
 }

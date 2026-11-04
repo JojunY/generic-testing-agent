@@ -11,6 +11,8 @@ public class RunResult {
     public List<String> command = new ArrayList<>();
     public int exitCode;
     public boolean compileError;
+    /** The run hit budgets.nodeTimeoutMinutes and was killed; cases hold whatever reports were written. */
+    public boolean timedOut;
     public String compileMessage;
     public long durationMs;
     public List<TestCase> cases = new ArrayList<>();

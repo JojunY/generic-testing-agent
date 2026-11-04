@@ -77,7 +77,7 @@ public final class SpecLinter {
                 }
             }
             for (Spec.Scenario s : r.scenarios) {
-                String sw = "scenario '" + s.title + "'";
+                String sw = scenarioLabel(s);
                 checkId(issues, sw, s.id(), flowId, 's');
                 if (!Spec.SOURCES.contains(s.source())) {
                     issues.add(sw + ": source must be one of " + Spec.SOURCES);
@@ -148,6 +148,11 @@ public final class SpecLinter {
         } else if (!Ids.SPEC_ELEMENT_ID.matcher(id).matches() || !id.startsWith(flowId + "/" + kind)) {
             issues.add(where + ": id '" + id + "' must look like " + flowId + "/" + kind + "01");
         }
+    }
+
+    /** How lint issues name a scenario; callers match issues by this prefix, never by title substring. */
+    public static String scenarioLabel(Spec.Scenario s) {
+        return "scenario " + (s.id() == null ? "(no id)" : s.id()) + " '" + s.title + "'";
     }
 
     private static void checkDocumented(List<String> issues, String where, String doc, String quote, Path root) {

@@ -1,9 +1,12 @@
 package com.gta.core.oracle;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.gta.core.error.ErrorCode;
+import com.gta.core.error.GtaException;
 import com.gta.core.util.Json;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -32,24 +35,29 @@ public final class OracleShard {
     private OracleShard() {
     }
 
+    /**
+     * Reads a committed shard. A shard that cannot be parsed (e.g. merge-conflict markers) fails closed: treating it as
+     * empty would let the next commit overwrite every other locked oracle and let the gate skip the flow.
+     */
     public static Map<String, Entry> read(Path file) {
         if (!Files.exists(file)) {
             return new TreeMap<>();
         }
         try {
-            return parse(Files.readString(file));
+            return parse(Files.readString(file), file.toString());
         } catch (IOException e) {
-            return new TreeMap<>();
+            throw new UncheckedIOException(e);
         }
     }
 
-    public static Map<String, Entry> parse(String json) {
+    public static Map<String, Entry> parse(String json, String where) {
         try {
             Map<String, Entry> m = Json.MAPPER.readValue(json, new TypeReference<TreeMap<String, Entry>>() {
             });
             return m == null ? new TreeMap<>() : m;
         } catch (IOException e) {
-            return new TreeMap<>();
+            throw new GtaException(ErrorCode.CONFIG_ORACLE_SHARD_INVALID, "Oracle shard " + where + " cannot be read: " + e.getMessage(),
+                    "Resolve the merge conflict or restore the file from git (both sides' entries must be kept), then re-run", e);
         }
     }
 

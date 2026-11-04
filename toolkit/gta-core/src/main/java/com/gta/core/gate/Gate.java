@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
+import com.gta.core.error.GtaException;
 import com.gta.core.oracle.AssertionScanner;
 import com.gta.core.oracle.OracleLock;
 import com.gta.core.oracle.OracleShard;
@@ -81,7 +82,7 @@ public final class Gate {
         Result r = new Result();
         r.base = baseRef;
         Map<String, Spec> currentSpecs = currentSpecs();
-        Map<String, Map<String, OracleShard.Entry>> baseShards = baseShards(baseRef);
+        Map<String, Map<String, OracleShard.Entry>> baseShards = baseShards(baseRef, r);
         Map<String, TestCase> byScenario = new HashMap<>();
         for (TestCase c : results) {
             if (c.scenarioId() != null) {
@@ -95,7 +96,19 @@ public final class Gate {
         for (Map.Entry<String, Map<String, OracleShard.Entry>> shard : baseShards.entrySet()) {
             String flowId = shard.getKey();
             Spec spec = currentSpecs.get(flowId);
-            Map<String, OracleShard.Entry> currentShard = OracleShard.read(paths.oracleShard(flowId));
+            Map<String, OracleShard.Entry> currentShard;
+            try {
+                currentShard = OracleShard.read(paths.oracleShard(flowId));
+            } catch (GtaException unreadable) {
+                r.failures.add(new Condition(ErrorCode.GATE_SHARD_UNREADABLE.name(), flowId, unreadable.getMessage()));
+                continue;
+            }
+            if (spec == null || !"approved".equals(spec.status())) {
+                // the locked scenarios of this flow are exempt below: make the reason visible in the PR
+                r.concerns.add(new Condition(ErrorCode.GATE_SCENARIOS_UNLOCKED.name(), flowId, spec == null
+                        ? "the spec was deleted: its " + shard.getValue().size() + " locked scenario(s) are no longer checked"
+                        : "the spec is " + spec.status() + ": its locked scenarios are checked again once it is approved"));
+            }
             for (Map.Entry<String, OracleShard.Entry> e : shard.getValue().entrySet()) {
                 String itemId = e.getKey();
                 if (itemId.contains("#foundation")) {
@@ -213,12 +226,19 @@ public final class Gate {
         return out;
     }
 
-    private Map<String, Map<String, OracleShard.Entry>> baseShards(String baseRef) {
+    private Map<String, Map<String, OracleShard.Entry>> baseShards(String baseRef, Result r) {
         Map<String, Map<String, OracleShard.Entry>> out = new HashMap<>();
         for (String file : git.listFiles(baseRef, paths.rel(paths.specs()))) {
-            if (file.endsWith(".oracles.json")) {
-                GtaPaths.flowIdOfSpecPath(file).ifPresent(flowId ->
-                        git.show(baseRef, file).ifPresent(json -> out.put(flowId, OracleShard.parse(json))));
+            Optional<String> flowId = file.endsWith(".oracles.json") ? GtaPaths.flowIdOfSpecPath(file) : Optional.empty();
+            Optional<String> json = flowId.isPresent() ? git.show(baseRef, file) : Optional.empty();
+            if (json.isEmpty()) {
+                continue;
+            }
+            try {
+                out.put(flowId.get(), OracleShard.parse(json.get(), baseRef + ":" + file));
+            } catch (GtaException unreadable) {
+                // fail closed: an unreadable base shard must not exempt its flow from the gate
+                r.failures.add(new Condition(ErrorCode.GATE_SHARD_UNREADABLE.name(), flowId.get(), unreadable.getMessage()));
             }
         }
         return out;

@@ -25,7 +25,6 @@ public final class Planner {
         String domain = Ids.domainOf(flowId);
         String flowName = Ids.flowNameOf(flowId);
         String pkg = packageFor(spec, profile);
-        String pkgPath = pkg.isEmpty() ? "" : pkg.replace('.', '/') + "/";
         List<String> skills = registry.skillsFor(capability.id, new HashSet<>(profile.capabilities)).stream()
                 .map(s -> ".gta/skills/" + s + "/SKILL.md").toList();
 
@@ -62,7 +61,7 @@ public final class Planner {
                 item.oracle.then = s.thenLiterals();
                 item.oracle.reviewerChecked = s.reviewerChecked();
                 item.testClass = pkg.isEmpty() ? className : pkg + "." + className;
-                item.ownsFiles.add(GtaPaths.TEST_JAVA + "/" + pkgPath + className + ".java");
+                item.ownsFiles.add(GtaPaths.testSourceRel(item.testClass));
                 item.ownsFiles.add(GtaPaths.TEST_RESOURCES + "/fixtures/" + domain + "/" + flowName + "/**");
                 item.priority = priority(spec.risk());
                 item.scenarioRevision = scenarioRevision(s);
@@ -88,7 +87,7 @@ public final class Planner {
             String basePkg = profile.basePackage == null || profile.basePackage.isEmpty() ? pkg : profile.basePackage;
             String basePath = basePkg.isEmpty() ? "" : basePkg.replace('.', '/') + "/";
             f.testClass = basePkg.isEmpty() ? seed : basePkg + "." + seed;
-            f.ownsFiles.add(GtaPaths.TEST_JAVA + "/" + basePath + seed + ".java");
+            f.ownsFiles.add(GtaPaths.testSourceRel(f.testClass));
             f.ownsFiles.add(GtaPaths.TEST_JAVA + "/" + basePath + "support/**");
             f.ownsFiles.add(GtaPaths.TEST_RESOURCES + "/**");
             f.ownsFiles.add("pom.xml");

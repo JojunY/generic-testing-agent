@@ -105,14 +105,14 @@ author() { # author <scenario> -> prints token of the author node
 review_accept() {
   local out; out=$(gtaw next)
   expect "$(jget "$out" 'd["kind"]')" oracle-review "review kind for $1"
-  out=$(gtaw submit --review "order.create-order/$1#component-01" --verdict accept --reason "asserts the THEN values")
+  out=$(gtaw submit --review "order.create-order/$1#component-01" --token "$(jget "$out" 'd["token"]')" --verdict accept --reason "asserts the THEN values")
   jget "$out" 'd["result"]' | grep -q '^passed' || fail "$1 not passed after review: $out"
   echo "ok   $1 passed and committed"
 }
 
 step "s01: oracle lock and change check"
 ITEM="order.create-order/s01#component-01"; TOKEN=$(author s01)
-mkdir -p "$(dirname "$TEST")" && { cat "$AGENT/OrderCreateOrderIT.head.java"; echo "}"; } > "$TEST" && add_method "$AGENT/s01.method.java"
+mkdir -p "$(dirname "$TEST")" && { cat "$AGENT/OrderCreateOrderIT.head.java.txt"; echo "}"; } > "$TEST" && add_method "$AGENT/s01.method.java.txt"
 OUT=$(gtaw check --item "$ITEM" --token "$TOKEN")
 expect "$(jget "$OUT" 'd["passed"]')" 1 "s01 check"
 expect "$(jget "$OUT" '",".join(d["oracleLocked"])')" "201,0.00,50.00,CREATED" "locked oracle"
@@ -131,18 +131,18 @@ review_accept s01
 
 step "s02"
 ITEM="order.create-order/s02#component-01"; TOKEN=$(author s02)
-add_method "$AGENT/s02.method.java"
+add_method "$AGENT/s02.method.java.txt"
 gtaw submit --item "$ITEM" --token "$TOKEN" >/dev/null
 review_accept s02
 
 step "s03: confirmed expectation exposes seeded defect D1"
 ITEM="order.create-order/s03#component-01"; TOKEN=$(author s03)
-add_method "$AGENT/s03.method.java"
+add_method "$AGENT/s03.method.java.txt"
 OUT=$(gtaw submit --item "$ITEM" --token "$TOKEN")
 expect "$(jget "$OUT" 'd["code"]')" TEST_ASSERTION_FAILED "s03 failure"
 OUT=$(gtaw next)
 expect "$(jget "$OUT" 'd["kind"]')" triage "triage node"
-gtaw submit --review "$ITEM" --verdict product-defect --reason "PricingService#discount uses > instead of >=" >/dev/null
+gtaw submit --review "$ITEM" --token "$(jget "$OUT" 'd["token"]')" --verdict product-defect --reason "PricingService#discount uses > instead of >=" >/dev/null
 OUT=$(gtaw next)
 expect "$(jget "$OUT" 'd["type"]')" defect "defect decision"
 gtaw answer A >/dev/null
@@ -156,11 +156,11 @@ echo "ok   s03 pinned with @KnownDefect ($FP)"
 
 step "s04: the reviewer rejects the first oracle, the author resubmits"
 ITEM="order.create-order/s04#component-01"; TOKEN=$(author s04)
-add_method "$AGENT/s04.method.java"
+add_method "$AGENT/s04.method.java.txt"
 gtaw submit --item "$ITEM" --token "$TOKEN" >/dev/null
 OUT=$(gtaw next)
 expect "$(jget "$OUT" 'd["kind"]')" oracle-review "review kind for s04"
-OUT=$(gtaw submit --review "$ITEM" --verdict reject --reason "also assert that nothing was stored")
+OUT=$(gtaw submit --review "$ITEM" --token "$(jget "$OUT" 'd["token"]')" --verdict reject --reason "also assert that nothing was stored")
 jget "$OUT" 'd["result"]' | grep -q 'fix it' || fail "reject did not send s04 back to the author: $OUT"
 echo "ok   reject sends the item back to the author"
 TOKEN=$(author s04)
@@ -187,7 +187,7 @@ for i in $(seq 1 30); do
       gtaw submit --item "$(jget "$OUT" 'd["itemId"]')" --token "$(jget "$OUT" 'd["token"]')" >/dev/null
       REPAIRED=$((REPAIRED + 1)) ;;
     review)
-      gtaw submit --review "$(jget "$OUT" 'd["itemId"]')" --verdict accept --reason "unchanged oracle" >/dev/null ;;
+      gtaw submit --review "$(jget "$OUT" 'd["itemId"]')" --token "$(jget "$OUT" 'd["token"]')" --verdict accept --reason "unchanged oracle" >/dev/null ;;
     done) break ;;
     result) ;;
     *) fail "unexpected node during rebuild: $OUT" ;;

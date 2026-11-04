@@ -1,8 +1,8 @@
 package com.gta.core.error;
 
 /**
- * Every error gtaw can report. The prefix of the name is the category prefix (plan §5.6);
- * the exit code is shared by all codes of a category.
+ * Every error and gate condition gtaw can report. The prefix of the name is the category prefix (plan §5.6); the exit code
+ * is shared by all codes of a category. Hints are given where a {@link GtaException} is thrown: every exception requires one.
  */
 public enum ErrorCode {
     // test-failure (10)
@@ -17,7 +17,7 @@ public enum ErrorCode {
     GATE_SCENARIO_REGRESSED(Category.GATE_FAILED),
     GATE_ORACLE_CHANGED_WITHOUT_SPEC(Category.GATE_FAILED),
     GATE_UNSTABLE_TEST(Category.GATE_FAILED),
-    GATE_KNOWN_DEFECT_MISMATCH(Category.GATE_FAILED),
+    GATE_SHARD_UNREADABLE(Category.GATE_FAILED),
 
     // gate-concern (0): reported in the PR comment, never fail the build
     GATE_ASSUMED_CLAIM(Category.GATE_CONCERN),
@@ -27,6 +27,7 @@ public enum ErrorCode {
     GATE_CHARACTERIZATION_RATIO(Category.GATE_CONCERN),
     GATE_UNMAPPED_CHANGE(Category.GATE_CONCERN),
     GATE_WAIVERS_UNREADABLE(Category.GATE_CONCERN),
+    GATE_SCENARIOS_UNLOCKED(Category.GATE_CONCERN),
     // usage (20)
     USAGE_UNKNOWN_ITEM(Category.USAGE),
     USAGE_UNKNOWN_FLOW(Category.USAGE),
@@ -36,9 +37,9 @@ public enum ErrorCode {
     // config (21)
     CONFIG_INVALID(Category.CONFIG),
     CONFIG_NOT_INITIALIZED(Category.CONFIG),
+    CONFIG_ORACLE_SHARD_INVALID(Category.CONFIG),
     // environment (30)
     ENV_NOT_A_GIT_REPO(Category.ENVIRONMENT),
-    ENV_MAVEN_UNAVAILABLE(Category.ENVIRONMENT),
     ENV_TOOL_UNAVAILABLE(Category.ENVIRONMENT),
     ENV_CHECK_FAILED(Category.ENVIRONMENT),
     ENV_UNSUPPORTED_BUILD(Category.ENVIRONMENT),
@@ -50,7 +51,6 @@ public enum ErrorCode {
     // build (40)
     BUILD_COMPILE_ERROR(Category.BUILD),
     // policy (50)
-    POLICY_PROTECTED_PATH(Category.POLICY),
     POLICY_OUT_OF_SCOPE_CHANGE(Category.POLICY),
     POLICY_ORACLE_MODIFIED(Category.POLICY),
     POLICY_ORACLE_MISMATCH(Category.POLICY),
@@ -62,7 +62,7 @@ public enum ErrorCode {
     STATE_LOCKED(Category.STATE),
     STATE_STALE_SESSION(Category.STATE),
     STATE_NOTHING_PENDING(Category.STATE),
-    STATE_BUDGET_EXHAUSTED(Category.STATE),
+    STATE_BUDGET_EXHAUSTED(Category.STATE, false),
     STATE_CORRUPT(Category.STATE),
     // internal (70)
     INTERNAL_ERROR(Category.INTERNAL);
@@ -92,9 +92,21 @@ public enum ErrorCode {
     }
 
     public final Category category;
+    private final boolean retryable;
 
     ErrorCode(Category category) {
+        this(category, category.retryable);
+    }
+
+    /** @param retryable overrides the category default (a used-up budget is a STATE error that retrying cannot fix) */
+    ErrorCode(Category category, boolean retryable) {
         this.category = category;
+        this.retryable = retryable;
+    }
+
+    /** Whether running the same command again can succeed without changing anything. */
+    public boolean retryable() {
+        return retryable;
     }
 
     public int exitCode() {

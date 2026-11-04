@@ -9,6 +9,11 @@ Get-Content (Join-Path $Root '.gta\wrapper\gta-wrapper.properties') | ForEach-Ob
 $version = $props['version']
 $url = $props['distributionUrl']
 $sha = $props['distributionSha256Sum']
+# fail closed: never download or run a jar whose checksum is not pinned
+if (-not $sha -or -not $url) {
+    Write-Output '{"error":{"code":"CONFIG_NOT_INITIALIZED","category":"config","message":"distributionUrl and distributionSha256Sum must be set in .gta/wrapper/gta-wrapper.properties","hint":"set both to the Nexus gta-cli jar and its sha256 (or GTA_CLI_JAR to a local jar for development)","retryable":false}'
+    exit 0
+}
 $gtaHome = if ($env:GTA_HOME) { $env:GTA_HOME } else { Join-Path $env:USERPROFILE '.gta' }
 $cache = Join-Path $gtaHome 'wrapper\dists'
 New-Item -ItemType Directory -Force -Path $cache | Out-Null
@@ -23,12 +28,10 @@ if (-not (Test-Path $jar)) {
     Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $tmp -Headers $headers
     Move-Item -Force $tmp $jar
 }
-if ($sha) {
-    $actual = (Get-FileHash -Algorithm SHA256 $jar).Hash.ToLower()
-    if ($actual -ne $sha.ToLower()) {
-        Remove-Item -Force $jar
-        Write-Output '{"error":{"code":"ENV_WRAPPER_CHECKSUM_MISMATCH","category":"environment","message":"gta-cli jar checksum mismatch","hint":"check .gta/wrapper/gta-wrapper.properties","retryable":false}}'
-        exit 0
-    }
+$actual = (Get-FileHash -Algorithm SHA256 $jar).Hash.ToLower()
+if ($actual -ne $sha.ToLower()) {
+    Remove-Item -Force $jar
+    Write-Output '{"error":{"code":"ENV_WRAPPER_CHECKSUM_MISMATCH","category":"environment","message":"gta-cli jar checksum mismatch","hint":"check .gta/wrapper/gta-wrapper.properties","retryable":false}}'
+    exit 0
 }
 Write-Output $jar

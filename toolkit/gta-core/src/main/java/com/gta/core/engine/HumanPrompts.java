@@ -62,7 +62,7 @@ final class HumanPrompts {
         if (s.lastError != null && s.lastError.message != null) {
             b.append("Last failure (").append(s.lastError.code).append("): ").append(firstLines(s.lastError.message, 6)).append('\n');
         }
-        b.append("Escalation file: ").append(".gta/escalations/").append(Ids.itemKey(item.id)).append(".md\n");
+        b.append("Escalation file: ").append(paths.rel(paths.escalations().resolve(Ids.itemKey(item.id) + ".md"))).append("\n");
         if (defect) {
             b.append("  A) Confirm it is a defect (pin it with @KnownDefect and draft an issue)\n");
             b.append("  B) The spec is wrong (back to review)\n");

@@ -2,6 +2,7 @@ package com.gta.cli;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.gta.core.error.GtaException;
+import com.gta.core.util.Hashes;
 import com.gta.core.util.Json;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -93,5 +94,28 @@ class InstallerTest {
 
         assertEquals(List.of(".opencode/agents/gta-test-author.md"), out.get("conflicts"));
         assertTrue(Files.readString(agent).contains("local tweak"));
+    }
+
+    @Test
+    void shouldRemoveUntouchedFilesANewVersionNoLongerShipsAndKeepEditedOnes() throws Exception {
+        new Installer(root).install("copilot", null, null, false);
+        Path managed = root.resolve(".gta/managed-files.json");
+        Map<String, Object> m = Json.read(managed, Map.class);
+        @SuppressWarnings("unchecked")
+        Map<String, String> files = (Map<String, String>) m.get("files");
+        // pretend the previous version shipped two more files
+        Files.createDirectories(root.resolve(".gta/skills/gta-old-skill"));
+        Files.writeString(root.resolve(".gta/skills/gta-old-skill/SKILL.md"), "old\n");
+        Files.writeString(root.resolve(".github/agents/gta-old.agent.md"), "old\n");
+        files.put(".gta/skills/gta-old-skill/SKILL.md", Hashes.sha256("old\n"));
+        files.put(".github/agents/gta-old.agent.md", Hashes.sha256("old\n"));
+        Json.writeAtomic(managed, m);
+        Files.writeString(root.resolve(".github/agents/gta-old.agent.md"), "old, edited here\n");
+
+        Map<String, Object> out = new Installer(root).install("copilot", null, null, true);
+
+        assertFalse(Files.exists(root.resolve(".gta/skills/gta-old-skill/SKILL.md")));
+        assertTrue(Files.exists(root.resolve(".github/agents/gta-old.agent.md")));
+        assertEquals(List.of(".github/agents/gta-old.agent.md"), out.get("obsoleteKept"));
     }
 }

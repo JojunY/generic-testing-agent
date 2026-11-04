@@ -6,14 +6,15 @@ import com.gta.core.profile.ServiceProfile;
 import com.gta.core.spec.Spec;
 import com.gta.core.state.WorkState;
 import com.gta.core.util.AtomicFiles;
-import com.gta.core.util.Ids;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -149,12 +150,12 @@ public final class Briefs {
         b.append("- Never `Thread.sleep`; use Awaitility. Never `@Disabled`. Never put the actual value where the expected value goes.\n\n");
         if ("known-defect".equals(state.intentOverride)) {
             b.append("## Confirmed defect\n\nA human confirmed this failure is a product defect. Annotate the test method with ")
-                    .append("`@com.gta.junit.KnownDefect(id = \"").append(item.ref).append("\", failure = \"")
+                    .append("`@KnownDefect(id = \"").append(item.ref).append("\", failure = \"")
                     .append(state.lastError == null || state.lastError.defectFingerprint == null ? "" : state.lastError.defectFingerprint).append("\")` and submit. Do not change assertions.\n\n");
         }
         appendSkills(b, item.skills);
         b.append("## Code slice\n\n");
-        java.util.Set<String> slice = new java.util.LinkedHashSet<>();
+        Set<String> slice = new LinkedHashSet<>();
         for (Spec.Requirement r : spec.requirements) {
             if (item.isFoundation() || r.scenarios.stream().anyMatch(s -> item.ref.equals(s.id()))) {
                 slice.addAll(r.refs());
@@ -215,7 +216,8 @@ public final class Briefs {
             b.append("- `environment` — fails only because of the local environment\n- `expected-change` — behaviour changed on purpose\n\n");
         }
         b.append("## Return\n\nReply with exactly one line: `verdict: <verdict> — <one-sentence reason>`. ")
-                .append("The orchestrator passes it to `./gtaw submit --review ").append(item.id).append(" --verdict <verdict> --reason \"…\"`.\n");
+                .append("The orchestrator passes it to `./gtaw submit --review ").append(item.id).append(" --token ").append(state.token)
+                .append(" --verdict <verdict> --reason \"…\"`.\n");
         return write(seq, b.toString());
     }
 
@@ -271,9 +273,5 @@ public final class Briefs {
 
     public static String token(String sessionId, int seq) {
         return sessionId + ":" + String.format("%04d", seq);
-    }
-
-    public static String itemKey(String itemId) {
-        return Ids.itemKey(itemId);
     }
 }

@@ -60,33 +60,26 @@ public final class Git {
         return paths;
     }
 
-    /** A commit between two revisions: its sha, whether gtaw made it (a {@code Gta-*} trailer) and the files it touched. */
-    public record Commit(String sha, boolean byGtaw, List<String> files) {
+    /** A commit between two revisions and the files it touched (against its first parent). */
+    public record Commit(String sha, List<String> files) {
     }
 
-    /** Commits reachable from HEAD but not from {@code since}, oldest first. Empty when {@code since} is unknown. */
+    /** Commits reachable from HEAD but not from {@code since}, oldest first, in one git call. Empty when {@code since} is unknown. */
     public List<Commit> commitsSince(String since) {
         List<Commit> out = new ArrayList<>();
         if (since == null || !Proc.run(root, Proc.cmd("git", "cat-file", "-e", since + "^{commit}")).ok()) {
             return out;
         }
-        Proc.Result log = Proc.run(root, Proc.cmd("git", "log", "--reverse", "--format=%H%x1f%B%x1e", since + "..HEAD"));
+        Proc.Result log = Proc.run(root, Proc.cmd("git", "log", "--reverse", "-m", "--first-parent", "--name-only",
+                "--format=%x1e%H", since + "..HEAD"));
         if (!log.ok()) {
             return out;
         }
         for (String rec : log.output().split("\u001e")) {
-            String r = rec.strip();
-            if (r.isEmpty() || !r.contains("\u001f")) {
-                continue;
+            List<String> lines = rec.lines().map(String::strip).filter(l -> !l.isEmpty()).toList();
+            if (!lines.isEmpty()) {
+                out.add(new Commit(lines.get(0), lines.subList(1, lines.size()).stream().distinct().toList()));
             }
-            String sha = r.substring(0, r.indexOf('\u001f')).strip();
-            String body = r.substring(r.indexOf('\u001f') + 1);
-            boolean byGtaw = body.lines().anyMatch(l -> l.matches("^Gta-[A-Za-z]+: .*"));
-            Proc.Result files = Proc.run(root, Proc.cmd("git", "diff-tree", "--no-commit-id", "--name-only", "-r", "-m", "--root", sha));
-            List<String> changed = files.ok()
-                    ? files.output().lines().map(String::strip).filter(l -> !l.isEmpty()).distinct().toList()
-                    : List.of();
-            out.add(new Commit(sha, byGtaw, changed));
         }
         return out;
     }

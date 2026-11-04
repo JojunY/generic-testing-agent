@@ -1,6 +1,6 @@
 # Generic Testing Agent (GTA) — 设计方案
 
-> 状态：**设计定稿**（未实现）· 版本：plan v9（最终版）· 日期：2026-11
+> 状态：**P0 已实现**（REST API；其余能力按 §12 路线图分阶段开放）· 版本：plan v9 · 日期：2026-11 · 代码审查与修复记录见 [remediation-plan.md](remediation-plan.md)
 > 范围：面向 Java（以 Spring 为主）服务的通用测试 harness
 > 使用面：**VS Code Copilot、IntelliJ IDEA Copilot**（主），OpenCode（次）
 > 目标环境：Maven；Spring Boot 4.1 为主，少量 3.5；JUnit 跟随 Spring Boot parent；Java 17+；开发机为 Windows；数据存储为 Oracle 和 BigQuery；消息为 Pub/Sub、Kafka、MQ；本地不能使用任何容器；所有依赖都经过公司 Nexus 代理，平台团队可以向 Nexus 上传包；CI（alm-github）可以接入；多数服务只有代码，没有规范文档。不启用 CODEOWNERS 和分支保护，不开启 Copilot preview policy
@@ -1198,19 +1198,19 @@ generic-testing-agent/
 │   ├── agents/      gta-orchestrator.md · gta-analyst.md · gta-test-author.md · gta-reviewer.md
 │   ├── commands/    gta.md
 │   ├── rules/       gta-guardrails.md           # AGENTS.md 段落，以及各 agent Rules 的公共部分
-│   ├── skills/      gta-<gerund>-<object>/{SKILL.md, references/, assets/}
+│   ├── skills/      gta-<gerund>-<object>/{SKILL.md, references/}
 │   ├── templates/   spec.md.tmpl（brief、报告与 PR 评论由 gta-core 直接渲染；service-overview 模板 P1 加入）
 │   ├── registry/    capabilities.yaml
 │   └── schemas/     <artifact>.v1.schema.json
 ├── platforms/
-│   ├── copilot/     mapping.yaml · gta.prompt.md.tmpl · settings.json.tmpl
+│   ├── copilot/     mapping.yaml · gta.prompt.md.tmpl · settings.json.tmpl · extensions.json.tmpl
 │   └── opencode/    mapping.yaml · opencode.json.tmpl · gta.md.tmpl
 ├── toolkit/
 │   ├── gta-core/            # 状态、规格、计划、分流、指纹、改动检查、门禁、错误
 │   ├── gta-cli/             # picocli；打包 harness 资源
 │   ├── gta-junit/           # @KnownDefect、scenario 结果 listener
 │   └── gta-harness-gen/     # core + platforms → copilot/、opencode/；lint
-├── wrapper/                 # gtaw · gtaw.cmd
+├── wrapper/                 # gtaw · gtaw.cmd · gtaw-download.ps1（下载 Nexus 上锁定版本的 jar，校验 sha256；未锁定时拒绝运行）
 ├── copilot/                 # ★ 用户选择 Copilot 时使用的完整文件夹（生成物，已提交）：.github/… · .vscode/… · .gta/skills/…
 ├── opencode/                # ★ 用户选择 OpenCode 时使用的完整文件夹（生成物，已提交）：.opencode/… · opencode.json · .gta/skills/…
 ├── evals/   fixtures/（带缺陷的样例服务） · e2e/（脚本化端到端；模型评测任务 P0a 加入）

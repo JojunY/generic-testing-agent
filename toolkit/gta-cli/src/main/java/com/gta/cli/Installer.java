@@ -125,6 +125,23 @@ public final class Installer {
         writes.put(paths.gta().resolve("wrapper/gtaw-download.ps1"), ps1);
         files.put(".gta/wrapper/gtaw-download.ps1", Hashes.sha256(ps1));
         writes.put(paths.wrapperProperties(), wrapperProperties(distributionUrl, distributionSha));
+
+        // managed files the new version no longer ships: remove them if untouched, report them if edited locally
+        List<Path> removals = new ArrayList<>();
+        List<String> removed = new ArrayList<>();
+        List<String> obsoleteKept = new ArrayList<>();
+        for (Map.Entry<String, String> old : previous.entrySet()) {
+            Path target = root.resolve(old.getKey());
+            if (files.containsKey(old.getKey()) || !Files.exists(target)) {
+                continue;
+            }
+            if (Hashes.sha256(target).equals(old.getValue())) {
+                removals.add(target);
+                removed.add(old.getKey());
+            } else {
+                obsoleteKept.add(old.getKey());
+            }
+        }
         gitignoreUpdate().ifPresent(text -> writes.put(root.resolve(".gitignore"), text));
 
         Map<String, Object> manifest = new LinkedHashMap<>();
@@ -135,6 +152,13 @@ public final class Installer {
 
         // phase 2: write; the manifest goes last so an interrupted install is detected as "not recorded" next time
         writes.forEach(AtomicFiles::write);
+        for (Path obsolete : removals) {
+            try {
+                Files.delete(obsolete);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
         root.resolve("gtaw").toFile().setExecutable(true);
         Json.writeAtomic(managedFile, manifest);
 
@@ -144,6 +168,13 @@ public final class Installer {
         if (!conflicts.isEmpty()) {
             out.put("conflicts", conflicts);
             out.put("hint", "These managed files were edited locally and were not overwritten; diff them against the new version");
+        }
+        if (!removed.isEmpty()) {
+            out.put("removed", removed);
+        }
+        if (!obsoleteKept.isEmpty()) {
+            out.put("obsoleteKept", obsoleteKept);
+            out.put("obsoleteHint", "These files are no longer shipped by gta but were edited locally; delete them when you no longer need them");
         }
         if (!mergeManually.isEmpty()) {
             out.put("mergeManually", mergeManually);

@@ -14,10 +14,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: "21", cache: maven }
-      - name: Build, unit tests, harness lint and sync check
+      - name: Build, unit tests, harness lint and generated-folder sync check (RepositoryHarnessTest)
         run: mvn -B install
-      - name: Generated folders are committed
-        run: java -jar toolkit/gta-harness-gen/target/gta-harness-gen.jar generate --repo . --check
       - name: Scripted end-to-end run
         run: evals/e2e/run.sh "$RUNNER_TEMP/gta-e2e"
 

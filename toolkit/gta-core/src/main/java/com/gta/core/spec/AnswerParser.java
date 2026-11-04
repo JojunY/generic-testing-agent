@@ -17,8 +17,14 @@ import java.util.regex.Pattern;
  * </ul>
  */
 public final class AnswerParser {
-    private static final Pattern APPROVAL = Pattern.compile("(?:批准|approve)\\s+([a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*)@(R\\d+)",
-            Pattern.CASE_INSENSITIVE);
+    /**
+     * An approval is the whole reply and nothing else: "不批准 order.create@R2" or "approve order.create@R2 after q2 is fixed"
+     * must never count as approval.
+     */
+    private static final Pattern APPROVAL = Pattern.compile(
+            "^\\s*(?:批准|approve)\\s+([a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*)@(R\\d+)\\s*[.。!！]?\\s*$", Pattern.CASE_INSENSITIVE);
+    /** Mentions an approval phrase without being one: refused explicitly instead of being read as answers. */
+    private static final Pattern APPROVAL_MENTION = Pattern.compile("批准|approve", Pattern.CASE_INSENSITIVE);
     private static final Pattern ROUND = Pattern.compile("^\\s*(R\\d+)\\s*[:：]", Pattern.CASE_INSENSITIVE);
     private static final Pattern PICK = Pattern.compile("(?<![A-Za-z0-9])(\\d{1,2})\\s*([A-Za-z])(?![A-Za-z])");
     private static final Pattern REST_DEFAULT = Pattern.compile("其余默认|其他默认|rest\\s+default", Pattern.CASE_INSENSITIVE);
@@ -41,8 +47,13 @@ public final class AnswerParser {
 
     public static Parsed parse(String text) {
         Matcher a = APPROVAL.matcher(text);
-        if (a.find()) {
+        if (a.matches()) {
             return new Approval(a.group(1), a.group(2).toUpperCase());
+        }
+        if (APPROVAL_MENTION.matcher(text).find() && !ROUND.matcher(text).find()) {
+            throw new GtaException(ErrorCode.USAGE_UNPARSEABLE_ANSWER, "Not an approval: " + text,
+                    "To approve, reply with exactly '批准 <flow>@<rev>' (or 'approve <flow>@<rev>') and nothing else;"
+                            + " to ask for changes, say what to change without the word 批准/approve");
         }
         Matcher c = CHOICE.matcher(text);
         if (c.find()) {

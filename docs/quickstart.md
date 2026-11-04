@@ -41,6 +41,8 @@ java -jar gta-cli-<version>.jar --root path/to/service init --platform copilot \
 | `gtaw`, `gtaw.cmd`, `.gta/wrapper/*` | the wrapper: it downloads the pinned jar from Nexus, verifies its sha256 and runs it |
 | `.gitignore` | adds `.gta/work/` (rebuildable working state) |
 
+`gtaw` refuses to run until `distributionUrl` and `distributionSha256Sum` are set: an unpinned jar is never downloaded or executed. For local development, `GTA_CLI_JAR=<path to gta-cli.jar>` overrides the download.
+
 Add the test dependency. If you skip this, the first foundation item adds it.
 
 ```xml

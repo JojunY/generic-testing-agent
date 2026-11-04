@@ -2,16 +2,15 @@ package com.gta.core.change;
 
 import com.gta.core.config.GtaPaths;
 import com.gta.core.state.WorkState;
+import com.gta.core.util.AtomicFiles;
 import com.gta.core.util.Git;
 import com.gta.core.util.Hashes;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -32,7 +31,7 @@ public final class ChangeChecker {
     private static final List<String> IGNORED = List.of("target/**", "**/target/**", ".gta/work/**", "**/.gta/work/**");
 
     /**
-     * @param foreignCommits commits made since the baseline without a gtaw trailer (an agent or a person ran git commit);
+     * @param foreignCommits commits made since the baseline that gtaw did not make (see {@link CommitLedger});
      *                       gtaw never rewrites history, so their files are reported as out of scope and unrestorable
      */
     public record Result(List<String> changed, List<String> outOfScope, List<String> restored, List<String> unrestorable,
@@ -94,8 +93,9 @@ public final class ChangeChecker {
         List<String> restored = new ArrayList<>();
         List<String> unrestorable = new ArrayList<>();
         List<String> foreign = new ArrayList<>();
+        CommitLedger ledger = new CommitLedger(paths);
         for (Git.Commit c : git.commitsSince(baseline.head)) {
-            if (c.byGtaw()) {
+            if (ledger.contains(c.sha())) {
                 continue;
             }
             foreign.add(c.sha().substring(0, Math.min(12, c.sha().length())));
@@ -141,13 +141,7 @@ public final class ChangeChecker {
         if (!Files.exists(src)) {
             return;
         }
-        try {
-            Path dst = backupDir.resolve(rel);
-            Files.createDirectories(dst.getParent());
-            Files.copy(src, dst, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        AtomicFiles.copy(src, backupDir.resolve(rel));
     }
 
     private String contentHash(String rel) {

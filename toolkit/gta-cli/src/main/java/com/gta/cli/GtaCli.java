@@ -1,5 +1,6 @@
 package com.gta.cli;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.engine.Engine;
 import com.gta.core.error.ErrorCode;
@@ -13,11 +14,16 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine;
 
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -44,8 +50,8 @@ public final class GtaCli implements Callable<Integer> {
 
     public static void main(String[] args) {
         // JSON and prompts are UTF-8 regardless of the console code page (Windows cp1252/cp936), so agents read them intact.
-        System.setOut(new java.io.PrintStream(new java.io.FileOutputStream(java.io.FileDescriptor.out), true, java.nio.charset.StandardCharsets.UTF_8));
-        System.setErr(new java.io.PrintStream(new java.io.FileOutputStream(java.io.FileDescriptor.err), true, java.nio.charset.StandardCharsets.UTF_8));
+        System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out), true, StandardCharsets.UTF_8));
+        System.setErr(new PrintStream(new FileOutputStream(FileDescriptor.err), true, StandardCharsets.UTF_8));
         CommandLine cli = new CommandLine(new GtaCli());
         cli.setExecutionExceptionHandler((ex, cmd, parsed) -> {
             GtaException ge = ex instanceof GtaException g ? g
@@ -251,7 +257,7 @@ public final class GtaCli implements Callable<Integer> {
                 return print(parent, e.submitSpec(spec, require(token, "--token")));
             }
             if (review != null) {
-                return print(parent, e.submitReview(review, require(verdict, "--verdict"), reason));
+                return print(parent, e.submitReview(review, require(token, "--token"), require(verdict, "--verdict"), reason));
             }
             throw new GtaException(ErrorCode.USAGE_INVALID_ARGUMENT, "Nothing to submit", "Use --item, --spec or --review");
         }
@@ -267,10 +273,10 @@ public final class GtaCli implements Callable<Integer> {
         Path file;
 
         @Override
-        public Integer call() throws java.io.IOException {
+        public Integer call() throws IOException {
             String reply;
             if (file != null) {
-                reply = java.nio.file.Files.readString(file, java.nio.charset.StandardCharsets.UTF_8).strip();
+                reply = Files.readString(file, StandardCharsets.UTF_8).strip();
             } else if (words != null && !words.isEmpty()) {
                 reply = String.join(" ", words);
             } else {
@@ -384,14 +390,20 @@ public final class GtaCli implements Callable<Integer> {
 
         @Override
         public Integer call() throws IOException {
-            LocalDate exp = LocalDate.parse(expires);
+            LocalDate exp;
+            try {
+                exp = LocalDate.parse(expires);
+            } catch (DateTimeParseException e) {
+                throw new GtaException(ErrorCode.USAGE_INVALID_ARGUMENT, "--expires must be a date like 2026-12-31, got " + expires,
+                        "Use yyyy-mm-dd, at most 90 days ahead");
+            }
             if (exp.isAfter(LocalDate.now().plusDays(90))) {
                 throw new GtaException(ErrorCode.USAGE_INVALID_ARGUMENT, "Waivers may last at most 90 days", "Pick an earlier --expires");
             }
             Path file = new GtaPaths(gate.parent.root).waivers();
             List<Map<String, Object>> list = new ArrayList<>();
             if (Files.exists(file)) {
-                list.addAll(Json.MAPPER.readValue(file.toFile(), new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {
+                list.addAll(Json.MAPPER.readValue(file.toFile(), new TypeReference<List<Map<String, Object>>>() {
                 }));
             }
             Map<String, Object> w = new LinkedHashMap<>();
