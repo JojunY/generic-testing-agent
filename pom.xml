@@ -6,7 +6,7 @@
 
   <groupId>com.gta</groupId>
   <artifactId>gta-parent</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Generic Testing Agent (gta)</name>
   <description>Spec-first testing harness for Java/Spring services, driven by GitHub Copilot or OpenCode agents.</description>
