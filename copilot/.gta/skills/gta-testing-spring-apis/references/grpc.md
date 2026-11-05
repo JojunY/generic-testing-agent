@@ -1,4 +1,4 @@
-# gRPC (P1)
+# gRPC (P3)
 
 - Component: start the server in-process (`InProcessServerBuilder` / Spring gRPC in-process transport) and call it with a blocking stub.
 - Assert status codes (`Status.Code.INVALID_ARGUMENT`, `NOT_FOUND`) and the response message fields named in THEN.

@@ -1,4 +1,4 @@
-# GraphQL (P1)
+# GraphQL (P3)
 
 - Slice: `@GraphQlTest(OrderController.class)` + `GraphQlTester`.
 - Component: `HttpGraphQlTester` against the running app.

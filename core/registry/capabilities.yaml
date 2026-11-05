@@ -11,19 +11,19 @@ capabilities:
     diagrams: [sequence]
     skills: [gta-testing-spring-apis, gta-stubbing-with-wiremock, gta-testing-api-contracts]
   - id: grpc-api
-    since: P1
+    since: P3
     detect: { buildDeps: [grpc-stub, spring-grpc-spring-boot-starter], files: ["**/*.proto"] }
     layers: [unit, component, contract]
     diagrams: [sequence]
     skills: [gta-testing-spring-apis, gta-testing-api-contracts]
   - id: graphql-api
-    since: P1
+    since: P3
     detect: { buildDeps: [spring-boot-starter-graphql] }
     layers: [unit, slice, component]
     diagrams: [sequence]
     skills: [gta-testing-spring-apis]
   - id: scheduler
-    since: P2
+    since: P1
     detect:
       annotations: ["@Scheduled", "@EnableScheduling", "@SchedulerLock"]
       buildDeps: [spring-boot-starter-quartz, shedlock-spring]
@@ -43,7 +43,7 @@ capabilities:
     diagrams: [er]
     skills: [gta-testing-db-migrations, gta-using-embedded-dependencies]
   - id: messaging
-    since: P3
+    since: P1
     detect:
       buildDeps: [spring-kafka, spring-cloud-gcp-starter-pubsub, spring-cloud-stream, spring-jms,
                   spring-boot-starter-artemis, mq-jms-spring-boot-starter]
