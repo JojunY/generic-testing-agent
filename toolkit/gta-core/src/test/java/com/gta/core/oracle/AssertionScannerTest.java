@@ -230,4 +230,18 @@ class AssertionScannerTest {
                 o.tokens().contains("EXPECTED-EVENT"), "verified outgoing messages are expected values: " + o.tokens());
         assertFalse(o.tokens().contains("INPUT-EVENT"), "the message the test sends is an input");
     }
+
+    @Test
+    void shouldTakeBooleanExpectedValuesFromLiteralsAndBooleanAssertions() throws Exception {
+        AssertionScanner.ScenarioOracle o = scanSource("""
+                    @Test @Tag("scenario:order.create/s01")
+                    void shouldArchive() {
+                        assertThat(repository.isArchived(id)).isEqualTo(true);
+                        assertThat(repository.isLocked(id)).isFalse();
+                    }
+                """);
+
+        assertTrue(o.tokens().containsAll(List.of("true", "false")), o.tokens().toString());
+        assertEquals(List.of(), AssertionScanner.missingThenLiterals(List.of("true", "false"), o.tokens()));
+    }
 }

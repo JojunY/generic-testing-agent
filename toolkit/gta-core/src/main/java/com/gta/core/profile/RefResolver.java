@@ -18,20 +18,29 @@ import java.util.stream.Stream;
 
 /**
  * Resolves spec refs (plan §3.3) to content hashes:
- * {@code method:Class#m} and {@code bean:Class#m} hash the method body; {@code config:key} hashes the property value.
+ * {@code method:Class#m} and {@code bean:Class#m} hash the method body; {@code config:key} hashes the property value;
+ * {@code file:path} hashes a file of the service module, such as a migration script.
  */
 public final class RefResolver {
     private final JavaIndex main;
     private final Map<String, String> config;
+    private final Path moduleRoot;
 
     public RefResolver(JavaIndex main, Map<String, String> config) {
+        this(main, config, null);
+    }
+
+    public RefResolver(JavaIndex main, Map<String, String> config, Path moduleRoot) {
         this.main = main;
         this.config = config;
+        this.moduleRoot = moduleRoot;
     }
 
     public static RefResolver of(Path root) {
         return new RefResolver(
-                JavaIndex.of(root.resolve(GtaPaths.MAIN_JAVA)), loadConfig(root.resolve(GtaPaths.MAIN_RESOURCES)));
+                JavaIndex.of(root.resolve(GtaPaths.MAIN_JAVA)),
+                loadConfig(root.resolve(GtaPaths.MAIN_RESOURCES)),
+                root);
     }
 
     public JavaIndex mainIndex() {
@@ -45,6 +54,12 @@ public final class RefResolver {
         if (ref.startsWith("config:")) {
             String key = ref.substring("config:".length());
             return Optional.ofNullable(config.get(key)).map(Hashes::shortSha);
+        }
+        if (ref.startsWith("file:") && moduleRoot != null) {
+            Path file = moduleRoot.resolve(ref.substring("file:".length())).normalize();
+            if (file.startsWith(moduleRoot) && Files.isRegularFile(file)) {
+                return Optional.of(Hashes.sha256(file).substring(0, 12));
+            }
         }
         return Optional.empty();
     }

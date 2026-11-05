@@ -244,7 +244,7 @@ expect "$(jget "$OUT" 'd["decision"]')" pass "gate after the fix"
 
 # P1 capabilities (plan §15): a scheduled job and an application-event listener, each with a seeded defect the
 # business-rules document contradicts (D4, D5). Runs on the fixed branch, as a new session.
-p1_item() { # p1_item <scenarioId> -> the author node of that scenario (the domain's seed is adopted on the way)
+cap_item() { # cap_item <scenarioId> -> the author node of that scenario (the domain's seed is adopted on the way)
   local out node
   for _ in $(seq 1 10); do
     out=$(gtaw next)
@@ -254,10 +254,10 @@ p1_item() { # p1_item <scenarioId> -> the author node of that scenario (the doma
   done
   fail "no author node for $1"
 }
-p1_flow() { # p1_flow <flowId> <spec> <test template> <test path> <triage reason>
-  local flow=$1 spec=$2 tmpl=$3 path=$4 reason=$5 out token fp
+cap_flow() { # cap_flow <flowId> <spec> <test template> <test path> <triage reason> [skill the briefs must load]
+  local flow=$1 spec=$2 tmpl=$3 path=$4 reason=$5 skill=${6:-} out token fp
   local domain=${1%%.*} name=${1#*.}
-  step "P1 $flow: spec, approval, a passing scenario and a seeded defect"
+  step "$flow: spec, approval, a passing scenario and a seeded defect"
   out=$(gtaw next --mode flow --target "$flow")
   expect "$(jget "$out" 'd["node"]')" analyze "$flow first node"
   token=$(jget "$out" 'd["token"]')
@@ -268,7 +268,11 @@ p1_flow() { # p1_flow <flowId> <spec> <test template> <test path> <triage reason
   expect "$(jget "$out" 'd["type"]')" approve "$flow approval prompt"
   gtaw answer "approve $flow@R1" >/dev/null
 
-  out=$(p1_item "$flow/s01")
+  out=$(cap_item "$flow/s01")
+  if [ -n "$skill" ]; then
+    grep -q "$skill/SKILL.md" "$(jget "$out" 'd["brief"]')" || fail "$flow brief does not load $skill"
+    echo "ok   $flow brief loads $skill"
+  fi
   mkdir -p "$(dirname "$path")" && cp "$AGENT/$tmpl" "$path"
   gtaw submit --item "$flow/s01#component-01" --token "$(jget "$out" 'd["token"]')" >/dev/null
   out=$(gtaw next)
@@ -277,7 +281,7 @@ p1_flow() { # p1_flow <flowId> <spec> <test template> <test path> <triage reason
   jget "$out" 'd["result"]' | grep -q '^passed' || fail "$flow/s01: $out"
   echo "ok   $flow/s01 passed and committed"
 
-  out=$(p1_item "$flow/s02")
+  out=$(cap_item "$flow/s02")
   out=$(gtaw submit --item "$flow/s02#component-01" --token "$(jget "$out" 'd["token"]')")
   expect "$(jget "$out" 'd["code"]')" TEST_ASSERTION_FAILED "$flow/s02 exposes the seeded defect"
   out=$(gtaw next)
@@ -286,7 +290,7 @@ p1_flow() { # p1_flow <flowId> <spec> <test template> <test path> <triage reason
   out=$(gtaw next)
   expect "$(jget "$out" 'd["type"]')" defect "$flow defect decision"
   gtaw answer A >/dev/null
-  out=$(gtaw next)
+  out=$(cap_item "$flow/s02")   # the session may end on its item budget first
   token=$(jget "$out" 'd["token"]')
   fp=$(grep -o 'failure = "[0-9a-f]*"' "$(jget "$out" 'd["brief"]')" | head -1 | grep -o '[0-9a-f]\{12\}')
   python3 - "$path" "$flow/s02" "$fp" <<'PY'
@@ -303,22 +307,34 @@ PY
   echo "ok   $flow/s02 pinned with @KnownDefect ($fp)"
 }
 
-p1_flow shipping.ship-paid-orders ship-paid-orders.spec.md ShippingJobIT.java.txt \
+cap_flow shipping.ship-paid-orders ship-paid-orders.spec.md ShippingJobIT.java.txt \
   "${P}src/test/java/com/example/order/shipping/ShippingJobIT.java" "ShippingJob ships CREATED orders too (D4)"
-p1_flow loyalty.on-order-created on-order-created.spec.md LoyaltyListenerIT.java.txt \
+cap_flow loyalty.on-order-created on-order-created.spec.md LoyaltyListenerIT.java.txt \
   "${P}src/test/java/com/example/order/loyalty/LoyaltyListenerIT.java" "LoyaltyService rounds up (D5)"
 
-step "P1 session end"
+# P2 capabilities: two cross-cutting ones that add their skill to a REST flow (security, caching), a Spring Batch job
+# and a Flyway migration, each with a seeded defect (D6-D9) the business rules contradict.
+cap_flow admin.purge-cancelled purge-cancelled.spec.md AdminControllerIT.java.txt \
+  "${P}src/test/java/com/example/order/admin/AdminControllerIT.java" "the admin API only requires a login (D6)" gta-testing-spring-security
+cap_flow price.update-price update-price.spec.md PriceControllerIT.java.txt \
+  "${P}src/test/java/com/example/order/price/PriceControllerIT.java" "PriceService#update does not evict the cache (D7)" gta-testing-caches
+cap_flow archive-job.archive-orders archive-orders.spec.md ArchiveJobConfigIT.java.txt \
+  "${P}src/test/java/com/example/order/archive/ArchiveJobConfigIT.java" "the archive step also takes CANCELLED orders (D8)"
+cap_flow db.customer-tier customer-tier.spec.md DbCustomerTierIT.java.txt \
+  "${P}src/test/java/com/example/order/DbCustomerTierIT.java" "V2 uses > instead of >= (D9)"
+
+step "P1 and P2 session end"
 for _ in $(seq 1 5); do
   OUT=$(gtaw next)
   [ "$(jget "$OUT" 'd.get("node")')" = done ] && break
 done
-expect "$(jget "$OUT" 'd["node"]')" done "P1 session end"
-for f in shipping.ship-paid-orders loyalty.on-order-created; do
+expect "$(jget "$OUT" 'd["node"]')" done "P1 and P2 session end"
+for f in shipping.ship-paid-orders loyalty.on-order-created admin.purge-cancelled price.update-price \
+         archive-job.archive-orders db.customer-tier; do
   STATUS=$(gtaw status)
   expect "$(jget "$STATUS" '" ".join(sorted(set(i["status"] for i in d["items"] if i["id"].startswith("'"$f"'/"))))')" \
     "defect-found passed" "$f item states"
 done
-git diff --quiet || fail "the work tree is dirty after the P1 flows"
+git diff --quiet || fail "the work tree is dirty after the P1 and P2 flows"
 
 printf '\nE2E PASSED (%s)\n' "$WORK"

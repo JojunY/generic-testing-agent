@@ -38,7 +38,10 @@ capabilities:
     skills: [gta-testing-spring-batch-jobs, gta-using-embedded-dependencies]
   - id: db-migration
     since: P2
-    detect: { buildDeps: [flyway-core, flyway-database-oracle, liquibase-core], files: ["**/db/migration/**", "**/db/changelog/**"] }
+    detect:
+      buildDeps: [flyway-core, flyway-database-oracle, liquibase-core, spring-boot-starter-flyway,
+                  spring-boot-starter-liquibase]
+      files: ["**/db/migration/**", "**/db/changelog/**"]
     layers: [component]
     diagrams: [er]
     skills: [gta-testing-db-migrations, gta-using-embedded-dependencies]
@@ -77,7 +80,8 @@ capabilities:
     dispatch: false
     detect:
       buildDeps: [spring-boot-starter-security, spring-boot-starter-oauth2-resource-server,
-                  spring-boot-starter-oauth2-client]
+                  spring-boot-starter-oauth2-client, spring-boot-starter-security-oauth2-resource-server,
+                  spring-boot-starter-security-oauth2-client]
       annotations: ["@EnableWebSecurity", "@PreAuthorize", "@Secured", "@EnableMethodSecurity"]
     skills: [gta-testing-spring-security]
   - id: caching               # never produces flows; adds the caching skill to the flows of a service with caches

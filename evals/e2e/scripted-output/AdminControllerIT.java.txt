@@ -1,0 +1,46 @@
+package com.example.order.admin;
+
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.gta.junit.KnownDefect;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.web.servlet.MockMvc;
+
+@Tag("component")
+@Tag("gta")
+@SpringBootTest
+@AutoConfigureMockMvc
+class AdminControllerIT {
+
+    @Autowired
+    MockMvc mvc;
+
+    @Test
+    @Tag("flow:admin.purge-cancelled")
+    @Tag("scenario:admin.purge-cancelled/s01")
+    @Tag("characterization")
+    @DisplayName("[admin.purge-cancelled/s01] an admin purges cancelled orders")
+    void shouldPurgeWhenTheCallerIsAnAdmin() throws Exception {
+        mvc.perform(post("/api/admin/orders/purge-cancelled").with(user("ops-1").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.purged").value(0));
+    }
+
+    @Test
+    @Tag("flow:admin.purge-cancelled")
+    @Tag("scenario:admin.purge-cancelled/s02")
+    @Tag("hardening")
+    @DisplayName("[admin.purge-cancelled/s02] a customer may not purge")
+    void shouldRefuseACustomer() throws Exception {
+        mvc.perform(post("/api/admin/orders/purge-cancelled").with(user("c-1").roles("CUSTOMER")))
+                .andExpect(status().isForbidden());
+    }
+}

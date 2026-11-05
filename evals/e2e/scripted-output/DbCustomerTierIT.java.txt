@@ -1,0 +1,50 @@
+package com.example.order;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.gta.junit.KnownDefect;
+import java.util.UUID;
+import javax.sql.DataSource;
+import org.flywaydb.core.Flyway;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+
+@Tag("component")
+@Tag("gta")
+class DbCustomerTierIT {
+
+    /** A fresh database at V1 with one customer, then migrated to the latest version. */
+    private JdbcTemplate migratedWithCustomerOf(int points) {
+        DataSource db = new DriverManagerDataSource("jdbc:h2:mem:" + UUID.randomUUID() + ";DB_CLOSE_DELAY=-1");
+        Flyway.configure().dataSource(db).target("1").load().migrate();
+        JdbcTemplate jdbc = new JdbcTemplate(db);
+        jdbc.update("insert into customer (id, points) values (?, ?)", "c-1", points);
+        Flyway.configure().dataSource(db).load().migrate();
+        return jdbc;
+    }
+
+    @Test
+    @Tag("flow:db.customer-tier")
+    @Tag("scenario:db.customer-tier/s01")
+    @Tag("characterization")
+    @DisplayName("[db.customer-tier/s01] a customer with few points stays BASIC")
+    void shouldKeepFewPointsBasic() {
+        JdbcTemplate jdbc = migratedWithCustomerOf(50);
+
+        assertThat(jdbc.queryForObject("select tier from customer where id = 'c-1'", String.class)).isEqualTo("BASIC");
+    }
+
+    @Test
+    @Tag("flow:db.customer-tier")
+    @Tag("scenario:db.customer-tier/s02")
+    @Tag("hardening")
+    @DisplayName("[db.customer-tier/s02] 100 points make a customer GOLD")
+    void shouldMakeHundredPointsGold() {
+        JdbcTemplate jdbc = migratedWithCustomerOf(100);
+
+        assertThat(jdbc.queryForObject("select tier from customer where id = 'c-1'", String.class)).isEqualTo("GOLD");
+    }
+}

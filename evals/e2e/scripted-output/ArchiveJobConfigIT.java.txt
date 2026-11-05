@@ -1,0 +1,69 @@
+package com.example.order.archive;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.example.order.domain.Order;
+import com.example.order.domain.OrderRepository;
+import com.example.order.domain.OrderStatus;
+import com.gta.junit.KnownDefect;
+import java.math.BigDecimal;
+import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.job.parameters.JobParametersBuilder;
+import org.springframework.batch.core.launch.JobOperator;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@Tag("component")
+@Tag("gta")
+@SpringBootTest
+class ArchiveJobConfigIT {
+
+    @Autowired
+    JobOperator jobs;
+
+    @Autowired
+    Job archiveOrders;
+
+    @Autowired
+    OrderRepository repository;
+
+    private UUID order(OrderStatus status) {
+        UUID id = UUID.randomUUID();
+        repository.save(new Order(id, "c-1", new BigDecimal("40.00"), BigDecimal.ZERO, new BigDecimal("40.00"), status));
+        return id;
+    }
+
+    private void runJob() throws Exception {
+        jobs.start(archiveOrders, new JobParametersBuilder().addLong("run", System.nanoTime()).toJobParameters());
+    }
+
+    @Test
+    @Tag("flow:archive-job.archive-orders")
+    @Tag("scenario:archive-job.archive-orders/s01")
+    @Tag("characterization")
+    @DisplayName("[archive-job.archive-orders/s01] a shipped order is archived")
+    void shouldArchiveAShippedOrder() throws Exception {
+        UUID id = order(OrderStatus.SHIPPED);
+
+        runJob();
+
+        assertThat(repository.isArchived(id)).isEqualTo(true);
+    }
+
+    @Test
+    @Tag("flow:archive-job.archive-orders")
+    @Tag("scenario:archive-job.archive-orders/s02")
+    @Tag("hardening")
+    @DisplayName("[archive-job.archive-orders/s02] a cancelled order stays")
+    void shouldKeepACancelledOrder() throws Exception {
+        UUID id = order(OrderStatus.CANCELLED);
+
+        runJob();
+
+        assertThat(repository.isArchived(id)).isEqualTo(false);
+    }
+}

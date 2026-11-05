@@ -101,6 +101,10 @@ public final class AssertionScanner {
             Map.entry("isServiceUnavailable", "503"),
             Map.entry("isGatewayTimeout", "504"));
 
+    /** Assertions that state a boolean expected value without a literal. */
+    private static final Map<String, String> BOOLEAN_MATCHERS =
+            Map.of("isTrue", "true", "assertTrue", "true", "isFalse", "false", "assertFalse", "false");
+
     private static final Set<String> STIMULUS_CALLS = Set.of(
             "perform",
             "post",
@@ -314,7 +318,9 @@ public final class AssertionScanner {
                 tokens.add(s.getValue());
             } else if (lit instanceof TextBlockLiteralExpr t) {
                 tokens.add(t.getValue());
-            } else if (!lit.isBooleanLiteralExpr() && !lit.isNullLiteralExpr()) {
+            } else if (lit.isBooleanLiteralExpr()) {
+                tokens.add(String.valueOf(lit.asBooleanLiteralExpr().getValue())); // e.g. isEqualTo(true)
+            } else if (!lit.isNullLiteralExpr()) {
                 tokens.add(lit.toString().replaceAll("[lLdDfF]$", "").replace("_", ""));
             }
         }
@@ -332,6 +338,10 @@ public final class AssertionScanner {
             String code = inStimulus(c) ? null : STATUS_MATCHERS.get(c.getNameAsString());
             if (code != null) {
                 tokens.add(code);
+            }
+            String bool = inStimulus(c) ? null : BOOLEAN_MATCHERS.get(c.getNameAsString());
+            if (bool != null) {
+                tokens.add(bool); // isTrue() asserts the THEN value `true`
             }
         }
     }

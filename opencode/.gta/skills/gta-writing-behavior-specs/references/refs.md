@@ -7,6 +7,7 @@ Refs say which code a requirement depends on. gtaw hashes them; when a hash chan
 | `method:<fqcn>#<method>` | the method body (all overloads) | `method:com.acme.order.OrderService#authorize` |
 | `bean:<fqcn>#<method>` | the `@Bean` factory method (e.g. a Batch `Step` with `.skipLimit()`) | `bean:com.acme.batch.ImportConfig#importStep` |
 | `config:<key>` | the value in `application*.yml/properties` | `config:payment.gateway.timeout` |
+| `file:<path in the module>` | the file, for non-Java behaviour such as a migration script | `file:src/main/resources/db/migration/V2__customer_tier.sql` |
 
 Rules:
 

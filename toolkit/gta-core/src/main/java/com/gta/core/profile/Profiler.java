@@ -107,6 +107,7 @@ public final class Profiler {
         }
         p.applicationClass = applicationClass(main);
         p.entrypoints.addAll(entrypoints(main));
+        p.entrypoints.addAll(migrations(paths.mainResources()));
         return p;
     }
 
@@ -235,6 +236,54 @@ public final class Profiler {
                         out.add(e);
                     }
                 }
+            }
+        }
+        return out;
+    }
+
+    private static final java.util.regex.Pattern FLYWAY = java.util.regex.Pattern.compile("V([0-9._]+)__(.+)\\.sql");
+
+    /**
+     * Schema migrations as flows (db-migration): each Flyway {@code db/migration/V<version>__<name>.sql} and each
+     * Liquibase changelog under {@code db/changelog/}. The flow is {@code db.<name>}; the spec cites the file with
+     * {@code ref=file:<path>}.
+     */
+    static List<ServiceProfile.EntryPoint> migrations(Path mainResources) {
+        List<ServiceProfile.EntryPoint> out = new ArrayList<>();
+        for (String dir : List.of("db/migration", "db/changelog")) {
+            Path folder = mainResources.resolve(dir);
+            if (!Files.isDirectory(folder)) {
+                continue;
+            }
+            try (Stream<Path> files = Files.list(folder)) {
+                for (Path f : files.sorted().toList()) {
+                    String name = String.valueOf(f.getFileName());
+                    java.util.regex.Matcher flyway = FLYWAY.matcher(name);
+                    String flowName;
+                    String trigger;
+                    if (dir.equals("db/migration") && flyway.matches()) {
+                        flowName = flyway.group(2);
+                        trigger = "Flyway V" + flyway.group(1);
+                    } else if (dir.equals("db/changelog") && name.matches(".+\\.(xml|ya?ml|sql)")) {
+                        flowName = name.substring(0, name.lastIndexOf('.'));
+                        trigger = "Liquibase " + name;
+                    } else {
+                        continue;
+                    }
+                    ServiceProfile.EntryPoint e = new ServiceProfile.EntryPoint();
+                    e.flowId = "db."
+                            + flowName.toLowerCase(java.util.Locale.ROOT)
+                                    .replaceAll("[^a-z0-9]+", "-")
+                                    .replaceAll("^-|-$", "");
+                    e.capability = "db-migration";
+                    e.kind = "migration";
+                    e.ref = "file:" + GtaPaths.MAIN_RESOURCES + "/" + dir + "/" + name;
+                    e.trigger = trigger;
+                    e.risk = 6;
+                    out.add(e);
+                }
+            } catch (IOException ex) {
+                // unreadable resources: no migration flows; the profile still lists the code's entry points
             }
         }
         return out;
