@@ -41,6 +41,9 @@ public final class Profiler {
             "RequestMapping",
             "ANY");
     private static final List<String> SUFFIXES = List.of(
+            "WorkflowImpl",
+            "Workflow",
+            "StateMachineConfig",
             "GrpcService",
             "Controller",
             "Resource",
@@ -118,6 +121,7 @@ public final class Profiler {
         p.applicationClass = applicationClass(main);
         p.entrypoints.addAll(entrypoints(main));
         p.entrypoints.addAll(migrations(paths.mainResources()));
+        p.entrypoints.addAll(processes(paths.mainResources()));
         return p;
     }
 
@@ -184,6 +188,7 @@ public final class Profiler {
     static List<ServiceProfile.EntryPoint> entrypoints(JavaIndex main) {
         Set<String> seenFlowIds = new LinkedHashSet<>();
         List<ServiceProfile.EntryPoint> out = new ArrayList<>();
+        Map<String, Set<String>> workflowMethods = temporalWorkflowMethods(main);
         for (JavaIndex.Unit u : main.units()) {
             for (ClassOrInterfaceDeclaration c : u.cu().findAll(ClassOrInterfaceDeclaration.class)) {
                 String fqcn = c.getFullyQualifiedName().orElse(c.getNameAsString());
@@ -231,6 +236,23 @@ public final class Profiler {
                                             + m.getNameAsString();
                             e.risk = mapping.equals("MutationMapping") ? 6 : 3;
                         }
+                    }
+                    if (isTemporalWorkflowMethod(c, m, workflowMethods)) {
+                        // the flow is the implementation of a @WorkflowMethod, tested in TestWorkflowEnvironment
+                        e = base(c, fqcn, m, "workflow", "workflow");
+                        e.trigger = "Temporal workflow " + c.getNameAsString() + "." + m.getNameAsString();
+                        e.risk = 6;
+                    }
+                    if (isStateMachineConfig(c)
+                            && m.getNameAsString().equals("configure")
+                            && m.getParameters().stream()
+                                    .anyMatch(par ->
+                                            par.getType().asString().startsWith("StateMachineTransitionConfigurer"))) {
+                        // one flow per state machine: its transitions
+                        e = base(c, fqcn, m, "workflow", "state-machine");
+                        e.flowId = e.flowId.substring(0, e.flowId.indexOf('.')) + ".transitions";
+                        e.trigger = "Spring Statemachine " + c.getNameAsString();
+                        e.risk = 6;
                     }
                     if (m.getAnnotationByName("Scheduled").isPresent()) {
                         e = base(c, fqcn, m, "scheduler", "schedule");
@@ -318,6 +340,70 @@ public final class Profiler {
             }
         }
         return out;
+    }
+
+    /**
+     * Camunda/BPMN process definitions as flows (workflow): each {@code *.bpmn} under the main resources is
+     * {@code process.<name>}, cited with {@code ref=file:}; its delegates are tested through the process.
+     */
+    static List<ServiceProfile.EntryPoint> processes(Path mainResources) {
+        List<ServiceProfile.EntryPoint> out = new ArrayList<>();
+        if (!Files.isDirectory(mainResources)) {
+            return out;
+        }
+        try (Stream<Path> files = Files.walk(mainResources, 6)) {
+            for (Path f :
+                    files.filter(x -> x.toString().endsWith(".bpmn")).sorted().toList()) {
+                String name = String.valueOf(f.getFileName());
+                ServiceProfile.EntryPoint e = new ServiceProfile.EntryPoint();
+                e.flowId = "process." + Ids.kebab(name.substring(0, name.length() - ".bpmn".length()));
+                e.capability = "workflow";
+                e.kind = "process";
+                e.ref = "file:" + GtaPaths.MAIN_RESOURCES + "/"
+                        + mainResources.relativize(f).toString().replace('\\', '/');
+                e.trigger = "BPMN process " + name;
+                e.risk = 6;
+                out.add(e);
+            }
+        } catch (IOException ex) {
+            // unreadable resources: no process flows
+        }
+        return out;
+    }
+
+    /** Simple names of Temporal {@code @WorkflowInterface}s and their {@code @WorkflowMethod}s. */
+    static Map<String, Set<String>> temporalWorkflowMethods(JavaIndex main) {
+        Map<String, Set<String>> out = new java.util.HashMap<>();
+        for (JavaIndex.Unit u : main.units()) {
+            for (ClassOrInterfaceDeclaration c : u.cu().findAll(ClassOrInterfaceDeclaration.class)) {
+                if (c.isInterface()
+                        && c.getAnnotationByName("WorkflowInterface").isPresent()) {
+                    for (MethodDeclaration m : c.getMethods()) {
+                        if (m.getAnnotationByName("WorkflowMethod").isPresent()) {
+                            out.computeIfAbsent(c.getNameAsString(), k -> new LinkedHashSet<>())
+                                    .add(m.getNameAsString());
+                        }
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    /** A method of a class that implements a Temporal workflow interface, overriding its @WorkflowMethod. */
+    static boolean isTemporalWorkflowMethod(
+            ClassOrInterfaceDeclaration c, MethodDeclaration m, Map<String, Set<String>> workflowMethods) {
+        return !c.isInterface()
+                && c.getImplementedTypes().stream()
+                        .anyMatch(t -> workflowMethods
+                                .getOrDefault(t.getNameAsString(), Set.of())
+                                .contains(m.getNameAsString()));
+    }
+
+    /** A Spring Statemachine configuration: extends (Enum)StateMachineConfigurerAdapter. */
+    static boolean isStateMachineConfig(ClassOrInterfaceDeclaration c) {
+        return c.getExtendedTypes().stream()
+                .anyMatch(t -> t.getNameAsString().endsWith("StateMachineConfigurerAdapter"));
     }
 
     /** A gRPC service: extends the generated {@code XxxGrpc.XxxImplBase}. */

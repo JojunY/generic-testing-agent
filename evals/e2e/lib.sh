@@ -22,8 +22,8 @@ cap_item() { # cap_item <scenarioId> [layer] -> the author node of that scenario
   done
   fail "no author node for $1"
 }
-cap_flow() { # cap_flow <flowId> <spec> <test template> <test path> <triage reason> [skill the briefs must load]
-  local flow=$1 spec=$2 tmpl=$3 path=$4 reason=$5 skill=${6:-} out token fp
+cap_flow() { # cap_flow <flowId> <spec> <test template> <test path> <triage reason> [skill the briefs must load] [layer]
+  local flow=$1 spec=$2 tmpl=$3 path=$4 reason=$5 skill=${6:-} layer=${7:-component} out token fp
   local domain=${1%%.*} name=${1#*.}
   step "$flow: spec, approval, a passing scenario and a seeded defect"
   out=$(gtaw next --mode flow --target "$flow")
@@ -36,29 +36,29 @@ cap_flow() { # cap_flow <flowId> <spec> <test template> <test path> <triage reas
   expect "$(jget "$out" 'd["type"]')" approve "$flow approval prompt"
   gtaw answer "approve $flow@R1" >/dev/null
 
-  out=$(cap_item "$flow/s01")
+  out=$(cap_item "$flow/s01" "$layer")
   if [ -n "$skill" ]; then
     grep -q "$skill/SKILL.md" "$(jget "$out" 'd["brief"]')" || fail "$flow brief does not load $skill"
     echo "ok   $flow brief loads $skill"
   fi
   mkdir -p "$(dirname "$path")" && cp "$AGENT/$tmpl" "$path"
-  gtaw submit --item "$flow/s01#component-01" --token "$(jget "$out" 'd["token"]')" >/dev/null
+  gtaw submit --item "$flow/s01#$layer-01" --token "$(jget "$out" 'd["token"]')" >/dev/null
   out=$(gtaw next)
   expect "$(jget "$out" 'd["kind"]')" oracle-review "$flow/s01 review"
-  out=$(gtaw submit --review "$flow/s01#component-01" --token "$(jget "$out" 'd["token"]')" --verdict accept --reason "asserts the THEN values")
+  out=$(gtaw submit --review "$flow/s01#$layer-01" --token "$(jget "$out" 'd["token"]')" --verdict accept --reason "asserts the THEN values")
   jget "$out" 'd["result"]' | grep -q '^passed' || fail "$flow/s01: $out"
   echo "ok   $flow/s01 passed and committed"
 
-  out=$(cap_item "$flow/s02")
-  out=$(gtaw submit --item "$flow/s02#component-01" --token "$(jget "$out" 'd["token"]')")
+  out=$(cap_item "$flow/s02" "$layer")
+  out=$(gtaw submit --item "$flow/s02#$layer-01" --token "$(jget "$out" 'd["token"]')")
   expect "$(jget "$out" 'd["code"]')" TEST_ASSERTION_FAILED "$flow/s02 exposes the seeded defect"
   out=$(gtaw next)
   expect "$(jget "$out" 'd["kind"]')" triage "$flow/s02 triage"
-  gtaw submit --review "$flow/s02#component-01" --token "$(jget "$out" 'd["token"]')" --verdict product-defect --reason "$reason" >/dev/null
+  gtaw submit --review "$flow/s02#$layer-01" --token "$(jget "$out" 'd["token"]')" --verdict product-defect --reason "$reason" >/dev/null
   out=$(gtaw next)
   expect "$(jget "$out" 'd["type"]')" defect "$flow defect decision"
   gtaw answer A >/dev/null
-  out=$(cap_item "$flow/s02")   # the session may end on its item budget first
+  out=$(cap_item "$flow/s02" "$layer")   # the session may end on its item budget first
   token=$(jget "$out" 'd["token"]')
   fp=$(grep -o 'failure = "[0-9a-f]*"' "$(jget "$out" 'd["brief"]')" | head -1 | grep -o '[0-9a-f]\{12\}')
   python3 - "$path" "$flow/s02" "$fp" <<'PY'
@@ -70,7 +70,7 @@ assert marker in s, marker
 s = s.replace(marker, '    @KnownDefect(id = "' + scenario + '", failure = "' + fp + '")\n' + marker, 1)
 open(path, "w").write(s)
 PY
-  out=$(gtaw submit --item "$flow/s02#component-01" --token "$token")
+  out=$(gtaw submit --item "$flow/s02#$layer-01" --token "$token")
   jget "$out" 'd["result"]' | grep -q '^defect-found' || fail "$flow/s02 pin: $out"
   echo "ok   $flow/s02 pinned with @KnownDefect ($fp)"
 }

@@ -319,4 +319,56 @@ class ProfilerTest {
         assertEquals("gRPC StockService.getStock", rpc.trigger);
         assertTrue(flows.keySet().stream().noneMatch(f -> f.endsWith(".helper")), "only overridden RPCs are flows");
     }
+
+    @Test
+    void shouldTurnTemporalWorkflowsStateMachinesAndBpmnProcessesIntoFlows() throws Exception {
+        source("com/acme/order/flow/RestockWorkflow.java", """
+                package com.acme.order.flow;
+                @WorkflowInterface
+                public interface RestockWorkflow {
+                    @WorkflowMethod
+                    String restock(String productId, int quantity);
+                    @SignalMethod
+                    void pause();
+                }
+                """);
+        source("com/acme/order/flow/RestockWorkflowImpl.java", """
+                package com.acme.order.flow;
+                public class RestockWorkflowImpl implements RestockWorkflow {
+                    public String restock(String productId, int quantity) { return "restocked"; }
+                    public void pause() {}
+                }
+                """);
+        source("com/acme/order/flow/OrderStateMachineConfig.java", """
+                package com.acme.order.flow;
+                @Configuration
+                @EnableStateMachine
+                public class OrderStateMachineConfig extends EnumStateMachineConfigurerAdapter<States, Events> {
+                    @Override
+                    public void configure(StateMachineStateConfigurer<States, Events> states) {}
+                    @Override
+                    public void configure(StateMachineTransitionConfigurer<States, Events> transitions) {}
+                }
+                """);
+        Path bpmn = root.resolve("src/main/resources/processes");
+        Files.createDirectories(bpmn);
+        Files.writeString(bpmn.resolve("Order_Approval.bpmn"), "<definitions/>");
+
+        Map<String, ServiceProfile.EntryPoint> flows =
+                byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"));
+
+        ServiceProfile.EntryPoint temporal = flows.get("restock.restock");
+        assertEquals("workflow", temporal.capability, flows.keySet().toString());
+        assertEquals("method:com.acme.order.flow.RestockWorkflowImpl#restock", temporal.ref, "the implementation");
+        assertTrue(!flows.containsKey("restock.pause"), "a signal is part of the workflow, not a flow of its own");
+        ServiceProfile.EntryPoint machine = flows.get("order.transitions");
+        assertEquals("workflow", machine.capability, flows.keySet().toString());
+        assertEquals("Spring Statemachine OrderStateMachineConfig", machine.trigger);
+        ServiceProfile.EntryPoint process = flows.get("process.order-approval");
+        assertEquals(
+                "file:src/main/resources/processes/Order_Approval.bpmn",
+                process.ref,
+                flows.keySet().toString());
+        assertEquals("workflow", process.capability);
+    }
 }

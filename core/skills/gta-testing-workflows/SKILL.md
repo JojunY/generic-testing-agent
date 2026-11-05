@@ -12,7 +12,7 @@ Derive tests from the spec's `stateDiagram-v2`: one test per edge, plus every er
 ## Workflow
 
 1. Spring State Machine: `StateMachineTestPlanBuilder` — send events, expect states and transitions (`references/state-machines.md`).
-2. Temporal: `TestWorkflowEnvironment` with time skipping and mocked activities; Camunda: the engine's test support with mocked delegates.
+2. Temporal: `TestWorkflowEnvironment` with time skipping and faked activities (`references/temporal.md`); Camunda: the engine's test support with mocked delegates.
 3. GCP Workflows: no local emulator. Unit-test the services the workflow calls; executing the workflow itself is a P4 system test (`references/gcp-workflows.md`).
 4. Assert the final state and the history (which steps ran, in which order), and that compensations undo partial work.
 
@@ -22,4 +22,4 @@ Derive tests from the spec's `stateDiagram-v2`: one test per edge, plus every er
 
 ## References
 
-- `references/gcp-workflows.md` · `references/state-machines.md`
+- `references/gcp-workflows.md` · `references/state-machines.md` · `references/temporal.md`

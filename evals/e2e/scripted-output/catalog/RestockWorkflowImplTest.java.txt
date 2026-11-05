@@ -1,0 +1,90 @@
+package com.example.catalog.restock;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.gta.junit.KnownDefect;
+import io.temporal.client.WorkflowOptions;
+import io.temporal.testing.TestWorkflowEnvironment;
+import io.temporal.worker.Worker;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+
+@Tag("unit")
+@Tag("gta")
+class RestockWorkflowImplTest {
+    private static final String QUEUE = "restock";
+
+    /** Activities that record what the workflow asked for; the stock update can be made to fail. */
+    static class FakeActivities implements RestockActivities {
+        final List<String> cancelled = new ArrayList<>();
+        boolean stockUpdateFails;
+
+        @Override
+        public String orderFromSupplier(String productId, int quantity) {
+            return "po-1";
+        }
+
+        @Override
+        public void addStock(String productId, int quantity) {
+            if (stockUpdateFails) {
+                throw new IllegalStateException("stock store unavailable");
+            }
+        }
+
+        @Override
+        public void cancelSupplierOrder(String supplierOrderId) {
+            cancelled.add(supplierOrderId);
+        }
+    }
+
+    TestWorkflowEnvironment env;
+    FakeActivities activities = new FakeActivities();
+
+    @BeforeEach
+    void startTemporal() {
+        env = TestWorkflowEnvironment.newInstance();
+        Worker worker = env.newWorker(QUEUE);
+        worker.registerWorkflowImplementationTypes(RestockWorkflowImpl.class);
+        worker.registerActivitiesImplementations(activities);
+        env.start();
+    }
+
+    @AfterEach
+    void stopTemporal() {
+        env.close();
+    }
+
+    private RestockWorkflow workflow() {
+        return env.getWorkflowClient()
+                .newWorkflowStub(
+                        RestockWorkflow.class,
+                        WorkflowOptions.newBuilder().setTaskQueue(QUEUE).build());
+    }
+
+    @Test
+    @Tag("flow:restock.restock")
+    @Tag("scenario:restock.restock/s01")
+    @Tag("characterization")
+    @DisplayName("[restock.restock/s01] a restock books the supplier's stock")
+    void shouldRestockWhenTheStockUpdateSucceeds() {
+        assertThat(workflow().restock("p-1", 5)).isEqualTo("restocked");
+    }
+
+    @Test
+    @Tag("flow:restock.restock")
+    @Tag("scenario:restock.restock/s02")
+    @Tag("hardening")
+    @DisplayName("[restock.restock/s02] a failed stock update cancels the supplier order")
+    void shouldCancelTheSupplierOrderWhenTheStockUpdateFails() {
+        activities.stockUpdateFails = true;
+
+        workflow().restock("p-1", 5);
+
+        assertThat(activities.cancelled).containsExactly("po-1");
+    }
+}

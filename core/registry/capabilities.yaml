@@ -68,8 +68,9 @@ capabilities:
   - id: workflow
     since: P3
     detect:
-      files: ["**/workflows/*.y*ml"]
-      buildDeps: [spring-statemachine-core, temporal-sdk, camunda-bpm-spring-boot-starter]
+      files: ["**/workflows/*.y*ml", "**/*.bpmn"]
+      buildDeps: [spring-statemachine-core, temporal-sdk, temporal-spring-boot-starter, camunda-bpm-spring-boot-starter,
+                  camunda-spring-boot-starter, spring-boot-starter-camunda]
     layers: [unit, component, system]
     diagrams: [state]
     skills: [gta-testing-workflows]

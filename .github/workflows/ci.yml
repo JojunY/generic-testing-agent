@@ -26,7 +26,7 @@ jobs:
       - name: Scripted end-to-end run
         if: matrix.java == '21'
         run: evals/e2e/run.sh "$RUNNER_TEMP/gta-e2e"
-      - name: Scripted end-to-end run, reactive and GraphQL catalog (P3 preview)
+      - name: Scripted end-to-end run, catalog with WebFlux, GraphQL, gRPC and Temporal (P3 preview)
         if: matrix.java == '21'
         run: evals/e2e/run-catalog.sh "$RUNNER_TEMP/gta-e2e-catalog"
       - name: Gradle for the Gradle e2e
