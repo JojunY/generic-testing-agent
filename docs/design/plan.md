@@ -458,19 +458,19 @@ capabilities:
     diagrams: [sequence]
     skills: [gta-testing-spring-apis, gta-stubbing-with-wiremock, gta-testing-api-contracts]
   - id: grpc-api
-    since: P1
+    since: P3
     detect: { buildDeps: [grpc-stub, spring-grpc-spring-boot-starter], files: ["**/*.proto"] }
     layers: [unit, component, contract]
     diagrams: [sequence]
     skills: [gta-testing-spring-apis, gta-testing-api-contracts]
   - id: graphql-api
-    since: P1
+    since: P3
     detect: { buildDeps: [spring-boot-starter-graphql] }
     layers: [unit, slice, component]
     diagrams: [sequence]
     skills: [gta-testing-spring-apis]
   - id: scheduler
-    since: P2
+    since: P1
     detect:
       annotations: ["@Scheduled", "@EnableScheduling", "@SchedulerLock"]
       buildDeps: [spring-boot-starter-quartz, shedlock-spring]
@@ -490,7 +490,7 @@ capabilities:
     diagrams: [er]
     skills: [gta-testing-db-migrations, gta-using-embedded-dependencies]
   - id: messaging
-    since: P3
+    since: P1
     detect:
       buildDeps: [spring-kafka, spring-cloud-gcp-starter-pubsub, spring-cloud-stream, spring-jms,
                   spring-boot-starter-artemis, mq-jms-spring-boot-starter]
@@ -1439,11 +1439,45 @@ When an agent writes to these paths, the change check of §5.8 restores them. Ap
 |---|---|---|
 | **P0a platform validation (1 week)** | choose the models per tier with evals; verify on Windows that the Pub/Sub emulator, EmbeddedKafka, Artemis and the shared Oracle test database work; verify in both IDEs and OpenCode: agent visibility, subagent dispatch and inline mode, the prompt file's `agent:` field, terminal auto-approve (including Windows), that privileged commands really ask for confirmation, request limits, long-running terminal commands (duration of check/submit) | a measured version of §11.4 |
 | **P0 core** (implemented) | gtaw: `init`/`doctor`/`next`/`check`/`submit`/`answer`/`status`/`abort`/`run`/`verify` (stability + expected-value check)/`gate`/`relock`/`report`; `gta-junit`; schemas; generator and lint; 4 agents; skills: mapping-flows, writing-behavior-specs, designing-test-oracles, writing-tests, testing-spring-apis, stubbing-with-wiremock, testing-api-contracts, using-embedded-dependencies, reviewing-test-quality; `/gta explain` and flow mode; 1 REST fixture, 20 eval tasks | on 1 real REST service: explain → answers → approval → at least 5 verified tests; seeded bugs are judged defects instead of being repaired to green; adversarial metrics 3 and 4 met; recovery after fault injection |
-| **P1 PR and incident modes** | impact (methods, config, bean graph), the alm-github CI template `gta-gate.yml`, PR comments, analyzing-change-impact; incident mode; gRPC and GraphQL; OpenCode end to end | behaviour change summaries on real PRs, the gate live (mutation advisory) |
-| **P2 jobs and quality** | scheduler, batch, db-migration; `mutate` and the can-fail check (shared PIT integration); learning loop; rules-before-LLM repair; `spec.source=openspec\|speckit` | mutation switched to enforced after calibration on pilot repositories |
-| **P3 data, events, catching** | beam, event, workflow; catching tests and the assessor | one pilot service per kind |
-| **P4 deployed systems** | the `gta-testing-deployed-systems` skill, `gtaw env`, Karate, cloud isolation | nightly regression |
+| **P1 adoption: multi-module, events, schedules, PR mode** | multi-module Maven services (one module at a time, the reactor resolved once); `messaging` (Kafka, Pub/Sub, JMS/MQ); `scheduler` (`@Scheduled`, ShedLock, Quartz); PR mode: impact (methods, config, bean graph), the alm-github CI template `gta-gate.yml`, PR comments, analyzing-change-impact; OpenCode end to end | one pilot service per new capability, and one multi-module service, run end to end; behaviour change summaries on real PRs, the gate live (mutation advisory) |
+| **P2 data, security and quality** | `db-migration` (Flyway, Liquibase); `security` (Spring Security, OAuth2 resource servers, JWT: authenticated and forbidden paths, method security); `caching` (Spring Cache, Redis, Caffeine: hits, eviction, stale reads); `spring-batch`; `mutate` and the can-fail check (shared PIT integration); learning loop; rules-before-LLM repair; `spec.source=openspec\|speckit` | one pilot service per new capability; mutation switched to enforced after calibration on pilot repositories |
+| **P3 reactive, Gradle, other protocols, catching** | `webflux` (reactive endpoints and clients with `WebTestClient` and `StepVerifier`); Gradle builds (a second `TestRunner` and build-file reader next to Maven); `grpc-api` and `graphql-api`; `workflow` (Temporal, Camunda, Spring Statemachine); `beam-pipeline`; incident mode; catching tests and the assessor | one pilot service per kind |
+| **P4 deployed systems and streaming endpoints** | the `gta-testing-deployed-systems` skill, `gtaw env`, Karate, cloud isolation; BigQuery SQL against temporary datasets; `websocket` (WebSocket, STOMP, SSE) | nightly regression |
 | **P5** | optional hooks (early interception, a `verified` answer channel), MCP wrapping, plugin distribution, SARIF, record-replay, performance tests, native-image, parallel authoring, adapters for other languages | on demand |
+
+### Capability order
+
+Every mainstream Spring service type is in scope. The phases follow how common each type is in Spring services, with
+one exception: multi-module support comes first, because it decides whether gta can be installed in a repository at
+all. A capability is active from its phase (`since` in `core/registry/capabilities.yaml`); before that it is
+explain-only. Capabilities marked *new* have no registry entry or skill yet: each arrives with its skill, its
+registry entry, an eval fixture and one pilot service.
+
+| # | Type | Phase | Status today |
+|---|---|---|---|
+| 1 | REST APIs (WebMVC) | P0 | tests written |
+| 2 | Database access (JPA, JDBC, Oracle) | P0 | a dependency of REST flows (embedded or fake) |
+| 3 | Calls to downstream HTTP services (RestClient, WebClient, Feign) | P0 | stubbed with WireMock inside REST flows |
+| 4 | Multi-module Maven services | P1 | *new*; `gtaw doctor` warns |
+| 5 | Messaging (Kafka, Pub/Sub, JMS/MQ) | P1 | detected, spec only |
+| 6 | Scheduled jobs (`@Scheduled`, ShedLock, Quartz) | P1 | detected, spec only |
+| 7 | Database migrations (Flyway, Liquibase) | P2 | detected, spec only |
+| 8 | Security (Spring Security, OAuth2, JWT) | P2 | *new* |
+| 9 | Caching (Spring Cache, Redis, Caffeine) | P2 | *new* |
+| 10 | Spring Batch | P2 | detected, spec only |
+| 11 | Reactive WebFlux | P3 | *new*; detected as REST today |
+| 12 | Gradle builds | P3 | *new*; Maven only today |
+| 13 | GCP data (BigQuery, GCS) | P0 / P4 | a dependency with fakes; SQL in the system layer from P4 |
+| 14 | gRPC | P3 | detected, spec only |
+| 15 | Workflows and state machines (Temporal, Camunda, Spring Statemachine) | P3 | detected, spec only |
+| 16 | GraphQL | P3 | detected, spec only |
+| 17 | Beam / Dataflow pipelines | P3 | detected, spec only |
+| 18 | System tests on deployed environments (Karate, Kubernetes) | P4 | skill only |
+| 19 | WebSocket, STOMP, SSE | P4 | *new* |
+
+Java: services on Java 17 or newer, tests written at the service's own level; CI builds gta on JDK 17, 21 and 25, and
+each new LTS joins the matrix. Java 8 and 11 services (mostly Spring Boot 2, out of open-source support) are not
+supported; `gtaw doctor` fails them.
 
 ---
 

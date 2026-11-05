@@ -5,6 +5,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 ## [Unreleased]
 
 ### Changed
+- Roadmap (plan §15): every mainstream Spring service type is in scope, ordered by how common it is. Multi-module, messaging and scheduled jobs move to P1; security and caching join P2; WebFlux, Gradle, gRPC and GraphQL are P3; WebSocket/SSE joins P4.
 - Briefs ask for tests at the service's own Java level (from `maven.compiler.release`, `java.version`, …) instead of "Java 17+", so a Java 17 service gets no newer syntax or APIs.
 - `gtaw doctor` fails a service on a Java older than 17 (`service-java`); CI also builds on JDK 25.
 - `docs/guides/quickstart.zh-CN.md`: a Chinese copy of the quickstart.

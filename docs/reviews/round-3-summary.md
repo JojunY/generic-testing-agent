@@ -81,7 +81,7 @@ All ten are decided. "Now" is what the code does today.
 | Q-R4 | The foundation item adds explicit Surefire/Failsafe includes only when the pom has none. An existing configuration is never rewritten. | as decided |
 | Q-R5 | gtaw commits the session report and the ledger changes at session end, one commit per session. | as decided |
 | Q-R6 | No change. A service gets its Maven repositories and credentials from its own `settings.xml`, so gta needs no Nexus setting. The `nexus.example.com` URLs in the docs and in `gtaw install` are examples for where the gta jar is published, nothing else. | as decided |
-| Q-R7 | Single-module services only, until a real multi-module service needs gta. | as decided |
+| Q-R7 | Single-module services only, until a real multi-module service needs gta. | superseded: multi-module support is planned for P1 (plan §15, review round 4) |
 | Q-R8 | `EI_EXPOSE_REP*` and DTO field patterns stay excluded in `toolkit/spotbugs-exclude.xml`, each with its reason. Drop the exclusion when a DTO becomes a record. | as decided |
 | Q-R9 | No scheduled enum migration. Persisted strings stay strings; migrate a field when its code is touched anyway. | as decided |
 | Q-R10 | Manual case ids are `<flowId>/mNN`. | as decided |

@@ -1,6 +1,6 @@
 ---
 name: gta-testing-scheduled-jobs
-description: Tests @Scheduled, Quartz, ShedLock and Cloud Scheduler-triggered jobs without waiting for cron - the job logic directly, cron expressions with time zones and DST, scheduling wiring, no-overlap locking, idempotent re-runs and at-least-once HTTP triggers. Use when a gta author brief targets a scheduler scenario (P2).
+description: Tests @Scheduled, Quartz, ShedLock and Cloud Scheduler-triggered jobs without waiting for cron - the job logic directly, cron expressions with time zones and DST, scheduling wiring, no-overlap locking, idempotent re-runs and at-least-once HTTP triggers. Use when a gta author brief targets a scheduler scenario (P1).
 ---
 
 # Testing scheduled jobs

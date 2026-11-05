@@ -1,6 +1,6 @@
 ---
 name: gta-testing-event-flows
-description: Tests message-driven flows over Kafka, Pub/Sub and MQ (JMS) without containers - consumers and producers with embedded brokers or emulators, Awaitility instead of sleeps, duplicate and out-of-order delivery, poison messages and dead-letter handling, transactional outbox, and Spring application events. Use when a gta author brief targets a messaging scenario (P3).
+description: Tests message-driven flows over Kafka, Pub/Sub and MQ (JMS) without containers - consumers and producers with embedded brokers or emulators, Awaitility instead of sleeps, duplicate and out-of-order delivery, poison messages and dead-letter handling, transactional outbox, and Spring application events. Use when a gta author brief targets a messaging scenario (P1).
 ---
 
 # Testing event flows
