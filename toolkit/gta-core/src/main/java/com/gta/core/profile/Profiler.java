@@ -41,6 +41,7 @@ public final class Profiler {
             "RequestMapping",
             "ANY");
     private static final List<String> SUFFIXES = List.of(
+            "GrpcService",
             "Controller",
             "Resource",
             "Endpoint",
@@ -213,6 +214,15 @@ public final class Profiler {
                             }
                         }
                     }
+                    if (isGrpcService(c)
+                            && m.getAnnotationByName("Override").isPresent()
+                            && m.getParameters().stream()
+                                    .anyMatch(par -> par.getType().asString().startsWith("StreamObserver"))) {
+                        e = base(c, fqcn, m, "grpc-api", "rpc");
+                        String implBase = c.getExtendedTypes().get(0).getNameAsString();
+                        e.trigger = "gRPC " + implBase.replace("ImplBase", "") + "." + m.getNameAsString();
+                        e.risk = 6;
+                    }
                     for (String mapping : GRAPHQL) {
                         if (m.getAnnotationByName(mapping).isPresent()) {
                             e = base(c, fqcn, m, "graphql-api", "graphql");
@@ -308,6 +318,11 @@ public final class Profiler {
             }
         }
         return out;
+    }
+
+    /** A gRPC service: extends the generated {@code XxxGrpc.XxxImplBase}. */
+    static boolean isGrpcService(ClassOrInterfaceDeclaration c) {
+        return c.getExtendedTypes().stream().anyMatch(t -> t.getNameAsString().endsWith("ImplBase"));
     }
 
     /** A Quartz job: extends QuartzJobBean or implements org.quartz.Job. */

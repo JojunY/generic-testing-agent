@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Scripted end-to-end run of gtaw against evals/fixtures/catalog-service (plan §15 P3): a WebFlux endpoint and a
-# GraphQL query, each from spec to a pinned seeded defect (D10, D11). The repository opts into P3 with
+# Scripted end-to-end run of gtaw against evals/fixtures/catalog-service (plan §15 P3): a WebFlux endpoint, a
+# GraphQL query and a gRPC call, each from spec to a pinned seeded defect (D10, D11, D12). The repository opts into P3 with
 # `phase` in .gta/config.json, since those capabilities are not on by default yet.
 #
 # Needs: the same as run.sh. Usage: evals/e2e/run-catalog.sh [work-dir]
@@ -90,13 +90,16 @@ echo "ok   product.reserve/s02 pinned with @KnownDefect ($FP)"
 cap_flow product-graphql.products-up-to products-up-to.spec.md ProductGraphqlControllerIT.java.txt \
   src/test/java/com/example/catalog/graphql/ProductGraphqlControllerIT.java "< instead of <= (D11)" gta-testing-spring-apis
 
+cap_flow stock.get-stock get-stock.spec.md StockGrpcServiceIT.java.txt \
+  src/test/java/com/example/catalog/grpc/StockGrpcServiceIT.java ">= instead of > (D12)" gta-testing-spring-apis
+
 step "session end"
 for _ in $(seq 1 5); do
   OUT=$(gtaw next)
   [ "$(jget "$OUT" 'd.get("node")')" = done ] && break
 done
 expect "$(jget "$OUT" 'd["node"]')" done "session end"
-for f in product.reserve product-graphql.products-up-to; do
+for f in product.reserve product-graphql.products-up-to stock.get-stock; do
   STATUS=$(gtaw status)
   expect "$(jget "$STATUS" '" ".join(sorted(set(i["status"] for i in d["items"] if i["id"].startswith("'"$f"'/"))))')" \
     "defect-found passed" "$f item states"

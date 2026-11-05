@@ -13,7 +13,7 @@
   <groupId>com.example</groupId>
   <artifactId>catalog-service</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <description>Fixture for gta evals: a reactive (WebFlux) and GraphQL catalog with seeded defects.</description>
+  <description>Fixture for gta evals: a reactive (WebFlux), GraphQL and gRPC catalog with seeded defects.</description>
 
   <properties>
     <java.version>17</java.version>
@@ -30,6 +30,10 @@
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-grpc-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-webflux-test</artifactId>
       <scope>test</scope>
     </dependency>
@@ -38,10 +42,20 @@
       <artifactId>spring-boot-starter-graphql-test</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-grpc-server-test</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
     <plugins>
+      <plugin>
+        <!-- generates the gRPC stubs from src/main/proto; the Spring Boot parent configures protoc and grpc-java -->
+        <groupId>io.github.ascopes</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+      </plugin>
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>

@@ -1,0 +1,51 @@
+package com.example.catalog.grpc;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.example.catalog.grpc.proto.StockReply;
+import com.example.catalog.grpc.proto.StockRequest;
+import com.example.catalog.grpc.proto.StockServiceGrpc;
+import com.gta.junit.KnownDefect;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.grpc.test.autoconfigure.AutoConfigureTestGrpcTransport;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.grpc.client.GrpcChannelFactory;
+
+@Tag("component")
+@Tag("gta")
+@SpringBootTest
+@AutoConfigureTestGrpcTransport
+class StockGrpcServiceIT {
+
+    @Autowired
+    GrpcChannelFactory channels;
+
+    private StockReply stockOf(String productId) {
+        return StockServiceGrpc.newBlockingStub(channels.createChannel("catalog"))
+                .getStock(StockRequest.newBuilder().setProductId(productId).build());
+    }
+
+    @Test
+    @Tag("flow:stock.get-stock")
+    @Tag("scenario:stock.get-stock/s01")
+    @Tag("characterization")
+    @DisplayName("[stock.get-stock/s01] a product in stock is available")
+    void shouldReportAProductInStockAsAvailable() {
+        StockReply reply = stockOf("p-1");
+
+        assertThat(reply.getStock()).isEqualTo(5);
+        assertThat(reply.getAvailable()).isEqualTo(true);
+    }
+
+    @Test
+    @Tag("flow:stock.get-stock")
+    @Tag("scenario:stock.get-stock/s02")
+    @Tag("hardening")
+    @DisplayName("[stock.get-stock/s02] a product without stock is not available")
+    void shouldReportAProductWithoutStockAsUnavailable() {
+        assertThat(stockOf("p-3").getAvailable()).isEqualTo(false);
+    }
+}
