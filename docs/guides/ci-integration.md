@@ -27,8 +27,9 @@ Waivers live in `.gta/waivers.json` on the base branch, so adding one needs its 
 
 `./gtaw init --platform copilot --ci` (or `opencode`) installs it as `.github/workflows/gta-gate.yml`, a managed file:
 `gtaw upgrade` keeps it current and reports local edits instead of overwriting them. In a multi-module repository the
-`--reports` folders are those of `build.module`, and `./mvnw` is used when the repository has the wrapper. The installed
-workflow looks like this:
+`--reports` folders are those of `build.module`, and `./mvnw` is used when the repository has the wrapper. A Gradle
+service gets `./gradlew --console=plain test` (or `gradle`, or `:<module>:test`) with `--reports build/test-results/test`
+instead. The installed workflow of a Maven service looks like this:
 
 ```yaml
 name: gta gate

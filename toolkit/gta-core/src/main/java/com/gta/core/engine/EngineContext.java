@@ -5,7 +5,6 @@ import com.gta.core.change.CommitLedger;
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.registry.CapabilityRegistry;
-import com.gta.core.run.MavenRunner;
 import com.gta.core.run.TestRunner;
 import com.gta.core.state.StateStore;
 import com.gta.core.util.Git;
@@ -39,7 +38,7 @@ final class EngineContext {
         this(root, null);
     }
 
-    /** @param runner the test runner; null = Maven (tests of gta pass a fake) */
+    /** @param runner the test runner; null = the build tool's runner (tests of gta pass a fake) */
     EngineContext(Path root, TestRunner runner) {
         GtaPaths repository = new GtaPaths(root.toAbsolutePath().normalize());
         this.config = GtaConfig.load(repository);
@@ -48,7 +47,7 @@ final class EngineContext {
         this.store = new StateStore(paths);
         this.git = new Git(paths.root());
         this.briefs = new BriefWriter(paths, config.spec.source);
-        this.runner = runner != null ? runner : new MavenRunner(paths, config);
+        this.runner = runner != null ? runner : TestRunner.forBuild(paths, config);
         this.runs = new TestRuns(this);
         this.sessions = new SessionManager(this);
         this.prompts = new HumanPrompts(this);

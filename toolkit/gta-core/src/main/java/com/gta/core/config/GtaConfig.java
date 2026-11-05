@@ -31,11 +31,14 @@ public class GtaConfig {
     public QualityGates qualityGates = new QualityGates();
 
     public static class Build {
-        public String tool = "maven";
+        /** {@code maven}, {@code gradle}, or {@code auto}: Gradle when the service has a Gradle build and no pom.xml. */
+        public String tool = "auto";
         /** Package prefix of production code; "auto" = package of the @SpringBootApplication class. */
         public String basePackage = "auto";
         /** Maven executable; "auto" = ./mvnw when present, otherwise mvn. */
         public String maven = "auto";
+        /** Gradle executable; "auto" = ./gradlew when present, otherwise gradle. */
+        public String gradle = "auto";
         /**
          * Name of an environment variable holding the JDK this service builds with (for example a JDK 8 for an old
          * Spring Boot 2 service); null = Maven uses the JDK gtaw runs on. A name, not a path, because paths differ
@@ -125,11 +128,11 @@ public class GtaConfig {
     }
 
     void validate() {
-        if (!"maven".equals(build.tool)) {
+        if (!List.of("auto", "maven", "gradle").contains(build.tool)) {
             throw new GtaException(
-                    ErrorCode.ENV_UNSUPPORTED_BUILD,
-                    "build.tool=" + build.tool + " is not supported",
-                    "gta v1 supports Maven only");
+                    ErrorCode.CONFIG_INVALID,
+                    "build.tool must be auto, maven or gradle, not " + build.tool,
+                    "Fix .gta/config.json");
         }
         if (!"subagent".equals(dispatch) && !"inline".equals(dispatch)) {
             throw new GtaException(

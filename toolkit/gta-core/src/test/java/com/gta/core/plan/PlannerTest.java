@@ -76,6 +76,7 @@ class PlannerTest {
 
         assertEquals("com.acme.OrderApplicationIT", seed.testClass);
         assertTrue(seed.ownsFiles.contains("pom.xml"));
+        assertTrue(seed.ownsFiles.contains("build.gradle.kts"), "a Gradle service's foundation edits its build script");
         assertTrue(seed.ownsFiles.contains("src/test/java/com/acme/support/**"));
     }
 

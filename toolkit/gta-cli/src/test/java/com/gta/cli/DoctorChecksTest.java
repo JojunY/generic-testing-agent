@@ -243,4 +243,20 @@ class DoctorChecksTest {
         assertEquals("warn", boot.get("status"));
         assertTrue(boot.get("hint").contains("javax"), boot.toString());
     }
+
+    @Test
+    void shouldCheckGradleAndReadTheBuildScriptOfAGradleService(@TempDir Path root) throws Exception {
+        Files.writeString(root.resolve("build.gradle"), """
+                plugins { id 'org.springframework.boot' version '3.5.4' }
+                dependencies { testImplementation 'com.gta:gta-junit:0.1.0' }
+                """);
+        Files.writeString(root.resolve("gradlew"), "#!/bin/sh\n");
+
+        assertEquals("ok", status(root, "gradle"));
+        assertEquals("Gradle wrapper", check(root, "gradle").get("detail"));
+        assertThrows(java.util.NoSuchElementException.class, () -> check(root, "maven"));
+        assertThrows(java.util.NoSuchElementException.class, () -> check(root, "failsafe"), "Failsafe is Maven's");
+        assertTrue(check(root, "spring-boot").get("detail").contains("3.5.4"));
+        assertEquals("ok", status(root, "gta-junit"));
+    }
 }

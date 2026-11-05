@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# Scripted end-to-end run of gtaw against evals/fixtures/invoice-service (plan §15 P3), a Spring MVC service built with
+# Gradle (Kotlin DSL): gtaw reads build.gradle.kts, runs the tests through Gradle with its init script, and takes one
+# REST flow from spec to the pinned seeded defect D13.
+#
+# Needs: the same as run.sh, plus Gradle 8.14 or newer on PATH (the fixture has no wrapper), and gta-junit in the local
+# Maven repository (mvn install). Usage: evals/e2e/run-gradle.sh [work-dir]
+set -euo pipefail
+
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+AGENT="$REPO/evals/e2e/scripted-output/invoice"
+WORK="${1:-$(mktemp -d)}"
+P=""
+export GTA_CLI_JAR="$REPO/toolkit/gta-cli/target/gta-cli.jar"
+export GIT_AUTHOR_NAME=gta-e2e GIT_AUTHOR_EMAIL=gta-e2e@example.com GIT_COMMITTER_NAME=gta-e2e GIT_COMMITTER_EMAIL=gta-e2e@example.com
+[ -f "$GTA_CLI_JAR" ] || { echo "build the toolkit first: mvn -B install -DskipTests"; exit 2; }
+command -v gradle >/dev/null || { echo "install Gradle 8.14 or newer"; exit 2; }
+# shellcheck source=lib.sh
+source "$REPO/evals/e2e/lib.sh"
+
+step "prepare $WORK"
+rm -rf "$WORK" && mkdir -p "$WORK"
+cp -r "$REPO/evals/fixtures/invoice-service/." "$WORK/"
+cd "$WORK"
+rm -rf build .gradle
+git init -q -b main && git add -A && git commit -qm "invoice-service fixture"
+java -jar "$GTA_CLI_JAR" --root . init --platform copilot >/dev/null 2>&1
+git add -A && git commit -qm "gta init"
+git checkout -q -b feature/gta-tests
+
+step "doctor sees the Gradle build"
+OUT=$(gtaw doctor || true)
+expect "$(jget "$OUT" '[c["status"] for c in d["checks"] if c["check"] == "gradle"][0]')" ok "gradle check"
+expect "$(jget "$OUT" '[c["detail"] for c in d["checks"] if c["check"] == "spring-boot"][0]')" "Spring Boot 4.1.2 → JUnit 6" "Boot version from build.gradle.kts"
+
+step "invoice.quote: spec and approval"
+OUT=$(gtaw next --mode flow --target invoice.quote)
+expect "$(jget "$OUT" 'd["node"]')" analyze "first node"
+TOKEN=$(jget "$OUT" 'd["token"]')
+mkdir -p .gta/specs/invoice && sed "s|__P__||" "$AGENT/quote.spec.md" > .gta/specs/invoice/quote.spec.md
+OUT=$(gtaw submit --spec invoice.quote --token "$TOKEN")
+expect "$(jget "$OUT" 'd["rev"]')" R1 "spec revision"
+OUT=$(gtaw next)
+expect "$(jget "$OUT" 'd["type"]')" approve "approval prompt"
+gtaw answer "approve invoice.quote@R1" >/dev/null
+
+step "foundation: seed test, gta-junit added to build.gradle.kts"
+OUT=$(gtaw next)
+expect "$(jget "$OUT" 'd["itemId"]')" "invoice#foundation-01" "first item"
+TOKEN=$(jget "$OUT" 'd["token"]')
+sed -i 's|^    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")|&\n    testImplementation("com.gta:gta-junit:0.1.1-SNAPSHOT")|' build.gradle.kts
+grep -q gta-junit build.gradle.kts || fail "gta-junit not added"
+cp "$AGENT/InvoiceApplicationIT.java.txt" src/test/java/com/example/invoice/InvoiceApplicationIT.java
+OUT=$(gtaw submit --item "invoice#foundation-01" --token "$TOKEN")
+jget "$OUT" 'd["result"]' | grep -q '^passed' || fail "foundation: $OUT"
+echo "ok   foundation passed through Gradle"
+[ -f .gta/work/gradle/gta-init.gradle ] || fail "no gtaw init script"
+git diff --quiet build.gradle.kts || fail "build.gradle.kts should be committed with the foundation"
+
+step "invoice.quote: a passing scenario and the seeded defect D13"
+OUT=$(cap_item invoice.quote/s01)
+mkdir -p src/test/java/com/example/invoice/api && cp "$AGENT/InvoiceControllerIT.java.txt" src/test/java/com/example/invoice/api/InvoiceControllerIT.java
+gtaw submit --item "invoice.quote/s01#component-01" --token "$(jget "$OUT" 'd["token"]')" >/dev/null
+OUT=$(gtaw next)
+expect "$(jget "$OUT" 'd["kind"]')" oracle-review "s01 review"
+OUT=$(gtaw submit --review "invoice.quote/s01#component-01" --token "$(jget "$OUT" 'd["token"]')" --verdict accept --reason "asserts 200 and 40.00")
+jget "$OUT" 'd["result"]' | grep -q '^passed' || fail "s01: $OUT"
+echo "ok   invoice.quote/s01 passed and committed"
+OUT=$(cap_item invoice.quote/s02)
+OUT=$(gtaw submit --item "invoice.quote/s02#component-01" --token "$(jget "$OUT" 'd["token"]')")
+expect "$(jget "$OUT" 'd["code"]')" TEST_ASSERTION_FAILED "s02 exposes D13"
+OUT=$(gtaw next)
+expect "$(jget "$OUT" 'd["kind"]')" triage "s02 triage"
+gtaw submit --review "invoice.quote/s02#component-01" --token "$(jget "$OUT" 'd["token"]')" --verdict product-defect --reason "> instead of >= (D13)" >/dev/null
+OUT=$(gtaw next)
+expect "$(jget "$OUT" 'd["type"]')" defect "defect decision"
+gtaw answer A >/dev/null
+OUT=$(cap_item invoice.quote/s02)
+TOKEN=$(jget "$OUT" 'd["token"]')
+FP=$(grep -o 'failure = "[0-9a-f]*"' "$(jget "$OUT" 'd["brief"]')" | head -1 | grep -o '[0-9a-f]\{12\}')
+sed -i "s|    @DisplayName(\"\[invoice.quote/s02\]|    @KnownDefect(id = \"invoice.quote/s02\", failure = \"$FP\")\n&|" src/test/java/com/example/invoice/api/InvoiceControllerIT.java
+OUT=$(gtaw submit --item "invoice.quote/s02#component-01" --token "$TOKEN")
+jget "$OUT" 'd["result"]' | grep -q '^defect-found' || fail "s02 pin: $OUT"
+echo "ok   invoice.quote/s02 pinned with @KnownDefect ($FP)"
+
+step "session end"
+for _ in $(seq 1 5); do
+  OUT=$(gtaw next)
+  [ "$(jget "$OUT" 'd.get("node")')" = done ] && break
+done
+expect "$(jget "$OUT" 'd["node"]')" done "session end"
+STATUS=$(gtaw status)
+expect "$(jget "$STATUS" '" ".join(sorted(set(i["status"] for i in d["items"] if i["id"].startswith("invoice.quote/"))))')" \
+  "defect-found passed" "invoice.quote item states"
+git diff --quiet || fail "the work tree is dirty"
+
+printf '\nE2E PASSED (%s)\n' "$WORK"

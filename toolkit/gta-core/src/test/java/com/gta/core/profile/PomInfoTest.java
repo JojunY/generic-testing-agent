@@ -103,4 +103,53 @@ class PomInfoTest {
                 java.util.List.of("spring-boot-starter-web"), api.dependencies, "dependencies are the module's own");
         assertThrows(GtaException.class, () -> PomInfo.read(root, "no-such-module"));
     }
+
+    @Test
+    void shouldReadAKotlinGradleBuildWhenThereIsNoPom() throws Exception {
+        Files.writeString(root.resolve("settings.gradle.kts"), """
+                rootProject.name = "invoice"
+                include("invoice-api", ":tools:cli")
+                """);
+        Files.writeString(root.resolve("build.gradle.kts"), """
+                plugins {
+                    java
+                    id("org.springframework.boot") version "3.4.1"
+                }
+                java { sourceCompatibility = JavaVersion.VERSION_21 }
+                dependencies {
+                    implementation("org.springframework.boot:spring-boot-starter-webmvc")
+                    testImplementation("com.gta:gta-junit:0.1.0")
+                }
+                """);
+
+        PomInfo build = PomInfo.read(root);
+
+        assertEquals("gradle", build.tool);
+        assertEquals("invoice", build.artifactId);
+        assertEquals(3, build.bootMajor());
+        assertEquals(21, build.javaMajor());
+        assertEquals(java.util.List.of("spring-boot-starter-webmvc", "gta-junit"), build.dependencies);
+        assertEquals(java.util.List.of("invoice-api", "tools/cli"), build.modules);
+    }
+
+    @Test
+    void shouldReadAGroovyGradleBuildWithAToolchain() throws Exception {
+        Files.writeString(root.resolve("build.gradle"), """
+                plugins {
+                    id 'org.springframework.boot' version '2.7.18'
+                }
+                java { toolchain { languageVersion = JavaLanguageVersion.of(11) } }
+                dependencies {
+                    implementation 'org.springframework.boot:spring-boot-starter-web'
+                }
+                """);
+
+        PomInfo build = PomInfo.read(root);
+
+        assertEquals(2, build.bootMajor());
+        assertEquals(11, build.javaMajor());
+        assertEquals(java.util.List.of("spring-boot-starter-web"), build.dependencies);
+        assertTrue(build.modules.isEmpty());
+        assertEquals(java.util.Optional.of(root.resolve("build.gradle")), PomInfo.gradleBuildFile(root));
+    }
 }

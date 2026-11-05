@@ -78,11 +78,12 @@ public final class Installer {
                     "--platform must be copilot or opencode",
                     "Pick the folder your team uses");
         }
-        if (!Files.exists(root.resolve("pom.xml"))) {
+        if (!Files.exists(root.resolve("pom.xml"))
+                && com.gta.core.profile.PomInfo.gradleBuildFile(root).isEmpty()) {
             throw new GtaException(
                     ErrorCode.ENV_UNSUPPORTED_BUILD,
-                    "No pom.xml in " + root,
-                    "Run init in the Maven module of the service");
+                    "No pom.xml or build.gradle(.kts) in " + root,
+                    "Run init in the root of the service's Maven or Gradle build");
         }
         @SuppressWarnings("unchecked")
         Map<String, String> previous = (Map<String, String>) managed.getOrDefault("files", new LinkedHashMap<>());
@@ -219,25 +220,40 @@ public final class Installer {
                 "next",
                 List.of(
                         "Set distributionUrl / distributionSha256Sum in .gta/wrapper/gta-wrapper.properties to the Nexus jar",
-                        "Add com.gta:gta-junit (test scope) to pom.xml, or let the first foundation item do it",
+                        "Add com.gta:gta-junit (test scope) to the build file, or let the first foundation item do it",
                         "Optional: add CODEOWNERS for .gta/** and the CI gate (init --ci, docs/guides/ci-integration.md)",
                         "Commit, then developers type /gta in Copilot Chat or OpenCode"));
         return out;
     }
 
-    /** The gate workflow for this repository: the service module's report folders, the Maven wrapper when there is one. */
+    /**
+     * The gate workflow for this repository: the service module's report folders and the build tool's command, with
+     * its wrapper when there is one.
+     */
     String ciWorkflow() {
-        String module;
+        GtaConfig config;
         try {
-            module = GtaConfig.load(paths).build.module;
+            config = GtaConfig.load(paths);
         } catch (GtaException e) {
-            module = "";
+            config = new GtaConfig();
         }
-        String target = GtaPaths.inModule(module, "target");
-        String maven = Files.exists(root.resolve("mvnw")) ? "./mvnw" : "mvn";
+        String module = config.build.module;
+        boolean gradle = com.gta.core.run.GradleRunner.selected(paths.withModule(module), config);
+        String reports;
+        String build;
+        if (gradle) {
+            reports = "--reports " + GtaPaths.inModule(module, "build/test-results/test");
+            build = (Files.exists(root.resolve("gradlew")) ? "./gradlew" : "gradle") + " --console=plain "
+                    + com.gta.core.run.GradleRunner.testTask(module);
+        } else {
+            String target = GtaPaths.inModule(module, "target");
+            reports = "--reports " + target + "/surefire-reports --reports " + target + "/failsafe-reports";
+            build = (Files.exists(root.resolve("mvnw")) ? "./mvnw" : "mvn") + " -B verify";
+        }
         return com.gta.core.brief.BriefWriter.template("gta-gate.yml.tmpl")
-                .replace("{{reports}}", target)
-                .replace("{{maven}}", maven);
+                .replace("{{reports}}", reports)
+                .replace("{{build}}", build)
+                .replace("{{cache}}", gradle ? "gradle" : "maven");
     }
 
     private String wrapperProperties(String distributionUrl, String distributionSha) {

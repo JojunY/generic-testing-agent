@@ -1466,7 +1466,11 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 
 主流的 Spring 服务类型都在范围内。阶段按各类型在 Spring 服务中的常见程度排列，只有一个例外：多模块支持排在最前，因为它决定 gta 能否装进一个仓库。能力从所在阶段起启用（`core/registry/capabilities.yaml` 中的 `since`），在此之前只能 explain。
 
-多模块仓库（已实现）：git 和 `.gta/` 留在仓库根目录；`build.module` 指定服务所在的模块。源码、测试、fixture 和报告都在该模块下解析；模块没有设置时，Spring Boot 版本和 Java 版本从根 pom 继承；Maven 在根目录以 `-pl <module> -am` 运行，兄弟模块从工作区构建。一个配置对应一个模块：仓库里有多个服务模块时，在会话之间切换 `build.module`。没有设置 `build.module` 的聚合 pom 会被拒绝并给出提示，而不是被当成一个没有流程的服务。脚本化 e2e 会跑两种布局。仓库可以在 `.gta/config.json` 中用 `"phase": "P3"` 提前启用后续阶段（不能设为更早的阶段）：这些能力就会在对所有人开放前开始写测试。各阶段退出标准需要的试点服务，以及开放某阶段之前必须通过的 eval，都用这个设置。
+多模块仓库（已实现）：git 和 `.gta/` 留在仓库根目录；`build.module` 指定服务所在的模块。源码、测试、fixture 和报告都在该模块下解析；模块没有设置时，Spring Boot 版本和 Java 版本从根 pom 继承；Maven 在根目录以 `-pl <module> -am` 运行，兄弟模块从工作区构建。一个配置对应一个模块：仓库里有多个服务模块时，在会话之间切换 `build.module`。没有设置 `build.module` 的聚合 pom 会被拒绝并给出提示，而不是被当成一个没有流程的服务。脚本化 e2e 会跑两种布局。
+
+Gradle 构建（已实现）：`build.tool` 为 `auto`（默认）时，有 `build.gradle(.kts)` 而没有 `pom.xml` 的模块用 Gradle 构建（存在 `./gradlew` 时用它）。gtaw 不运行 Gradle，而是从脚本文本读取 Boot 插件版本、依赖、Java 版本和 `include` 的子项目；运行测试时使用它写到 `.gta/work/gradle/` 的 init 脚本，选择场景的 tag 并把结果目录传给 gta-junit；gtaw 从不修改服务的构建脚本。`build.module` 指定子项目（`:a:b:test`）。Test 任务的 JUnit XML 按 Surefire 的格式读取（其 testcase 以显示名命名、消息带异常类型，两者都会被规范化）。变异测试需要 Maven 的测试 classpath，所以 `gtaw mutate` 和 can-fail 检查对 Gradle 构建报告 `n/a`。
+
+仓库可以在 `.gta/config.json` 中用 `"phase": "P3"` 提前启用后续阶段（不能设为更早的阶段）：这些能力就会在对所有人开放前开始写测试。各阶段退出标准需要的试点服务，以及开放某阶段之前必须通过的 eval，都用这个设置。
 
 标为*新增*的能力还没有注册表条目和 skill：每个都随自己的 skill、注册表条目、eval fixture 和 1 个试点服务一起交付。
 
@@ -1483,7 +1487,7 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 | 9 | 缓存（Spring Cache、Redis、Caffeine） | P2 | 自动写测试；skill 附加到使用缓存的服务的流程 |
 | 10 | Spring Batch | P2 | 自动写测试；每个 `@Bean Job` 是一个流程 |
 | 11 | 响应式 WebFlux | P3 | 开启 `phase: "P3"` 预览后自动写测试；返回 `Mono`/`Flux` 的 handler 是 `webflux` 流程 |
-| 12 | Gradle 构建 | P3 | *新增*；目前只支持 Maven |
+| 12 | Gradle 构建 | P3 | 已支持：读取 Groovy 和 Kotlin DSL 构建，测试经 Gradle 运行；`gtaw mutate` 和 can-fail 检查仍只支持 Maven |
 | 13 | GCP 数据（BigQuery、GCS） | P0 / P4 | 作为依赖使用 fake；SQL 从 P4 起在 system 层测试 |
 | 14 | gRPC | P3 | 开启 `phase: "P3"` 预览后自动写测试；继承生成的 `*ImplBase` 的每个 RPC 是一个流程 |
 | 15 | 工作流与状态机（Temporal、Camunda、Spring Statemachine） | P3 | 能识别，只写 spec |

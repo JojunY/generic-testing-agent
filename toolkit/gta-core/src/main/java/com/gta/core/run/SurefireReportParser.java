@@ -60,6 +60,13 @@ public final class SurefireReportParser {
         }
         for (TestOutcome c : out) {
             JsonNode n = tagged.get(c.className + "#" + c.method);
+            if (n == null) {
+                // Gradle reports a test by its display name, not its method name
+                n = tagged.get(c.className + "|" + c.method);
+                if (n != null) {
+                    c.method = n.path("method").asText(c.method);
+                }
+            }
             if (n != null) {
                 n.path("tags").forEach(t -> c.tags.add(t.asText()));
                 c.displayName = n.path("displayName").asText(null);
@@ -93,7 +100,7 @@ public final class SurefireReportParser {
                     Element x = failure != null ? failure : error;
                     c.outcome = failure != null ? "failed" : "error";
                     c.failureType = x.getAttribute("type");
-                    c.message = x.getAttribute("message");
+                    c.message = withoutTypePrefix(x.getAttribute("message"), c.failureType);
                     c.stack = x.getTextContent();
                 }
                 out.add(c);
@@ -111,6 +118,17 @@ public final class SurefireReportParser {
      * The plain method name of a reported test case. Surefire appends the parameter types and, for parameterized or
      * repeated tests, the invocation index ({@code shouldX(String)[2]}); gta-junit reports the plain name.
      */
+    /**
+     * The exception's own message. Gradle's report puts "type: " in front of it, Surefire's does not; fingerprints are
+     * computed from the bare message on both sides.
+     */
+    static String withoutTypePrefix(String message, String type) {
+        if (message != null && type != null && !type.isEmpty() && message.startsWith(type + ": ")) {
+            return message.substring(type.length() + 2);
+        }
+        return message;
+    }
+
     static String methodName(String reported) {
         int cut = reported.length();
         for (char c : new char[] {'(', '['}) {
@@ -150,6 +168,12 @@ public final class SurefireReportParser {
                                 n.path("className").asText() + "#"
                                         + n.path("method").asText(),
                                 n);
+                        if (n.hasNonNull("displayName")) {
+                            out.putIfAbsent(
+                                    n.path("className").asText() + "|"
+                                            + methodName(n.path("displayName").asText()),
+                                    n);
+                        }
                     } catch (IOException truncated) {
                         // one bad line (e.g. the last one of a killed JVM) must not drop the others
                     }

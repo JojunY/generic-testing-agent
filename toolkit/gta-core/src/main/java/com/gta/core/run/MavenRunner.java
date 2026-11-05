@@ -25,12 +25,12 @@ import java.util.stream.Stream;
  * Runs tests through Maven Surefire with -Dtest/-Dgroups. All test execution goes through here, so gtaw - not the
  * agent - decides what "passed" means. Cloud credentials are isolated for every run (plan §13).
  */
-public final class MavenRunner implements TestRunner {
+public class MavenRunner implements TestRunner {
     private static final Pattern COMPILE_ERROR =
             Pattern.compile("\\[ERROR\\]\\s+(/?\\S+\\.java):\\[(\\d+),(\\d+)]\\s*(.*)");
 
-    private final GtaPaths paths;
-    private final GtaConfig config;
+    protected final GtaPaths paths;
+    protected final GtaConfig config;
 
     public MavenRunner(GtaPaths paths, GtaConfig config) {
         this.paths = paths;
@@ -65,29 +65,12 @@ public final class MavenRunner implements TestRunner {
     public RunResult run(
             String runId, String itemId, Options options, Set<String> productionClasses, Set<String> testClasses) {
         Path root = paths.root();
-        Path surefire = paths.surefireReports();
+        Path reports = reportDir();
         Path gtaResults = paths.gtaResults();
-        deleteDir(surefire);
+        deleteDir(reports);
         deleteDir(gtaResults);
 
-        List<String> cmd = mavenCommand();
-        cmd.addAll(List.of(
-                "-B",
-                "-Dsurefire.failIfNoSpecifiedTests=false",
-                "-DfailIfNoTests=false",
-                "-Djacoco.skip=true",
-                "-Dgta.results.dir=" + gtaResults));
-        cmd.addAll(moduleArgs(paths.module()));
-        if (options.testClass() != null) {
-            cmd.add("-Dtest=" + options.testClass());
-        } else {
-            // Surefire's default includes skip *IT; gtaw runs component tests through Surefire too (no Failsafe needed)
-            cmd.add("-Dtest=" + ALL_TESTS);
-        }
-        if (options.scenarioTag() != null) {
-            cmd.add("-Dgroups=" + options.scenarioTag());
-        }
-        cmd.add("test");
+        List<String> cmd = testCommand(options, gtaResults);
 
         IsolatedEnv isolated = IsolatedEnv.create();
         Map<String, String> env = isolated.variables();
@@ -127,19 +110,60 @@ public final class MavenRunner implements TestRunner {
         result.timedOut = timedOut;
         result.durationMs = System.currentTimeMillis() - start;
         String output = proc.output();
-        if (proc.exitCode() != 0 && (output.contains("COMPILATION ERROR") || output.contains("Compilation failure"))) {
+        if (proc.exitCode() != 0 && compileFailed(output)) {
             result.compileError = true;
-            result.compileMessage = compileSummary(output);
+            result.compileMessage = compileErrors(output);
         }
-        result.cases = SurefireReportParser.parse(List.of(surefire), gtaResults, timedOut);
+        result.cases = SurefireReportParser.parse(List.of(reports), gtaResults, timedOut);
         for (TestOutcome c : result.cases) {
             FailureClassifier.classify(c, productionClasses, testClasses);
         }
         Path runDir = paths.runs().resolve(runId);
-        AtomicFiles.write(runDir.resolve("maven.log"), output);
-        result.logFile = paths.rel(runDir.resolve("maven.log"));
+        AtomicFiles.write(runDir.resolve(logName()), output);
+        result.logFile = paths.rel(runDir.resolve(logName()));
         Json.writeAtomic(runDir.resolve("run.json"), result);
         return result;
+    }
+
+    /** The build command that runs the selected tests and writes JUnit XML reports to {@link #reportDir()}. */
+    protected List<String> testCommand(Options options, Path gtaResults) {
+        List<String> cmd = mavenCommand();
+        cmd.addAll(List.of(
+                "-B",
+                "-Dsurefire.failIfNoSpecifiedTests=false",
+                "-DfailIfNoTests=false",
+                "-Djacoco.skip=true",
+                "-Dgta.results.dir=" + gtaResults));
+        cmd.addAll(moduleArgs(paths.module()));
+        if (options.testClass() != null) {
+            cmd.add("-Dtest=" + options.testClass());
+        } else {
+            // Surefire's default includes skip *IT; gtaw runs component tests through Surefire too (no Failsafe needed)
+            cmd.add("-Dtest=" + ALL_TESTS);
+        }
+        if (options.scenarioTag() != null) {
+            cmd.add("-Dgroups=" + options.scenarioTag());
+        }
+        cmd.add("test");
+        return cmd;
+    }
+
+    /** Where the build writes the JUnit XML reports of a run. */
+    protected Path reportDir() {
+        return paths.surefireReports();
+    }
+
+    protected boolean compileFailed(String output) {
+        return output.contains("COMPILATION ERROR") || output.contains("Compilation failure");
+    }
+
+    protected String compileErrors(String output) {
+        return compileSummary(output);
+    }
+
+    /** File name of the build output kept in the run directory. */
+    protected String logName() {
+        return "maven.log";
     }
 
     /** JVM options of the stability variant: another timezone and locale (plan §8). */
@@ -171,7 +195,7 @@ public final class MavenRunner implements TestRunner {
                 : sb.toString().trim();
     }
 
-    private static void deleteDir(Path dir) {
+    static void deleteDir(Path dir) {
         if (!Files.exists(dir)) {
             return;
         }
