@@ -4,3 +4,4 @@
 - Search: a price filter includes products that cost exactly the maximum.
 - Stock: a product is available only when its stock is above zero.
 - Restocking: a restock whose stock update fails cancels its supplier order.
+- Reports: a product with fewer than 3 in stock is on the low-stock report.

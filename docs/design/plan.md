@@ -1524,7 +1524,7 @@ registry entry, an eval fixture and one pilot service.
 | 14 | gRPC | P3 | tests written with the `phase: "P3"` preview; each RPC of a generated `*ImplBase` subclass is a flow |
 | 15 | Workflows and state machines (Temporal, Camunda, Spring Statemachine) | P3 | tests written with the `phase: "P3"` preview; each Temporal `@WorkflowMethod` implementation, each state machine's transitions and each `*.bpmn` process is a flow |
 | 16 | GraphQL | P3 | tests written with the `phase: "P3"` preview; `@QueryMapping`/`@MutationMapping` handlers are flows |
-| 17 | Beam / Dataflow pipelines | P3 | detected, spec only |
+| 17 | Beam / Dataflow pipelines | P3 | tests written with the `phase: "P3"` preview; each composite `PTransform` is a flow, run on the DirectRunner with `TestPipeline` and `PAssert` |
 | 18 | System tests on deployed environments (Karate, Kubernetes) | P4 | skill only |
 | 19 | WebSocket, STOMP, SSE | P4 | *new* |
 

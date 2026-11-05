@@ -260,4 +260,19 @@ class AssertionScannerTest {
                 o.tokens().containsAll(List.of("Kettle", "Toaster")), o.tokens().toString());
         assertFalse(o.tokens().stream().anyMatch(t -> t.contains("productsUpTo(maxPrice")), "the query is an input");
     }
+
+    @Test
+    void shouldTakeBeamPassertValuesAsExpectedAndTheCreatedElementsAsInputs() throws Exception {
+        AssertionScanner.ScenarioOracle o = scanSource("""
+                    @Test @Tag("scenario:order.create/s01")
+                    void shouldReport(TestPipeline p) {
+                        PCollection<String> report = p.apply(Create.of(KV.of("INPUT-NAME", 2))).apply(new LowStock());
+                        PAssert.that(report).containsInAnyOrder("EXPECTED-NAME");
+                        p.run().waitUntilFinish();
+                    }
+                """);
+
+        assertTrue(o.tokens().contains("EXPECTED-NAME"), o.tokens().toString());
+        assertFalse(o.tokens().contains("INPUT-NAME"), "the elements the pipeline starts from are inputs");
+    }
 }

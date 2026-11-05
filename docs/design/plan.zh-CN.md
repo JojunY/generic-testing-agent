@@ -1493,7 +1493,7 @@ Gradle 构建（已实现）：`build.tool` 为 `auto`（默认）时，有 `bui
 | 14 | gRPC | P3 | 开启 `phase: "P3"` 预览后自动写测试；继承生成的 `*ImplBase` 的每个 RPC 是一个流程 |
 | 15 | 工作流与状态机（Temporal、Camunda、Spring Statemachine） | P3 | 启用 `phase: "P3"` 预览后自动写测试；每个 Temporal `@WorkflowMethod` 实现、每个状态机的 transitions、每个 `*.bpmn` 流程都是一个流程 |
 | 16 | GraphQL | P3 | 开启 `phase: "P3"` 预览后自动写测试；`@QueryMapping`/`@MutationMapping` handler 是流程 |
-| 17 | Beam / Dataflow 管道 | P3 | 能识别，只写 spec |
+| 17 | Beam / Dataflow 管道 | P3 | 启用 `phase: "P3"` 预览后自动写测试；每个组合 `PTransform` 都是一个流程，用 `TestPipeline` 和 `PAssert` 在 DirectRunner 上运行 |
 | 18 | 部署环境上的系统测试（Karate、Kubernetes） | P4 | 只有 skill |
 | 19 | WebSocket、STOMP、SSE | P4 | *新增* |
 

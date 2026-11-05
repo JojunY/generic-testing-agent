@@ -30,6 +30,9 @@ void shouldSumUsagePerAccountWhenEventsArriveOutOfOrder(TestPipeline p) {
 
 ## Rules
 
+- Test dependencies: `beam-runners-direct-java` and `beam-sdks-java-testing-junit` at the SDK's version, plus
+  `junit:junit` (Beam's `TestPipeline` implements JUnit 4's `TestRule`, so it does not compile without it).
+
 - `PAssert` must be applied before `run()`.
 - Compare aggregates with an independently computed expectation (differential oracle), not with the pipeline's own helper code.
 
