@@ -513,8 +513,9 @@ capabilities:
   - id: workflow
     since: P3
     detect:
-      files: ["**/workflows/*.y*ml"]
-      buildDeps: [spring-statemachine-core, temporal-sdk, camunda-bpm-spring-boot-starter]
+      files: ["**/workflows/*.y*ml", "**/*.bpmn"]
+      buildDeps: [spring-statemachine-core, temporal-sdk, temporal-spring-boot-starter, camunda-bpm-spring-boot-starter,
+                  camunda-spring-boot-starter, spring-boot-starter-camunda]
     layers: [unit, component, system]
     diagrams: [state]
     skills: [gta-testing-workflows]
@@ -1490,7 +1491,7 @@ Gradle 构建（已实现）：`build.tool` 为 `auto`（默认）时，有 `bui
 | 12 | Gradle 构建 | P3 | 已支持：读取 Groovy 和 Kotlin DSL 构建，测试经 Gradle 运行；`gtaw mutate` 和 can-fail 检查仍只支持 Maven |
 | 13 | GCP 数据（BigQuery、GCS） | P0 / P4 | 作为依赖使用 fake；SQL 从 P4 起在 system 层测试 |
 | 14 | gRPC | P3 | 开启 `phase: "P3"` 预览后自动写测试；继承生成的 `*ImplBase` 的每个 RPC 是一个流程 |
-| 15 | 工作流与状态机（Temporal、Camunda、Spring Statemachine） | P3 | 能识别，只写 spec |
+| 15 | 工作流与状态机（Temporal、Camunda、Spring Statemachine） | P3 | 启用 `phase: "P3"` 预览后自动写测试；每个 Temporal `@WorkflowMethod` 实现、每个状态机的 transitions、每个 `*.bpmn` 流程都是一个流程 |
 | 16 | GraphQL | P3 | 开启 `phase: "P3"` 预览后自动写测试；`@QueryMapping`/`@MutationMapping` handler 是流程 |
 | 17 | Beam / Dataflow 管道 | P3 | 能识别，只写 spec |
 | 18 | 部署环境上的系统测试（Karate、Kubernetes） | P4 | 只有 skill |

@@ -13,10 +13,11 @@
   <groupId>com.example</groupId>
   <artifactId>catalog-service</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <description>Fixture for gta evals: a reactive (WebFlux), GraphQL and gRPC catalog with seeded defects.</description>
+  <description>Fixture for gta evals: a reactive (WebFlux), GraphQL, gRPC and Temporal catalog with seeded defects.</description>
 
   <properties>
     <java.version>17</java.version>
+    <temporal.version>1.40.0</temporal.version>
   </properties>
 
   <dependencies>
@@ -31,6 +32,17 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-grpc-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.temporal</groupId>
+      <artifactId>temporal-sdk</artifactId>
+      <version>${temporal.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.temporal</groupId>
+      <artifactId>temporal-testing</artifactId>
+      <version>${temporal.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>

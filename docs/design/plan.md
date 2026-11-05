@@ -515,8 +515,9 @@ capabilities:
   - id: workflow
     since: P3
     detect:
-      files: ["**/workflows/*.y*ml"]
-      buildDeps: [spring-statemachine-core, temporal-sdk, camunda-bpm-spring-boot-starter]
+      files: ["**/workflows/*.y*ml", "**/*.bpmn"]
+      buildDeps: [spring-statemachine-core, temporal-sdk, temporal-spring-boot-starter, camunda-bpm-spring-boot-starter,
+                  camunda-spring-boot-starter, spring-boot-starter-camunda]
     layers: [unit, component, system]
     diagrams: [state]
     skills: [gta-testing-workflows]
@@ -1521,7 +1522,7 @@ registry entry, an eval fixture and one pilot service.
 | 12 | Gradle builds | P3 | supported: Groovy and Kotlin DSL builds are read, tests run through Gradle; `gtaw mutate` and the can-fail check stay Maven-only |
 | 13 | GCP data (BigQuery, GCS) | P0 / P4 | a dependency with fakes; SQL in the system layer from P4 |
 | 14 | gRPC | P3 | tests written with the `phase: "P3"` preview; each RPC of a generated `*ImplBase` subclass is a flow |
-| 15 | Workflows and state machines (Temporal, Camunda, Spring Statemachine) | P3 | detected, spec only |
+| 15 | Workflows and state machines (Temporal, Camunda, Spring Statemachine) | P3 | tests written with the `phase: "P3"` preview; each Temporal `@WorkflowMethod` implementation, each state machine's transitions and each `*.bpmn` process is a flow |
 | 16 | GraphQL | P3 | tests written with the `phase: "P3"` preview; `@QueryMapping`/`@MutationMapping` handlers are flows |
 | 17 | Beam / Dataflow pipelines | P3 | detected, spec only |
 | 18 | System tests on deployed environments (Karate, Kubernetes) | P4 | skill only |

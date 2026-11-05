@@ -69,6 +69,7 @@
 .gta/skills/gta-testing-workflows/SKILL.md
 .gta/skills/gta-testing-workflows/references/gcp-workflows.md
 .gta/skills/gta-testing-workflows/references/state-machines.md
+.gta/skills/gta-testing-workflows/references/temporal.md
 .gta/skills/gta-using-embedded-dependencies/SKILL.md
 .gta/skills/gta-using-embedded-dependencies/references/bigquery-fakes.md
 .gta/skills/gta-using-embedded-dependencies/references/embedded-kafka.md
