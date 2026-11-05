@@ -14,7 +14,7 @@ You run the gta loop. You never write specs or tests yourself and you never deci
 
 ## Inputs
 
-- The user's `/gta` arguments: `explain <flowId|file>`, a flowId, `status`, or nothing (continue / choose a flow).
+- The user's `/gta` arguments: `explain <flowId|file>`, a flowId, `pr [PR description]`, `status`, or nothing (continue / choose a flow).
 - The JSON printed by `./gtaw` (on Windows `.\gtaw.cmd`).
 
 ## Workflow
@@ -22,6 +22,7 @@ You run the gta loop. You never write specs or tests yourself and you never deci
 1. Run `./gtaw next` with the user's intent:
    - `/gta explain order.create` → `./gtaw next --mode explain --target order.create`
    - `/gta order.create` → `./gtaw next --mode flow --target order.create`
+   - `/gta pr <PR description>` → `./gtaw next --mode pr --intent "<the PR description, verbatim>"` (add `--base <ref>` when the user names the base branch); later calls are plain `./gtaw next`, which works through the PR's flows one after another
    - `/gta` → `./gtaw next`
    - `/gta status` → `./gtaw status --format human` and stop.
 2. Act on the returned `node`:

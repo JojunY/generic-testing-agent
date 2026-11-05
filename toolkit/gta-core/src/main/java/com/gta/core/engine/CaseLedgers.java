@@ -237,79 +237,85 @@ final class CaseLedgers {
      */
     Map<String, Object> impact(String base) {
         try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
-            Set<String> changed = new LinkedHashSet<>(git.changedFiles(base));
-            changed.addAll(git.dirtyPaths());
-            // a scenario is affected through the classes its spec cites, the classes they inject (bean graph), and
-            // the config keys it cites whose value changed
-            Map<String, String> affectedClasses = Impact.affectedClasses(
-                    com.gta.core.profile.JavaIndex.of(paths.mainJava()), Impact.changedClasses(paths, changed));
-            Set<String> changedKeys = Impact.changedConfigKeys(git, paths, base, changed);
-            Map<String, String> reasons = new LinkedHashMap<>();
-            List<String> affected = new ArrayList<>();
-            List<String> p0 = new ArrayList<>();
-            Set<String> tests = new LinkedHashSet<>();
-            for (String flowId : approvedFlows()) {
-                Spec spec = SpecParser.parse(paths.spec(flowId));
-                CaseLedger ledger = CaseLedger.read(paths.cases(flowId), flowId);
-                for (Spec.Requirement r : spec.requirements) {
-                    String reason = null;
-                    for (Ref ref : r.refs().stream()
-                            .map(Ref::parse)
-                            .flatMap(Optional::stream)
-                            .toList()) {
-                        if (ref.isCode() && affectedClasses.containsKey(ref.target())) {
-                            String cause = affectedClasses.get(ref.target());
-                            reason = cause.equals(ref.target())
-                                    ? ref.target() + " changed"
-                                    : cause + " changed (reached through " + ref.target() + ")";
-                        } else if ("config".equals(ref.kind()) && changedKeys.contains(ref.target())) {
-                            reason = "config " + ref.target() + " changed";
-                        } else if ("file".equals(ref.kind()) && changed.contains(paths.inModule(ref.target()))) {
-                            reason = ref.target() + " changed";
-                        }
-                        if (reason != null) {
-                            break;
-                        }
+            return impactUnlocked(base);
+        }
+    }
+
+    /** {@link #impact(String)} for a caller that already holds the work lock (PR mode in {@code next}). */
+    Map<String, Object> impactUnlocked(String base) {
+        Set<String> changed = new LinkedHashSet<>(git.changedFiles(base));
+        changed.addAll(git.dirtyPaths());
+        // a scenario is affected through the classes its spec cites, the classes they inject (bean graph), and
+        // the config keys it cites whose value changed
+        Map<String, String> affectedClasses = Impact.affectedClasses(
+                com.gta.core.profile.JavaIndex.of(paths.mainJava()), Impact.changedClasses(paths, changed));
+        Set<String> changedKeys = Impact.changedConfigKeys(git, paths, base, changed);
+        Map<String, String> reasons = new LinkedHashMap<>();
+        List<String> affected = new ArrayList<>();
+        List<String> p0 = new ArrayList<>();
+        Set<String> tests = new LinkedHashSet<>();
+        for (String flowId : approvedFlows()) {
+            Spec spec = SpecParser.parse(paths.spec(flowId));
+            CaseLedger ledger = CaseLedger.read(paths.cases(flowId), flowId);
+            for (Spec.Requirement r : spec.requirements) {
+                String reason = null;
+                for (Ref ref : r.refs().stream()
+                        .map(Ref::parse)
+                        .flatMap(Optional::stream)
+                        .toList()) {
+                    if (ref.isCode() && affectedClasses.containsKey(ref.target())) {
+                        String cause = affectedClasses.get(ref.target());
+                        reason = cause.equals(ref.target())
+                                ? ref.target() + " changed"
+                                : cause + " changed (reached through " + ref.target() + ")";
+                    } else if ("config".equals(ref.kind()) && changedKeys.contains(ref.target())) {
+                        reason = "config " + ref.target() + " changed";
+                    } else if ("file".equals(ref.kind()) && changed.contains(paths.inModule(ref.target()))) {
+                        reason = ref.target() + " changed";
                     }
-                    boolean touched = reason != null;
-                    for (Spec.Scenario s : r.scenarios) {
-                        if (s.id() == null) {
-                            continue;
-                        }
-                        if (touched) {
-                            ledger.markForReview(s.id());
-                            affected.add(s.id());
-                            reasons.put(s.id(), reason);
-                        }
+                    if (reason != null) {
+                        break;
                     }
                 }
-                for (CaseLedger.Row row : ledger.rows()) {
-                    if ("P0".equals(row.priority) && !CaseLedger.RETIRED.equals(row.status)) {
-                        p0.add(row.id);
+                boolean touched = reason != null;
+                for (Spec.Scenario s : r.scenarios) {
+                    if (s.id() == null) {
+                        continue;
                     }
-                    if ((affected.contains(row.id) || "P0".equals(row.priority))
-                            && !CaseLedger.NOT_AUTOMATED.equals(row.automation)) {
-                        tests.add(
-                                row.automation.contains("#")
-                                        ? row.automation.substring(0, row.automation.indexOf('#'))
-                                        : row.automation);
+                    if (touched) {
+                        ledger.markForReview(s.id());
+                        affected.add(s.id());
+                        reasons.put(s.id(), reason);
                     }
-                }
-                if (!ledger.changes().isEmpty()) {
-                    write(ledger);
                 }
             }
-            Set<String> scope = new LinkedHashSet<>(affected);
-            scope.addAll(p0);
-            Map<String, Object> out = new LinkedHashMap<>();
-            out.put("base", base);
-            out.put("needsReview", affected);
-            out.put("reasons", reasons);
-            out.put("regressionScope", List.copyOf(scope));
-            out.put("testClasses", List.copyOf(tests));
-            out.put("tags", scope.stream().map(id -> "scenario:" + id).toList());
-            return out;
+            for (CaseLedger.Row row : ledger.rows()) {
+                if ("P0".equals(row.priority) && !CaseLedger.RETIRED.equals(row.status)) {
+                    p0.add(row.id);
+                }
+                if ((affected.contains(row.id) || "P0".equals(row.priority))
+                        && !CaseLedger.NOT_AUTOMATED.equals(row.automation)) {
+                    tests.add(
+                            row.automation.contains("#")
+                                    ? row.automation.substring(0, row.automation.indexOf('#'))
+                                    : row.automation);
+                }
+            }
+            if (!ledger.changes().isEmpty()) {
+                write(ledger);
+            }
         }
+        Set<String> scope = new LinkedHashSet<>(affected);
+        scope.addAll(p0);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("base", base);
+        out.put("needsReview", affected);
+        out.put("reasons", reasons);
+        out.put("regressionScope", List.copyOf(scope));
+        out.put("testClasses", List.copyOf(tests));
+        out.put("tags", scope.stream().map(id -> "scenario:" + id).toList());
+        out.put("changedClasses", List.copyOf(Impact.changedClasses(paths, changed)));
+        return out;
     }
 
     // ------------------------------------------------------------------ helpers

@@ -84,6 +84,11 @@ final class SpecWorkflow {
         List<String> skills = new ArrayList<>(List.of("gta-mapping-flows", "gta-writing-behavior-specs"));
         if ("pr".equals(st.mode)) {
             skills.add("gta-analyzing-change-impact");
+            if (st.prIntent != null) {
+                issues.add("PR mode: the PR description below is a documented intent (cite it as `source=documented`);"
+                        + " ask only where it leaves the expected behaviour unclear.\n\n> "
+                        + st.prIntent.replace("\n", "\n> "));
+            }
         }
         Path brief = briefs.analyze(
                 st.seq, sw.token, flowId, entry, capability, skills, issues, sw.answersToApply, Files.exists(specPath));

@@ -25,6 +25,10 @@ public class WorkState {
     public List<String> pendingReview = new ArrayList<>();
     public boolean sessionEnded;
     public Map<String, SpecWork> specWork = new LinkedHashMap<>();
+    /** PR mode (plan §6): the affected flows still to work on, after the active one. */
+    public List<String> prQueue = new ArrayList<>();
+    /** PR mode: the PR description, a documented intent for the analyst. */
+    public String prIntent;
 
     /** Analyst work on one flow's spec. */
     public static class SpecWork {

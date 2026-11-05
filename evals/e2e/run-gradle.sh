@@ -94,4 +94,15 @@ expect "$(jget "$STATUS" '" ".join(sorted(set(i["status"] for i in d["items"] if
   "defect-found passed" "invoice.quote item states"
 git diff --quiet || fail "the work tree is dirty"
 
+step "PR mode: a change to the quote re-opens its flow with the PR description as intent"
+sed -i 's|new BigDecimal("0.90")|new BigDecimal("0.85")|' src/main/java/com/example/invoice/api/InvoiceController.java
+git commit -qam "Raise the discount to 15 %"
+OUT=$(gtaw next --mode pr --base main --intent "Invoices of 100 or more now get 15 % off instead of 10 %")
+expect "$(jget "$OUT" 'd["node"]')" analyze "PR mode node"
+expect "$(jget "$OUT" 'd["flowId"]')" invoice.quote "affected flow"
+expect "$(jget "$OUT" '" ".join(d["pr"]["flows"])')" invoice.quote "PR flows"
+grep -q "status=stale" .gta/specs/invoice/quote.spec.md || fail "the approved spec should be stale"
+grep -q "15 % off instead of 10 %" "$(jget "$OUT" 'd["brief"]')" || fail "the analyst brief should quote the PR description"
+echo "ok   the analyst brief quotes the PR description"
+
 printf '\nE2E PASSED (%s)\n' "$WORK"

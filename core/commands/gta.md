@@ -8,6 +8,7 @@ Run the gta loop for this repository. Arguments from the user: {{args}}
 
 - `explain <flowId|file>` — write a behaviour spec and questions only (read-only for code)
 - `<flowId>` — spec, questions, approval, then tests for that flow
+- `pr [PR description]` — the flows this branch changes: re-check their specs against the diff and the description, then test them
 - `status` — show flows, items and what is waiting for the human
 - nothing — continue the current work, or list the riskiest flows to choose from
 

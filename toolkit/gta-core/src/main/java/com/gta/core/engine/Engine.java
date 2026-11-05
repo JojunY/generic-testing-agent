@@ -71,19 +71,33 @@ public final class Engine {
     }
 
     public Map<String, Object> next(String mode, String target, String base, boolean takeover) {
+        return next(mode, target, base, takeover, null);
+    }
+
+    /** @param intent PR mode: the PR description, a documented intent for the analyst (plan §6) */
+    public Map<String, Object> next(String mode, String target, String base, boolean takeover, String intent) {
         git.requireRepo();
         try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
             WorkState st = store.load();
             Map<String, Object> recovered = ctx.sessions.touchSession(st, takeover);
+            boolean startPr = "pr".equals(mode) && target == null;
             if (mode != null) {
                 st.mode = mode;
             }
-            ServiceProfile profile = ensureProfile(target != null);
+            ServiceProfile profile = ensureProfile(target != null || startPr);
+            Map<String, Object> prScope = null;
             if (target != null) {
                 st.activeFlow = resolveTarget(target, profile);
                 st.pending = null;
+            } else if (startPr) {
+                prScope = ctx.pr.start(st, profile, base == null ? ctx.sessionEnd.defaultBase() : base, intent);
             }
-            Map<String, Object> out = step(st, profile, base);
+            Map<String, Object> out = prScope != null && st.activeFlow == null
+                    ? done("No flow is affected by the changes since " + prScope.get("base"), null)
+                    : step(st, profile, base);
+            if (prScope != null) {
+                out.put("pr", prScope);
+            }
             if (List.of("analyze", "author", "review").contains(String.valueOf(out.get("node")))) {
                 out.put("dispatch", config.dispatch); // subagent | inline: how the orchestrator runs the node
             }
@@ -165,6 +179,11 @@ public final class Engine {
             return answerNode(p);
         }
         if (!"approved".equals(spec.status())) {
+            String queued = PrMode.advance(st);
+            if (queued != null) {
+                st.activeFlow = queued;
+                return step(st, profile, base);
+            }
             return done("Flow " + flowId + " is " + spec.status() + "; nothing to do", null);
         }
         if (explainOnly) {
@@ -179,7 +198,17 @@ public final class Engine {
         }
         List<PlanItem> flowItems = ctx.planSync.syncPlan(st, spec, profile);
         ItemWorkflow.Dispatch next = ctx.items.dispatch(st, spec, profile, flowItems);
-        return next.node() != null ? next.node() : ctx.sessionEnd.finishSession(st, next.sessionOverReason(), base);
+        if (next.node() != null) {
+            return next.node();
+        }
+        if (next.sessionOverReason().startsWith("all items of")) {
+            String queued = PrMode.advance(st); // PR mode: the next affected flow, in the same session
+            if (queued != null) {
+                st.activeFlow = queued;
+                return step(st, profile, base);
+            }
+        }
+        return ctx.sessionEnd.finishSession(st, next.sessionOverReason(), base);
     }
 
     private Map<String, Object> chooseFlow(ServiceProfile profile) {
