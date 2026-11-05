@@ -30,6 +30,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - Services on Java 8 and 11: `gta-junit` is Java 8 bytecode, briefs name the service's level and `javax.*` for Spring Boot 2, `build.javaHomeEnv` runs Maven with the JDK an old build needs, and `gtaw doctor` warns (instead of failing) for Java 8 to 16.
 
 ### Changed
+- CI: the four scripted e2e runs (main, multi-module, catalog, Gradle) run as parallel jobs instead of one after another in `build (21)`, with the same scripts and coverage, so a PR waits about 17 minutes instead of about 41. A newer push to the same PR cancels the run it replaces; runs on `main` are never cancelled.
 - Roadmap (plan §15): every mainstream Spring service type is in scope, ordered by how common it is. Multi-module, messaging and scheduled jobs move to P1; security and caching join P2; WebFlux, Gradle, gRPC and GraphQL are P3; WebSocket/SSE joins P4.
 - Briefs ask for tests at the service's own Java level (from `maven.compiler.release`, `java.version`, …) instead of "Java 17+", so a Java 17 service gets no newer syntax or APIs.
 - `gtaw doctor` fails a service on a Java older than 17 (`service-java`); CI also builds on JDK 25.
