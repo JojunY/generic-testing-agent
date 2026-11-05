@@ -126,6 +126,7 @@ final class Triage {
         s.verdict = verdict;
         switch (verdict) {
             case "test-defect", "flaky" -> {
+                com.gta.core.state.Lessons.record(paths, verdict, item.capability + " " + item.layer + " test", reason);
                 st.move(s, ItemStatus.REPAIRING);
                 s.attempts++;
                 s.reason =
@@ -144,6 +145,8 @@ final class Triage {
                                     + "; it cannot prove a product defect",
                             "Use spec-error (observation was wrong) or test-defect");
                 }
+                // a suspected defect is an eval candidate for the model evals (plan §12)
+                com.gta.core.state.Lessons.record(paths, "defect", item.ref, reason);
                 Map<String, Object> out = ctx.items.needsHuman(st, item, s, "defect: " + reason);
                 st.consecutiveFailures = 0; // a suspected product defect is a finding, not an authoring failure
                 return out;

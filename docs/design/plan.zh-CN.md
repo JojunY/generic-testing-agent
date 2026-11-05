@@ -324,11 +324,11 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
    - 批准按 Requirement 记录内容哈希。之后哪个 Requirement 的内容变了，只有它会退回 `in-review`。
 5. **权威审批**：由团队正常的 PR review 把关。gtaw 生成的 PR 评论会单独列出本次新增的所有 `confirmed`、批准、`relock` 和豁免，包括原话和渠道，**任何伪造都在 reviewer 眼前**。问题也可以通过 PR 异步交给产品负责人回答。以后如果启用 CODEOWNERS，规格的审批可以收紧为必须由 CODEOWNERS 批准，不需要改动设计。
 
-### 3.6 与 OpenSpec / Spec Kit 共存（P2）
+### 3.6 与 OpenSpec / Spec Kit 共存（P2；除 delta 格式摘要外已实现）
 
 - 配置项 `spec.source`（P2 加入；v1 会把它当作未知字段拒绝）可以设为 `gta`、`openspec` 或 `speckit`。
 - 设为后两者时，仓库中已有的规格作为 `documented` 来源读取，GTA 不会改写它们。
-- PR 报告的行为变更摘要使用 OpenSpec 的 delta 格式。
+- PR 报告的行为变更摘要使用 OpenSpec 的 delta 格式（尚未实现：PR 报告目前还没有任何格式的行为变更摘要，会随它一起加入）。
 
 ---
 
@@ -450,11 +450,17 @@ capabilities:
   - id: rest-api
     since: P0
     detect:
-      buildDeps: [spring-boot-starter-web, spring-boot-starter-webmvc, spring-boot-starter-webflux]
+      buildDeps: [spring-boot-starter-web, spring-boot-starter-webmvc]
       annotations: ["@RestController", "@RequestMapping"]
     layers: [unit, slice, component, contract, system]
     diagrams: [sequence]
     skills: [gta-testing-spring-apis, gta-stubbing-with-wiremock, gta-testing-api-contracts]
+  - id: webflux
+    since: P3
+    detect: { buildDeps: [spring-boot-starter-webflux] }
+    layers: [unit, slice, component, contract]
+    diagrams: [sequence]
+    skills: [gta-testing-reactive-apis, gta-stubbing-with-wiremock, gta-testing-api-contracts]
   - id: grpc-api
     since: P3
     detect: { buildDeps: [grpc-stub, spring-grpc-spring-boot-starter], files: ["**/*.proto"] }
@@ -1155,9 +1161,10 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 ```json
 {
   "$schema": "./schemas/config.v1.schema.json", "schemaVersion": "1.0",
+  "phase": null,
   "build": { "tool": "maven", "basePackage": "auto", "maven": "auto", "javaHomeEnv": null, "module": "" },
   "dispatch": "subagent",
-  "spec": { "maxQuestionsPerRound": 5, "maxClarifyRounds": 2, "maxSubmitAttempts": 3 },
+  "spec": { "maxQuestionsPerRound": 5, "maxClarifyRounds": 2, "maxSubmitAttempts": 3, "source": "gta" },
   "environments": { "oracle": { "testUrl": null, "userEnv": "GTA_ORACLE_USER", "passwordEnv": "GTA_ORACLE_PASSWORD" } },
   "distribution": { "toolsUrl": "https://nexus.example.com/repository/gta-tools/" },
   "budgets": { "maxChecksPerItem": 8, "maxAttemptsPerItem": 2, "maxConsecutiveFailures": 3,
@@ -1447,7 +1454,7 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 | **P0a 平台验证（1 周）** | 用 eval 选定各档模型；在 Windows 上验证 Pub/Sub 模拟器、EmbeddedKafka、Artemis、Oracle 共享测试库能否正常使用；在两个 IDE 和 OpenCode 中验证：agent 可见性；子 agent 派发与 inline 模式；prompt 文件的 `agent:` 字段；终端自动批准（含 Windows）；特权命令是否确实会弹出确认；请求上限；长时间运行的终端命令（check/submit 的耗时） | 得到实测版的 §11.4 |
 | **P0 核心**（已实现） | gtaw：`init`/`doctor`/`next`/`check`/`submit`/`answer`/`status`/`abort`/`run`/`verify`（稳定性 + 期望值复核）/`report`；`gta-junit`；schemas；生成器和 lint；4 个 agent；skills：mapping-flows、writing-behavior-specs、designing-test-oracles、writing-tests、testing-spring-apis、stubbing-with-wiremock、testing-api-contracts、using-embedded-dependencies、reviewing-test-quality；`/gta explain` 和 flow 模式；1 个 REST fixture，20 个 eval task | 在 1 个真实 REST 服务上跑通 explain → 回答 → 批准 → 至少 5 个 verified 测试；植入的 bug 被判定为缺陷，而不是被修绿；对抗 eval 的指标 3、4 达标；故障注入后能恢复 |
 | **P1 接入：多模块、事件、定时任务、PR 模式** | 多模块 Maven 服务（一次一个模块，Maven 以 `-pl <module> -am` 运行；已实现）；`messaging`（Kafka、Pub/Sub、JMS/MQ、RabbitMQ、SQS；已实现）；`scheduler`（`@Scheduled`、ShedLock、Quartz；已实现）；PR 模式：impact（方法、配置、bean 图；已实现）、alm-github CI 模板 `gta-gate.yml`（`gtaw init --ci`；已实现）、PR 评论、analyzing-change-impact；OpenCode 端到端 | 每个新能力各有 1 个试点服务跑通，另有 1 个多模块服务跑通；在真实 PR 上产出行为变更摘要，门禁上线（mutation 为 advisory） |
-| **P2 数据、安全与质量** | `db-migration`（Flyway、Liquibase；已实现）；`security`（Spring Security、OAuth2 resource server、JWT：已认证与被拒绝的路径、方法级安全；已实现）；`caching`（Spring Cache、Redis、Caffeine：命中、失效、读到旧值；已实现）；`spring-batch`（已实现）；`mutate`（已实现）和能失败检查（共用 PIT 集成）；学习回路；先规则后 LLM 的修复；`spec.source=openspec\|speckit` | 每个新能力各有 1 个试点服务；mutation 在试点仓库校准后切换为 enforced |
+| **P2 数据、安全与质量** | `db-migration`（Flyway、Liquibase；已实现）；`security`（Spring Security、OAuth2 resource server、JWT：已认证与被拒绝的路径、方法级安全；已实现）；`caching`（Spring Cache、Redis、Caffeine：命中、失效、读到旧值；已实现）；`spring-batch`（已实现）；`mutate` 和能失败检查（共用 PIT 集成；均已实现）；学习回路（已实现）；先规则后 LLM 的修复；`spec.source=openspec\|speckit`（已实现） | 每个新能力各有 1 个试点服务；mutation 在试点仓库校准后切换为 enforced |
 | **P3 响应式、Gradle、其他协议、catching** | `webflux`（用 `WebTestClient` 和 `StepVerifier` 测响应式端点和客户端）；Gradle 构建（在 Maven 之外增加第二个 `TestRunner` 和构建文件读取）；`grpc-api` 和 `graphql-api`；`workflow`（Temporal、Camunda、Spring Statemachine）；`beam-pipeline`；incident 模式；catching 测试与 assessor | 每类各试点 1 个服务 |
 | **P4 部署态与流式端点** | `gta-testing-deployed-systems` skill、`gtaw env`、Karate、云隔离；BigQuery SQL 在临时数据集上测试；`websocket`（WebSocket、STOMP、SSE） | 夜间 regression |
 | **P5** | 可选的 hooks（早期拦截、`verified` 回答渠道）、MCP 包装、插件分发、SARIF、record-replay、性能测试、native-image、并行编写、其他语言的适配器 | 按需 |
@@ -1456,7 +1463,9 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 
 主流的 Spring 服务类型都在范围内。阶段按各类型在 Spring 服务中的常见程度排列，只有一个例外：多模块支持排在最前，因为它决定 gta 能否装进一个仓库。能力从所在阶段起启用（`core/registry/capabilities.yaml` 中的 `since`），在此之前只能 explain。
 
-多模块仓库（已实现）：git 和 `.gta/` 留在仓库根目录；`build.module` 指定服务所在的模块。源码、测试、fixture 和报告都在该模块下解析；模块没有设置时，Spring Boot 版本和 Java 版本从根 pom 继承；Maven 在根目录以 `-pl <module> -am` 运行，兄弟模块从工作区构建。一个配置对应一个模块：仓库里有多个服务模块时，在会话之间切换 `build.module`。没有设置 `build.module` 的聚合 pom 会被拒绝并给出提示，而不是被当成一个没有流程的服务。脚本化 e2e 会跑两种布局。标为*新增*的能力还没有注册表条目和 skill：每个都随自己的 skill、注册表条目、eval fixture 和 1 个试点服务一起交付。
+多模块仓库（已实现）：git 和 `.gta/` 留在仓库根目录；`build.module` 指定服务所在的模块。源码、测试、fixture 和报告都在该模块下解析；模块没有设置时，Spring Boot 版本和 Java 版本从根 pom 继承；Maven 在根目录以 `-pl <module> -am` 运行，兄弟模块从工作区构建。一个配置对应一个模块：仓库里有多个服务模块时，在会话之间切换 `build.module`。没有设置 `build.module` 的聚合 pom 会被拒绝并给出提示，而不是被当成一个没有流程的服务。脚本化 e2e 会跑两种布局。仓库可以在 `.gta/config.json` 中用 `"phase": "P3"` 提前启用后续阶段（不能设为更早的阶段）：这些能力就会在对所有人开放前开始写测试。各阶段退出标准需要的试点服务，以及开放某阶段之前必须通过的 eval，都用这个设置。
+
+标为*新增*的能力还没有注册表条目和 skill：每个都随自己的 skill、注册表条目、eval fixture 和 1 个试点服务一起交付。
 
 | # | 类型 | 阶段 | 当前状态 |
 |---|---|---|---|
@@ -1470,12 +1479,12 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 | 8 | 安全（Spring Security、OAuth2、JWT） | P2 | 自动写测试；skill 附加到有安全配置的服务的流程 |
 | 9 | 缓存（Spring Cache、Redis、Caffeine） | P2 | 自动写测试；skill 附加到使用缓存的服务的流程 |
 | 10 | Spring Batch | P2 | 自动写测试；每个 `@Bean Job` 是一个流程 |
-| 11 | 响应式 WebFlux | P3 | *新增*；目前按 REST 识别 |
+| 11 | 响应式 WebFlux | P3 | 开启 `phase: "P3"` 预览后自动写测试；返回 `Mono`/`Flux` 的 handler 是 `webflux` 流程 |
 | 12 | Gradle 构建 | P3 | *新增*；目前只支持 Maven |
 | 13 | GCP 数据（BigQuery、GCS） | P0 / P4 | 作为依赖使用 fake；SQL 从 P4 起在 system 层测试 |
 | 14 | gRPC | P3 | 能识别，只写 spec |
 | 15 | 工作流与状态机（Temporal、Camunda、Spring Statemachine） | P3 | 能识别，只写 spec |
-| 16 | GraphQL | P3 | 能识别，只写 spec |
+| 16 | GraphQL | P3 | 开启 `phase: "P3"` 预览后自动写测试；`@QueryMapping`/`@MutationMapping` handler 是流程 |
 | 17 | Beam / Dataflow 管道 | P3 | 能识别，只写 spec |
 | 18 | 部署环境上的系统测试（Karate、Kubernetes） | P4 | 只有 skill |
 | 19 | WebSocket、STOMP、SSE | P4 | *新增* |

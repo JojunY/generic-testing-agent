@@ -128,6 +128,9 @@ class EngineTest {
 
         assertEquals(ItemStatus.REPAIRING, item().status);
         assertTrue(item().lastError.message.contains("asserts the wrong field"));
+        assertTrue(
+                com.gta.core.state.Lessons.recent(paths, 10).stream().anyMatch(l -> l.startsWith("- [reviewer] ")),
+                "the reject is a lesson for the next author");
     }
 
     @Test

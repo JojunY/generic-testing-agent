@@ -126,6 +126,7 @@ approve order.create@R2
 | `.gta/specs/<domain>/<flow>.cases.md` | 测试用例台账：每个场景一行，含测试、优先级、最近结果和状态。把某行 Status 设为 `Retired` 即退役该用例；探索性用例加到 `## Manual cases` 表中 |
 | `.gta/specs/INDEX.md` | 所有台账的总览 |
 | `.gta/reports/<date>-<session>.md` | 每个会话一份报告：gate、变化的台账行、等待你确认的退役用例 |
+| `.gta/lessons.md` | gtaw 从之前的运行中记录的教训（审查者的驳回、无法失败的测试、确认的缺陷）；brief 会展示最新的几条。可以自由修改或删除 |
 
 代码变更后，`./gtaw impact --base origin/main` 会标出代码已变化的用例，并打印回归范围（这些用例加上全部 P0）。以下情况都算变化：spec 引用的类变了；该类注入的类（直接或更深层）变了；spec 引用的配置项取值变了。`reasons` 会说明原因。退役的用例会保留其测试，直到你运行 `./gtaw cases confirm-retired <ids>`（或 `--all`）。`./gtaw cases --rebuild` 为已有已批准 spec 的服务创建台账。测试命名遵循 [test-naming.md](test-naming.md)。
 
@@ -146,6 +147,8 @@ approve order.create@R2
 
 - `dispatch: "inline"`：如果你的 Copilot 版本无法运行子 agent，使用它；此时由 orchestrator 自己执行每个节点。
 - Oracle 的凭据从指定的环境变量读取，不会被保存。
+- `phase`：设为 `"P3"` 可在默认开放前使用下一阶段的能力（WebFlux、GraphQL 等）；用于试点服务。
+- `spec.source`：仓库自己维护规格时设为 `openspec` 或 `speckit`（`openspec/specs/`、`specs/`）。analyst 会把它们当作 documented 来源引用，绝不修改。
 - `build.module`：多模块仓库中服务所在的模块，例如 `"order-api"`。`.gta/` 留在仓库根目录；测试写进该模块，Maven 以 `-pl <module> -am` 运行。未设置时 `gtaw doctor` 报失败。
 - `build.javaHomeEnv`：如果服务的构建需要更旧的 JDK（例如 Java 8 加 Spring Boot 2），填写存放该 JDK 路径的环境变量名，例如 `"JAVA8_HOME"`。Maven 会以该 `JAVA_HOME` 运行；gtaw 本身仍需要 JDK 17 或更新版本。
 

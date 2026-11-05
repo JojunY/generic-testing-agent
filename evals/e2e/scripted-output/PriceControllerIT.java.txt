@@ -25,8 +25,6 @@ class PriceControllerIT {
     MockMvc mvc;
 
     @Test
-    @Tag("flow:price.update-price")
-    @Tag("scenario:price.update-price/s01")
     @Tag("characterization")
     @DisplayName("[price.update-price/s01] an update returns the new price")
     void shouldReturnTheNewPriceWhenUpdated() throws Exception {

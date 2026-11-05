@@ -244,4 +244,20 @@ class AssertionScannerTest {
         assertTrue(o.tokens().containsAll(List.of("true", "false")), o.tokens().toString());
         assertEquals(List.of(), AssertionScanner.missingThenLiterals(List.of("true", "false"), o.tokens()));
     }
+
+    @Test
+    void shouldTreatAGraphqlDocumentAndItsVariablesAsInputs() throws Exception {
+        AssertionScanner.ScenarioOracle o = scanSource("""
+                    @Test @Tag("scenario:order.create/s01")
+                    void shouldList() {
+                        List<String> names = graphql.document("{ productsUpTo(maxPrice: 45.0) { name } }")
+                                .variable("limit", 10).execute().path("productsUpTo[*].name").entityList(String.class).get();
+                        assertThat(names).containsExactly("Kettle", "Toaster");
+                    }
+                """);
+
+        assertTrue(
+                o.tokens().containsAll(List.of("Kettle", "Toaster")), o.tokens().toString());
+        assertFalse(o.tokens().stream().anyMatch(t -> t.contains("productsUpTo(maxPrice")), "the query is an input");
+    }
 }

@@ -50,6 +50,22 @@ public class CapabilityRegistry {
     /** The phase this build of gta implements. Capabilities with a later `since` are explain-only. */
     public static final String CURRENT_PHASE = "P2";
 
+    /**
+     * The phase a repository runs in: {@code CURRENT_PHASE}, or a later one it opted into with {@code phase} in
+     * .gta/config.json to use a later phase's capabilities early (pilot services, evals). Never an earlier one: the
+     * current phase's capabilities are always on.
+     */
+    public static String effectivePhase(String configured) {
+        if (configured == null || configured.isBlank()) {
+            return CURRENT_PHASE;
+        }
+        if (!configured.matches("P[0-9]")) {
+            throw new GtaException(
+                    ErrorCode.CONFIG_INVALID, "phase must look like P3, not " + configured, "Fix .gta/config.json");
+        }
+        return phaseNumber(configured) < phaseNumber(CURRENT_PHASE) ? CURRENT_PHASE : configured;
+    }
+
     public static int phaseNumber(String phase) {
         try {
             return Integer.parseInt(phase.replaceAll("[^0-9]", ""));

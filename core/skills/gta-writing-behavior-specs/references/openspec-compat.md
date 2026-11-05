@@ -6,4 +6,4 @@ gta specs use the OpenSpec structure (`### Requirement:` with SHALL, `#### Scena
 - gta specs live in `.gta/specs/<domain>/<flow>.spec.md`, not `openspec/specs/`.
 - The OpenSpec CLI is not required (it needs Node and enables telemetry by default).
 
-Reading existing OpenSpec or Spec Kit specs as `documented` sources (`spec.source=openspec|speckit`) arrives in P2. Until then, cite them with `source=documented doc=openspec/specs/orders/spec.md#create quote="..."`.
+With `spec.source=openspec` (or `speckit`) in `.gta/config.json`, your brief lists the repository's own specs (`openspec/specs/**/spec.md`, or `specs/*/spec.md` for Spec Kit). They are a documented source: cite them with `source=documented doc=openspec/specs/orders/spec.md#create quote="..."` and never edit them.

@@ -430,9 +430,12 @@ public final class GtaCli implements Callable<Integer> {
         @Option(names = "--new", description = "Only tests that passed in the current session")
         boolean onlyNew;
 
+        @Option(names = "--item", description = "Only this passed item")
+        String item;
+
         @Override
         public Integer call() {
-            Map<String, Object> out = engine(parent).verify(onlyNew);
+            Map<String, Object> out = engine(parent).verify(onlyNew, item);
             print(parent, out);
             return ((List<?>) out.get("unstable")).isEmpty() ? 0 : ErrorCode.GATE_UNSTABLE_TEST.exitCode();
         }

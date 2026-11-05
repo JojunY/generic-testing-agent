@@ -7,6 +7,7 @@ import com.gta.core.error.GtaException;
 import com.gta.core.util.Json;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.List;
 
 /**
  * .gta/config.json. Every field is optional; defaults below are the built-in values (plan §10.4).
@@ -19,6 +20,9 @@ public class GtaConfig {
 
     public String schemaVersion = "1.0";
     public Build build = new Build();
+    /** Opt into a later roadmap phase early (plan §15), e.g. "P3" for a pilot service; null = gta's current phase. */
+    public String phase;
+
     public String dispatch = "subagent";
     public Spec spec = new Spec();
     public Environments environments = new Environments();
@@ -50,6 +54,12 @@ public class GtaConfig {
         public int maxClarifyRounds = 2;
         /** Rejected spec submissions in a row before the flow escalates to a human. */
         public int maxSubmitAttempts = 3;
+        /**
+         * Where the repository's own specs come from (plan §3.6): {@code gta} (none besides gta's), {@code openspec}
+         * ({@code openspec/specs/}) or {@code speckit} ({@code specs/}). Those are read as documented sources, never
+         * rewritten.
+         */
+        public String source = "gta";
     }
 
     public static class Environments {
@@ -124,6 +134,10 @@ public class GtaConfig {
         if (!"subagent".equals(dispatch) && !"inline".equals(dispatch)) {
             throw new GtaException(
                     ErrorCode.CONFIG_INVALID, "dispatch must be subagent or inline", "Fix .gta/config.json");
+        }
+        if (!List.of("gta", "openspec", "speckit").contains(spec.source)) {
+            throw new GtaException(
+                    ErrorCode.CONFIG_INVALID, "spec.source must be gta, openspec or speckit", "Fix .gta/config.json");
         }
         if (!"advisory".equals(qualityGates.mutation.mode) && !"enforced".equals(qualityGates.mutation.mode)) {
             throw new GtaException(

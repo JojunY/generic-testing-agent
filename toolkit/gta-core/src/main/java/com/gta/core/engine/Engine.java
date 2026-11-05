@@ -120,7 +120,7 @@ public final class Engine {
         }
         String capability = Files.exists(specPath) ? SpecParser.parse(specPath).capability() : entry.capability;
         CapabilityRegistry.Capability cap = registry.capability(capability);
-        boolean explainOnly = !cap.activeIn(CapabilityRegistry.CURRENT_PHASE);
+        boolean explainOnly = !cap.activeIn(CapabilityRegistry.effectivePhase(config.phase));
 
         if (!Files.exists(specPath)
                 || sw.needsRevision
@@ -169,8 +169,9 @@ public final class Engine {
         }
         if (explainOnly) {
             return done(
-                    "Capability " + capability + " is explain-only in " + CapabilityRegistry.CURRENT_PHASE
-                            + " (active from " + cap.since + "). The approved spec is kept as documentation.",
+                    "Capability " + capability + " is explain-only in "
+                            + CapabilityRegistry.effectivePhase(config.phase) + " (active from " + cap.since
+                            + "). The approved spec is kept as documentation.",
                     null);
         }
         if ("explain".equals(st.mode)) {
@@ -400,7 +401,8 @@ public final class Engine {
         if (!refresh && Files.exists(paths.profile())) {
             return Json.read(paths.profile(), ServiceProfile.class);
         }
-        ServiceProfile p = Profiler.profile(paths, registry, config.build.basePackage);
+        ServiceProfile p = Profiler.profile(
+                paths, registry, config.build.basePackage, CapabilityRegistry.effectivePhase(config.phase));
         Json.writeAtomic(paths.profile(), p);
         Json.writeAtomic(paths.flowCatalog(), p.entrypoints);
         return p;
@@ -447,6 +449,10 @@ public final class Engine {
 
     public Map<String, Object> verify(boolean newOnly) {
         return ctx.sessionEnd.verify(newOnly);
+    }
+
+    public Map<String, Object> verify(boolean newOnly, String itemId) {
+        return ctx.sessionEnd.verify(newOnly, itemId);
     }
 
     /** {@code gtaw cases}: the test case ledgers (plan §10.6); {@code rebuild} creates them from the approved specs. */

@@ -81,6 +81,9 @@ final class SessionEnd {
         @SuppressWarnings("unchecked")
         List<String> files = new ArrayList<>((List<String>) ledgers.get("paths"));
         files.add(paths.rel(reportFile));
+        if (Files.exists(paths.lessons())) {
+            files.add(paths.rel(paths.lessons()));
+        }
         ctx.commit(files.stream().distinct().toList(), "docs(gta): session report " + st.session.id);
         st.sessionEnded = true;
         more.put("gate", gate.decision);
@@ -90,8 +93,25 @@ final class SessionEnd {
     }
 
     public Map<String, Object> verify(boolean newOnly) {
+        return verify(newOnly, null);
+    }
+
+    /** @param itemId verify only this item (it must have passed); null for the session's or all passed items */
+    public Map<String, Object> verify(boolean newOnly, String itemId) {
         try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
             WorkState st = store.load();
+            if (itemId != null) {
+                WorkState.ItemState s = st.items.get(itemId);
+                if (s == null || s.status != ItemStatus.PASSED) {
+                    throw new GtaException(
+                            ErrorCode.USAGE_UNKNOWN_ITEM,
+                            itemId + " is not a passed item",
+                            "Run ./gtaw status to see the items and their states");
+                }
+                Map<String, Object> out = verifyInternal(st, new ArrayList<>(List.of(itemId)));
+                store.save(st);
+                return out;
+            }
             List<String> ids = newOnly
                     ? st.sessionPassed
                     : st.items.values().stream()
@@ -104,8 +124,55 @@ final class SessionEnd {
         }
     }
 
+    /** The can-fail check applies to unit and slice tests (plan §5.6 item 5); integration tests are too slow for PIT. */
+    static final Set<String> CAN_FAIL_LAYERS = Set.of("unit", "slice");
+
+    /**
+     * Mutates the methods the scenario's requirement cites and runs the item's test against them. A test none of
+     * whose mutants it kills goes back to the author; PIT being unavailable is reported, never held against the item.
+     */
+    private String canFail(WorkState st, PlanItem item) {
+        Map<String, Set<String>> methods = new LinkedHashMap<>();
+        try {
+            com.gta.core.spec.Spec spec = com.gta.core.spec.SpecParser.parse(paths.spec(item.flowId));
+            spec.scenario(item.ref)
+                    .flatMap(spec::requirementOf)
+                    .ifPresent(r -> r.refs().stream()
+                            .map(com.gta.core.spec.Ref::parse)
+                            .flatMap(java.util.Optional::stream)
+                            .filter(ref -> ref.isCode() && ref.member() != null)
+                            .forEach(ref -> methods.computeIfAbsent(ref.target(), k -> new LinkedHashSet<>())
+                                    .add(ref.member())));
+        } catch (GtaException e) {
+            return "n/a: " + e.getMessage();
+        }
+        com.gta.core.run.MutationRunner.CanFail result;
+        try {
+            result = new com.gta.core.run.MutationRunner(paths, config).canFail(item.id, methods, item.testClass);
+        } catch (GtaException e) {
+            return "n/a: " + e.getMessage(); // e.g. no network for PIT: the item keeps its result
+        }
+        if (com.gta.core.run.MutationRunner.CanFail.SURVIVED.equals(result.verdict())) {
+            WorkState.ItemState s = st.items.get(item.id);
+            if (s != null && s.status == ItemStatus.PASSED) {
+                s.lastError = ItemWorkflow.lastError(s, ErrorCode.POLICY_TEST_CANNOT_FAIL, result.detail());
+                com.gta.core.state.Lessons.record(
+                        paths,
+                        "can-fail",
+                        item.capability + " " + item.layer + " test",
+                        "a test passed whatever the code did; assert what the code under test does, not a value the"
+                                + " test computes itself");
+                s.reason = "can-fail: " + result.detail()
+                        + "; assert what the code under test does, not a value the test computes itself";
+                st.move(s, ItemStatus.REPAIRING);
+            }
+        }
+        return result.verdict() + ": " + result.detail();
+    }
+
     Map<String, Object> verifyInternal(WorkState st, List<String> ids) {
         List<String> unstable = new ArrayList<>();
+        Map<String, String> canFail = new LinkedHashMap<>();
         Set<String> classesDone = new LinkedHashSet<>();
         for (String id : ids) {
             PlanItem item;
@@ -134,9 +201,13 @@ final class SessionEnd {
                     break;
                 }
             }
+            if (!unstable.contains(id) && CAN_FAIL_LAYERS.contains(item.layer)) {
+                canFail.put(id, canFail(st, item));
+            }
         }
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("checked", classesDone.size());
+        out.put("canFail", canFail);
         out.put("repeat", config.qualityGates.stabilityRepeat);
         out.put("unstable", unstable);
         Json.writeAtomic(paths.verifyLatest(), out);

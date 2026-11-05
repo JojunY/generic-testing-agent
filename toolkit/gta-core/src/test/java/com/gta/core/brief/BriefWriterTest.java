@@ -118,4 +118,43 @@ class BriefWriterTest {
         org.junit.jupiter.api.Assertions.assertEquals(
                 "", BriefWriter.namespaceLine(3), "Boot 3+ uses jakarta by default");
     }
+
+    @org.junit.jupiter.api.Test
+    void shouldShowTheLessonsOfEarlierRuns(@org.junit.jupiter.api.io.TempDir java.nio.file.Path root) {
+        com.gta.core.config.GtaPaths paths = new com.gta.core.config.GtaPaths(root);
+        StringBuilder none = new StringBuilder();
+        new BriefWriter(paths).appendSkills(none, java.util.List.of("gta-writing-tests"));
+        org.junit.jupiter.api.Assertions.assertFalse(none.toString().contains("Lessons"), "no section without lessons");
+
+        com.gta.core.state.Lessons.record(paths, "reviewer", "rest-api component test", "assert the stored state too");
+        StringBuilder b = new StringBuilder();
+        new BriefWriter(paths).appendSkills(b, java.util.List.of("gta-writing-tests"));
+
+        org.junit.jupiter.api.Assertions.assertTrue(
+                b.toString().contains("## Lessons from earlier runs")
+                        && b.toString().contains("- [reviewer] rest-api component test: assert the stored state too"),
+                b.toString());
+    }
+
+    @org.junit.jupiter.api.Test
+    void shouldListTheRepositorysOwnSpecsAsDocumentedSources(@org.junit.jupiter.api.io.TempDir java.nio.file.Path root)
+            throws Exception {
+        java.nio.file.Path open = root.resolve("openspec/specs/orders/spec.md");
+        java.nio.file.Files.createDirectories(open.getParent());
+        java.nio.file.Files.writeString(open, "### Requirement: Create an order");
+        java.nio.file.Path kit = root.resolve("specs/001-orders/spec.md");
+        java.nio.file.Files.createDirectories(kit.getParent());
+        java.nio.file.Files.writeString(kit, "## User Scenarios");
+
+        org.junit.jupiter.api.Assertions.assertEquals(
+                java.util.List.of("openspec/specs/orders/spec.md"), BriefWriter.existingSpecs(root, "openspec"));
+        org.junit.jupiter.api.Assertions.assertEquals(
+                java.util.List.of("specs/001-orders/spec.md"), BriefWriter.existingSpecs(root, "speckit"));
+        org.junit.jupiter.api.Assertions.assertEquals(java.util.List.of(), BriefWriter.existingSpecs(root, "gta"));
+
+        StringBuilder b = new StringBuilder();
+        new BriefWriter(new com.gta.core.config.GtaPaths(root), "openspec").appendExistingSpecs(b);
+        org.junit.jupiter.api.Assertions.assertTrue(
+                b.toString().contains("source=documented") && b.toString().contains("Never edit"), b.toString());
+    }
 }

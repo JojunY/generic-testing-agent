@@ -36,6 +36,11 @@ WHEN an OrderCreated event arrives, THE loyalty service SHALL add one point per 
 - **WHEN** an OrderCreated event for customer `c-8` with total `25.00` arrives
 - **THEN** customer `c-8` has `2` points
 
+#### Scenario: the listener alone awards the points
+<!-- gta: id=loyalty.on-order-created/s03 source=observed hint.layer=unit hint.oracle=state priority=P2 -->
+- **WHEN** the listener receives an OrderCreated event for customer `c-9` with total `30.00`
+- **THEN** that customer has `3` points
+
 ## Invariants
 
 ## Open questions

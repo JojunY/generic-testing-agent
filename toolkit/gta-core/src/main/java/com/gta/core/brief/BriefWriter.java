@@ -23,9 +23,16 @@ import java.util.stream.Stream;
  */
 public final class BriefWriter {
     private final GtaPaths paths;
+    private final String specSource;
 
     public BriefWriter(GtaPaths paths) {
+        this(paths, "gta");
+    }
+
+    /** @param specSource {@code spec.source}: gta, openspec or speckit (plan §3.6) */
+    public BriefWriter(GtaPaths paths, String specSource) {
         this.paths = paths;
+        this.specSource = specSource == null ? "gta" : specSource;
     }
 
     /** First clause with its keyword, the rest as AND - the way the spec writes them. */
@@ -101,6 +108,7 @@ public final class BriefWriter {
             b.append("\n- Suggested risk: ").append(entry.risk).append(" (probability 1-3 × impact 1-3)\n");
         }
         b.append("- Capability: `").append(capability).append("`\n\n");
+        appendExistingSpecs(b);
         appendSkills(b, skills);
         if (!exists) {
             b.append("## Template\n\nStart from this skeleton (keep the gta comments; ids follow `")
@@ -334,7 +342,47 @@ public final class BriefWriter {
         return write(seq, b.toString());
     }
 
-    private void appendSkills(StringBuilder b, List<String> skills) {
+    /**
+     * With {@code spec.source=openspec|speckit} the repository's own specs are a {@code documented} source (plan §3.6):
+     * the analyst cites them and never edits them.
+     */
+    void appendExistingSpecs(StringBuilder b) {
+        List<String> found = existingSpecs(paths.root(), specSource);
+        if (found.isEmpty()) {
+            return;
+        }
+        b.append("## Existing specifications (`spec.source=")
+                .append(specSource)
+                .append(
+                        "`)\n\nThis repository keeps its own specs. They are a documented source: when one states the behaviour of a")
+                .append(
+                        " scenario, cite it with `source=documented doc=<path>#<heading> quote=\"<verbatim text>\"`. Never edit")
+                .append(" these files; gta writes only `.gta/specs/`.\n\n");
+        found.forEach(f -> b.append("- `").append(f).append("`\n"));
+        b.append('\n');
+    }
+
+    /** OpenSpec keeps {@code openspec/specs/<capability>/spec.md}; Spec Kit keeps {@code specs/<feature>/spec.md}. */
+    static List<String> existingSpecs(Path root, String source) {
+        Path dir = switch (source) {
+            case "openspec" -> root.resolve("openspec/specs");
+            case "speckit" -> root.resolve("specs");
+            default -> null;
+        };
+        if (dir == null || !Files.isDirectory(dir)) {
+            return List.of();
+        }
+        try (java.util.stream.Stream<Path> files = Files.walk(dir, 3)) {
+            return files.filter(f -> String.valueOf(f.getFileName()).equals("spec.md"))
+                    .map(f -> root.relativize(f).toString().replace('\\', '/'))
+                    .sorted()
+                    .toList();
+        } catch (java.io.IOException e) {
+            return List.of();
+        }
+    }
+
+    void appendSkills(StringBuilder b, List<String> skills) {
         if (skills.isEmpty()) {
             return;
         }
@@ -344,6 +392,12 @@ public final class BriefWriter {
             b.append("- `").append(path).append("`\n");
         }
         b.append('\n');
+        List<String> lessons = com.gta.core.state.Lessons.recent(paths, 10);
+        if (!lessons.isEmpty()) {
+            b.append("## Lessons from earlier runs (`.gta/lessons.md`)\n\nDo not repeat these:\n\n");
+            lessons.forEach(l -> b.append(l).append('\n'));
+            b.append('\n');
+        }
     }
 
     private String fileHint(String ref) {

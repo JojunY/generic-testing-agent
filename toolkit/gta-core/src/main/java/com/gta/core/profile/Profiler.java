@@ -64,6 +64,10 @@ public final class Profiler {
             "TransactionalEventListener",
             "ApplicationModuleListener");
 
+    /** Spring for GraphQL handler annotations (graphql-api). */
+    static final List<String> GRAPHQL =
+            List.of("QueryMapping", "MutationMapping", "SubscriptionMapping", "SchemaMapping", "BatchMapping");
+
     private Profiler() {}
 
     public static ServiceProfile profile(Path root, CapabilityRegistry registry, String configuredBasePackage) {
@@ -71,6 +75,11 @@ public final class Profiler {
     }
 
     public static ServiceProfile profile(GtaPaths paths, CapabilityRegistry registry, String configuredBasePackage) {
+        return profile(paths, registry, configuredBasePackage, CapabilityRegistry.CURRENT_PHASE);
+    }
+
+    public static ServiceProfile profile(
+            GtaPaths paths, CapabilityRegistry registry, String configuredBasePackage, String phase) {
         Path repository = paths.root();
         Path root = paths.moduleRoot();
         PomInfo pom = PomInfo.read(repository, paths.module());
@@ -102,7 +111,7 @@ public final class Profiler {
                     || c.detect.annotations.stream().anyMatch(sources::contains)
                     || c.detect.files.stream().anyMatch(g -> anyFileMatches(root, g));
             if (hit) {
-                (c.activeIn(CapabilityRegistry.CURRENT_PHASE) ? p.capabilities : p.explainOnlyCapabilities).add(c.id);
+                (c.activeIn(phase) ? p.capabilities : p.explainOnlyCapabilities).add(c.id);
             }
         }
         p.applicationClass = applicationClass(main);
@@ -190,7 +199,10 @@ public final class Profiler {
                         for (AnnotationExpr a : m.getAnnotations()) {
                             String verb = HTTP.get(a.getNameAsString());
                             if (verb != null) {
-                                e = base(c, fqcn, m, "rest-api", "http");
+                                // a handler returning Mono/Flux is a reactive (WebFlux) endpoint: tested differently
+                                String returns = m.getType().asString();
+                                boolean reactive = returns.startsWith("Mono") || returns.startsWith("Flux");
+                                e = base(c, fqcn, m, reactive ? "webflux" : "rest-api", "http");
                                 e.httpMethod = verb;
                                 List<String> paths = pathsOf(a);
                                 e.path = (paths.isEmpty() ? List.of("") : paths)
@@ -199,6 +211,15 @@ public final class Profiler {
                                                 .collect(Collectors.joining(" | "));
                                 e.risk = verb.equals("GET") ? 2 : 6;
                             }
+                        }
+                    }
+                    for (String mapping : GRAPHQL) {
+                        if (m.getAnnotationByName(mapping).isPresent()) {
+                            e = base(c, fqcn, m, "graphql-api", "graphql");
+                            e.trigger =
+                                    "GraphQL " + mapping.replace("Mapping", "").toLowerCase(java.util.Locale.ROOT) + " "
+                                            + m.getNameAsString();
+                            e.risk = mapping.equals("MutationMapping") ? 6 : 3;
                         }
                     }
                     if (m.getAnnotationByName("Scheduled").isPresent()) {

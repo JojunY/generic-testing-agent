@@ -126,6 +126,7 @@ If your terminal mangles Chinese characters, gta says so. Use the ASCII forms ab
 | `.gta/specs/<domain>/<flow>.cases.md` | the test case ledger: one row per scenario with its test, priority, latest result and status. Set a Status to `Retired` to retire a case; add exploratory cases to its `## Manual cases` table |
 | `.gta/specs/INDEX.md` | the overview of every ledger |
 | `.gta/reports/<date>-<session>.md` | one report per session: gate, changed ledger rows, retired cases waiting for you |
+| `.gta/lessons.md` | lessons gtaw recorded from earlier runs (a reviewer's reject, a test that could not fail, a confirmed defect); briefs show the latest ones. Edit or delete lines freely |
 
 After a code change, `./gtaw impact --base origin/main` marks the cases whose code changed and prints the regression
 scope (those cases plus every P0). A case counts as changed when a class its spec cites changed, when a class that
@@ -150,6 +151,8 @@ already has approved specs. Test names follow [test-naming.md](test-naming.md).
 
 - `dispatch: "inline"`: use this if your Copilot build cannot run subagents; the orchestrator then does each node itself.
 - Oracle credentials are read from the named environment variables and never stored.
+- `phase`: `"P3"` to use the next roadmap phase's capabilities (WebFlux, GraphQL, …) before they are on by default; for pilot services.
+- `spec.source`: `openspec` or `speckit` when the repository keeps its own specs (`openspec/specs/`, `specs/`). The analyst cites them as documented sources and never edits them.
 - `build.module`: in a multi-module repository, the module that holds the service, such as `"order-api"`. `.gta/` stays at
   the repository root; tests are written into that module and Maven runs with `-pl <module> -am`. `gtaw doctor` fails
   until it is set.

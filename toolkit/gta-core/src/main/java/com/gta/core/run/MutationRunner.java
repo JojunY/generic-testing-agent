@@ -76,7 +76,7 @@ public final class MutationRunner {
             return out;
         }
         Path work = paths.work().resolve("pit");
-        List<Mutant> all = run(work, lines.keySet());
+        List<Mutant> all = run(work, lines.keySet(), List.of("*Test"));
         List<Mutant> onChangedLines = all.stream()
                 .filter(m -> lines.getOrDefault(m.mutatedClass(), Set.of()).contains(m.line()))
                 .toList();
@@ -140,7 +140,56 @@ public final class MutationRunner {
         return out;
     }
 
-    private List<Mutant> run(Path work, Set<String> classes) {
+    /** Outcome of the can-fail check of one item. */
+    public record CanFail(String verdict, int mutants, int killed, String detail) {
+        public static final String KILLED = "killed";
+        public static final String SURVIVED = "survived";
+        public static final String NOT_APPLICABLE = "n/a";
+    }
+
+    /**
+     * The can-fail check (plan §5.6 item 5): mutate the methods the scenario's spec cites and run only the item's own
+     * test. The test can fail when at least one mutant of those methods is killed; when every covered mutant survives,
+     * the test passes whatever the code does. {@code n/a} when PIT finds no covered mutant in those methods.
+     */
+    public CanFail canFail(String itemId, Map<String, Set<String>> methodsByClass, String testClass) {
+        if (methodsByClass.isEmpty()) {
+            return new CanFail(CanFail.NOT_APPLICABLE, 0, 0, "the scenario cites no method");
+        }
+        Path work = paths.work().resolve("pit").resolve(itemId.replaceAll("[^A-Za-z0-9.-]", "_"));
+        List<Mutant> mutants = run(work, methodsByClass.keySet(), List.of(testClass)).stream()
+                .filter(m ->
+                        methodsByClass.getOrDefault(m.mutatedClass(), Set.of()).contains(m.method()))
+                .filter(Mutant::covered)
+                .toList();
+        return verdict(mutants, testClass);
+    }
+
+    static CanFail verdict(List<Mutant> covered, String testClass) {
+        if (covered.isEmpty()) {
+            return new CanFail(
+                    CanFail.NOT_APPLICABLE, 0, 0, "no mutant of the cited methods is reached by " + testClass);
+        }
+        int killed = (int) covered.stream().filter(Mutant::killed).count();
+        return killed > 0
+                ? new CanFail(
+                        CanFail.KILLED, covered.size(), killed, killed + " of " + covered.size() + " mutants killed")
+                : new CanFail(
+                        CanFail.SURVIVED,
+                        covered.size(),
+                        0,
+                        "none of " + covered.size() + " mutants of "
+                                + covered.stream()
+                                        .map(m -> m.mutatedClass()
+                                                        .substring(
+                                                                m.mutatedClass().lastIndexOf('.') + 1) + "#"
+                                                + m.method())
+                                        .distinct()
+                                        .toList()
+                                + " made " + testClass + " fail: it passes whatever the code does");
+    }
+
+    private List<Mutant> run(Path work, Set<String> classes, List<String> targetTests) {
         Path lib = work.resolve("lib");
         Path classpathFile = work.resolve("classpath.txt");
         Path report = work.resolve("report");
@@ -216,7 +265,7 @@ public final class MutationRunner {
                 "--targetClasses",
                 String.join(",", classes),
                 "--targetTests",
-                "*Test",
+                String.join(",", targetTests),
                 "--excludedTestClasses",
                 "*E2ETest,*IT",
                 "--sourceDirs",
