@@ -2,7 +2,11 @@
 
 All notable changes to gta. Versions follow SemVer; the version lives in the root `pom.xml`.
 
-## [Unreleased] — 0.1.0 (P0)
+## [Unreleased]
+
+## [0.1.0] — 2026-11-05 (P0 preview: REST APIs only)
+
+The first release. Other capabilities are explain-only until their phase (see the capability registry). Findings from the P0a platform validation go into 0.1.1.
 
 ### Fixed (code review, round 3; see docs/reviews/round-3-plan.md §6.3)
 - Git failures (dubious ownership, a stale `index.lock`, an unknown base) fail closed instead of reading as "nothing changed"; git always runs with `LC_ALL=C`.
