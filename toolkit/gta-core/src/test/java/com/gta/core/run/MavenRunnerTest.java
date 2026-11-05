@@ -42,8 +42,7 @@ class MavenRunnerTest {
         config.build.maven = mvn.toString();
     }
 
-    private static final String REPORT =
-            """
+    private static final String REPORT = """
             mkdir -p target/surefire-reports
             cat > target/surefire-reports/TEST-com.acme.OrderControllerIT.xml <<'XML'
             <testsuite name="com.acme.OrderControllerIT">
@@ -95,8 +94,7 @@ class MavenRunnerTest {
 
     @Test
     void shouldReportACompileErrorWithItsLocation() throws Exception {
-        script(
-                """
+        script("""
                 echo "[ERROR] COMPILATION ERROR :"
                 echo "[ERROR] /work/src/test/java/com/acme/OrderControllerIT.java:[12,5] cannot find symbol"
                 exit 1

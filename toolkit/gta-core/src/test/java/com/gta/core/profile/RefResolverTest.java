@@ -25,9 +25,7 @@ class RefResolverTest {
         Path res = root.resolve("src/main/resources");
         Files.createDirectories(res);
         Files.writeString(res.resolve("application.properties"), "order.discount.rate=10\n");
-        Files.writeString(
-                res.resolve("application.yml"),
-                """
+        Files.writeString(res.resolve("application.yml"), """
                 order:
                   discount:
                     threshold: 100

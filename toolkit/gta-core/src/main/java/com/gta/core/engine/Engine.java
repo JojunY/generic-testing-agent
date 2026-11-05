@@ -216,15 +216,15 @@ public final class Engine {
                         "Run ./gtaw next; answers are only accepted while an 'answer' node is open");
             }
             WorkState.Pending p = st.pending;
-            Map<String, Object> out =
-                    switch (p.type) {
-                        case "answer" -> ctx.specs.applyAnswers(st, p, AnswerParser.parse(text), text);
-                        case "approve" -> approvalOrChangeRequest(st, p, text);
-                        case "defect", "escalation", "naming-conflict" -> ctx.triage.applyDecision(
-                                st, p, AnswerParser.parse(text), text);
-                        default -> throw new GtaException(
-                                ErrorCode.INTERNAL_ERROR, "Unknown pending type " + p.type, "Run ./gtaw abort");
-                    };
+            Map<String, Object> out = switch (p.type) {
+                case "answer" -> ctx.specs.applyAnswers(st, p, AnswerParser.parse(text), text);
+                case "approve" -> approvalOrChangeRequest(st, p, text);
+                case "defect", "escalation", "naming-conflict" ->
+                    ctx.triage.applyDecision(st, p, AnswerParser.parse(text), text);
+                default ->
+                    throw new GtaException(
+                            ErrorCode.INTERNAL_ERROR, "Unknown pending type " + p.type, "Run ./gtaw abort");
+            };
             store.save(st);
             return out;
         }

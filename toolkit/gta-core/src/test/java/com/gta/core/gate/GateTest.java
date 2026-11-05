@@ -30,8 +30,7 @@ import org.junit.jupiter.api.io.TempDir;
 class GateTest {
     static final String ITEM = "order.create/s01#component-01";
     static final String TEST_CLASS = "com.acme.OrderCreateIT";
-    static final String TEST_V1 =
-            """
+    static final String TEST_V1 = """
             package com.acme;
             class OrderCreateIT {
                 @Test
@@ -174,8 +173,9 @@ class GateTest {
 
     @Test
     void shouldRefuseABaseThatDoesNotExist() {
-        GtaException e = assertThrows(GtaException.class, () -> new Gate(paths, new GtaConfig())
-                .evaluate("origin/no-such-branch", List.of(), List.of()));
+        GtaException e = assertThrows(
+                GtaException.class,
+                () -> new Gate(paths, new GtaConfig()).evaluate("origin/no-such-branch", List.of(), List.of()));
 
         assertEquals(ErrorCode.ENV_GIT_FAILED, e.code(), "a missing base must not pass the gate");
     }

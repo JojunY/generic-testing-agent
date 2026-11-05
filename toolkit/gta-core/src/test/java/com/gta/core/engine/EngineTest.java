@@ -345,9 +345,7 @@ class EngineTest {
                 paths.spec("order.create"),
                 SpecTestData.CREATE_ORDER.replace("status=draft", "status=approved rev=R2"));
         Files.createDirectories(paths.testSource("com.acme.OrderCreateIT").getParent());
-        Files.writeString(
-                paths.testSource("com.acme.OrderCreateIT"),
-                """
+        Files.writeString(paths.testSource("com.acme.OrderCreateIT"), """
                 class OrderCreateIT {
                     @Test
                     @Tag("scenario:order.create/s01")

@@ -38,14 +38,12 @@ public final class GtaResultsListener implements TestExecutionListener {
             return;
         }
         String message = result.getThrowable().map(Throwable::getMessage).orElse(null);
-        String outcome =
-                switch (result.getStatus()) {
-                    case SUCCESSFUL -> "passed";
-                    case ABORTED -> message != null && message.startsWith(KnownDefectExtension.ABORT_PREFIX)
-                            ? "known-defect"
-                            : "skipped";
-                    case FAILED -> "failed";
-                };
+        String outcome = switch (result.getStatus()) {
+            case SUCCESSFUL -> "passed";
+            case ABORTED ->
+                message != null && message.startsWith(KnownDefectExtension.ABORT_PREFIX) ? "known-defect" : "skipped";
+            case FAILED -> "failed";
+        };
         write(id, outcome, message);
     }
 

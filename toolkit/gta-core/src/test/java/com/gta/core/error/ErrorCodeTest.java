@@ -20,13 +20,12 @@ class ErrorCodeTest {
     void shouldNameEveryCodeAfterItsCategoryPrefix() {
         for (ErrorCode c : ErrorCode.values()) {
             String prefix = c.name().substring(0, c.name().indexOf('_'));
-            String expected =
-                    switch (c.category) {
-                        case TEST_FAILURE -> "TEST";
-                        case GATE_FAILED, GATE_CONCERN -> "GATE";
-                        case ENVIRONMENT -> "ENV";
-                        default -> c.category.name();
-                    };
+            String expected = switch (c.category) {
+                case TEST_FAILURE -> "TEST";
+                case GATE_FAILED, GATE_CONCERN -> "GATE";
+                case ENVIRONMENT -> "ENV";
+                default -> c.category.name();
+            };
             assertEquals(expected, prefix, c.name());
         }
     }

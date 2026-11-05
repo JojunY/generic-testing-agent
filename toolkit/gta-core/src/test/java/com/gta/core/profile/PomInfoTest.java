@@ -17,9 +17,7 @@ class PomInfoTest {
 
     @Test
     void shouldReadTheBootParentDependenciesAndPlugins() throws Exception {
-        Files.writeString(
-                root.resolve("pom.xml"),
-                """
+        Files.writeString(root.resolve("pom.xml"), """
                 <project>
                   <parent><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-parent</artifactId><version>3.5.4</version></parent>
                   <artifactId>billing</artifactId>

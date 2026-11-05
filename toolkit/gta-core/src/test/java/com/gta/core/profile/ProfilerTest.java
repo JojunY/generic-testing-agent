@@ -26,9 +26,7 @@ class ProfilerTest {
 
     @BeforeEach
     void service() throws Exception {
-        Files.writeString(
-                root.resolve("pom.xml"),
-                """
+        Files.writeString(root.resolve("pom.xml"), """
                 <project>
                   <parent><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-parent</artifactId><version>4.1.0</version></parent>
                   <artifactId>order-service</artifactId>
@@ -38,16 +36,12 @@ class ProfilerTest {
                   </dependencies>
                 </project>
                 """);
-        source(
-                "com/acme/order/OrderApplication.java",
-                """
+        source("com/acme/order/OrderApplication.java", """
                 package com.acme.order;
                 @SpringBootApplication
                 public class OrderApplication {}
                 """);
-        source(
-                "com/acme/order/api/OrderController.java",
-                """
+        source("com/acme/order/api/OrderController.java", """
                 package com.acme.order.api;
                 @RestController
                 @RequestMapping("/api/orders")
@@ -59,18 +53,14 @@ class ProfilerTest {
                     public void helper() {}
                 }
                 """);
-        source(
-                "com/acme/order/job/CleanupJob.java",
-                """
+        source("com/acme/order/job/CleanupJob.java", """
                 package com.acme.order.job;
                 public class CleanupJob {
                     @Scheduled(cron = "0 0 * * * *")
                     public void run() {}
                 }
                 """);
-        source(
-                "com/acme/order/messaging/PaymentListener.java",
-                """
+        source("com/acme/order/messaging/PaymentListener.java", """
                 package com.acme.order.messaging;
                 public class PaymentListener {
                     @KafkaListener(topics = "payments")
@@ -134,9 +124,7 @@ class ProfilerTest {
 
     @Test
     void shouldGiveFlowsOfTheSameNameDistinctIds() throws Exception {
-        source(
-                "com/acme/order/api/v2/OrderController.java",
-                """
+        source("com/acme/order/api/v2/OrderController.java", """
                 package com.acme.order.api.v2;
                 @RestController
                 public class OrderController {
