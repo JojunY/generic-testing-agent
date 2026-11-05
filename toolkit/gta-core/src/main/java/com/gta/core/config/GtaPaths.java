@@ -106,6 +106,11 @@ public record GtaPaths(Path root, String module) {
         return gta().resolve("config.json");
     }
 
+    /** Lessons from earlier runs (plan §12, the learning loop); tracked. */
+    public Path lessons() {
+        return gta().resolve("lessons.md");
+    }
+
     public Path waivers() {
         return gta().resolve("waivers.json");
     }

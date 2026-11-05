@@ -1,0 +1,27 @@
+package com.example.order.loyalty;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.math.BigDecimal;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+
+@Tag("unit")
+@Tag("gta")
+class LoyaltyListenerTest {
+    LoyaltyService loyalty = new LoyaltyService();
+    LoyaltyListener listener = new LoyaltyListener(loyalty);
+
+    @Test
+    @Tag("flow:loyalty.on-order-created")
+    @Tag("scenario:loyalty.on-order-created/s03")
+    @Tag("characterization")
+    @DisplayName("[loyalty.on-order-created/s03] the listener alone awards the points")
+    void shouldAwardThePointsThroughTheListener() {
+        listener.onOrderCreated(new OrderCreated("c-9", new BigDecimal("30.00")));
+
+        int expected = 3; // a weak first draft: asserts a value it computed itself
+        assertThat(expected).isEqualTo(3);
+    }
+}

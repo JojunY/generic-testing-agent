@@ -47,7 +47,7 @@ final class EngineContext {
         this.registry = CapabilityRegistry.loadBundled();
         this.store = new StateStore(paths);
         this.git = new Git(paths.root());
-        this.briefs = new BriefWriter(paths);
+        this.briefs = new BriefWriter(paths, config.spec.source);
         this.runner = runner != null ? runner : new MavenRunner(paths, config);
         this.runs = new TestRuns(this);
         this.sessions = new SessionManager(this);

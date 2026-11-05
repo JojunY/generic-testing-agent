@@ -216,6 +216,14 @@ final class ItemWorkflow {
         return node("review", extra);
     }
 
+    private String buildLog(RunResult run) {
+        try {
+            return run.logFile == null ? "" : Files.readString(paths.root().resolve(run.logFile));
+        } catch (java.io.IOException e) {
+            return "";
+        }
+    }
+
     public Map<String, Object> check(String itemId, String token) {
         try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
             WorkState st = store.load();
@@ -304,6 +312,18 @@ final class ItemWorkflow {
         String runId = Ids.newRunId(git.head());
         RunResult run = ctx.runs.runItem(runId, item, false, false);
         s.evidenceRunId = runId;
+        if (!run.timedOut && (run.compileError || run.cases.isEmpty())) {
+            // rules before the LLM: fix deterministic slips in the item's own test, then run again once
+            List<String> repaired = RuleRepair.apply(
+                    paths.testSource(item.testClass), item, run.compileError ? buildLog(run) : "", run.cases.isEmpty());
+            if (!repaired.isEmpty()) {
+                repaired.forEach(r -> com.gta.core.state.Lessons.record(
+                        paths, "rule-repair", item.capability + " " + item.layer + " test", r));
+                runId = Ids.newRunId(git.head());
+                run = ctx.runs.runItem(runId, item, false, false);
+                s.evidenceRunId = runId;
+            }
+        }
         if (run.timedOut) {
             // counted like any other failure, so a hanging test reaches a human instead of being resubmitted forever
             return fail(
@@ -451,6 +471,8 @@ final class ItemWorkflow {
                 if ("accept".equals(verdict)) {
                     out = markPassed(st, item, s, s.evidenceRunId);
                 } else if ("reject".equals(verdict)) {
+                    com.gta.core.state.Lessons.record(
+                            paths, "reviewer", item.capability + " " + item.layer + " test", reason);
                     out = fail(st, item, s, ErrorCode.TEST_CODE_ERROR, "Reviewer rejected the oracle: " + reason);
                 } else {
                     throw new GtaException(

@@ -326,11 +326,11 @@ The diagrams of this document and the README are not Mermaid: they are rendered 
 
 Users may reply in Chinese: gtaw accepts `批准` for approve and `其余默认`/`其他默认` for rest default.
 
-### 3.6 Coexisting with OpenSpec / Spec Kit (P2)
+### 3.6 Coexisting with OpenSpec / Spec Kit (P2; implemented except the delta-format summary)
 
 - A configuration key `spec.source` (added in P2; v1 rejects it as unknown) can be `gta`, `openspec` or `speckit`.
 - With the latter two, the specs already in the repository are read as a `documented` source and GTA does not rewrite them.
-- The behaviour change summary of the PR report uses OpenSpec's delta format.
+- The behaviour change summary of the PR report uses OpenSpec's delta format (not yet: the PR report has no behaviour change summary in any format; it arrives with it).
 
 ---
 
@@ -452,11 +452,17 @@ capabilities:
   - id: rest-api
     since: P0
     detect:
-      buildDeps: [spring-boot-starter-web, spring-boot-starter-webmvc, spring-boot-starter-webflux]
+      buildDeps: [spring-boot-starter-web, spring-boot-starter-webmvc]
       annotations: ["@RestController", "@RequestMapping"]
     layers: [unit, slice, component, contract, system]
     diagrams: [sequence]
     skills: [gta-testing-spring-apis, gta-stubbing-with-wiremock, gta-testing-api-contracts]
+  - id: webflux
+    since: P3
+    detect: { buildDeps: [spring-boot-starter-webflux] }
+    layers: [unit, slice, component, contract]
+    diagrams: [sequence]
+    skills: [gta-testing-reactive-apis, gta-stubbing-with-wiremock, gta-testing-api-contracts]
   - id: grpc-api
     since: P3
     detect: { buildDeps: [grpc-stub, spring-grpc-spring-boot-starter], files: ["**/*.proto"] }
@@ -1157,9 +1163,10 @@ The state of each item in `.gta/work/state.json`:
 ```json
 {
   "$schema": "./schemas/config.v1.schema.json", "schemaVersion": "1.0",
+  "phase": null,
   "build": { "tool": "maven", "basePackage": "auto", "maven": "auto", "javaHomeEnv": null, "module": "" },
   "dispatch": "subagent",
-  "spec": { "maxQuestionsPerRound": 5, "maxClarifyRounds": 2, "maxSubmitAttempts": 3 },
+  "spec": { "maxQuestionsPerRound": 5, "maxClarifyRounds": 2, "maxSubmitAttempts": 3, "source": "gta" },
   "environments": { "oracle": { "testUrl": null, "userEnv": "GTA_ORACLE_USER", "passwordEnv": "GTA_ORACLE_PASSWORD" } },
   "distribution": { "toolsUrl": "https://nexus.example.com/repository/gta-tools/" },
   "budgets": { "maxChecksPerItem": 8, "maxAttemptsPerItem": 2, "maxConsecutiveFailures": 3,
@@ -1461,7 +1468,7 @@ When an agent writes to these paths, the change check of §5.8 restores them. Ap
 | **P0a platform validation (1 week)** | choose the models per tier with evals; verify on Windows that the Pub/Sub emulator, EmbeddedKafka, Artemis and the shared Oracle test database work; verify in both IDEs and OpenCode: agent visibility, subagent dispatch and inline mode, the prompt file's `agent:` field, terminal auto-approve (including Windows), that privileged commands really ask for confirmation, request limits, long-running terminal commands (duration of check/submit) | a measured version of §11.4 |
 | **P0 core** (implemented) | gtaw: `init`/`doctor`/`next`/`check`/`submit`/`answer`/`status`/`abort`/`run`/`verify` (stability + expected-value check)/`gate`/`relock`/`report`; `gta-junit`; schemas; generator and lint; 4 agents; skills: mapping-flows, writing-behavior-specs, designing-test-oracles, writing-tests, testing-spring-apis, stubbing-with-wiremock, testing-api-contracts, using-embedded-dependencies, reviewing-test-quality; `/gta explain` and flow mode; 1 REST fixture, 20 eval tasks | on 1 real REST service: explain → answers → approval → at least 5 verified tests; seeded bugs are judged defects instead of being repaired to green; adversarial metrics 3 and 4 met; recovery after fault injection |
 | **P1 adoption: multi-module, events, schedules, PR mode** | multi-module Maven services (one module at a time, Maven with `-pl <module> -am`; implemented); `messaging` (Kafka, Pub/Sub, JMS/MQ, RabbitMQ, SQS; implemented); `scheduler` (`@Scheduled`, ShedLock, Quartz; implemented); PR mode: impact (methods, config, bean graph; implemented), the alm-github CI template `gta-gate.yml` (`gtaw init --ci`; implemented), PR comments, analyzing-change-impact; OpenCode end to end | one pilot service per new capability, and one multi-module service, run end to end; behaviour change summaries on real PRs, the gate live (mutation advisory) |
-| **P2 data, security and quality** | `db-migration` (Flyway, Liquibase; implemented); `security` (Spring Security, OAuth2 resource servers, JWT: authenticated and forbidden paths, method security; implemented); `caching` (Spring Cache, Redis, Caffeine: hits, eviction, stale reads; implemented); `spring-batch` (implemented); `mutate` (implemented) and the can-fail check (shared PIT integration); learning loop; rules-before-LLM repair; `spec.source=openspec\|speckit` | one pilot service per new capability; mutation switched to enforced after calibration on pilot repositories |
+| **P2 data, security and quality** | `db-migration` (Flyway, Liquibase; implemented); `security` (Spring Security, OAuth2 resource servers, JWT: authenticated and forbidden paths, method security; implemented); `caching` (Spring Cache, Redis, Caffeine: hits, eviction, stale reads; implemented); `spring-batch` (implemented); `mutate` and the can-fail check (shared PIT integration; both implemented); learning loop (implemented); rules-before-LLM repair; `spec.source=openspec\|speckit` (implemented) | one pilot service per new capability; mutation switched to enforced after calibration on pilot repositories |
 | **P3 reactive, Gradle, other protocols, catching** | `webflux` (reactive endpoints and clients with `WebTestClient` and `StepVerifier`); Gradle builds (a second `TestRunner` and build-file reader next to Maven); `grpc-api` and `graphql-api`; `workflow` (Temporal, Camunda, Spring Statemachine); `beam-pipeline`; incident mode; catching tests and the assessor | one pilot service per kind |
 | **P4 deployed systems and streaming endpoints** | the `gta-testing-deployed-systems` skill, `gtaw env`, Karate, cloud isolation; BigQuery SQL against temporary datasets; `websocket` (WebSocket, STOMP, SSE) | nightly regression |
 | **P5** | optional hooks (early interception, a `verified` answer channel), MCP wrapping, plugin distribution, SARIF, record-replay, performance tests, native-image, parallel authoring, adapters for other languages | on demand |
@@ -1480,6 +1487,10 @@ Java level are inherited from the root pom when the module does not set them, an
 several service modules changes `build.module` between sessions. An aggregator pom without `build.module` is refused
 with a hint instead of being profiled as a service with no flows. The scripted e2e runs both layouts.
 
+A repository can opt into a later phase early with `"phase": "P3"` in `.gta/config.json` (never an earlier one): its
+capabilities then write tests before they are on for everyone. Pilot services, which each phase's exit criteria need,
+use it, and so do the evals that must pass before a phase is switched on.
+
 Capabilities marked *new* have no registry entry or skill yet: each arrives with its skill, its
 registry entry, an eval fixture and one pilot service.
 
@@ -1495,12 +1506,12 @@ registry entry, an eval fixture and one pilot service.
 | 8 | Security (Spring Security, OAuth2, JWT) | P2 | tests written; the skill attaches to the flows of a secured service |
 | 9 | Caching (Spring Cache, Redis, Caffeine) | P2 | tests written; the skill attaches to the flows of a service with caches |
 | 10 | Spring Batch | P2 | tests written; each `@Bean Job` is a flow |
-| 11 | Reactive WebFlux | P3 | *new*; detected as REST today |
+| 11 | Reactive WebFlux | P3 | tests written with the `phase: "P3"` preview; a handler returning `Mono`/`Flux` is a `webflux` flow |
 | 12 | Gradle builds | P3 | *new*; Maven only today |
 | 13 | GCP data (BigQuery, GCS) | P0 / P4 | a dependency with fakes; SQL in the system layer from P4 |
 | 14 | gRPC | P3 | detected, spec only |
 | 15 | Workflows and state machines (Temporal, Camunda, Spring Statemachine) | P3 | detected, spec only |
-| 16 | GraphQL | P3 | detected, spec only |
+| 16 | GraphQL | P3 | tests written with the `phase: "P3"` preview; `@QueryMapping`/`@MutationMapping` handlers are flows |
 | 17 | Beam / Dataflow pipelines | P3 | detected, spec only |
 | 18 | System tests on deployed environments (Karate, Kubernetes) | P4 | skill only |
 | 19 | WebSocket, STOMP, SSE | P4 | *new* |

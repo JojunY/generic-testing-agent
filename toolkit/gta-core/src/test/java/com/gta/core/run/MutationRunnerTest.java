@@ -195,4 +195,33 @@ class MutationRunnerTest {
 
         assertTrue(String.valueOf(out.get("result")).startsWith("no production class changed"), out.toString());
     }
+
+    @Test
+    void shouldJudgeWhetherATestCanFailFromTheMutantsOfTheCitedMethods() {
+        MutationRunner.Mutant killed =
+                new MutationRunner.Mutant("L.java", "a.L", "on", 5, "x.VoidMethodCallMutator", "KILLED");
+        MutationRunner.Mutant survived =
+                new MutationRunner.Mutant("L.java", "a.L", "on", 5, "x.VoidMethodCallMutator", "SURVIVED");
+
+        assertEquals(
+                MutationRunner.CanFail.KILLED,
+                MutationRunner.verdict(List.of(killed, survived), "a.LTest").verdict());
+        MutationRunner.CanFail weak = MutationRunner.verdict(List.of(survived), "a.LTest");
+        assertEquals(MutationRunner.CanFail.SURVIVED, weak.verdict());
+        assertTrue(
+                weak.detail().contains("L#on") && weak.detail().contains("passes whatever the code does"),
+                weak.detail());
+        assertEquals(
+                MutationRunner.CanFail.NOT_APPLICABLE,
+                MutationRunner.verdict(List.of(), "a.LTest").verdict());
+    }
+
+    @Test
+    void shouldNotJudgeAScenarioThatCitesNoMethod() {
+        assertEquals(
+                MutationRunner.CanFail.NOT_APPLICABLE,
+                new MutationRunner(new com.gta.core.config.GtaPaths(dir), new com.gta.core.config.GtaConfig())
+                        .canFail("i", Map.of(), "a.LTest")
+                        .verdict());
+    }
 }

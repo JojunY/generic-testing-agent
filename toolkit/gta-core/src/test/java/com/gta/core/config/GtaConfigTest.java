@@ -47,4 +47,13 @@ class GtaConfigTest {
         assertEquals(2, c.qualityGates.stabilityRepeat);
         assertEquals(5, c.spec.maxQuestionsPerRound);
     }
+
+    @Test
+    void shouldReadTheSpecSourceAndRefuseAnUnknownOne() throws Exception {
+        assertEquals("gta", load("{}").spec.source);
+        assertEquals("openspec", load("{ \"spec\": { \"source\": \"openspec\" } }").spec.source);
+
+        GtaException e = assertThrows(GtaException.class, () -> load("{ \"spec\": { \"source\": \"jira\" } }"));
+        assertEquals(ErrorCode.CONFIG_INVALID, e.code());
+    }
 }

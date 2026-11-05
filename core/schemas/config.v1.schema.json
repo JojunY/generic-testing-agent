@@ -42,6 +42,13 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "source": {
+          "enum": [
+            "gta",
+            "openspec",
+            "speckit"
+          ]
+        },
         "maxQuestionsPerRound": {
           "type": "integer",
           "minimum": 1,
@@ -166,6 +173,11 @@
           }
         }
       }
+    },
+    "phase": {
+      "type": "string",
+      "pattern": "^P[0-9]$",
+      "description": "Opt into a later roadmap phase early, e.g. P3"
     }
   }
 }

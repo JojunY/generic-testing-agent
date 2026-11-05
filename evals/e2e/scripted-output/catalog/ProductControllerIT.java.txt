@@ -1,0 +1,41 @@
+package com.example.catalog.api;
+
+import com.gta.junit.KnownDefect;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.test.web.reactive.server.WebTestClient;
+
+@Tag("component")
+@Tag("gta")
+@SpringBootTest
+@AutoConfigureWebTestClient
+class ProductControllerIT {
+
+    @Autowired
+    WebTestClient web;
+
+    @Test
+    @Tag("flow:product.reserve")
+    @Tag("scenario:product.reserve/s01")
+    @Tag("characterization")
+    @DisplayName("[product.reserve/s01] a reservation within the stock lowers it")
+    void shouldLowerTheStockWhenReservingWithinIt() {
+        web.post().uri("/api/products/p-1/reserve?quantity=2")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody().jsonPath("$.stock").isEqualTo(3);
+    }
+
+    @Test
+    @Tag("flow:product.reserve")
+    @Tag("scenario:product.reserve/s02")
+    @Tag("hardening")
+    @DisplayName("[product.reserve/s02] a reservation larger than the stock is refused")
+    void shouldRefuseAReservationLargerThanTheStock() {
+        web.post().uri("/api/products/p-2/reserve?quantity=3").exchange().expectStatus().isEqualTo(409);
+    }
+}

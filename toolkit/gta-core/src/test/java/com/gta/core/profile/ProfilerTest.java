@@ -260,4 +260,42 @@ class ProfilerTest {
         assertTrue(flows.containsKey("db.customers"));
         assertTrue(flows.keySet().stream().noneMatch(f -> f.contains("notes")));
     }
+
+    @Test
+    void shouldTellReactiveEndpointsAndGraphqlHandlersApart() throws Exception {
+        source("com/acme/order/api/StockController.java", """
+                package com.acme.order.api;
+                @RestController
+                @RequestMapping("/api/stock")
+                public class StockController {
+                    @PostMapping("/{id}/reserve")
+                    public Mono<Stock> reserve() { return null; }
+                    @GetMapping
+                    public Flux<Stock> all() { return null; }
+                }
+                """);
+        source("com/acme/order/graphql/OrderGraphqlController.java", """
+                package com.acme.order.graphql;
+                @Controller
+                public class OrderGraphqlController {
+                    @QueryMapping
+                    public Order order(String id) { return null; }
+                    @MutationMapping
+                    public Order cancel(String id) { return null; }
+                }
+                """);
+
+        Map<String, ServiceProfile.EntryPoint> flows =
+                byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"));
+
+        assertEquals("webflux", flows.get("stock.reserve").capability, "a Mono handler is reactive");
+        assertEquals("webflux", flows.get("stock.all").capability);
+        assertEquals("rest-api", flows.get("order.create").capability, "a plain handler stays rest-api");
+        assertEquals(
+                "graphql-api",
+                flows.get("order-graphql.order").capability,
+                flows.keySet().toString());
+        assertEquals("GraphQL mutation cancel", flows.get("order-graphql.cancel").trigger);
+        assertEquals(6, flows.get("order-graphql.cancel").risk, "a mutation is riskier than a query");
+    }
 }

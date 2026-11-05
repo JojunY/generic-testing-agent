@@ -1,0 +1,17 @@
+package com.example.catalog;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@Tag("component")
+@Tag("gta")
+@SpringBootTest
+class CatalogApplicationIT {
+
+    @Test
+    @Tag("scenario:product")
+    @DisplayName("[product] the application context starts")
+    void shouldStartContextWhenApplicationBoots() {}
+}

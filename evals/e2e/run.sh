@@ -18,15 +18,8 @@ export GTA_CLI_JAR="$REPO/toolkit/gta-cli/target/gta-cli.jar"
 export GIT_AUTHOR_NAME=gta-e2e GIT_AUTHOR_EMAIL=gta-e2e@example.com GIT_COMMITTER_NAME=gta-e2e GIT_COMMITTER_EMAIL=gta-e2e@example.com
 [ -f "$GTA_CLI_JAR" ] || { echo "build the toolkit first: mvn -B install -DskipTests"; exit 2; }
 
-step() { printf '\n== %s\n' "$*"; }
-fail() { echo "E2E FAILED: $*" >&2; exit 1; }
-gtaw() { ./gtaw "$@" 2>/dev/null; }
-# jget <json> <python expression on d>; the expressions are literals of this script, never input
-jget() { python3 -c 'import json,sys; d=json.loads(sys.argv[1]); print(eval(sys.argv[2]))' "$1" "$2"; }
-expect() { # expect <actual> <expected> <what>
-  [ "$1" = "$2" ] || fail "$3: expected '$2', got '$1'"
-  echo "ok   $3 = $2"
-}
+# shellcheck source=lib.sh
+source "$REPO/evals/e2e/lib.sh"
 MODULE="${GTA_E2E_MODULE:-}"
 P="${MODULE:+$MODULE/}"   # the module's folder prefix, empty for the single-module run
 TEST=${P}src/test/java/com/example/order/api/OrderControllerIT.java
@@ -196,6 +189,9 @@ LEDGER=.gta/specs/order/create-order.cases.md
 expect "$(grep -c '^| order.create-order/s0' "$LEDGER")" 4 "ledger rows, one per scenario"
 grep -q '^| order.create-order/s01 .*OrderControllerIT#.* | Pass .* | Active |$' "$LEDGER" || fail "s01 ledger row: $(grep s01 "$LEDGER")"
 grep -q 'order.create-order' .gta/specs/INDEX.md || fail "INDEX.md lacks the flow"
+grep -q '^- \[reviewer\] .*also assert that nothing was stored' .gta/lessons.md || fail "the reviewer's reject is not a lesson"
+git ls-files --error-unmatch .gta/lessons.md >/dev/null 2>&1 || fail ".gta/lessons.md is not committed with the report"
+echo "ok   the reviewer's reject is a committed lesson"
 echo "ok   report lists the known defect"
 
 step "rebuild: lost working state, adopted tests are verified and repaired"
@@ -252,69 +248,6 @@ echo "ok   mutate names the surviving boundary mutant ($(jget "$OUT" 'd["strengt
 
 # P1 capabilities (plan §15): a scheduled job and an application-event listener, each with a seeded defect the
 # business-rules document contradicts (D4, D5). Runs on the fixed branch, as a new session.
-cap_item() { # cap_item <scenarioId> -> the author node of that scenario (the domain's seed is adopted on the way)
-  local out node
-  for _ in $(seq 1 10); do
-    out=$(gtaw next)
-    node=$(jget "$out" 'd.get("node", "result")')
-    if [ "$node" = author ] && [ "$(jget "$out" 'd.get("itemId")')" = "$1#component-01" ]; then echo "$out"; return; fi
-    case "$node" in done|result) ;; *) fail "unexpected node before $1: $out" ;; esac
-  done
-  fail "no author node for $1"
-}
-cap_flow() { # cap_flow <flowId> <spec> <test template> <test path> <triage reason> [skill the briefs must load]
-  local flow=$1 spec=$2 tmpl=$3 path=$4 reason=$5 skill=${6:-} out token fp
-  local domain=${1%%.*} name=${1#*.}
-  step "$flow: spec, approval, a passing scenario and a seeded defect"
-  out=$(gtaw next --mode flow --target "$flow")
-  expect "$(jget "$out" 'd["node"]')" analyze "$flow first node"
-  token=$(jget "$out" 'd["token"]')
-  mkdir -p ".gta/specs/$domain" && sed "s|__P__|$P|" "$AGENT/$spec" > ".gta/specs/$domain/$name.spec.md"
-  out=$(gtaw submit --spec "$flow" --token "$token")
-  expect "$(jget "$out" 'd["rev"]')" R1 "$flow spec revision"
-  out=$(gtaw next)
-  expect "$(jget "$out" 'd["type"]')" approve "$flow approval prompt"
-  gtaw answer "approve $flow@R1" >/dev/null
-
-  out=$(cap_item "$flow/s01")
-  if [ -n "$skill" ]; then
-    grep -q "$skill/SKILL.md" "$(jget "$out" 'd["brief"]')" || fail "$flow brief does not load $skill"
-    echo "ok   $flow brief loads $skill"
-  fi
-  mkdir -p "$(dirname "$path")" && cp "$AGENT/$tmpl" "$path"
-  gtaw submit --item "$flow/s01#component-01" --token "$(jget "$out" 'd["token"]')" >/dev/null
-  out=$(gtaw next)
-  expect "$(jget "$out" 'd["kind"]')" oracle-review "$flow/s01 review"
-  out=$(gtaw submit --review "$flow/s01#component-01" --token "$(jget "$out" 'd["token"]')" --verdict accept --reason "asserts the THEN values")
-  jget "$out" 'd["result"]' | grep -q '^passed' || fail "$flow/s01: $out"
-  echo "ok   $flow/s01 passed and committed"
-
-  out=$(cap_item "$flow/s02")
-  out=$(gtaw submit --item "$flow/s02#component-01" --token "$(jget "$out" 'd["token"]')")
-  expect "$(jget "$out" 'd["code"]')" TEST_ASSERTION_FAILED "$flow/s02 exposes the seeded defect"
-  out=$(gtaw next)
-  expect "$(jget "$out" 'd["kind"]')" triage "$flow/s02 triage"
-  gtaw submit --review "$flow/s02#component-01" --token "$(jget "$out" 'd["token"]')" --verdict product-defect --reason "$reason" >/dev/null
-  out=$(gtaw next)
-  expect "$(jget "$out" 'd["type"]')" defect "$flow defect decision"
-  gtaw answer A >/dev/null
-  out=$(cap_item "$flow/s02")   # the session may end on its item budget first
-  token=$(jget "$out" 'd["token"]')
-  fp=$(grep -o 'failure = "[0-9a-f]*"' "$(jget "$out" 'd["brief"]')" | head -1 | grep -o '[0-9a-f]\{12\}')
-  python3 - "$path" "$flow/s02" "$fp" <<'PY'
-import sys
-path, scenario, fp = sys.argv[1:]
-s = open(path).read()
-marker = '    @DisplayName("[' + scenario + ']'
-assert marker in s, marker
-s = s.replace(marker, '    @KnownDefect(id = "' + scenario + '", failure = "' + fp + '")\n' + marker, 1)
-open(path, "w").write(s)
-PY
-  out=$(gtaw submit --item "$flow/s02#component-01" --token "$token")
-  jget "$out" 'd["result"]' | grep -q '^defect-found' || fail "$flow/s02 pin: $out"
-  echo "ok   $flow/s02 pinned with @KnownDefect ($fp)"
-}
-
 cap_flow shipping.ship-paid-orders ship-paid-orders.spec.md ShippingJobIT.java.txt \
   "${P}src/test/java/com/example/order/shipping/ShippingJobIT.java" "ShippingJob ships CREATED orders too (D4)"
 cap_flow loyalty.on-order-created on-order-created.spec.md LoyaltyListenerIT.java.txt \
@@ -322,10 +255,50 @@ cap_flow loyalty.on-order-created on-order-created.spec.md LoyaltyListenerIT.jav
 
 # P2 capabilities: two cross-cutting ones that add their skill to a REST flow (security, caching), a Spring Batch job
 # and a Flyway migration, each with a seeded defect (D6-D9) the business rules contradict.
+step "can-fail: a unit test that passes whatever the code does goes back to the author"
+CF="loyalty.on-order-created/s03#unit-01"
+UNIT="${P}src/test/java/com/example/order/loyalty/LoyaltyListenerTest.java"
+OUT=$(cap_item loyalty.on-order-created/s03 unit)
+cp "$AGENT/LoyaltyListenerTest.java.txt" "$UNIT"
+gtaw submit --item "$CF" --token "$(jget "$OUT" 'd["token"]')" >/dev/null
+OUT=$(gtaw next)
+expect "$(jget "$OUT" 'd["kind"]')" oracle-review "s03 review"
+OUT=$(gtaw submit --review "$CF" --token "$(jget "$OUT" 'd["token"]')" --verdict accept --reason "asserts 3")
+jget "$OUT" 'd["result"]' | grep -q '^passed' || fail "s03: $OUT"
+OUT=$(gtaw verify --item "$CF")
+jget "$OUT" 'd["canFail"]["'"$CF"'"]' | grep -q '^survived' || fail "can-fail should catch the weak test: $OUT"
+echo "ok   can-fail: no mutant of the listener made the weak test fail"
+OUT=$(cap_item loyalty.on-order-created/s03 unit)
+grep -q "POLICY_TEST_CANNOT_FAIL" "$(jget "$OUT" 'd["brief"]')" || fail "the repair brief should say why"
+python3 - "$UNIT" <<'PY'
+import sys
+path = sys.argv[1]
+s = open(path).read()
+anchor = "        assertThat(expected).isEqualTo(3);\n"
+assert anchor in s
+open(path, "w").write(s.replace(anchor, anchor + '        assertThat(loyalty.points("c-9")).isEqualTo(3);\n', 1))
+PY
+OUT=$(gtaw submit --item "$CF" --token "$(jget "$OUT" 'd["token"]')" || true)
+for _ in 1 2 3; do
+  STATE=$(jget "$(gtaw status)" '[i["status"] for i in d["items"] if i["id"] == "'"$CF"'"][0]')
+  [ "$STATE" = passed ] && break
+  NEXT=$(gtaw next || true)
+  [ "$(jget "$NEXT" 'd.get("kind", "")')" = oracle-review ] || fail "s03 after the repair is $STATE: $OUT / $NEXT"
+  gtaw submit --review "$CF" --token "$(jget "$NEXT" 'd["token"]')" --verdict accept --reason "now asserts the points" >/dev/null
+done
+[ "$STATE" = passed ] || STATE=$(jget "$(gtaw status)" '[i["status"] for i in d["items"] if i["id"] == "'"$CF"'"][0]')
+expect "$STATE" passed "s03 after the repair"
+OUT=$(gtaw verify --item "$CF")
+jget "$OUT" 'd["canFail"]["'"$CF"'"]' | grep -q '^killed' || fail "the repaired test should kill a mutant: $OUT"
+echo "ok   can-fail: the repaired test kills the mutant"
+
 cap_flow admin.purge-cancelled purge-cancelled.spec.md AdminControllerIT.java.txt \
   "${P}src/test/java/com/example/order/admin/AdminControllerIT.java" "the admin API only requires a login (D6)" gta-testing-spring-security
 cap_flow price.update-price update-price.spec.md PriceControllerIT.java.txt \
   "${P}src/test/java/com/example/order/price/PriceControllerIT.java" "PriceService#update does not evict the cache (D7)" gta-testing-caches
+grep -q '^- \[rule-repair\] .*scenario:price.update-price/s01' .gta/lessons.md \
+  || fail "the missing scenario tag of price.update-price/s01 should have been repaired by rule"
+echo "ok   a missing scenario tag was repaired by rule, before the LLM"
 cap_flow archive-job.archive-orders archive-orders.spec.md ArchiveJobConfigIT.java.txt \
   "${P}src/test/java/com/example/order/archive/ArchiveJobConfigIT.java" "the archive step also takes CANCELLED orders (D8)"
 cap_flow db.customer-tier customer-tier.spec.md DbCustomerTierIT.java.txt \

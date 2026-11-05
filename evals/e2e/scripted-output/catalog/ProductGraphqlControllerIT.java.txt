@@ -1,0 +1,53 @@
+package com.example.catalog.graphql;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.gta.junit.KnownDefect;
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.graphql.test.autoconfigure.tester.AutoConfigureHttpGraphQlTester;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.graphql.test.tester.HttpGraphQlTester;
+
+@Tag("component")
+@Tag("gta")
+@SpringBootTest
+@AutoConfigureHttpGraphQlTester
+class ProductGraphqlControllerIT {
+
+    @Autowired
+    HttpGraphQlTester graphql;
+
+    @Test
+    @Tag("flow:product-graphql.products-up-to")
+    @Tag("scenario:product-graphql.products-up-to/s01")
+    @Tag("characterization")
+    @DisplayName("[product-graphql.products-up-to/s01] cheap products are listed")
+    void shouldListTheProductsBelowTheMaximum() {
+        List<String> names = graphql.document("{ productsUpTo(maxPrice: 40.0) { name } }")
+                .execute()
+                .path("productsUpTo[*].name")
+                .entityList(String.class)
+                .get();
+
+        assertThat(names).containsExactly("Kettle");
+    }
+
+    @Test
+    @Tag("flow:product-graphql.products-up-to")
+    @Tag("scenario:product-graphql.products-up-to/s02")
+    @Tag("hardening")
+    @DisplayName("[product-graphql.products-up-to/s02] a product at exactly the maximum is listed")
+    void shouldIncludeAProductAtExactlyTheMaximum() {
+        List<String> names = graphql.document("{ productsUpTo(maxPrice: 45.0) { name } }")
+                .execute()
+                .path("productsUpTo[*].name")
+                .entityList(String.class)
+                .get();
+
+        assertThat(names).containsExactly("Kettle", "Toaster");
+    }
+}

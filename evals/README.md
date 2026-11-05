@@ -16,6 +16,18 @@ A small Spring Boot 4.1 service: a REST API to create, get, cancel and ship orde
 | D8 | `ArchiveJobConfig#archiveShipped` (spring-batch) | cancelled orders are archived too | same |
 | D9 | `V2__customer_tier.sql` (db-migration) | `>` instead of `>=`: 100 points stay BASIC | same, with `ref=file:` |
 
+## Fixture: `fixtures/catalog-service`
+
+A reactive Spring Boot 4.1 catalog: a WebFlux endpoint and a GraphQL query, each with a seeded defect that
+`docs/business-rules.md` contradicts.
+
+| Id | Where | Defect |
+|---|---|---|
+| D10 | `ProductController#reserve` (webflux) | no stock check: a reservation larger than the stock succeeds |
+| D11 | `ProductGraphqlController#productsUpTo` (graphql-api) | `<` instead of `<=`: a product at exactly the maximum is left out |
+
+`e2e/run-catalog.sh` opts the repository into P3 (`"phase": "P3"`) and takes both flows from spec to a pinned defect.
+
 ## Scripted end-to-end run: `e2e/run.sh`
 
 `e2e/scripted-output/` holds what a correct analyst, author and reviewer would produce for `order.create-order`. The script plays those nodes and asserts each decision gtaw makes:

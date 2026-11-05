@@ -49,4 +49,13 @@ class CapabilityRegistryTest {
         assertFalse(registry.skillsFor("rest-api", Set.of("rest-api")).contains("gta-testing-spring-security"));
         assertTrue(registry.skillsFor("rest-api", Set.of("caching")).contains("gta-testing-caches"));
     }
+
+    @Test
+    void shouldLetARepositoryOptIntoALaterPhaseButNeverAnEarlierOne() {
+        assertEquals(CapabilityRegistry.CURRENT_PHASE, CapabilityRegistry.effectivePhase(null));
+        assertEquals("P3", CapabilityRegistry.effectivePhase("P3"), "a pilot service previews P3");
+        assertEquals(CapabilityRegistry.CURRENT_PHASE, CapabilityRegistry.effectivePhase("P0"), "never below current");
+        assertThrows(com.gta.core.error.GtaException.class, () -> CapabilityRegistry.effectivePhase("phase3"));
+        assertTrue(registry.capability("webflux").activeIn(CapabilityRegistry.effectivePhase("P3")));
+    }
 }

@@ -49,6 +49,8 @@
 .gta/skills/gta-testing-event-flows/references/kafka.md
 .gta/skills/gta-testing-event-flows/references/modulith-scenario.md
 .gta/skills/gta-testing-event-flows/references/pubsub-emulator-limits.md
+.gta/skills/gta-testing-reactive-apis/SKILL.md
+.gta/skills/gta-testing-reactive-apis/references/stepverifier.md
 .gta/skills/gta-testing-scheduled-jobs/SKILL.md
 .gta/skills/gta-testing-scheduled-jobs/references/cloud-scheduler.md
 .gta/skills/gta-testing-scheduled-jobs/references/cron.md

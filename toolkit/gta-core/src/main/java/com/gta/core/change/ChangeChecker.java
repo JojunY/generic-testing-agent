@@ -52,7 +52,9 @@ public final class ChangeChecker {
             ".opencode/**",
             "opencode.json");
     /** Never considered agent changes: build output and gtaw's own working area. */
-    private static final List<String> IGNORED = List.of("target/**", "**/target/**", ".gta/work/**", "**/.gta/work/**");
+    // .gta/lessons.md is written by gtaw between nodes (the learning loop) and committed at session end
+    private static final List<String> IGNORED = List.of(
+            "target/**", "**/target/**", ".gta/work/**", "**/.gta/work/**", ".gta/lessons.md", "**/.gta/lessons.md");
 
     /**
      * @param foreignCommits commits made since the baseline that gtaw did not make (see {@link CommitLedger});
