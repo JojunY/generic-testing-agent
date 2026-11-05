@@ -189,4 +189,13 @@ class GitTest {
         GtaException e = assertThrows(GtaException.class, () -> new Git(notARepo).requireRepo());
         assertEquals(ErrorCode.ENV_NOT_A_GIT_REPO, e.code());
     }
+
+    @org.junit.jupiter.api.Test
+    void shouldReadTheNewSideLinesOfEachHunk() {
+        String diff =
+                "diff --git a/A.java b/A.java\n@@ -3 +3 @@\n-a\n+b\n@@ -10,0 +11,2 @@\n+c\n+d\n@@ -20,4 +21,0 @@\n";
+
+        org.junit.jupiter.api.Assertions.assertEquals(
+                java.util.Set.of(3, 11, 12), Git.hunkLines(diff), "a pure deletion adds no new line");
+    }
 }

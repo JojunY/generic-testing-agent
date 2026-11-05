@@ -242,6 +242,14 @@ git commit -qam "remove known defect pin"
 OUT=$(gtaw gate --base main || true)
 expect "$(jget "$OUT" 'd["decision"]')" pass "gate after the fix"
 
+step "mutate: PIT on the changed threshold line, with the developer's unit test"
+OUT=$(gtaw mutate --changed --base main)
+expect "$(jget "$OUT" '",".join(d["classes"])')" com.example.order.service.PricingService "mutated class"
+expect "$(jget "$OUT" 'd["mutants"] > 0 and d["covered"] == d["mutants"]')" True "mutants on the changed line are covered"
+jget "$OUT" '" ".join(d["survived"])' | grep -q 'PricingService:.*ConditionalsBoundaryMutator' \
+  || fail "the boundary mutant of the fixed line should survive (no test at exactly 100.00): $OUT"
+echo "ok   mutate names the surviving boundary mutant ($(jget "$OUT" 'd["strength"]'))"
+
 # P1 capabilities (plan §15): a scheduled job and an application-event listener, each with a seeded defect the
 # business-rules document contradicts (D4, D5). Runs on the fixed branch, as a new session.
 cap_item() { # cap_item <scenarioId> -> the author node of that scenario (the domain's seed is adopted on the way)

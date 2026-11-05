@@ -440,12 +440,19 @@ public final class GtaCli implements Callable<Integer> {
 
     @Command(name = "mutate", description = "Mutation testing on changed code (P2).")
     static final class Mutate implements Callable<Integer> {
+        @CommandLine.ParentCommand
+        GtaCli parent;
+
+        @Option(names = "--changed", required = true, description = "Mutate the production lines changed since --base")
+        boolean changed;
+
+        @Option(names = "--base", description = "Base ref (default origin/main, main, ...)")
+        String base;
+
         @Override
         public Integer call() {
-            throw new GtaException(
-                    ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE,
-                    "Mutation testing arrives in P2",
-                    "Gate runs in advisory mode until then");
+            // advisory until calibrated on pilot repositories (plan §15 P2): it reports, it never fails the command
+            return print(parent, engine(parent).mutateChanged(base));
         }
     }
 
