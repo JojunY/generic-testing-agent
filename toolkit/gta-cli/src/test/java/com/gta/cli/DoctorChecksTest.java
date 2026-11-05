@@ -250,7 +250,9 @@ class DoctorChecksTest {
                 plugins { id 'org.springframework.boot' version '3.5.4' }
                 dependencies { testImplementation 'com.gta:gta-junit:0.1.0' }
                 """);
-        Files.writeString(root.resolve("gradlew"), "#!/bin/sh\n");
+        // the wrapper doctor looks for is the platform's own
+        Files.writeString(
+                root.resolve(com.gta.core.util.ProcessRunner.isWindows() ? "gradlew.bat" : "gradlew"), "#!/bin/sh\n");
 
         assertEquals("ok", status(root, "gradle"));
         assertEquals("Gradle wrapper", check(root, "gradle").get("detail"));
