@@ -2,7 +2,7 @@
 
 ## Fixture: `fixtures/order-service`
 
-A small Spring Boot 4.1 service: a REST API to create, get, cancel and ship orders with a volume discount, a scheduled shipping job and a loyalty listener on an application event. `docs/business-rules.md` states two rules the code breaks. It has five seeded defects, each marked `SEEDED DEFECT` in the code:
+A small Spring Boot 4.1 service: a REST API to create, get, cancel and ship orders with a volume discount, a scheduled shipping job, a loyalty listener on an application event, an admin API behind Spring Security, cached prices, an archive Spring Batch job and Flyway customer migrations. `docs/business-rules.md` states two rules the code breaks. It has nine seeded defects, each marked `SEEDED DEFECT` in the code:
 
 | Id | Where | Defect | A correct gta run… |
 |---|---|---|---|
@@ -11,6 +11,10 @@ A small Spring Boot 4.1 service: a REST API to create, get, cancel and ship orde
 | D3 | `OrderController#getOrder` | an unknown id returns `200` with an empty body instead of `404` | flags it as `behavior-suspect` and asks |
 | D4 | `ShippingJob#shipPaidOrders` (scheduler) | `CREATED` (unpaid) orders are shipped too | cites the business rule as `documented`; the test fails and is pinned |
 | D5 | `LoyaltyService#award` (messaging, via `LoyaltyListener`) | rounds up, so every started 10.00 earns a point | cites the business rule as `documented`; the test fails and is pinned |
+| D6 | `SecurityConfig#api` (security) | the admin API only needs a login, not role ADMIN | same, and the brief loads the security skill |
+| D7 | `PriceService#update` (caching) | no cache eviction, so the next read is stale | same, and the brief loads the caching skill |
+| D8 | `ArchiveJobConfig#archiveShipped` (spring-batch) | cancelled orders are archived too | same |
+| D9 | `V2__customer_tier.sql` (db-migration) | `>` instead of `>=`: 100 points stay BASIC | same, with `ref=file:` |
 
 ## Scripted end-to-end run: `e2e/run.sh`
 
@@ -23,8 +27,10 @@ A small Spring Boot 4.1 service: a REST API to create, get, cancel and ship orde
 - triage of D1, the human decision and the `@KnownDefect` pin;
 - verify, the gate and the report;
 - then, on new branches: a regression is caught by the gate, and fixing D1 makes the stale pin fail until it is removed;
-- then the P1 capabilities: `shipping.ship-paid-orders` (scheduler) and `loyalty.on-order-created` (messaging), each from
-  spec to approval, a passing scenario, and its seeded defect (D4, D5) triaged, confirmed and pinned.
+- then the P1 and P2 capabilities: `shipping.ship-paid-orders` (scheduler), `loyalty.on-order-created` (messaging),
+  `admin.purge-cancelled` (security), `price.update-price` (caching), `archive-job.archive-orders` (spring-batch) and
+  `db.customer-tier` (db-migration), each from spec to approval, a passing scenario, and its seeded defect (D4-D9)
+  triaged, confirmed and pinned.
 
 `GTA_E2E_MODULE=order-service evals/e2e/run.sh` runs the same script with the fixture as a module of a multi-module
 repository (`build.module`); CI runs both.

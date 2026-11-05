@@ -175,6 +175,33 @@ public final class Git {
     }
 
     /**
+     * Line numbers of {@code path} (working tree) that differ from {@code baseRef}: added or changed lines, from the
+     * hunks of {@code git diff -U0}.
+     */
+    public java.util.Set<Integer> changedLines(String baseRef, String path) {
+        ProcessRunner.Result r = git("diff", "-U0", baseRef, "--", path);
+        if (!r.ok()) {
+            throw failed("diff -U0 " + baseRef + " -- " + path, r);
+        }
+        return hunkLines(r.output());
+    }
+
+    /** New-side line numbers of {@code @@ -a,b +c,d @@} hunks; {@code d = 0} (a pure deletion) adds none. */
+    static java.util.Set<Integer> hunkLines(String diff) {
+        java.util.Set<Integer> out = new java.util.TreeSet<>();
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?m)^@@ -\\S+ \\+(\\d+)(?:,(\\d+))? @@")
+                .matcher(diff);
+        while (m.find()) {
+            int start = Integer.parseInt(m.group(1));
+            int count = m.group(2) == null ? 1 : Integer.parseInt(m.group(2));
+            for (int i = 0; i < count; i++) {
+                out.add(start + i);
+            }
+        }
+        return out;
+    }
+
+    /**
      * Commits exactly the given paths (never {@code git add -A}). Returns the new HEAD, or empty when nothing changed.
      * When the commit fails, the paths are unstaged again, so the index is as it was before.
      */

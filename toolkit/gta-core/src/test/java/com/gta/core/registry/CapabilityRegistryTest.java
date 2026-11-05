@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.gta.core.error.GtaException;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -14,11 +15,11 @@ class CapabilityRegistryTest {
     final CapabilityRegistry registry = CapabilityRegistry.loadBundled();
 
     @Test
-    void shouldActivateMessagingAndScheduledJobsInP1AndKeepLaterPhasesExplainOnly() {
-        assertEquals("P1", CapabilityRegistry.CURRENT_PHASE);
-        assertTrue(registry.capability("messaging").activeIn(CapabilityRegistry.CURRENT_PHASE));
-        assertTrue(registry.capability("scheduler").activeIn(CapabilityRegistry.CURRENT_PHASE));
-        assertFalse(registry.capability("spring-batch").activeIn(CapabilityRegistry.CURRENT_PHASE), "P2");
+    void shouldActivateEveryCapabilityUpToP2AndKeepLaterPhasesExplainOnly() {
+        assertEquals("P2", CapabilityRegistry.CURRENT_PHASE);
+        for (String id : List.of("messaging", "scheduler", "spring-batch", "db-migration", "security", "caching")) {
+            assertTrue(registry.capability(id).activeIn(CapabilityRegistry.CURRENT_PHASE), id);
+        }
         assertFalse(registry.capability("grpc-api").activeIn(CapabilityRegistry.CURRENT_PHASE), "P3");
     }
 

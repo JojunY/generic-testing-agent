@@ -1,0 +1,48 @@
+package com.example.order.price;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.gta.junit.KnownDefect;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+
+@Tag("component")
+@Tag("gta")
+@SpringBootTest
+@AutoConfigureMockMvc
+class PriceControllerIT {
+
+    @Autowired
+    MockMvc mvc;
+
+    @Test
+    @Tag("flow:price.update-price")
+    @Tag("scenario:price.update-price/s01")
+    @Tag("characterization")
+    @DisplayName("[price.update-price/s01] an update returns the new price")
+    void shouldReturnTheNewPriceWhenUpdated() throws Exception {
+        mvc.perform(put("/api/prices/sku-2").contentType(MediaType.APPLICATION_JSON).content("{\"price\":7.25}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.price").value(7.25));
+    }
+
+    @Test
+    @Tag("flow:price.update-price")
+    @Tag("scenario:price.update-price/s02")
+    @Tag("hardening")
+    @DisplayName("[price.update-price/s02] the next read sees the update")
+    void shouldServeTheNewPriceAfterAnUpdate() throws Exception {
+        mvc.perform(get("/api/prices/sku-1")).andExpect(status().isOk());
+        mvc.perform(put("/api/prices/sku-1").contentType(MediaType.APPLICATION_JSON).content("{\"price\":12.50}"));
+        mvc.perform(get("/api/prices/sku-1")).andExpect(jsonPath("$.price").value(12.50));
+    }
+}

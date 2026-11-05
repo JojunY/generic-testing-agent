@@ -66,4 +66,27 @@ class RefResolverTest {
         assertEquals("test", config.get("spring.profiles"), "every yaml document is read");
         assertTrue(RefResolver.loadConfig(root.resolve("none")).isEmpty());
     }
+
+    @org.junit.jupiter.api.Test
+    void shouldHashAFileOfTheModuleButNothingOutsideIt(@org.junit.jupiter.api.io.TempDir java.nio.file.Path module)
+            throws Exception {
+        java.nio.file.Path sql = module.resolve("src/main/resources/db/migration/V2__tier.sql");
+        java.nio.file.Files.createDirectories(sql.getParent());
+        java.nio.file.Files.writeString(sql, "update customer set tier = 'GOLD';");
+        RefResolver refs = RefResolver.of(module);
+
+        String before =
+                refs.hash("file:src/main/resources/db/migration/V2__tier.sql").orElseThrow();
+        java.nio.file.Files.writeString(sql, "update customer set tier = 'SILVER';");
+        org.junit.jupiter.api.Assertions.assertNotEquals(
+                before,
+                RefResolver.of(module)
+                        .hash("file:src/main/resources/db/migration/V2__tier.sql")
+                        .orElseThrow(),
+                "a changed migration makes its spec stale");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                refs.hash("file:../outside.sql").isEmpty(), "never outside the module");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                refs.hash("file:missing.sql").isEmpty());
+    }
 }

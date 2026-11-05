@@ -4,7 +4,12 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 
 ## [Unreleased]
 
+### Fixed
+- A THEN value of `true` or `false` could never be satisfied: the oracle scanner ignored boolean literals. `isEqualTo(true)`, `isTrue()`, `isFalse()`, `assertTrue` and `assertFalse` now assert them (found by the Spring Batch eval).
+
 ### Added
+- `gtaw mutate --changed [--base]`: PIT on the production lines changed since the base, with the service's unit and slice tests; reports strength and names surviving mutants. PIT runs from its command line with tools resolved through the service's own Maven repositories (no plugin in the service's pom; the JUnit Platform launcher is added at the service's version). Advisory. The e2e checks it names the surviving boundary mutant of the fixed D1 line.
+- P2 capabilities write tests (current phase P2): `security` and `caching` add their skills to the flows of a service that uses them; Spring Batch jobs and Flyway/Liquibase migrations are flows. New `file:` spec refs hash non-Java files such as migration scripts (stale specs, `gtaw impact`). Detection knows the Boot 4 starter names. Following `adding-a-capability.md`, the fixture gains a seeded defect per capability (D6-D9) and the e2e takes each flow to a pinned defect.
 - P2 groundwork: `security` and `caching` capabilities (detected; they add the new `gta-testing-spring-security` and `gta-testing-caches` skills to a service's flows from P2). Cross-cutting capabilities now follow their phase like the others. Spring Batch jobs (`@Bean Job`) are detected as flows.
 - `gtaw impact` follows the bean graph (a class that injects a changed class, transitively, and implementations of a changed interface) and config refs whose value changed, and says why each case needs review (`reasons`).
 - `gtaw init --ci` installs the CI gate workflow `.github/workflows/gta-gate.yml` as a managed file (kept current by `gtaw upgrade`), pointed at the service module's reports.

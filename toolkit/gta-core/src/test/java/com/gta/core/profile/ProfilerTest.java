@@ -196,7 +196,7 @@ class ProfilerTest {
     }
 
     @Test
-    void shouldDetectSecurityAndCachingButAttachThemOnlyFromTheirPhase() throws Exception {
+    void shouldDetectSecurityAndCachingAsCrossCuttingCapabilities() throws Exception {
         Files.writeString(
                 root.resolve("pom.xml"),
                 Files.readString(root.resolve("pom.xml"))
@@ -207,10 +207,11 @@ class ProfilerTest {
 
         ServiceProfile p = Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto");
 
+        assertTrue(p.capabilities.containsAll(List.of("security", "caching")), p.capabilities.toString());
         assertTrue(
-                p.explainOnlyCapabilities.containsAll(List.of("security", "caching")),
-                p.explainOnlyCapabilities.toString());
-        assertTrue(!p.capabilities.contains("security") && !p.capabilities.contains("caching"), "P2 is not active yet");
+                p.entrypoints.stream()
+                        .noneMatch(e -> "security".equals(e.capability) || "caching".equals(e.capability)),
+                "cross-cutting capabilities add skills to flows, they are never flows themselves");
     }
 
     @Test
@@ -235,5 +236,28 @@ class ProfilerTest {
                 flows.keySet().toString());
         assertTrue(
                 flows.keySet().stream().noneMatch(f -> f.endsWith(".load")), "a Step is part of its job, not a flow");
+    }
+
+    @Test
+    void shouldTurnEachMigrationIntoAFlow() throws Exception {
+        Path migrations = root.resolve("src/main/resources/db/migration");
+        Files.createDirectories(migrations);
+        Files.writeString(migrations.resolve("V1__customers.sql"), "create table customer (id int);");
+        Files.writeString(migrations.resolve("V2_1__Customer_Tier.sql"), "alter table customer add tier int;");
+        Files.writeString(migrations.resolve("notes.txt"), "not a migration");
+        Path changelog = root.resolve("src/main/resources/db/changelog");
+        Files.createDirectories(changelog);
+        Files.writeString(changelog.resolve("add-orders.yaml"), "databaseChangeLog: []");
+
+        Map<String, ServiceProfile.EntryPoint> flows =
+                byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"));
+
+        ServiceProfile.EntryPoint tier = flows.get("db.customer-tier");
+        assertEquals("db-migration", tier.capability, flows.keySet().toString());
+        assertEquals("file:src/main/resources/db/migration/V2_1__Customer_Tier.sql", tier.ref);
+        assertEquals("Flyway V2_1", tier.trigger);
+        assertEquals("db-migration", flows.get("db.add-orders").capability, "Liquibase changelogs too");
+        assertTrue(flows.containsKey("db.customers"));
+        assertTrue(flows.keySet().stream().noneMatch(f -> f.contains("notes")));
     }
 }

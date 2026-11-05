@@ -465,6 +465,13 @@ public final class Engine {
         return ctx.cases.impact(base == null ? ctx.sessionEnd.defaultBase() : base);
     }
 
+    /** {@code gtaw mutate --changed}: PIT on the classes changed since {@code base}, counted on the changed lines. */
+    public Map<String, Object> mutateChanged(String base) {
+        git.requireRepo();
+        return new com.gta.core.run.MutationRunner(ctx.paths, ctx.config)
+                .changed(base == null ? ctx.sessionEnd.defaultBase() : base);
+    }
+
     public Gate.Result gate(String base, List<Path> reportDirs) {
         return ctx.sessionEnd.gate(base, reportDirs);
     }

@@ -7,10 +7,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 @Repository
 public class OrderRepository {
     private final Map<UUID, Order> orders = new ConcurrentHashMap<>();
+    private final Map<UUID, Order> archived = new ConcurrentHashMap<>();
 
     public Order save(Order order) {
         orders.put(order.id(), order);
@@ -23,5 +25,22 @@ public class OrderRepository {
 
     public List<Order> findAll() {
         return List.copyOf(orders.values());
+    }
+
+    public int deleteWhere(Predicate<Order> condition) {
+        List<Order> matching = orders.values().stream().filter(condition).toList();
+        matching.forEach(o -> orders.remove(o.id()));
+        return matching.size();
+    }
+
+    /** Moves matching orders to the archive. */
+    public int archiveWhere(Predicate<Order> condition) {
+        List<Order> matching = orders.values().stream().filter(condition).toList();
+        matching.forEach(o -> archived.put(o.id(), orders.remove(o.id())));
+        return matching.size();
+    }
+
+    public boolean isArchived(UUID id) {
+        return archived.containsKey(id);
     }
 }

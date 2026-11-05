@@ -264,6 +264,8 @@ final class CaseLedgers {
                                     : cause + " changed (reached through " + ref.target() + ")";
                         } else if ("config".equals(ref.kind()) && changedKeys.contains(ref.target())) {
                             reason = "config " + ref.target() + " changed";
+                        } else if ("file".equals(ref.kind()) && changed.contains(paths.inModule(ref.target()))) {
+                            reason = ref.target() + " changed";
                         }
                         if (reason != null) {
                             break;

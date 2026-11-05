@@ -485,7 +485,10 @@ capabilities:
     skills: [gta-testing-spring-batch-jobs, gta-using-embedded-dependencies]
   - id: db-migration
     since: P2
-    detect: { buildDeps: [flyway-core, flyway-database-oracle, liquibase-core], files: ["**/db/migration/**", "**/db/changelog/**"] }
+    detect:
+      buildDeps: [flyway-core, flyway-database-oracle, liquibase-core, spring-boot-starter-flyway,
+                  spring-boot-starter-liquibase]
+      files: ["**/db/migration/**", "**/db/changelog/**"]
     layers: [component]
     diagrams: [er]
     skills: [gta-testing-db-migrations, gta-using-embedded-dependencies]
@@ -524,7 +527,8 @@ capabilities:
     dispatch: false
     detect:
       buildDeps: [spring-boot-starter-security, spring-boot-starter-oauth2-resource-server,
-                  spring-boot-starter-oauth2-client]
+                  spring-boot-starter-oauth2-client, spring-boot-starter-security-oauth2-resource-server,
+                  spring-boot-starter-security-oauth2-client]
       annotations: ["@EnableWebSecurity", "@PreAuthorize", "@Secured", "@EnableMethodSecurity"]
     skills: [gta-testing-spring-security]
   - id: caching               # never produces flows; adds the caching skill to the flows of a service with caches
@@ -1266,7 +1270,7 @@ evidence, the PR comment draft).
 | `gtaw abort [--flow <flowId>]` | **people only** | discards working state (keeps `.gta/work/recover/`) |
 | `gtaw run --smoke \| --layer <layer>` | gtaw internally / CI | runs the selected tests |
 | `gtaw verify [--new]` | gtaw internally / CI | stability and expected-value check; from P2 also the can-fail check |
-| `gtaw mutate --changed` (P2) | CI / person | PIT on changed classes, filtered to the diff lines, using unit and slice tests only |
+| `gtaw mutate --changed [--base]` (P2, implemented) | CI / person | PIT on changed classes, filtered to the diff lines, using unit and slice tests only; advisory (exit 0). PIT runs from its command line with the service's test classpath, so the service's pom needs no plugin |
 | `gtaw gate --base <ref> --reports <dir>` · `gtaw gate waive <GATE_CODE> …` | CI / person | the gate; registering a waiver (**people only**) |
 | `gtaw relock --item <id> --reason "<text>"` | **people only** | relocks an oracle on the spec's current expected values |
 | `gtaw report [--kind md\|pr-comment]` | gtaw internally / CI | traceability matrix, orphan check, new confirmations |
@@ -1457,7 +1461,7 @@ When an agent writes to these paths, the change check of §5.8 restores them. Ap
 | **P0a platform validation (1 week)** | choose the models per tier with evals; verify on Windows that the Pub/Sub emulator, EmbeddedKafka, Artemis and the shared Oracle test database work; verify in both IDEs and OpenCode: agent visibility, subagent dispatch and inline mode, the prompt file's `agent:` field, terminal auto-approve (including Windows), that privileged commands really ask for confirmation, request limits, long-running terminal commands (duration of check/submit) | a measured version of §11.4 |
 | **P0 core** (implemented) | gtaw: `init`/`doctor`/`next`/`check`/`submit`/`answer`/`status`/`abort`/`run`/`verify` (stability + expected-value check)/`gate`/`relock`/`report`; `gta-junit`; schemas; generator and lint; 4 agents; skills: mapping-flows, writing-behavior-specs, designing-test-oracles, writing-tests, testing-spring-apis, stubbing-with-wiremock, testing-api-contracts, using-embedded-dependencies, reviewing-test-quality; `/gta explain` and flow mode; 1 REST fixture, 20 eval tasks | on 1 real REST service: explain → answers → approval → at least 5 verified tests; seeded bugs are judged defects instead of being repaired to green; adversarial metrics 3 and 4 met; recovery after fault injection |
 | **P1 adoption: multi-module, events, schedules, PR mode** | multi-module Maven services (one module at a time, Maven with `-pl <module> -am`; implemented); `messaging` (Kafka, Pub/Sub, JMS/MQ, RabbitMQ, SQS; implemented); `scheduler` (`@Scheduled`, ShedLock, Quartz; implemented); PR mode: impact (methods, config, bean graph; implemented), the alm-github CI template `gta-gate.yml` (`gtaw init --ci`; implemented), PR comments, analyzing-change-impact; OpenCode end to end | one pilot service per new capability, and one multi-module service, run end to end; behaviour change summaries on real PRs, the gate live (mutation advisory) |
-| **P2 data, security and quality** | `db-migration` (Flyway, Liquibase); `security` (Spring Security, OAuth2 resource servers, JWT: authenticated and forbidden paths, method security); `caching` (Spring Cache, Redis, Caffeine: hits, eviction, stale reads); `spring-batch`; `mutate` and the can-fail check (shared PIT integration); learning loop; rules-before-LLM repair; `spec.source=openspec\|speckit` | one pilot service per new capability; mutation switched to enforced after calibration on pilot repositories |
+| **P2 data, security and quality** | `db-migration` (Flyway, Liquibase; implemented); `security` (Spring Security, OAuth2 resource servers, JWT: authenticated and forbidden paths, method security; implemented); `caching` (Spring Cache, Redis, Caffeine: hits, eviction, stale reads; implemented); `spring-batch` (implemented); `mutate` (implemented) and the can-fail check (shared PIT integration); learning loop; rules-before-LLM repair; `spec.source=openspec\|speckit` | one pilot service per new capability; mutation switched to enforced after calibration on pilot repositories |
 | **P3 reactive, Gradle, other protocols, catching** | `webflux` (reactive endpoints and clients with `WebTestClient` and `StepVerifier`); Gradle builds (a second `TestRunner` and build-file reader next to Maven); `grpc-api` and `graphql-api`; `workflow` (Temporal, Camunda, Spring Statemachine); `beam-pipeline`; incident mode; catching tests and the assessor | one pilot service per kind |
 | **P4 deployed systems and streaming endpoints** | the `gta-testing-deployed-systems` skill, `gtaw env`, Karate, cloud isolation; BigQuery SQL against temporary datasets; `websocket` (WebSocket, STOMP, SSE) | nightly regression |
 | **P5** | optional hooks (early interception, a `verified` answer channel), MCP wrapping, plugin distribution, SARIF, record-replay, performance tests, native-image, parallel authoring, adapters for other languages | on demand |
@@ -1487,10 +1491,10 @@ registry entry, an eval fixture and one pilot service.
 | 4 | Multi-module Maven services | P1 | supported: `build.module` names the service module |
 | 5 | Messaging (Kafka, Pub/Sub, JMS/MQ, RabbitMQ, SQS, application events) | P1 | tests written |
 | 6 | Scheduled jobs (`@Scheduled`, ShedLock, Quartz) | P1 | tests written |
-| 7 | Database migrations (Flyway, Liquibase) | P2 | detected, spec only |
-| 8 | Security (Spring Security, OAuth2, JWT) | P2 | detected; skill `gta-testing-spring-security` ready; attaches to flows from P2 |
-| 9 | Caching (Spring Cache, Redis, Caffeine) | P2 | detected; skill `gta-testing-caches` ready; attaches to flows from P2 |
-| 10 | Spring Batch | P2 | detected, spec only |
+| 7 | Database migrations (Flyway, Liquibase) | P2 | tests written; each migration file is a flow, cited with `ref=file:` |
+| 8 | Security (Spring Security, OAuth2, JWT) | P2 | tests written; the skill attaches to the flows of a secured service |
+| 9 | Caching (Spring Cache, Redis, Caffeine) | P2 | tests written; the skill attaches to the flows of a service with caches |
+| 10 | Spring Batch | P2 | tests written; each `@Bean Job` is a flow |
 | 11 | Reactive WebFlux | P3 | *new*; detected as REST today |
 | 12 | Gradle builds | P3 | *new*; Maven only today |
 | 13 | GCP data (BigQuery, GCS) | P0 / P4 | a dependency with fakes; SQL in the system layer from P4 |
