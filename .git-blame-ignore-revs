@@ -4,3 +4,6 @@
 
 # palantir-java-format over all Java sources (review round 3, step S3)
 5c45f288c216f500f7f098ba7fe8557767048132
+
+# palantir-java-format 2.50.0 -> 2.102.0, which runs on JDK 25 (review round 4)
+af632b54ba28eaca6a7f74a5ec1774862b456bf5
