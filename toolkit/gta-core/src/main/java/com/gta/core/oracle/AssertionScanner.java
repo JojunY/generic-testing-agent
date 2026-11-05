@@ -132,6 +132,7 @@ public final class AssertionScanner {
             "send",
             "convertAndSend",
             "publish",
+            "publishEvent",
             "launchJob",
             "launchStep",
             "given",
@@ -279,12 +280,27 @@ public final class AssertionScanner {
                 if (inArgs && isAssertionCall(call)) {
                     return false; // expected side wins, e.g. andExpect(content().string("x"))
                 }
-                if (inArgs && STIMULUS_CALLS.contains(call.getNameAsString())) {
+                if (inArgs && STIMULUS_CALLS.contains(call.getNameAsString()) && !verified(call)) {
                     return true;
                 }
             }
             child = parent.get();
             parent = child.getParentNode();
+        }
+        return false;
+    }
+
+    /**
+     * A stimulus-named call made on an assertion, such as {@code verify(producer).send("orders", payload)}: its
+     * arguments are what the test expects to be sent, not inputs.
+     */
+    static boolean verified(MethodCallExpr call) {
+        Optional<com.github.javaparser.ast.expr.Expression> scope = call.getScope();
+        while (scope.isPresent() && scope.get() instanceof MethodCallExpr s) {
+            if (isAssertionCall(s)) {
+                return true;
+            }
+            scope = s.getScope();
         }
         return false;
     }

@@ -65,7 +65,7 @@ public final class MavenRunner implements TestRunner {
     public RunResult run(
             String runId, String itemId, Options options, Set<String> productionClasses, Set<String> testClasses) {
         Path root = paths.root();
-        Path surefire = root.resolve("target/surefire-reports");
+        Path surefire = paths.surefireReports();
         Path gtaResults = paths.gtaResults();
         deleteDir(surefire);
         deleteDir(gtaResults);
@@ -77,6 +77,7 @@ public final class MavenRunner implements TestRunner {
                 "-DfailIfNoTests=false",
                 "-Djacoco.skip=true",
                 "-Dgta.results.dir=" + gtaResults));
+        cmd.addAll(moduleArgs(paths.module()));
         if (options.testClass() != null) {
             cmd.add("-Dtest=" + options.testClass());
         } else {
@@ -103,6 +104,10 @@ public final class MavenRunner implements TestRunner {
         }
         if (!toolOptions.isEmpty()) {
             env.put("JAVA_TOOL_OPTIONS", String.join(" ", toolOptions));
+        }
+        String javaHome = javaHome(config.build.javaHomeEnv, System::getenv);
+        if (javaHome != null) {
+            env.put("JAVA_HOME", javaHome);
         }
 
         long start = System.currentTimeMillis();
@@ -181,5 +186,32 @@ public final class MavenRunner implements TestRunner {
                     "Cannot clear " + dir + ": " + e.getMessage(),
                     "Close programs that hold files in it (IDE, antivirus scan), then run the command again");
         }
+    }
+
+    /**
+     * The JDK Maven runs with: the directory in {@code build.javaHomeEnv}'s variable, or null to keep the inherited
+     * JAVA_HOME. A configured but unset variable fails instead of silently building with the wrong JDK.
+     */
+    static String javaHome(String envName, java.util.function.Function<String, String> getenv) {
+        if (envName == null || envName.isBlank()) {
+            return null;
+        }
+        String value = getenv.apply(envName);
+        if (value == null || value.isBlank()) {
+            throw new GtaException(
+                    ErrorCode.ENV_TOOL_UNAVAILABLE,
+                    "build.javaHomeEnv names " + envName + ", which is not set",
+                    "Set " + envName + " to the JDK this service builds with (for example a JDK 8), or remove"
+                            + " build.javaHomeEnv from .gta/config.json");
+        }
+        return value;
+    }
+
+    /**
+     * In a multi-module repository Maven runs from the root on the service module and the modules it depends on
+     * ({@code -pl <module> -am}), so siblings are built from the working tree instead of a stale local repository.
+     */
+    static List<String> moduleArgs(String module) {
+        return module == null || module.isEmpty() ? List.of() : List.of("-pl", module, "-am");
     }
 }

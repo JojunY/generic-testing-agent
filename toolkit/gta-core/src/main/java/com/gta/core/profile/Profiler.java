@@ -8,6 +8,8 @@ import com.github.javaparser.ast.expr.MemberValuePair;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.expr.SingleMemberAnnotationExpr;
 import com.gta.core.config.GtaPaths;
+import com.gta.core.error.ErrorCode;
+import com.gta.core.error.GtaException;
 import com.gta.core.registry.CapabilityRegistry;
 import com.gta.core.util.Ids;
 import java.io.IOException;
@@ -39,20 +41,56 @@ public final class Profiler {
             "RequestMapping",
             "ANY");
     private static final List<String> SUFFIXES = List.of(
-            "Controller", "Resource", "Endpoint", "Api", "Listener", "Consumer", "Job", "Scheduler", "Task", "Handler");
+            "Controller",
+            "Resource",
+            "Endpoint",
+            "Api",
+            "Listener",
+            "Consumer",
+            "Job",
+            "Scheduler",
+            "Task",
+            "Handler",
+            "Configuration",
+            "Config");
+
+    /** Message listener annotations: Kafka, JMS/MQ, Pub/Sub (ServiceActivator), RabbitMQ, SQS, application events. */
+    static final List<String> LISTENERS = List.of(
+            "KafkaListener",
+            "JmsListener",
+            "ServiceActivator",
+            "RabbitListener",
+            "SqsListener",
+            "TransactionalEventListener",
+            "ApplicationModuleListener");
 
     private Profiler() {}
 
     public static ServiceProfile profile(Path root, CapabilityRegistry registry, String configuredBasePackage) {
-        PomInfo pom = PomInfo.read(root);
-        JavaIndex main = JavaIndex.of(root.resolve(GtaPaths.MAIN_JAVA));
+        return profile(new GtaPaths(root), registry, configuredBasePackage);
+    }
+
+    public static ServiceProfile profile(GtaPaths paths, CapabilityRegistry registry, String configuredBasePackage) {
+        Path repository = paths.root();
+        Path root = paths.moduleRoot();
+        PomInfo pom = PomInfo.read(repository, paths.module());
+        if (paths.module().isEmpty() && !pom.modules.isEmpty()) {
+            // an aggregator pom has no sources of its own: profiling it would find no flows and say nothing
+            throw new GtaException(
+                    ErrorCode.ENV_UNSUPPORTED_BUILD,
+                    "This is a multi-module repository " + pom.modules + " and build.module is not set",
+                    "Set build.module in .gta/config.json to the module that holds the service, e.g. {\"build\":"
+                            + " {\"module\": \"" + pom.modules.get(0) + "\"}}");
+        }
+        JavaIndex main = JavaIndex.of(paths.mainJava());
         ServiceProfile p = new ServiceProfile();
+        p.module = paths.module();
         p.artifactId = pom.artifactId;
         p.bootVersion = pom.bootVersion;
         p.bootMajor = pom.bootMajor();
         p.junitMajor = pom.junitMajor();
         p.javaMajor = pom.javaMajor();
-        p.mavenWrapper = Files.exists(root.resolve("mvnw")) || Files.exists(root.resolve("mvnw.cmd"));
+        p.mavenWrapper = Files.exists(repository.resolve("mvnw")) || Files.exists(repository.resolve("mvnw.cmd"));
         p.dependencies.addAll(pom.dependencies);
         p.basePackage = "auto".equals(configuredBasePackage) || configuredBasePackage == null
                 ? detectBasePackage(main)
@@ -64,10 +102,7 @@ public final class Profiler {
                     || c.detect.annotations.stream().anyMatch(sources::contains)
                     || c.detect.files.stream().anyMatch(g -> anyFileMatches(root, g));
             if (hit) {
-                (c.activeIn(CapabilityRegistry.CURRENT_PHASE) || !c.dispatch
-                                ? p.capabilities
-                                : p.explainOnlyCapabilities)
-                        .add(c.id);
+                (c.activeIn(CapabilityRegistry.CURRENT_PHASE) ? p.capabilities : p.explainOnlyCapabilities).add(c.id);
             }
         }
         p.applicationClass = applicationClass(main);
@@ -170,7 +205,21 @@ public final class Profiler {
                         e.trigger = m.getAnnotationByName("Scheduled").get().toString();
                         e.risk = 6;
                     }
-                    for (String listener : List.of("KafkaListener", "JmsListener", "ServiceActivator")) {
+                    if (isQuartzJob(c)
+                            && (m.getNameAsString().equals("execute")
+                                    || m.getNameAsString().equals("executeInternal"))) {
+                        e = base(c, fqcn, m, "scheduler", "schedule");
+                        e.trigger = "Quartz job " + c.getNameAsString();
+                        e.risk = 6;
+                    }
+                    if (m.getAnnotationByName("Bean").isPresent()
+                            && m.getType().asString().equals("Job")) {
+                        // a Spring Batch job is a @Bean of type Job; the flow is the whole job (plan §7.4)
+                        e = base(c, fqcn, m, "spring-batch", "job");
+                        e.trigger = "Spring Batch job " + m.getNameAsString();
+                        e.risk = 6;
+                    }
+                    for (String listener : LISTENERS) {
                         if (m.getAnnotationByName(listener).isPresent()) {
                             e = base(c, fqcn, m, "messaging", "listener");
                             e.trigger = m.getAnnotationByName(listener).get().toString();
@@ -189,6 +238,13 @@ public final class Profiler {
             }
         }
         return out;
+    }
+
+    /** A Quartz job: extends QuartzJobBean or implements org.quartz.Job. */
+    static boolean isQuartzJob(ClassOrInterfaceDeclaration c) {
+        return c.getExtendedTypes().stream().anyMatch(t -> t.getNameAsString().equals("QuartzJobBean"))
+                || c.getImplementedTypes().stream()
+                        .anyMatch(t -> t.getNameAsString().equals("Job"));
     }
 
     private static ServiceProfile.EntryPoint base(

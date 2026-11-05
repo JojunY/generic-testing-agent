@@ -215,4 +215,19 @@ class AssertionScannerTest {
         Files.writeString(dir.resolve("resources/s01.data.sql"), "insert into orders values (2);");
         assertFalse(before.equals(scanSource(body).watchedHash()), "a changed @Sql script changes the inputs");
     }
+
+    @Test
+    void shouldTakeWhatATestVerifiesWasSentAsExpectedAndWhatItSendsAsInput() throws Exception {
+        AssertionScanner.ScenarioOracle o = scanSource("""
+                    @Test @Tag("scenario:order.create/s01")
+                    void shouldPublishOrderCreated() {
+                        kafkaTemplate.send("orders-in", "INPUT-EVENT");
+                        verify(producer).send("orders-out", "EXPECTED-EVENT");
+                    }
+                """);
+
+        assertTrue(
+                o.tokens().contains("EXPECTED-EVENT"), "verified outgoing messages are expected values: " + o.tokens());
+        assertFalse(o.tokens().contains("INPUT-EVENT"), "the message the test sends is an input");
+    }
 }

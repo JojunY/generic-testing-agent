@@ -58,8 +58,8 @@ cd <service> && ./gtaw doctor       # Windows: .\gtaw.cmd doctor
 
 ## 当前支持（P0）
 
-- **环境：** Maven 服务，Spring Boot 4.1（及 3.5），Java 17+，Windows、macOS、Linux。
-- **会写测试的能力：** REST API。其他能力（定时任务、Batch、消息、工作流、Beam、已部署系统）已能识别并编写规格，测试编写在后续阶段开放（见 `core/registry/capabilities.yaml` 和设计文档 §15）。
+- **环境：** Maven 服务，Spring Boot 4.1 和 3.5（也支持 2.2 到 2.7），Java 17+（少数 Java 8 或 11 的服务也支持），Windows、macOS、Linux。gtaw 本身需要 JDK 17+。
+- **会写测试的能力：** REST API、消息监听（Kafka、Pub/Sub、JMS/MQ、RabbitMQ、SQS）和定时任务（`@Scheduled`、Quartz）。其他能力（Batch、数据库迁移、工作流、Beam、已部署系统等）已能识别并编写规格，测试编写在后续阶段开放（见 `core/registry/capabilities.yaml` 和设计文档 §15）。
 - **不需要容器：**
   - Oracle 使用共享测试 schema，或 Oracle 模式的 H2；
   - BigQuery 和 GCS 使用替身；

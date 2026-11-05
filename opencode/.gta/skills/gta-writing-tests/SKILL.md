@@ -32,7 +32,8 @@ class OrderControllerIT {                  // tests of com.acme.order.api.OrderC
 
 ## Rules
 
-- JUnit version follows the Spring Boot parent: Boot 4.x → JUnit 6, Boot 3.5 → JUnit 5. The `org.junit.jupiter.api` imports are the same. Differences that matter: `references/boot3-vs-boot4.md`.
+- JUnit version follows the Spring Boot parent: Boot 4.x → JUnit 6, Boot 2.2 to 3.5 → JUnit 5. The `org.junit.jupiter.api` imports are the same. Differences that matter: `references/boot3-vs-boot4.md`.
+- Write at the Java level the brief names, never newer. Java 8: no `var`, `List.of`/`Map.of`, text blocks, records, switch expressions or `instanceof` patterns; Java 11: no text blocks, records or switch expressions. Spring Boot 2 uses `javax.*` (`javax.persistence`, `javax.validation`), not `jakarta.*`.
 - One test class per source class and kind: `Test` unit, `SliceTest` Spring slice, `IT` component, `ContractIT` contract (`references/naming.md`). gtaw runs them through Surefire with an explicit `-Dtest`.
 - Support code never ends in `Test` or `IT`: `<Port>Fake`, `<Type>TestData`, `<Downstream>Stub`, `<Name>TestConfig`.
 - Never change production code. If there is no seam (no injectable `Clock`, logic inside a framework callback), use the seams in `references/seams.md` and mention "refactor suggested" in your result.

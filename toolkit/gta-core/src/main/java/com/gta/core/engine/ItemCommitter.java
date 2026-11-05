@@ -42,8 +42,8 @@ final class ItemCommitter {
             if (!ChangeChecker.matchesAny(changed, item.ownsFiles)) {
                 continue;
             }
-            boolean testCode =
-                    changed.startsWith(GtaPaths.TEST_JAVA + "/") || changed.startsWith(GtaPaths.TEST_RESOURCES + "/");
+            boolean testCode = changed.startsWith(paths.inModule(GtaPaths.TEST_JAVA + "/"))
+                    || changed.startsWith(paths.inModule(GtaPaths.TEST_RESOURCES + "/"));
             if (baseline.dirty.containsKey(changed) && !testCode) {
                 // e.g. pom.xml with the developer's own uncommitted edits: never commit those on their behalf.
                 // Test classes are shared by the items of a flow, so earlier items' uncommitted work is gta's own.

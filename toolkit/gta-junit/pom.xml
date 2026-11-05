@@ -13,7 +13,14 @@
   <artifactId>gta-junit</artifactId>
   <name>gta-junit</name>
   <description>Test-scope library for services under test: @KnownDefect (strict xfail) and the scenario result listener.
-    Compiled against the JUnit 5 API so it works with Spring Boot 3.5 (JUnit 5) and 4.x (JUnit 6).</description>
+    Compiled against the JUnit 5 API and for Java 8, so it works with Spring Boot 2.2 to 3.5 (JUnit 5) and 4.x (JUnit 6).</description>
+
+  <properties>
+    <!-- Services on Java 8 and 11 (mostly Spring Boot 2) load this jar too, so its main code compiles for Java 8.
+         Its tests use the toolkit's Java 17. -->
+    <maven.compiler.release>8</maven.compiler.release>
+    <maven.compiler.testRelease>17</maven.compiler.testRelease>
+  </properties>
 
   <dependencies>
     <dependency>

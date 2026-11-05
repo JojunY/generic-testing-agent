@@ -58,27 +58,42 @@ public final class DoctorChecks {
                 "Install Maven or add the Maven wrapper");
 
         List<String> dependencies = List.of();
+        String module = configuredModule();
         try {
-            PomInfo pom = PomInfo.read(root);
+            PomInfo repositoryPom = PomInfo.read(root);
+            PomInfo pom = module.isEmpty() ? repositoryPom : PomInfo.read(root, module);
             dependencies = pom.dependencies;
             add(
                     "spring-boot",
                     pom.bootMajor() >= 3 ? "ok" : "warn",
                     "Spring Boot " + pom.bootVersion + " → JUnit " + pom.junitMajor(),
-                    "gta targets Spring Boot 3.5 and 4.x");
+                    pom.bootMajor() == 2
+                            ? "Spring Boot 2 is out of open-source support; gta writes JUnit 5 tests with javax.* for it"
+                                    + " (Boot 2.0 and 2.1 also need org.junit.jupiter:junit-jupiter as a test dependency)"
+                            : "gta targets Spring Boot 2.2 to 4.x");
             int serviceJava = pom.javaMajor();
             add(
                     "service-java",
-                    serviceJava == 0 || serviceJava >= 17 ? "ok" : "fail",
+                    serviceJava == 0 || serviceJava >= 17 ? "ok" : serviceJava >= 8 ? "warn" : "fail",
                     serviceJava == 0
                             ? "Java level not set in pom.xml (tests are written for Java 17)"
-                            : "Java " + serviceJava,
-                    "gta-junit and the tests gta writes need Java 17 or newer; services on an older Java are not supported");
+                            : "Java " + serviceJava
+                                    + (serviceJava < 17 ? ": tests are written for Java " + serviceJava : ""),
+                    serviceJava >= 8
+                            ? "If this build needs an older JDK than the one gtaw runs on, set build.javaHomeEnv in"
+                                    + " .gta/config.json to the name of a variable holding that JDK"
+                            : "gta supports services on Java 8 or newer");
+            boolean multiModule = !repositoryPom.modules.isEmpty();
             add(
                     "modules",
-                    pom.modules.isEmpty() ? "ok" : "warn",
-                    pom.modules.isEmpty() ? "single module" : "multi-module: " + pom.modules,
-                    "gta supports single-module services only for now; run it in the module that holds the service");
+                    !multiModule || repositoryPom.modules.contains(module) ? "ok" : "fail",
+                    !multiModule
+                            ? "single module"
+                            : module.isEmpty()
+                                    ? "multi-module " + repositoryPom.modules + ", build.module not set"
+                                    : "module " + module + " of " + repositoryPom.modules,
+                    "Set build.module in .gta/config.json to the module that holds the service (one of "
+                            + repositoryPom.modules + ")");
             boolean junit = pom.dependencies.contains("gta-junit");
             add(
                     "gta-junit",
@@ -103,6 +118,17 @@ public final class DoctorChecks {
                     "ok",
                     Files.exists(paths.config()) ? ".gta/config.json valid" : "defaults (no .gta/config.json)",
                     "");
+            if (config.build.javaHomeEnv != null) {
+                String jdk = System.getenv(config.build.javaHomeEnv);
+                boolean present = jdk != null && Files.isDirectory(Path.of(jdk));
+                add(
+                        "build-jdk",
+                        present ? "ok" : "fail",
+                        present
+                                ? config.build.javaHomeEnv + " = " + jdk
+                                : config.build.javaHomeEnv + " is not a JDK directory",
+                        "Set " + config.build.javaHomeEnv + " to the JDK this service builds with");
+            }
             // dependency-specific checks only run for services that use the dependency
             if (uses(dependencies, "ojdbc")) {
                 boolean oracle = config.environments.oracle.testUrl != null;
@@ -202,5 +228,15 @@ public final class DoctorChecks {
     /** Whether any dependency's artifactId contains {@code fragment} (e.g. ojdbc11, spring-cloud-gcp-starter-pubsub). */
     static boolean uses(List<String> dependencies, String fragment) {
         return dependencies.stream().anyMatch(a -> a != null && a.contains(fragment));
+    }
+
+    /** build.module from .gta/config.json; "" when unset or when the config cannot be read (the config check reports that). */
+    private String configuredModule() {
+        try {
+            String m = GtaConfig.load(new GtaPaths(root)).build.module;
+            return m == null ? "" : m;
+        } catch (GtaException e) {
+            return "";
+        }
     }
 }

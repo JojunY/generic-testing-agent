@@ -169,7 +169,7 @@ final class ItemWorkflow {
     private String lastAuthor(PlanItem item) {
         ProcessRunner.Result r = ProcessRunner.run(
                 paths.root(),
-                ProcessRunner.cmd("git", "log", "-1", "--format=%an", "--", GtaPaths.testSourceRel(item.testClass)));
+                ProcessRunner.cmd("git", "log", "-1", "--format=%an", "--", paths.testSourceRel(item.testClass)));
         return r.ok() && !r.output().isBlank() ? r.output().strip() : "not committed yet";
     }
 
@@ -190,7 +190,7 @@ final class ItemWorkflow {
         String details;
         if (kind.equals("oracle-review")) {
             details = "The test passed. Check that it asserts exactly what the THEN clauses say, on the right object, "
-                    + "and that inputs really exercise the WHEN. Test file: `" + GtaPaths.testSourceRel(item.testClass)
+                    + "and that inputs really exercise the WHEN. Test file: `" + paths.testSourceRel(item.testClass)
                     + "`."
                     + (s.structuralOracleChange
                             ? "\n\n**Locked assertions were restructured (values unchanged): confirm the meaning is the same.**"

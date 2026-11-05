@@ -400,7 +400,7 @@ public final class Engine {
         if (!refresh && Files.exists(paths.profile())) {
             return Json.read(paths.profile(), ServiceProfile.class);
         }
-        ServiceProfile p = Profiler.profile(paths.root(), registry, config.build.basePackage);
+        ServiceProfile p = Profiler.profile(paths, registry, config.build.basePackage);
         Json.writeAtomic(paths.profile(), p);
         Json.writeAtomic(paths.flowCatalog(), p.entrypoints);
         return p;

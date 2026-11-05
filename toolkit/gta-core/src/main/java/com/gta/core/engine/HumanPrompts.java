@@ -123,7 +123,7 @@ final class HumanPrompts {
         p.type = "naming-conflict";
         p.itemId = item.id;
         p.flowId = item.flowId;
-        String file = GtaPaths.testSourceRel(item.testClass);
+        String file = paths.testSourceRel(item.testClass);
         p.prompt = "── " + item.id + ": the test class name is taken ──\n"
                 + "gta names this test " + file + " (one test class per source class and kind),\n"
                 + "but that file already exists and is not a gta test (last change by " + lastAuthor + ").\n"

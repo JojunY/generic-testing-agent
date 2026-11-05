@@ -1,0 +1,46 @@
+package com.example.order.loyalty;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.gta.junit.KnownDefect;
+import java.math.BigDecimal;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationEventPublisher;
+
+@Tag("component")
+@Tag("gta")
+@SpringBootTest
+class LoyaltyListenerIT {
+
+    @Autowired
+    ApplicationEventPublisher events;
+
+    @Autowired
+    LoyaltyService loyalty;
+
+    @Test
+    @Tag("flow:loyalty.on-order-created")
+    @Tag("scenario:loyalty.on-order-created/s01")
+    @Tag("characterization")
+    @DisplayName("[loyalty.on-order-created/s01] a round total")
+    void shouldAwardOnePointPerTenForARoundTotal() {
+        events.publishEvent(new OrderCreated("c-7", new BigDecimal("30.00")));
+
+        assertThat(loyalty.points("c-7")).isEqualTo(3);
+    }
+
+    @Test
+    @Tag("flow:loyalty.on-order-created")
+    @Tag("scenario:loyalty.on-order-created/s02")
+    @Tag("hardening")
+    @DisplayName("[loyalty.on-order-created/s02] only full 10.00 count")
+    void shouldCountOnlyFullTens() {
+        events.publishEvent(new OrderCreated("c-8", new BigDecimal("25.00")));
+
+        assertThat(loyalty.points("c-8")).isEqualTo(2);
+    }
+}

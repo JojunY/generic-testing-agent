@@ -1,0 +1,36 @@
+# Installed by `gtaw init --ci` (docs/guides/ci-integration.md). Managed by gta: `gtaw upgrade` updates it and
+# reports local edits instead of overwriting them.
+name: gta gate
+on:
+  pull_request:
+    paths-ignore: ["**/*.md", "!.gta/specs/**"]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  gate:
+    runs-on: [self-hosted, linux]          # a runner that can reach Nexus
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }           # the gate reads the base branch's specs and shards
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "21", cache: maven }
+      - name: Build and run tests
+        run: {{maven}} -B verify
+      - name: gta gate
+        env:
+          GTA_NEXUS_USER: ${{ secrets.NEXUS_USER }}          # used by gtaw to download the pinned gta-cli jar
+          GTA_NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+        run: |
+          ./gtaw gate --base "origin/${{ github.base_ref }}" \
+            --reports {{reports}}/surefire-reports --reports {{reports}}/failsafe-reports > gate.json || echo "GATE_FAILED=1" >> "$GITHUB_ENV"
+          ./gtaw report --kind pr-comment > pr-comment.md
+          cat gate.json
+      - name: Comment on the PR
+        uses: marocchino/sticky-pull-request-comment@v2   # replace with your organisation's approved equivalent
+        with: { path: pr-comment.md, header: gta }
+      - name: Fail when the gate failed
+        if: env.GATE_FAILED == '1'
+        run: exit 1

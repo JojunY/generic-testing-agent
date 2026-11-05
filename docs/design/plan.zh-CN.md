@@ -491,8 +491,10 @@ capabilities:
     since: P1
     detect:
       buildDeps: [spring-kafka, spring-cloud-gcp-starter-pubsub, spring-cloud-stream, spring-jms,
-                  spring-boot-starter-artemis, mq-jms-spring-boot-starter]
-      annotations: ["@KafkaListener", "@JmsListener", "@ApplicationModuleListener", "@TransactionalEventListener"]
+                  spring-boot-starter-artemis, mq-jms-spring-boot-starter, spring-boot-starter-amqp,
+                  spring-cloud-aws-starter-sqs]
+      annotations: ["@KafkaListener", "@JmsListener", "@RabbitListener", "@SqsListener", "@ApplicationModuleListener",
+                    "@TransactionalEventListener"]
     layers: [unit, component, contract]
     diagrams: [sequence]
     skills: [gta-testing-event-flows, gta-using-embedded-dependencies]
@@ -515,6 +517,21 @@ capabilities:
     detect: { files: ["**/service.yaml", "**/helm/**/Chart.yaml", "**/k8s/**/*.yaml", "**/*.tf"] }
     layers: [system]
     skills: [gta-testing-deployed-systems]
+  - id: security              # never produces flows; adds the security skill to the flows of a secured service
+    since: P2
+    dispatch: false
+    detect:
+      buildDeps: [spring-boot-starter-security, spring-boot-starter-oauth2-resource-server,
+                  spring-boot-starter-oauth2-client]
+      annotations: ["@EnableWebSecurity", "@PreAuthorize", "@Secured", "@EnableMethodSecurity"]
+    skills: [gta-testing-spring-security]
+  - id: caching               # never produces flows; adds the caching skill to the flows of a service with caches
+    since: P2
+    dispatch: false
+    detect:
+      buildDeps: [spring-boot-starter-cache, caffeine, spring-boot-starter-data-redis]
+      annotations: ["@Cacheable", "@CacheEvict", "@CachePut", "@EnableCaching"]
+    skills: [gta-testing-caches]
   - id: data-dependencies     # 不产生 flow，只为命中的条目追加 skill
     since: P0
     dispatch: false
@@ -1134,7 +1151,7 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 ```json
 {
   "$schema": "./schemas/config.v1.schema.json", "schemaVersion": "1.0",
-  "build": { "tool": "maven", "basePackage": "auto", "maven": "auto" },
+  "build": { "tool": "maven", "basePackage": "auto", "maven": "auto", "javaHomeEnv": null, "module": "" },
   "dispatch": "subagent",
   "spec": { "maxQuestionsPerRound": 5, "maxClarifyRounds": 2, "maxSubmitAttempts": 3 },
   "environments": { "oracle": { "testUrl": null, "userEnv": "GTA_ORACLE_USER", "passwordEnv": "GTA_ORACLE_PASSWORD" } },
@@ -1425,7 +1442,7 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 |---|---|---|
 | **P0a 平台验证（1 周）** | 用 eval 选定各档模型；在 Windows 上验证 Pub/Sub 模拟器、EmbeddedKafka、Artemis、Oracle 共享测试库能否正常使用；在两个 IDE 和 OpenCode 中验证：agent 可见性；子 agent 派发与 inline 模式；prompt 文件的 `agent:` 字段；终端自动批准（含 Windows）；特权命令是否确实会弹出确认；请求上限；长时间运行的终端命令（check/submit 的耗时） | 得到实测版的 §11.4 |
 | **P0 核心**（已实现） | gtaw：`init`/`doctor`/`next`/`check`/`submit`/`answer`/`status`/`abort`/`run`/`verify`（稳定性 + 期望值复核）/`report`；`gta-junit`；schemas；生成器和 lint；4 个 agent；skills：mapping-flows、writing-behavior-specs、designing-test-oracles、writing-tests、testing-spring-apis、stubbing-with-wiremock、testing-api-contracts、using-embedded-dependencies、reviewing-test-quality；`/gta explain` 和 flow 模式；1 个 REST fixture，20 个 eval task | 在 1 个真实 REST 服务上跑通 explain → 回答 → 批准 → 至少 5 个 verified 测试；植入的 bug 被判定为缺陷，而不是被修绿；对抗 eval 的指标 3、4 达标；故障注入后能恢复 |
-| **P1 接入：多模块、事件、定时任务、PR 模式** | 多模块 Maven 服务（一次一个模块，reactor 只解析一次）；`messaging`（Kafka、Pub/Sub、JMS/MQ）；`scheduler`（`@Scheduled`、ShedLock、Quartz）；PR 模式：impact（方法、配置、bean 图）、alm-github CI 模板 `gta-gate.yml`、PR 评论、analyzing-change-impact；OpenCode 端到端 | 每个新能力各有 1 个试点服务跑通，另有 1 个多模块服务跑通；在真实 PR 上产出行为变更摘要，门禁上线（mutation 为 advisory） |
+| **P1 接入：多模块、事件、定时任务、PR 模式** | 多模块 Maven 服务（一次一个模块，Maven 以 `-pl <module> -am` 运行；已实现）；`messaging`（Kafka、Pub/Sub、JMS/MQ、RabbitMQ、SQS；已实现）；`scheduler`（`@Scheduled`、ShedLock、Quartz；已实现）；PR 模式：impact（方法、配置、bean 图；已实现）、alm-github CI 模板 `gta-gate.yml`（`gtaw init --ci`；已实现）、PR 评论、analyzing-change-impact；OpenCode 端到端 | 每个新能力各有 1 个试点服务跑通，另有 1 个多模块服务跑通；在真实 PR 上产出行为变更摘要，门禁上线（mutation 为 advisory） |
 | **P2 数据、安全与质量** | `db-migration`（Flyway、Liquibase）；`security`（Spring Security、OAuth2 resource server、JWT：已认证与被拒绝的路径、方法级安全）；`caching`（Spring Cache、Redis、Caffeine：命中、失效、读到旧值）；`spring-batch`；`mutate` 和能失败检查（共用 PIT 集成）；学习回路；先规则后 LLM 的修复；`spec.source=openspec\|speckit` | 每个新能力各有 1 个试点服务；mutation 在试点仓库校准后切换为 enforced |
 | **P3 响应式、Gradle、其他协议、catching** | `webflux`（用 `WebTestClient` 和 `StepVerifier` 测响应式端点和客户端）；Gradle 构建（在 Maven 之外增加第二个 `TestRunner` 和构建文件读取）；`grpc-api` 和 `graphql-api`；`workflow`（Temporal、Camunda、Spring Statemachine）；`beam-pipeline`；incident 模式；catching 测试与 assessor | 每类各试点 1 个服务 |
 | **P4 部署态与流式端点** | `gta-testing-deployed-systems` skill、`gtaw env`、Karate、云隔离；BigQuery SQL 在临时数据集上测试；`websocket`（WebSocket、STOMP、SSE） | 夜间 regression |
@@ -1433,19 +1450,21 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 
 ### 能力顺序
 
-主流的 Spring 服务类型都在范围内。阶段按各类型在 Spring 服务中的常见程度排列，只有一个例外：多模块支持排在最前，因为它决定 gta 能否装进一个仓库。能力从所在阶段起启用（`core/registry/capabilities.yaml` 中的 `since`），在此之前只能 explain。标为*新增*的能力还没有注册表条目和 skill：每个都随自己的 skill、注册表条目、eval fixture 和 1 个试点服务一起交付。
+主流的 Spring 服务类型都在范围内。阶段按各类型在 Spring 服务中的常见程度排列，只有一个例外：多模块支持排在最前，因为它决定 gta 能否装进一个仓库。能力从所在阶段起启用（`core/registry/capabilities.yaml` 中的 `since`），在此之前只能 explain。
+
+多模块仓库（已实现）：git 和 `.gta/` 留在仓库根目录；`build.module` 指定服务所在的模块。源码、测试、fixture 和报告都在该模块下解析；模块没有设置时，Spring Boot 版本和 Java 版本从根 pom 继承；Maven 在根目录以 `-pl <module> -am` 运行，兄弟模块从工作区构建。一个配置对应一个模块：仓库里有多个服务模块时，在会话之间切换 `build.module`。没有设置 `build.module` 的聚合 pom 会被拒绝并给出提示，而不是被当成一个没有流程的服务。脚本化 e2e 会跑两种布局。标为*新增*的能力还没有注册表条目和 skill：每个都随自己的 skill、注册表条目、eval fixture 和 1 个试点服务一起交付。
 
 | # | 类型 | 阶段 | 当前状态 |
 |---|---|---|---|
 | 1 | REST API（WebMVC） | P0 | 自动写测试 |
 | 2 | 数据库访问（JPA、JDBC、Oracle） | P0 | 作为 REST 流程的依赖（嵌入式或 fake） |
 | 3 | 调用下游 HTTP 服务（RestClient、WebClient、Feign） | P0 | 在 REST 流程中用 WireMock stub |
-| 4 | 多模块 Maven 服务 | P1 | *新增*；`gtaw doctor` 会警告 |
-| 5 | 消息（Kafka、Pub/Sub、JMS/MQ） | P1 | 能识别，只写 spec |
-| 6 | 定时任务（`@Scheduled`、ShedLock、Quartz） | P1 | 能识别，只写 spec |
+| 4 | 多模块 Maven 服务 | P1 | 已支持：用 `build.module` 指定服务所在模块 |
+| 5 | 消息（Kafka、Pub/Sub、JMS/MQ、RabbitMQ、SQS、应用事件） | P1 | 自动写测试 |
+| 6 | 定时任务（`@Scheduled`、ShedLock、Quartz） | P1 | 自动写测试 |
 | 7 | 数据库迁移（Flyway、Liquibase） | P2 | 能识别，只写 spec |
-| 8 | 安全（Spring Security、OAuth2、JWT） | P2 | *新增* |
-| 9 | 缓存（Spring Cache、Redis、Caffeine） | P2 | *新增* |
+| 8 | 安全（Spring Security、OAuth2、JWT） | P2 | 能识别；skill `gta-testing-spring-security` 已就绪；从 P2 起附加到流程 |
+| 9 | 缓存（Spring Cache、Redis、Caffeine） | P2 | 能识别；skill `gta-testing-caches` 已就绪；从 P2 起附加到流程 |
 | 10 | Spring Batch | P2 | 能识别，只写 spec |
 | 11 | 响应式 WebFlux | P3 | *新增*；目前按 REST 识别 |
 | 12 | Gradle 构建 | P3 | *新增*；目前只支持 Maven |
@@ -1457,7 +1476,7 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 | 18 | 部署环境上的系统测试（Karate、Kubernetes） | P4 | 只有 skill |
 | 19 | WebSocket、STOMP、SSE | P4 | *新增* |
 
-Java：支持 Java 17 及以上的服务，测试按服务自身的 Java 版本编写；CI 在 JDK 17、21、25 上构建 gta，每个新的 LTS 都会加入矩阵。Java 8 和 11 的服务（大多是已停止开源支持的 Spring Boot 2）不支持，`gtaw doctor` 会报失败。
+Java：以 Java 17 及以上的服务为主进行设计，少数 Java 8 或 11 的服务也支持。测试按服务自身的语言版本编写，Spring Boot 2.2 到 2.7 使用 `javax.*` 导入。`gta-junit` 编译为 Java 8 字节码，旧服务也能加载；gtaw 本身运行在 JDK 17+ 上。旧服务的构建需要自己的 JDK 时，用 `build.javaHomeEnv` 指定存放该 JDK 路径的环境变量，Maven 会以该 `JAVA_HOME` 运行。CI 在 JDK 17、21、25 上构建 gta，每个新的 LTS 都会加入矩阵。`gtaw doctor` 对 Java 8 到 16 给出警告，更旧的报失败。
 
 ---
 

@@ -7,6 +7,7 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.printer.lexicalpreservation.LexicalPreservingPrinter;
+import com.gta.core.change.Impact;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
@@ -238,6 +239,12 @@ final class CaseLedgers {
         try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
             Set<String> changed = new LinkedHashSet<>(git.changedFiles(base));
             changed.addAll(git.dirtyPaths());
+            // a scenario is affected through the classes its spec cites, the classes they inject (bean graph), and
+            // the config keys it cites whose value changed
+            Map<String, String> affectedClasses = Impact.affectedClasses(
+                    com.gta.core.profile.JavaIndex.of(paths.mainJava()), Impact.changedClasses(paths, changed));
+            Set<String> changedKeys = Impact.changedConfigKeys(git, paths, base, changed);
+            Map<String, String> reasons = new LinkedHashMap<>();
             List<String> affected = new ArrayList<>();
             List<String> p0 = new ArrayList<>();
             Set<String> tests = new LinkedHashSet<>();
@@ -245,11 +252,24 @@ final class CaseLedgers {
                 Spec spec = SpecParser.parse(paths.spec(flowId));
                 CaseLedger ledger = CaseLedger.read(paths.cases(flowId), flowId);
                 for (Spec.Requirement r : spec.requirements) {
-                    boolean touched = r.refs().stream()
+                    String reason = null;
+                    for (Ref ref : r.refs().stream()
                             .map(Ref::parse)
                             .flatMap(Optional::stream)
-                            .filter(Ref::isCode)
-                            .anyMatch(ref -> changed.contains(GtaPaths.MAIN_JAVA + "/" + ref.sourcePath()));
+                            .toList()) {
+                        if (ref.isCode() && affectedClasses.containsKey(ref.target())) {
+                            String cause = affectedClasses.get(ref.target());
+                            reason = cause.equals(ref.target())
+                                    ? ref.target() + " changed"
+                                    : cause + " changed (reached through " + ref.target() + ")";
+                        } else if ("config".equals(ref.kind()) && changedKeys.contains(ref.target())) {
+                            reason = "config " + ref.target() + " changed";
+                        }
+                        if (reason != null) {
+                            break;
+                        }
+                    }
+                    boolean touched = reason != null;
                     for (Spec.Scenario s : r.scenarios) {
                         if (s.id() == null) {
                             continue;
@@ -257,6 +277,7 @@ final class CaseLedgers {
                         if (touched) {
                             ledger.markForReview(s.id());
                             affected.add(s.id());
+                            reasons.put(s.id(), reason);
                         }
                     }
                 }
@@ -281,6 +302,7 @@ final class CaseLedgers {
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("base", base);
             out.put("needsReview", affected);
+            out.put("reasons", reasons);
             out.put("regressionScope", List.copyOf(scope));
             out.put("testClasses", List.copyOf(tests));
             out.put("tags", scope.stream().map(id -> "scenario:" + id).toList());
@@ -382,7 +404,7 @@ final class CaseLedgers {
                 Files.delete(file);
             }
             List<String> out = new ArrayList<>(List.of(paths.rel(file)));
-            Path fixtures = paths.root().resolve(Planner.fixtureFolder(testClass));
+            Path fixtures = paths.moduleRoot().resolve(Planner.fixtureFolder(testClass));
             String prefix = scenarioId.substring(scenarioId.indexOf('/') + 1) + ".";
             if (Files.isDirectory(fixtures)) {
                 try (Stream<Path> fs = Files.list(fixtures)) {

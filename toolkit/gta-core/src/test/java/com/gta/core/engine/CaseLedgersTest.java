@@ -230,6 +230,9 @@ class CaseLedgersTest {
                 "both scenarios of the requirement that refers to it");
         assertEquals(List.of(S01, "order.create/s02"), out.get("regressionScope"));
         assertEquals(CaseLedger.NEEDS_REVIEW, ledger().row(S01).orElseThrow().status);
+        assertTrue(
+                String.valueOf(((Map<?, ?>) out.get("reasons")).get(S01)).contains("OrderController changed"),
+                "the human sees why: " + out.get("reasons"));
     }
 
     @Test

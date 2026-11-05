@@ -26,6 +26,8 @@
 .gta/skills/gta-testing-beam-pipelines/SKILL.md
 .gta/skills/gta-testing-beam-pipelines/references/dataflow-runs.md
 .gta/skills/gta-testing-beam-pipelines/references/test-stream.md
+.gta/skills/gta-testing-caches/SKILL.md
+.gta/skills/gta-testing-caches/references/cache-stores.md
 .gta/skills/gta-testing-db-migrations/SKILL.md
 .gta/skills/gta-testing-db-migrations/references/flyway.md
 .gta/skills/gta-testing-db-migrations/references/liquibase.md
@@ -55,6 +57,8 @@
 .gta/skills/gta-testing-spring-batch-jobs/SKILL.md
 .gta/skills/gta-testing-spring-batch-jobs/references/batch5-vs-batch6.md
 .gta/skills/gta-testing-spring-batch-jobs/references/restart.md
+.gta/skills/gta-testing-spring-security/SKILL.md
+.gta/skills/gta-testing-spring-security/references/test-identities.md
 .gta/skills/gta-testing-workflows/SKILL.md
 .gta/skills/gta-testing-workflows/references/gcp-workflows.md
 .gta/skills/gta-testing-workflows/references/state-machines.md

@@ -41,8 +41,9 @@ final class EngineContext {
 
     /** @param runner the test runner; null = Maven (tests of gta pass a fake) */
     EngineContext(Path root, TestRunner runner) {
-        this.paths = new GtaPaths(root.toAbsolutePath().normalize());
-        this.config = GtaConfig.load(paths);
+        GtaPaths repository = new GtaPaths(root.toAbsolutePath().normalize());
+        this.config = GtaConfig.load(repository);
+        this.paths = repository.withModule(config.build.module);
         this.registry = CapabilityRegistry.loadBundled();
         this.store = new StateStore(paths);
         this.git = new Git(paths.root());

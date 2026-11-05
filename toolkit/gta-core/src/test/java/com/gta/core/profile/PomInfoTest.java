@@ -74,4 +74,33 @@ class PomInfoTest {
         assertEquals(8, javaOf("<maven.compiler.source>1.8</maven.compiler.source>"), "1.8 is Java 8");
         assertEquals(0, javaOf(""), "unknown when the pom does not say");
     }
+
+    @Test
+    void shouldReadAModuleWithTheBootVersionAndJavaLevelItInheritsFromTheRootPom() throws Exception {
+        Files.writeString(root.resolve("pom.xml"), """
+                <project>
+                  <parent><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-parent</artifactId><version>3.5.4</version></parent>
+                  <artifactId>orders</artifactId>
+                  <properties><java.version>21</java.version></properties>
+                  <modules><module>order-api</module><module>order-core</module></modules>
+                </project>
+                """);
+        Files.createDirectories(root.resolve("order-api"));
+        Files.writeString(root.resolve("order-api/pom.xml"), """
+                <project>
+                  <parent><artifactId>orders</artifactId></parent>
+                  <artifactId>order-api</artifactId>
+                  <dependencies><dependency><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies>
+                </project>
+                """);
+
+        PomInfo api = PomInfo.read(root, "order-api");
+
+        assertEquals("order-api", api.artifactId);
+        assertEquals("3.5.4", api.bootVersion, "inherited from the root pom's parent");
+        assertEquals(21, api.javaMajor(), "inherited from the root pom's properties");
+        assertEquals(
+                java.util.List.of("spring-boot-starter-web"), api.dependencies, "dependencies are the module's own");
+        assertThrows(GtaException.class, () -> PomInfo.read(root, "no-such-module"));
+    }
 }

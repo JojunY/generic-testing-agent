@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.stream.Collectors;
 import org.junit.platform.engine.TestExecutionResult;
@@ -22,7 +23,14 @@ public final class GtaResultsListener implements TestExecutionListener {
 
     public GtaResultsListener() {
         String dir = System.getProperty("gta.results.dir", "target/gta-results");
-        this.file = Path.of(dir).resolve("results-" + ProcessHandle.current().pid() + ".jsonl");
+        this.file = Paths.get(dir).resolve("results-" + pid() + ".jsonl");
+    }
+
+    /** One file per test JVM, so parallel forks never interleave lines (ProcessHandle needs Java 9). */
+    private static String pid() {
+        String name = java.lang.management.ManagementFactory.getRuntimeMXBean().getName();
+        int at = name.indexOf('@');
+        return at > 0 ? name.substring(0, at) : Integer.toHexString(System.identityHashCode(name));
     }
 
     @Override
@@ -38,19 +46,28 @@ public final class GtaResultsListener implements TestExecutionListener {
             return;
         }
         String message = result.getThrowable().map(Throwable::getMessage).orElse(null);
-        String outcome = switch (result.getStatus()) {
-            case SUCCESSFUL -> "passed";
-            case ABORTED ->
-                message != null && message.startsWith(KnownDefectExtension.ABORT_PREFIX) ? "known-defect" : "skipped";
-            case FAILED -> "failed";
-        };
+        String outcome;
+        switch (result.getStatus()) {
+            case SUCCESSFUL:
+                outcome = "passed";
+                break;
+            case ABORTED:
+                outcome = message != null && message.startsWith(KnownDefectExtension.ABORT_PREFIX)
+                        ? "known-defect"
+                        : "skipped";
+                break;
+            default:
+                outcome = "failed";
+        }
         write(id, outcome, message);
     }
 
     private void write(TestIdentifier id, String outcome, String message) {
-        if (!(id.getSource().orElse(null) instanceof MethodSource m)) {
+        Object source = id.getSource().orElse(null);
+        if (!(source instanceof MethodSource)) {
             return;
         }
+        MethodSource m = (MethodSource) source;
         String tags = id.getTags().stream()
                 .map(TestTag::getName)
                 .map(GtaResultsListener::quote)
@@ -64,7 +81,8 @@ public final class GtaResultsListener implements TestExecutionListener {
             if (dir != null) {
                 Files.createDirectories(dir);
             }
-            Files.writeString(file, line, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            Files.write(
+                    file, line.getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         } catch (IOException e) {
             // results are an optimisation for gtaw; never fail the build because of them
         }
@@ -76,19 +94,20 @@ public final class GtaResultsListener implements TestExecutionListener {
         }
         StringBuilder sb = new StringBuilder("\"");
         for (char c : s.toCharArray()) {
-            switch (c) {
-                case '"' -> sb.append("\\\"");
-                case '\\' -> sb.append("\\\\");
-                case '\n' -> sb.append("\\n");
-                case '\r' -> sb.append("\\r");
-                case '\t' -> sb.append("\\t");
-                default -> {
-                    if (c < 0x20) {
-                        sb.append(String.format("\\u%04x", (int) c));
-                    } else {
-                        sb.append(c);
-                    }
-                }
+            if (c == '"') {
+                sb.append("\\\"");
+            } else if (c == '\\') {
+                sb.append("\\\\");
+            } else if (c == '\n') {
+                sb.append("\\n");
+            } else if (c == '\r') {
+                sb.append("\\r");
+            } else if (c == '\t') {
+                sb.append("\\t");
+            } else if (c < 0x20) {
+                sb.append(String.format("\\u%04x", (int) c));
+            } else {
+                sb.append(c);
             }
         }
         return sb.append('"').toString();

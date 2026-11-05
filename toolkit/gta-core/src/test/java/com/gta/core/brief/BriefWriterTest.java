@@ -112,5 +112,10 @@ class BriefWriterTest {
                 BriefWriter.javaLine(17).contains("newer than Java 17"), "a Java 17 service gets no Java 21 syntax");
         org.junit.jupiter.api.Assertions.assertTrue(
                 BriefWriter.javaLine(0).startsWith("Java 17 "), "an unknown level falls back to gta's floor");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                BriefWriter.javaLine(8).startsWith("Java 8 "), "Java 8 services too");
+        org.junit.jupiter.api.Assertions.assertTrue(BriefWriter.namespaceLine(2).contains("javax"));
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "", BriefWriter.namespaceLine(3), "Boot 3+ uses jakarta by default");
     }
 }

@@ -2,6 +2,7 @@ package com.example.order.domain;
 
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,5 +19,9 @@ public class OrderRepository {
 
     public Optional<Order> findById(UUID id) {
         return Optional.ofNullable(orders.get(id));
+    }
+
+    public List<Order> findAll() {
+        return List.copyOf(orders.values());
     }
 }

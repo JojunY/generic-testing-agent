@@ -28,6 +28,32 @@ public final class PomInfo {
     public List<String> modules = new ArrayList<>();
     public List<String> plugins = new ArrayList<>();
 
+    /**
+     * The service module's pom, with what a module usually inherits from the root pom: the Spring Boot version and the
+     * Java level. Dependencies and plugins are the module's own.
+     */
+    public static PomInfo read(Path repository, String module) {
+        if (module == null || module.isEmpty()) {
+            return read(repository);
+        }
+        Path moduleRoot = repository.resolve(module);
+        if (!Files.exists(moduleRoot.resolve("pom.xml"))) {
+            throw new GtaException(
+                    ErrorCode.ENV_UNSUPPORTED_BUILD,
+                    "build.module is " + module + ", but " + module + "/pom.xml does not exist",
+                    "Set build.module in .gta/config.json to the folder of the module that holds the service");
+        }
+        PomInfo info = read(moduleRoot);
+        PomInfo parent = read(repository);
+        if (info.bootVersion == null) {
+            info.bootVersion = parent.bootVersion;
+        }
+        if (info.javaRelease == null) {
+            info.javaRelease = parent.javaRelease;
+        }
+        return info;
+    }
+
     public static PomInfo read(Path root) {
         Path pom = root.resolve("pom.xml");
         if (!Files.exists(pom)) {

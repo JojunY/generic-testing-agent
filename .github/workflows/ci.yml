@@ -26,6 +26,9 @@ jobs:
       - name: Scripted end-to-end run
         if: matrix.java == '21'
         run: evals/e2e/run.sh "$RUNNER_TEMP/gta-e2e"
+      - name: Scripted end-to-end run, service as a module of a multi-module repository
+        if: matrix.java == '21'
+        run: GTA_E2E_MODULE=order-service evals/e2e/run.sh "$RUNNER_TEMP/gta-e2e-module"
 
   windows:
     runs-on: windows-latest

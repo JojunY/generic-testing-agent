@@ -48,7 +48,7 @@ public class CapabilityRegistry {
     }
 
     /** The phase this build of gta implements. Capabilities with a later `since` are explain-only. */
-    public static final String CURRENT_PHASE = "P0";
+    public static final String CURRENT_PHASE = "P1";
 
     public static int phaseNumber(String phase) {
         try {

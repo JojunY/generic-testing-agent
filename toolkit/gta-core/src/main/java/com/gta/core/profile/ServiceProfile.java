@@ -7,6 +7,9 @@ import java.util.List;
 public class ServiceProfile {
     public String schemaVersion = "1.0";
     public String artifactId;
+    /** The module that holds the service ({@code build.module}); "" for a single-module repository. */
+    public String module = "";
+
     public String bootVersion;
     public int bootMajor;
     public int junitMajor;

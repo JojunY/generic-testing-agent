@@ -119,4 +119,17 @@ class PlannerTest {
         assertEquals("p2", Planner.priority(3));
         assertEquals("p3", Planner.priority(1));
     }
+
+    @Test
+    void shouldOwnTheTestFilesOfTheServiceModuleOnly() {
+        ServiceProfile p = profile();
+        p.module = "order-api";
+
+        List<PlanItem> items = Planner.plan(spec(), CapabilityRegistry.loadBundled(), p);
+
+        for (PlanItem i : items) {
+            assertTrue(i.ownsFiles.stream().allMatch(f -> f.startsWith("order-api/")), i.id + " " + i.ownsFiles);
+        }
+        assertTrue(items.get(0).ownsFiles.contains("order-api/pom.xml"), "the foundation edits the module's pom");
+    }
 }

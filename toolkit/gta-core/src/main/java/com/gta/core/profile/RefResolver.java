@@ -60,22 +60,35 @@ public final class RefResolver {
                 if (!name.startsWith("application")) {
                     continue;
                 }
-                if (name.endsWith(".properties")) {
-                    Properties p = new Properties();
-                    try (Reader r = Files.newBufferedReader(f, StandardCharsets.UTF_8)) {
-                        p.load(r);
-                    }
-                    p.forEach((k, v) -> out.putIfAbsent(k.toString(), v.toString()));
-                } else if (name.endsWith(".yml") || name.endsWith(".yaml")) {
-                    for (JsonNode doc : Yaml.MAPPER
-                            .readValues(Yaml.MAPPER.getFactory().createParser(f.toFile()), JsonNode.class)
-                            .readAll()) {
-                        flatten("", doc, out);
-                    }
-                }
+                parseConfig(name, Files.readString(f, StandardCharsets.UTF_8)).forEach(out::putIfAbsent);
             }
         } catch (IOException e) {
             // unreadable config is reported by lint as unresolvable refs
+        }
+        return out;
+    }
+
+    /** Whether a file name is a Spring Boot config file gta reads ({@code application*.properties|yml|yaml}). */
+    public static boolean isConfigFile(String name) {
+        return name.startsWith("application")
+                && (name.endsWith(".properties") || name.endsWith(".yml") || name.endsWith(".yaml"));
+    }
+
+    /** Flattened keys of one config file's text ({@code a.b[0].c -> value}); empty for other file types. */
+    public static Map<String, String> parseConfig(String name, String text) throws IOException {
+        Map<String, String> out = new LinkedHashMap<>();
+        if (name.endsWith(".properties")) {
+            Properties p = new Properties();
+            try (Reader r = new java.io.StringReader(text)) {
+                p.load(r);
+            }
+            p.forEach((k, v) -> out.putIfAbsent(k.toString(), v.toString()));
+        } else if (name.endsWith(".yml") || name.endsWith(".yaml")) {
+            for (JsonNode doc : Yaml.MAPPER
+                    .readValues(Yaml.MAPPER.getFactory().createParser(text), JsonNode.class)
+                    .readAll()) {
+                flatten("", doc, out);
+            }
         }
         return out;
     }

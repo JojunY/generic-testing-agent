@@ -32,6 +32,17 @@ public class GtaConfig {
         public String basePackage = "auto";
         /** Maven executable; "auto" = ./mvnw when present, otherwise mvn. */
         public String maven = "auto";
+        /**
+         * Name of an environment variable holding the JDK this service builds with (for example a JDK 8 for an old
+         * Spring Boot 2 service); null = Maven uses the JDK gtaw runs on. A name, not a path, because paths differ
+         * per machine.
+         */
+        public String javaHomeEnv;
+        /**
+         * The Maven module that holds the service, relative to the repository root (for example "order-api"); "" for
+         * a single-module repository. gta works in one module at a time (plan §15, P1).
+         */
+        public String module = "";
     }
 
     public static class Spec {
