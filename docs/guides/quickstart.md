@@ -1,5 +1,7 @@
 # Quick start
 
+**English** | [简体中文](quickstart.zh-CN.md)
+
 Who does what:
 
 - **Tech lead, once per service:** steps 1–3.
@@ -35,7 +37,7 @@ java -jar gta-cli-<version>.jar --root path/to/service init --platform copilot \
 |---|---|
 | `.github/agents/gta-*.agent.md`, `.github/prompts/gta.prompt.md` | Copilot agents and the `/gta` command (OpenCode: `.opencode/agents`, `.opencode/commands`) |
 | `.gta/skills/**` | testing skills, loaded by path from briefs |
-| `AGENTS.md` | a gta block between `<!-- gta:begin -->` and `<!-- gta:end -->`; the rest of the file is kept |
+| `AGENTS.md` | a gta block between `<!-- gta:begin -->` and `<!-- gta:end -->`; the rest of the file is kept. A damaged block (a missing, reversed or duplicated marker) makes `init` refuse and write nothing |
 | `.vscode/settings.json`, `.vscode/extensions.json` / `opencode.json` | merged, never overwritten: auto-approve for `./gtaw next|check|submit|answer|status`, the Mermaid preview. A file with comments is left untouched and `init` prints the keys to add (`mergeManually`) |
 | `gtaw`, `gtaw.cmd`, `.gta/wrapper/*` | the wrapper: it downloads the pinned jar from Nexus, verifies its sha256 and runs it |
 | `.gitignore` | adds `.gta/work/` (rebuildable working state) |
@@ -65,6 +67,7 @@ Commit everything.
 
 - the JDK, Maven (or `mvnw`), git and the Spring Boot/JUnit versions;
 - gta-junit and the harness files;
+- a single-module pom (multi-module services are not supported yet and give a warning);
 - the Oracle test schema and the emulators;
 - IDE auto-approve.
 

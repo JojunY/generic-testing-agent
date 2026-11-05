@@ -46,7 +46,7 @@ gta 是一个面向 Java/Spring 服务、"先写规格再写测试"的测试 har
 
 ## 快速开始
 
-详见 [docs/guides/quickstart.md](docs/guides/quickstart.md)（英文）。简要步骤：
+详见 [docs/guides/quickstart.zh-CN.md](docs/guides/quickstart.zh-CN.md)（[English](docs/guides/quickstart.md)）。简要步骤：
 
 ```bash
 mvn -B install                      # 在本仓库：构建并测试 toolkit

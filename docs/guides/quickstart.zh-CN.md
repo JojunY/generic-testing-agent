@@ -1,0 +1,155 @@
+# 快速开始
+
+[English](quickstart.md) | **简体中文**
+
+> 这是 [quickstart.md](quickstart.md) 的中文副本，两份内容需要一起修改。命令、路径、回复格式（如 `approve order.create@R2`）保持原样。
+
+谁做什么：
+
+- **技术负责人，每个服务一次：** 第 1–3 步。
+- **每位开发者：** 第 4 步。
+
+## 1. 把 gta 发布到 Nexus（平台团队，每个版本一次）
+
+```bash
+mvn -B deploy -DaltDeploymentRepository=nexus::https://nexus.example.com/repository/maven-releases
+```
+
+这会发布 `com.gta:gta-cli:<version>`（shaded jar）和 `com.gta:gta-junit:<version>`（服务以 test 范围依赖它），以及配套的几个 artifact。完整的发布流程（校验和、tag）见 [releasing.md](releasing.md)。
+
+wrapper 和 Maven 的所有下载都经过公司的 Nexus 代理。
+
+可选：把 Pub/Sub 模拟器压缩包上传到 Nexus raw 仓库，并设置 `distribution.toolsUrl`（见 `.gta/skills/gta-using-embedded-dependencies/references/pubsub-emulator.md`）。不设置时，Pub/Sub 流程使用内存中的 fake。
+
+## 2. 把 harness 安装进服务
+
+选择团队使用的目录：`copilot`（VS Code 或 IntelliJ Copilot）或 `opencode`。
+
+```bash
+java -jar gta-cli-<version>.jar --root path/to/service init --platform copilot \
+  --distribution-url https://nexus.example.com/repository/maven-releases/com/gta/gta-cli/<version>/gta-cli-<version>.jar \
+  --distribution-sha256 <该 jar 的 sha256>
+```
+
+`init` 会写入：
+
+| 文件 | 用途 |
+|---|---|
+| `.github/agents/gta-*.agent.md`、`.github/prompts/gta.prompt.md` | Copilot 的 agent 和 `/gta` 命令（OpenCode：`.opencode/agents`、`.opencode/commands`） |
+| `.gta/skills/**` | 测试 skill，由 brief 按路径加载 |
+| `AGENTS.md` | 位于 `<!-- gta:begin -->` 和 `<!-- gta:end -->` 之间的 gta 块；文件其余内容保持不变。标记损坏（缺失、顺序颠倒或重复）时，`init` 拒绝写入并给出提示 |
+| `.vscode/settings.json`、`.vscode/extensions.json` / `opencode.json` | 合并写入，从不覆盖：`./gtaw next|check|submit|answer|status` 的自动批准、Mermaid 预览。带注释的文件不会被改动，`init` 会打印需要手工添加的键（`mergeManually`） |
+| `gtaw`、`gtaw.cmd`、`.gta/wrapper/*` | wrapper：从 Nexus 下载固定版本的 jar，校验 sha256 后运行 |
+| `.gitignore` | 增加 `.gta/work/`（可重建的工作状态） |
+
+在设置 `distributionUrl` 和 `distributionSha256Sum` 之前，`gtaw` 拒绝运行：未固定版本的 jar 永远不会被下载或执行。本地开发时，可用 `GTA_CLI_JAR=<gta-cli.jar 的路径>` 跳过下载。
+
+添加测试依赖。如果跳过，第一个 foundation 项会帮你加上。
+
+```xml
+<dependency>
+  <groupId>com.gta</groupId>
+  <artifactId>gta-junit</artifactId>
+  <version><!-- gta 版本 --></version>
+  <scope>test</scope>
+</dependency>
+```
+
+然后全部提交。
+
+## 3. 检查机器环境
+
+```bash
+./gtaw doctor        # Windows：.\gtaw.cmd doctor
+```
+
+`doctor` 检查：
+
+- JDK、Maven（或 `mvnw`）、git，以及 Spring Boot / JUnit 版本；
+- gta-junit 和 harness 文件；
+- 单模块（多模块服务暂不支持，会给出警告）；
+- Oracle 测试 schema 和模拟器；
+- IDE 自动批准。
+
+一开始有警告也没关系。在 IntelliJ 上，请手工添加自动批准规则：Settings > GitHub Copilot > Chat > Auto Approve。为 `./gtaw` 和 `.\gtaw.cmd` 添加子命令 `next`、`check`、`submit`、`answer`、`status`。
+
+## 4. 开始使用
+
+在服务中打开 Copilot Chat（agent 模式）或 OpenCode，输入：
+
+| 输入 | 效果 |
+|---|---|
+| `/gta` | 继续，或列出风险最高的流程供你选择 |
+| `/gta explain order.create` | 只写行为 spec 和问题，不写测试 |
+| `/gta order.create` | spec → 提问 → 批准 → 为该流程写测试 |
+| `/gta status` | 流程、事项，以及等待你处理的内容 |
+
+gta 会在三处停下来等你。
+
+**提问。** 用它给出的轮次编号回复：
+
+```
+R1: 1B 2A rest default
+```
+
+影响大的问题必须明确回答。`rest default` 会为其余问题选择“= 代码现状”选项。这些场景会变成*特征化*测试：锁定当前行为，但不证明它是正确的。
+
+**批准。** 用它给出的修订号回复：
+
+```
+approve order.create@R2
+```
+
+回复必须恰好是这一行：“don't approve …”或“approve … after q2 is fixed”会被当作修改请求，绝不当作批准。批准会连同你的原话一起提交，作为记录。
+
+**用中文回复。** 你可以用任何语言和 agent 交流。对于固定格式的回复，gtaw 也接受这些中文形式：`批准 order.create@R2` 表示批准，`其余默认`（或 `其他默认`）表示 rest default，选项标记 `= 代码现状` 对应 `= current code`。
+
+**缺陷与升级。** 用字母（A、B、C）回复。确认的缺陷会用 `@KnownDefect` 固定：
+
+- 缺陷存在期间，构建保持绿色；
+- 缺陷被修复后，该测试会变红，提醒你去掉固定标记。
+
+如果终端把中文显示成乱码，gta 会提示。请改用上面的 ASCII 形式，或把回复写进 UTF-8 文件，再运行 `./gtaw answer --file reply.txt`。
+
+## gta 在仓库里保留什么
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../diagrams/artifacts-dark.svg">
+  <img alt="gta 为每个流程保留的内容：spec 是预期值的来源；批准后写入用例台账，测试断言 THEN 值，gtaw 把它们锁进 oracle 分片，事项提交更新台账，INDEX.md 由它们派生，会话结束时从临时的 .gta/work 写出受版本控制的报告。" src="../diagrams/artifacts-light.svg">
+</picture>
+
+| 文件 | 说明 |
+|---|---|
+| `.gta/specs/<domain>/<flow>.spec.md` | 你批准的行为 spec：预期值的唯一来源 |
+| `.gta/specs/<domain>/<flow>.cases.md` | 测试用例台账：每个场景一行，含测试、优先级、最近结果和状态。把某行 Status 设为 `Retired` 即退役该用例；探索性用例加到 `## Manual cases` 表中 |
+| `.gta/specs/INDEX.md` | 所有台账的总览 |
+| `.gta/reports/<date>-<session>.md` | 每个会话一份报告：gate、变化的台账行、等待你确认的退役用例 |
+
+代码变更后，`./gtaw impact --base origin/main` 会标出代码已变化的用例，并打印回归范围（这些用例加上全部 P0）。退役的用例会保留其测试，直到你运行 `./gtaw cases confirm-retired <ids>`（或 `--all`）。`./gtaw cases --rebuild` 为已有已批准 spec 的服务创建台账。测试命名遵循 [test-naming.md](test-naming.md)。
+
+## 配置（可选）
+
+`.gta/config.json` 覆盖默认值，只使用你设置的键。
+
+```json
+{
+  "build": { "basePackage": "auto", "maven": "auto" },
+  "dispatch": "subagent",
+  "environments": { "oracle": { "testUrl": "jdbc:oracle:thin:@//test-db:1521/TESTPDB", "userEnv": "GTA_ORACLE_USER", "passwordEnv": "GTA_ORACLE_PASSWORD" } },
+  "distribution": { "toolsUrl": "https://nexus.example.com/repository/raw-tools/gta" },
+  "budgets": { "maxItemsPerSession": 5, "maxAttemptsPerItem": 2, "nodeTimeoutMinutes": 15 },
+  "qualityGates": { "stabilityRepeat": 3 }
+}
+```
+
+- `dispatch: "inline"`：如果你的 Copilot 版本无法运行子 agent，使用它；此时由 orchestrator 自己执行每个节点。
+- Oracle 的凭据从指定的环境变量读取，不会被保存。
+
+## 出问题时
+
+| 情况 | 处理 |
+|---|---|
+| 运行中聊天窗口关闭或崩溃 | 再次输入 `/gta`。状态在 `.gta/work/` 中，空闲 10 分钟的会话可用 `./gtaw next --takeover` 接管。 |
+| 想重新开始 | `./gtaw abort`（或 `--flow <flowId>`）。spec、oracle 分片和已提交的测试都会保留。 |
+| 某个事项需要你处理 | `./gtaw status --format human`；详情在 `.gta/escalations/<item>.md`。 |
+| 有意修改了某个测试 | `./gtaw relock --item <itemId> --reason "..."`（仅限人工；gate 会显示）。 |
