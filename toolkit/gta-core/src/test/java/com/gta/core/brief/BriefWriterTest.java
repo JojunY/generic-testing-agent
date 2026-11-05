@@ -104,4 +104,13 @@ class BriefWriterTest {
         assertTrue(analyze.contains("use EARS") && analyze.contains("q01: B"), analyze);
         assertTrue(analyze.contains("--token s1:0010"), analyze);
     }
+
+    @org.junit.jupiter.api.Test
+    void shouldAskForTestsAtTheServiceJavaLevel() {
+        org.junit.jupiter.api.Assertions.assertTrue(BriefWriter.javaLine(21).startsWith("Java 21 "));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                BriefWriter.javaLine(17).contains("newer than Java 17"), "a Java 17 service gets no Java 21 syntax");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                BriefWriter.javaLine(0).startsWith("Java 17 "), "an unknown level falls back to gta's floor");
+    }
 }

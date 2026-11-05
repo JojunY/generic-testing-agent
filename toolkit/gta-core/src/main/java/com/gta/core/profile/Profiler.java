@@ -51,6 +51,7 @@ public final class Profiler {
         p.bootVersion = pom.bootVersion;
         p.bootMajor = pom.bootMajor();
         p.junitMajor = pom.junitMajor();
+        p.javaMajor = pom.javaMajor();
         p.mavenWrapper = Files.exists(root.resolve("mvnw")) || Files.exists(root.resolve("mvnw.cmd"));
         p.dependencies.addAll(pom.dependencies);
         p.basePackage = "auto".equals(configuredBasePackage) || configuredBasePackage == null
