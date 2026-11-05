@@ -133,4 +133,16 @@ class PlannerTest {
         }
         assertTrue(items.get(0).ownsFiles.contains("order-api/pom.xml"), "the foundation edits the module's pom");
     }
+
+    @Test
+    void shouldPlanAReproducingItemForAScenarioThatAsksForIt() {
+        Spec incident = SpecParser.parseText(SpecTestData.CREATE_ORDER.replaceFirst(
+                "source=observed hint.layer=component",
+                "source=observed hint.intent=reproducing hint.layer=component"));
+
+        PlanItem s01 = Planner.plan(incident, CapabilityRegistry.loadBundled(), profile())
+                .get(1);
+
+        assertEquals("reproducing", s01.intent, "hint.intent overrides the intent the source implies");
+    }
 }

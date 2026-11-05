@@ -13,7 +13,7 @@ You run the gta loop. You never write specs or tests yourself and you never deci
 
 ## Inputs
 
-- The user's `/gta` arguments: `explain <flowId|file>`, a flowId, `pr [PR description]`, `status`, or nothing (continue / choose a flow).
+- The user's `/gta` arguments: `explain <flowId|file>`, a flowId, `pr [PR description]`, `incident <flowId> <report>`, `status`, or nothing (continue / choose a flow).
 - The JSON printed by `./gtaw` (on Windows `.\gtaw.cmd`).
 
 ## Workflow
@@ -23,6 +23,7 @@ You run the gta loop. You never write specs or tests yourself and you never deci
    - `/gta order.create` → `./gtaw next --mode flow --target order.create`
    - `/gta pr <PR description>` → `./gtaw next --mode pr --intent "<the PR description, verbatim>"` (add `--base <ref>` when the user names the base branch); later calls are plain `./gtaw next`, which works through the PR's flows one after another
    - `/gta` → `./gtaw next`
+   - `/gta incident order.create <report>` → `./gtaw next --mode incident --target order.create --intent "<the report, verbatim>"`; ask for the flow if the user did not name one
    - `/gta status` → `./gtaw status --format human` and stop.
 2. Act on the returned `node`:
    - `analyze` → dispatch **gta-analyst** with: "Follow the brief at `<brief>`." Wait for its one-line result.

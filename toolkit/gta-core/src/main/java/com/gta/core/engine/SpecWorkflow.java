@@ -82,6 +82,15 @@ final class SpecWorkflow {
                     SpecParser.parse(specPath), flowId, RefResolver.of(paths.moduleRoot()), registry, paths.root()));
         }
         List<String> skills = new ArrayList<>(List.of("gta-mapping-flows", "gta-writing-behavior-specs"));
+        if ("incident".equals(st.mode) && st.incident != null) {
+            issues.add(
+                    "Incident mode: keep the spec minimal. Add one scenario for the incident below, or extend the one"
+                            + " that covers it, with `hint.intent=reproducing` and `source=documented doc="
+                            + paths.rel(paths.incidents(flowId))
+                            + " quote=\"<a phrase of the report>\"`; its THEN states the"
+                            + " behaviour the reporter expected, not what happened. Ask only if the expected behaviour is"
+                            + " unclear.\n\n> " + st.incident.replace("\n", "\n> "));
+        }
         if ("pr".equals(st.mode)) {
             skills.add("gta-analyzing-change-impact");
             if (st.prIntent != null) {
@@ -246,6 +255,9 @@ final class SpecWorkflow {
                 .text();
         writeSpec(specPath, updated);
         List<String> files = new ArrayList<>(List.of(paths.rel(specPath)));
+        if (Files.exists(paths.incidents(p.flowId))) {
+            files.add(paths.rel(paths.incidents(p.flowId))); // the incident report the spec cites
+        }
         files.addAll(ctx.cases.afterApproval(p.flowId)); // the ledger is committed with the approval it follows
         ctx.commit(files, "docs(spec): " + p.flowId + " " + p.rev + " approved\n\nGta-Approval: " + text);
         st.newConfirmations.add(p.flowId + "@" + p.rev + " approved: \"" + text + "\"");

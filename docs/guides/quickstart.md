@@ -85,6 +85,7 @@ Open Copilot Chat (agent mode) or OpenCode in the service and type:
 | `/gta explain order.create` | write the behaviour spec and questions only, no tests |
 | `/gta order.create` | spec → questions → approval → tests for that flow |
 | `/gta pr <PR description>` | re-check and test the flows your branch changes, with the PR description as the intended behaviour |
+| `/gta incident order.create <report>` | turn a bug report into a test that fails on today's code, then confirm the defect |
 | `/gta status` | flows, items and what is waiting for you |
 
 gta stops and waits for you at three points.

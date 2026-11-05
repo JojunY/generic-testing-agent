@@ -247,4 +247,16 @@ class SpecLinterTest {
 
         assertTrue(issues.contains("doc missing.md#x is not readable"), issues);
     }
+
+    @Test
+    void shouldAcceptOnlyKnownScenarioIntents() throws Exception {
+        assertTrue(lint(SpecTestData.CREATE_ORDER.replaceFirst(
+                        "hint.layer=component", "hint.intent=reproducing hint.layer=component"))
+                .isEmpty());
+
+        List<String> issues = lint(SpecTestData.CREATE_ORDER.replaceFirst(
+                "hint.layer=component", "hint.intent=guess hint.layer=component"));
+
+        assertTrue(issues.stream().anyMatch(i -> i.contains("hint.intent must be one of")), issues.toString());
+    }
 }

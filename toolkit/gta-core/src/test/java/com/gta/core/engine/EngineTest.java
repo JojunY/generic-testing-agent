@@ -779,4 +779,25 @@ class EngineTest {
                     ledger);
         }
     }
+
+    @Test
+    void shouldKeepTheIncidentNextToTheSpecAndBriefTheAnalystForAReproducingScenario() throws Exception {
+        Files.createDirectories(paths.spec("order.create").getParent());
+        Files.writeString(
+                paths.spec("order.create"),
+                com.gta.core.spec.SpecTestData.CREATE_ORDER.replace("status=draft", "status=approved rev=R2"));
+        Engine e = new Engine(root, runner);
+
+        GtaException missing = org.junit.jupiter.api.Assertions.assertThrows(
+                GtaException.class, () -> e.next("incident", "order.create", null, false, " "));
+        assertEquals(ErrorCode.USAGE_INVALID_ARGUMENT, missing.code(), "an incident needs its report");
+
+        Map<String, Object> out = e.next("incident", "order.create", null, false, "Order 42 was created twice");
+
+        assertEquals("analyze", out.get("node"), "the approved spec goes back to the analyst: " + out);
+        assertTrue(Files.readString(paths.incidents("order.create")).contains("Order 42 was created twice"));
+        String brief = Files.readString(root.resolve(String.valueOf(out.get("brief"))));
+        assertTrue(brief.contains("hint.intent=reproducing"), brief);
+        assertTrue(brief.contains(".gta/specs/order/create.incidents.md"), "the scenario cites the kept report");
+    }
 }

@@ -85,6 +85,7 @@ java -jar gta-cli-<version>.jar --root path/to/service init --platform copilot \
 | `/gta explain order.create` | 只写行为 spec 和问题，不写测试 |
 | `/gta order.create` | spec → 提问 → 批准 → 为该流程写测试 |
 | `/gta pr <PR 描述>` | 以 PR 描述为预期行为，重新检查并测试本分支改动到的流程 |
+| `/gta incident order.create <报告>` | 把缺陷报告变成一个在当前代码上失败的测试，然后由你确认缺陷 |
 | `/gta status` | 流程、事项，以及等待你处理的内容 |
 
 gta 会在三处停下来等你。
