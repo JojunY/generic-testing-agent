@@ -139,4 +139,101 @@ class ProfilerTest {
 
         assertTrue(ids.contains("order.create") && ids.contains("order.create-2"), ids.toString());
     }
+
+    @Test
+    void shouldProfileTheConfiguredModuleOfAMultiModuleRepository() throws Exception {
+        Path repo = root.resolve("repo");
+        Path module = repo.resolve("order-api");
+        Files.createDirectories(module);
+        Files.writeString(
+                repo.resolve("pom.xml"),
+                "<project><artifactId>orders</artifactId><modules><module>order-api</module></modules></project>");
+        Files.move(root.resolve("pom.xml"), module.resolve("pom.xml"));
+        Files.move(root.resolve("src"), module.resolve("src"));
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.gta.core.error.GtaException.class,
+                () -> Profiler.profile(repo, CapabilityRegistry.loadBundled(), "auto"),
+                "an aggregator without build.module must not read as a service with no flows");
+
+        ServiceProfile p = Profiler.profile(
+                new com.gta.core.config.GtaPaths(repo, "order-api"), CapabilityRegistry.loadBundled(), "auto");
+        assertEquals("order-api", p.module);
+        assertEquals("com.acme.order", p.basePackage);
+        assertTrue(
+                p.entrypoints.stream().anyMatch(e -> e.ref.contains("OrderController#create")),
+                p.entrypoints.toString());
+    }
+
+    @Test
+    void shouldFindRabbitAndSqsListenersAndQuartzJobs() throws Exception {
+        source("com/acme/order/messaging/RefundListener.java", """
+                package com.acme.order.messaging;
+                public class RefundListener {
+                    @RabbitListener(queues = "refunds")
+                    public void onRefund(String event) {}
+                    @SqsListener("returns")
+                    public void onReturn(String event) {}
+                }
+                """);
+        source("com/acme/order/job/ReportJob.java", """
+                package com.acme.order.job;
+                public class ReportJob extends QuartzJobBean {
+                    protected void executeInternal(JobExecutionContext context) {}
+                    void helper() {}
+                }
+                """);
+
+        Map<String, ServiceProfile.EntryPoint> flows =
+                byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"));
+
+        assertEquals("messaging", flows.get("refund.on-refund").capability);
+        assertEquals("messaging", flows.get("refund.on-return").capability);
+        ServiceProfile.EntryPoint quartz = flows.get("report.execute-internal");
+        assertEquals("scheduler", quartz.capability, flows.keySet().toString());
+        assertTrue(quartz.trigger.contains("Quartz"), quartz.trigger);
+        assertTrue(flows.keySet().stream().noneMatch(f -> f.endsWith(".helper")), "only the job method is a flow");
+    }
+
+    @Test
+    void shouldDetectSecurityAndCachingButAttachThemOnlyFromTheirPhase() throws Exception {
+        Files.writeString(
+                root.resolve("pom.xml"),
+                Files.readString(root.resolve("pom.xml"))
+                        .replace(
+                                "</dependencies>",
+                                "<dependency><artifactId>spring-boot-starter-security</artifactId></dependency>"
+                                        + "<dependency><artifactId>caffeine</artifactId></dependency></dependencies>"));
+
+        ServiceProfile p = Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto");
+
+        assertTrue(
+                p.explainOnlyCapabilities.containsAll(List.of("security", "caching")),
+                p.explainOnlyCapabilities.toString());
+        assertTrue(!p.capabilities.contains("security") && !p.capabilities.contains("caching"), "P2 is not active yet");
+    }
+
+    @Test
+    void shouldFindSpringBatchJobBeans() throws Exception {
+        source("com/acme/order/batch/ImportConfig.java", """
+                package com.acme.order.batch;
+                @Configuration
+                public class ImportConfig {
+                    @Bean
+                    public Job importOrders(JobRepository jobs, Step load) { return null; }
+                    @Bean
+                    public Step load(JobRepository jobs) { return null; }
+                }
+                """);
+
+        Map<String, ServiceProfile.EntryPoint> flows =
+                byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"));
+
+        assertEquals(
+                "spring-batch",
+                flows.get("import.import-orders").capability,
+                flows.keySet().toString());
+        assertTrue(
+                flows.keySet().stream().noneMatch(f -> f.endsWith(".load")), "a Step is part of its job, not a flow");
+    }
 }

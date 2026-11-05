@@ -42,6 +42,8 @@ java -jar gta-cli-<version>.jar --root path/to/service init --platform copilot \
 | `gtaw`, `gtaw.cmd`, `.gta/wrapper/*` | the wrapper: it downloads the pinned jar from Nexus, verifies its sha256 and runs it |
 | `.gitignore` | adds `.gta/work/` (rebuildable working state) |
 
+Add `--ci` to also install the CI gate workflow `.github/workflows/gta-gate.yml` ([ci-integration.md](ci-integration.md)).
+
 `gtaw` refuses to run until `distributionUrl` and `distributionSha256Sum` are set: an unpinned jar is never downloaded or executed. For local development, `GTA_CLI_JAR=<path to gta-cli.jar>` overrides the download.
 
 Add the test dependency. If you skip this, the first foundation item adds it.
@@ -67,7 +69,7 @@ Commit everything.
 
 - the JDK, Maven (or `mvnw`), git and the Spring Boot/JUnit versions;
 - gta-junit and the harness files;
-- a single-module pom (multi-module services are not supported yet and give a warning);
+- for a multi-module repository, that `build.module` names one of its modules;
 - the Oracle test schema and the emulators;
 - IDE auto-approve.
 
@@ -126,7 +128,8 @@ If your terminal mangles Chinese characters, gta says so. Use the ASCII forms ab
 | `.gta/reports/<date>-<session>.md` | one report per session: gate, changed ledger rows, retired cases waiting for you |
 
 After a code change, `./gtaw impact --base origin/main` marks the cases whose code changed and prints the regression
-scope (those cases plus every P0). Retired cases keep their tests until you run
+scope (those cases plus every P0). A case counts as changed when a class its spec cites changed, when a class that
+class injects changed (directly or further down), or when a config key it cites has a new value; `reasons` says which. Retired cases keep their tests until you run
 `./gtaw cases confirm-retired <ids>` (or `--all`). `./gtaw cases --rebuild` creates the ledgers for a service that
 already has approved specs. Test names follow [test-naming.md](test-naming.md).
 
@@ -147,6 +150,9 @@ already has approved specs. Test names follow [test-naming.md](test-naming.md).
 
 - `dispatch: "inline"`: use this if your Copilot build cannot run subagents; the orchestrator then does each node itself.
 - Oracle credentials are read from the named environment variables and never stored.
+- `build.module`: in a multi-module repository, the module that holds the service, such as `"order-api"`. `.gta/` stays at
+  the repository root; tests are written into that module and Maven runs with `-pl <module> -am`. `gtaw doctor` fails
+  until it is set.
 - `build.javaHomeEnv`: for a service whose build needs an older JDK (for example Java 8 with Spring Boot 2), the name of an
   environment variable holding that JDK, such as `"JAVA8_HOME"`. Maven then runs with that `JAVA_HOME`; gtaw itself still
   needs JDK 17 or newer.

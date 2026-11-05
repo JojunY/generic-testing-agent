@@ -61,8 +61,8 @@ public final class Planner {
                 item.oracle.then = s.thenLiterals();
                 item.oracle.reviewerChecked = s.reviewerChecked();
                 item.testClass = testClass(source, layer, domain, flowName, profile);
-                item.ownsFiles.add(GtaPaths.testSourceRel(item.testClass));
-                item.ownsFiles.add(fixtureFolder(item.testClass) + "/**");
+                item.ownsFiles.add(GtaPaths.testSourceRel(profile.module, item.testClass));
+                item.ownsFiles.add(GtaPaths.inModule(profile.module, fixtureFolder(item.testClass) + "/**"));
                 item.priority = priority(spec.risk());
                 item.scenarioRevision = s.revision();
                 items.add(item);
@@ -86,10 +86,10 @@ public final class Planner {
             f.testClass = seedClass(profile);
             String basePkg = new Ref("bean", f.testClass, null).packageName();
             String basePath = basePkg.isEmpty() ? "" : basePkg.replace('.', '/') + "/";
-            f.ownsFiles.add(GtaPaths.testSourceRel(f.testClass));
-            f.ownsFiles.add(GtaPaths.TEST_JAVA + "/" + basePath + "support/**");
-            f.ownsFiles.add(GtaPaths.TEST_RESOURCES + "/**");
-            f.ownsFiles.add("pom.xml");
+            f.ownsFiles.add(GtaPaths.testSourceRel(profile.module, f.testClass));
+            f.ownsFiles.add(GtaPaths.inModule(profile.module, GtaPaths.TEST_JAVA + "/" + basePath + "support/**"));
+            f.ownsFiles.add(GtaPaths.inModule(profile.module, GtaPaths.TEST_RESOURCES + "/**"));
+            f.ownsFiles.add(GtaPaths.inModule(profile.module, "pom.xml"));
             f.priority = "p0";
             f.scenarioRevision = "foundation";
             for (PlanItem i : items) {
@@ -164,7 +164,7 @@ public final class Planner {
         return base + "ApplicationIT";
     }
 
-    /** Fixtures of one test class: {@code src/test/resources/<package path>/<TestClass>} (repository-relative). */
+    /** Fixtures of one test class: {@code src/test/resources/<package path>/<TestClass>} (relative to the module). */
     public static String fixtureFolder(String testClass) {
         return GtaPaths.TEST_RESOURCES + "/" + testClass.replace('.', '/');
     }

@@ -42,6 +42,8 @@ java -jar gta-cli-<version>.jar --root path/to/service init --platform copilot \
 | `gtaw`、`gtaw.cmd`、`.gta/wrapper/*` | wrapper：从 Nexus 下载固定版本的 jar，校验 sha256 后运行 |
 | `.gitignore` | 增加 `.gta/work/`（可重建的工作状态） |
 
+加上 `--ci` 会同时安装 CI gate 工作流 `.github/workflows/gta-gate.yml`（见 [ci-integration.md](ci-integration.md)）。
+
 在设置 `distributionUrl` 和 `distributionSha256Sum` 之前，`gtaw` 拒绝运行：未固定版本的 jar 永远不会被下载或执行。本地开发时，可用 `GTA_CLI_JAR=<gta-cli.jar 的路径>` 跳过下载。
 
 添加测试依赖。如果跳过，第一个 foundation 项会帮你加上。
@@ -67,7 +69,7 @@ java -jar gta-cli-<version>.jar --root path/to/service init --platform copilot \
 
 - JDK、Maven（或 `mvnw`）、git，以及 Spring Boot / JUnit 版本；
 - gta-junit 和 harness 文件；
-- 单模块（多模块服务暂不支持，会给出警告）；
+- 多模块仓库是否已用 `build.module` 指定其中一个模块；
 - Oracle 测试 schema 和模拟器；
 - IDE 自动批准。
 
@@ -125,7 +127,7 @@ approve order.create@R2
 | `.gta/specs/INDEX.md` | 所有台账的总览 |
 | `.gta/reports/<date>-<session>.md` | 每个会话一份报告：gate、变化的台账行、等待你确认的退役用例 |
 
-代码变更后，`./gtaw impact --base origin/main` 会标出代码已变化的用例，并打印回归范围（这些用例加上全部 P0）。退役的用例会保留其测试，直到你运行 `./gtaw cases confirm-retired <ids>`（或 `--all`）。`./gtaw cases --rebuild` 为已有已批准 spec 的服务创建台账。测试命名遵循 [test-naming.md](test-naming.md)。
+代码变更后，`./gtaw impact --base origin/main` 会标出代码已变化的用例，并打印回归范围（这些用例加上全部 P0）。以下情况都算变化：spec 引用的类变了；该类注入的类（直接或更深层）变了；spec 引用的配置项取值变了。`reasons` 会说明原因。退役的用例会保留其测试，直到你运行 `./gtaw cases confirm-retired <ids>`（或 `--all`）。`./gtaw cases --rebuild` 为已有已批准 spec 的服务创建台账。测试命名遵循 [test-naming.md](test-naming.md)。
 
 ## 配置（可选）
 
@@ -144,6 +146,7 @@ approve order.create@R2
 
 - `dispatch: "inline"`：如果你的 Copilot 版本无法运行子 agent，使用它；此时由 orchestrator 自己执行每个节点。
 - Oracle 的凭据从指定的环境变量读取，不会被保存。
+- `build.module`：多模块仓库中服务所在的模块，例如 `"order-api"`。`.gta/` 留在仓库根目录；测试写进该模块，Maven 以 `-pl <module> -am` 运行。未设置时 `gtaw doctor` 报失败。
 - `build.javaHomeEnv`：如果服务的构建需要更旧的 JDK（例如 Java 8 加 Spring Boot 2），填写存放该 JDK 路径的环境变量名，例如 `"JAVA8_HOME"`。Maven 会以该 `JAVA_HOME` 运行；gtaw 本身仍需要 JDK 17 或更新版本。
 
 ## 出问题时

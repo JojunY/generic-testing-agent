@@ -48,10 +48,28 @@ class GtaPathsTest {
     @Test
     void shouldMirrorTestClassesIntoTheTestSourceRoot() {
         assertEquals(
-                "src/test/java/com/acme/OrderControllerIT.java", GtaPaths.testSourceRel("com.acme.OrderControllerIT"));
+                "src/test/java/com/acme/OrderControllerIT.java",
+                new GtaPaths(Path.of(".")).testSourceRel("com.acme.OrderControllerIT"));
         assertEquals(
                 Path.of("/repo/src/test/java/com/acme/OrderControllerIT.java"),
                 paths.testSource("com.acme.OrderControllerIT"));
         assertEquals("src/main/java/A.java", paths.rel(Path.of("/repo/src/main/java/A.java")));
+    }
+
+    @Test
+    void shouldKeepGtaAtTheRepositoryRootAndTheSourcesInTheServiceModule() {
+        GtaPaths m = new GtaPaths(Path.of("/repo"), "services/order-api/");
+
+        assertEquals("services/order-api", m.module(), "trailing slashes are dropped");
+        assertEquals(Path.of("/repo/.gta/config.json"), m.config(), ".gta stays at the repository root");
+        assertEquals(Path.of("/repo/services/order-api/src/main/java"), m.mainJava());
+        assertEquals(
+                Path.of("/repo/services/order-api/src/test/java/com/acme/OrderIT.java"),
+                m.testSource("com.acme.OrderIT"));
+        assertEquals("services/order-api/src/test/java/com/acme/OrderIT.java", m.testSourceRel("com.acme.OrderIT"));
+        assertEquals(Path.of("/repo/services/order-api/target/surefire-reports"), m.surefireReports());
+        assertEquals(Path.of("/repo/services/order-api/target/gta-results"), m.gtaResults());
+        assertEquals(
+                "src/main/java", new GtaPaths(Path.of("/repo")).inModule("src/main/java"), "single module: unchanged");
     }
 }

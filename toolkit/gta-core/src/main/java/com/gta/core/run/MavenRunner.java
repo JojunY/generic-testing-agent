@@ -65,7 +65,7 @@ public final class MavenRunner implements TestRunner {
     public RunResult run(
             String runId, String itemId, Options options, Set<String> productionClasses, Set<String> testClasses) {
         Path root = paths.root();
-        Path surefire = root.resolve("target/surefire-reports");
+        Path surefire = paths.surefireReports();
         Path gtaResults = paths.gtaResults();
         deleteDir(surefire);
         deleteDir(gtaResults);
@@ -77,6 +77,7 @@ public final class MavenRunner implements TestRunner {
                 "-DfailIfNoTests=false",
                 "-Djacoco.skip=true",
                 "-Dgta.results.dir=" + gtaResults));
+        cmd.addAll(moduleArgs(paths.module()));
         if (options.testClass() != null) {
             cmd.add("-Dtest=" + options.testClass());
         } else {
@@ -204,5 +205,13 @@ public final class MavenRunner implements TestRunner {
                             + " build.javaHomeEnv from .gta/config.json");
         }
         return value;
+    }
+
+    /**
+     * In a multi-module repository Maven runs from the root on the service module and the modules it depends on
+     * ({@code -pl <module> -am}), so siblings are built from the working tree instead of a stale local repository.
+     */
+    static List<String> moduleArgs(String module) {
+        return module == null || module.isEmpty() ? List.of() : List.of("-pl", module, "-am");
     }
 }

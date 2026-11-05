@@ -7,6 +7,8 @@
 #
 # Needs: java 17+, mvn, git, python3; the toolkit installed in ~/.m2 (mvn -B install -DskipTests at the repo root).
 # Usage: evals/e2e/run.sh [work-dir]
+#   GTA_E2E_MODULE=<name> runs the same loop with the fixture as module <name> of a multi-module repository
+#   (build.module, Maven with -pl <name> -am; plan §15 P1).
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -25,7 +27,9 @@ expect() { # expect <actual> <expected> <what>
   [ "$1" = "$2" ] || fail "$3: expected '$2', got '$1'"
   echo "ok   $3 = $2"
 }
-TEST=src/test/java/com/example/order/api/OrderControllerIT.java
+MODULE="${GTA_E2E_MODULE:-}"
+P="${MODULE:+$MODULE/}"   # the module's folder prefix, empty for the single-module run
+TEST=${P}src/test/java/com/example/order/api/OrderControllerIT.java
 add_method() { python3 - "$TEST" "$1" <<'EOF'
 import sys
 path, part = sys.argv[1], open(sys.argv[2]).read()
@@ -37,10 +41,23 @@ EOF
 
 step "prepare $WORK"
 rm -rf "$WORK" && mkdir -p "$WORK"
-cp -r "$REPO/evals/fixtures/order-service/." "$WORK/"
+mkdir -p "$WORK/$P" && cp -r "$REPO/evals/fixtures/order-service/." "$WORK/$P"
 cd "$WORK"
-rm -rf target
+rm -rf "${P}target"
 printf 'target/\n' > .gitignore
+if [ -n "$MODULE" ]; then
+  cat > pom.xml <<POM
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example</groupId>
+  <artifactId>orders</artifactId>
+  <version>1</version>
+  <packaging>pom</packaging>
+  <modules><module>$MODULE</module></modules>
+</project>
+POM
+  mkdir -p .gta && printf '{ "build": { "module": "%s" } }\n' "$MODULE" > .gta/config.json
+fi
 git init -q -b main && git add -A && git commit -qm "order-service fixture"
 java -jar "$GTA_CLI_JAR" --root . init --platform copilot >/dev/null 2>&1
 git add -A && git commit -qm "gta init"
@@ -77,8 +94,9 @@ step "foundation: seed test"
 OUT=$(gtaw next)
 expect "$(jget "$OUT" 'd["itemId"]')" "order#foundation-01" "first item"
 TOKEN=$(jget "$OUT" 'd["token"]')
-python3 - <<'EOF'
-s = open("pom.xml").read()
+python3 - "${P}pom.xml" <<'EOF'
+import sys
+s = open(sys.argv[1]).read()
 dep = """    <dependency>
       <groupId>com.gta</groupId>
       <artifactId>gta-junit</artifactId>
@@ -86,9 +104,9 @@ dep = """    <dependency>
       <scope>test</scope>
     </dependency>
   </dependencies>"""
-open("pom.xml", "w").write(s.replace("  </dependencies>", dep, 1))
+open(sys.argv[1], "w").write(s.replace("  </dependencies>", dep, 1))
 EOF
-cp "$AGENT/OrderApplicationIT.java.txt" src/test/java/com/example/order/OrderApplicationIT.java
+cp "$AGENT/OrderApplicationIT.java.txt" ${P}src/test/java/com/example/order/OrderApplicationIT.java
 OUT=$(gtaw submit --item "order#foundation-01" --token "$TOKEN")
 jget "$OUT" 'd["result"]' | grep -q '^passed' || fail "foundation: $OUT"
 echo "ok   foundation passed"
@@ -120,10 +138,10 @@ sed -i 's/value(50.00)/value(51.00)/' "$TEST"
 OUT=$(gtaw check --item "$ITEM" --token "$TOKEN")
 expect "$(jget "$OUT" 'd["oracleLock"]')" modified "tampered expected value"
 sed -i 's/value(51.00)/value(50.00)/' "$TEST"
-echo "// out of scope" >> src/main/java/com/example/order/OrderApplication.java
+echo "// out of scope" >> ${P}src/main/java/com/example/order/OrderApplication.java
 OUT=$(gtaw submit --item "$ITEM" --token "$TOKEN")
 expect "$(jget "$OUT" 'd["code"]')" POLICY_OUT_OF_SCOPE_CHANGE "production edit"
-git diff --quiet -- src/main || fail "production edit was not reverted"
+git diff --quiet -- ${P}src/main || fail "production edit was not reverted"
 echo "ok   production edit reverted"
 TOKEN=$(author s01)
 gtaw submit --item "$ITEM" --token "$TOKEN" >/dev/null
@@ -206,7 +224,7 @@ git diff --quiet || fail "the work tree is dirty after the rebuild"
 
 step "regression: merge, then break the code on a new branch"
 git checkout -q main && git merge -q --no-ff feature/gta-tests -m "merge gta tests" && git checkout -q -b feature/regression
-sed -i 's/OrderStatus.CREATED));/OrderStatus.PAID));/' src/main/java/com/example/order/service/OrderService.java
+sed -i 's/OrderStatus.CREATED));/OrderStatus.PAID));/' ${P}src/main/java/com/example/order/service/OrderService.java
 git commit -qam "change initial status"
 OUT=$(gtaw gate --base main || true)
 expect "$(jget "$OUT" 'd["decision"]')" fail "gate after the regression"
@@ -215,7 +233,7 @@ echo "ok   regression of s01 detected"
 
 step "fix of D1 turns the pinned test red until the annotation is removed"
 git checkout -q main && git checkout -q -b fix/threshold
-sed -i 's/subtotal.compareTo(threshold) > 0/subtotal.compareTo(threshold) >= 0/' src/main/java/com/example/order/service/PricingService.java
+sed -i 's/subtotal.compareTo(threshold) > 0/subtotal.compareTo(threshold) >= 0/' ${P}src/main/java/com/example/order/service/PricingService.java
 git commit -qam "fix threshold discount"
 OUT=$(gtaw gate --base main || true)
 expect "$(jget "$OUT" 'd["decision"]')" fail "gate with a stale @KnownDefect"
@@ -223,5 +241,84 @@ sed -i '/@KnownDefect(id = "order.create-order\/s03"/d' "$TEST"
 git commit -qam "remove known defect pin"
 OUT=$(gtaw gate --base main || true)
 expect "$(jget "$OUT" 'd["decision"]')" pass "gate after the fix"
+
+# P1 capabilities (plan §15): a scheduled job and an application-event listener, each with a seeded defect the
+# business-rules document contradicts (D4, D5). Runs on the fixed branch, as a new session.
+p1_item() { # p1_item <scenarioId> -> the author node of that scenario (the domain's seed is adopted on the way)
+  local out node
+  for _ in $(seq 1 10); do
+    out=$(gtaw next)
+    node=$(jget "$out" 'd.get("node", "result")')
+    if [ "$node" = author ] && [ "$(jget "$out" 'd.get("itemId")')" = "$1#component-01" ]; then echo "$out"; return; fi
+    case "$node" in done|result) ;; *) fail "unexpected node before $1: $out" ;; esac
+  done
+  fail "no author node for $1"
+}
+p1_flow() { # p1_flow <flowId> <spec> <test template> <test path> <triage reason>
+  local flow=$1 spec=$2 tmpl=$3 path=$4 reason=$5 out token fp
+  local domain=${1%%.*} name=${1#*.}
+  step "P1 $flow: spec, approval, a passing scenario and a seeded defect"
+  out=$(gtaw next --mode flow --target "$flow")
+  expect "$(jget "$out" 'd["node"]')" analyze "$flow first node"
+  token=$(jget "$out" 'd["token"]')
+  mkdir -p ".gta/specs/$domain" && sed "s|__P__|$P|" "$AGENT/$spec" > ".gta/specs/$domain/$name.spec.md"
+  out=$(gtaw submit --spec "$flow" --token "$token")
+  expect "$(jget "$out" 'd["rev"]')" R1 "$flow spec revision"
+  out=$(gtaw next)
+  expect "$(jget "$out" 'd["type"]')" approve "$flow approval prompt"
+  gtaw answer "approve $flow@R1" >/dev/null
+
+  out=$(p1_item "$flow/s01")
+  mkdir -p "$(dirname "$path")" && cp "$AGENT/$tmpl" "$path"
+  gtaw submit --item "$flow/s01#component-01" --token "$(jget "$out" 'd["token"]')" >/dev/null
+  out=$(gtaw next)
+  expect "$(jget "$out" 'd["kind"]')" oracle-review "$flow/s01 review"
+  out=$(gtaw submit --review "$flow/s01#component-01" --token "$(jget "$out" 'd["token"]')" --verdict accept --reason "asserts the THEN values")
+  jget "$out" 'd["result"]' | grep -q '^passed' || fail "$flow/s01: $out"
+  echo "ok   $flow/s01 passed and committed"
+
+  out=$(p1_item "$flow/s02")
+  out=$(gtaw submit --item "$flow/s02#component-01" --token "$(jget "$out" 'd["token"]')")
+  expect "$(jget "$out" 'd["code"]')" TEST_ASSERTION_FAILED "$flow/s02 exposes the seeded defect"
+  out=$(gtaw next)
+  expect "$(jget "$out" 'd["kind"]')" triage "$flow/s02 triage"
+  gtaw submit --review "$flow/s02#component-01" --token "$(jget "$out" 'd["token"]')" --verdict product-defect --reason "$reason" >/dev/null
+  out=$(gtaw next)
+  expect "$(jget "$out" 'd["type"]')" defect "$flow defect decision"
+  gtaw answer A >/dev/null
+  out=$(gtaw next)
+  token=$(jget "$out" 'd["token"]')
+  fp=$(grep -o 'failure = "[0-9a-f]*"' "$(jget "$out" 'd["brief"]')" | head -1 | grep -o '[0-9a-f]\{12\}')
+  python3 - "$path" "$flow/s02" "$fp" <<'PY'
+import sys
+path, scenario, fp = sys.argv[1:]
+s = open(path).read()
+marker = '    @DisplayName("[' + scenario + ']'
+assert marker in s, marker
+s = s.replace(marker, '    @KnownDefect(id = "' + scenario + '", failure = "' + fp + '")\n' + marker, 1)
+open(path, "w").write(s)
+PY
+  out=$(gtaw submit --item "$flow/s02#component-01" --token "$token")
+  jget "$out" 'd["result"]' | grep -q '^defect-found' || fail "$flow/s02 pin: $out"
+  echo "ok   $flow/s02 pinned with @KnownDefect ($fp)"
+}
+
+p1_flow shipping.ship-paid-orders ship-paid-orders.spec.md ShippingJobIT.java.txt \
+  "${P}src/test/java/com/example/order/shipping/ShippingJobIT.java" "ShippingJob ships CREATED orders too (D4)"
+p1_flow loyalty.on-order-created on-order-created.spec.md LoyaltyListenerIT.java.txt \
+  "${P}src/test/java/com/example/order/loyalty/LoyaltyListenerIT.java" "LoyaltyService rounds up (D5)"
+
+step "P1 session end"
+for _ in $(seq 1 5); do
+  OUT=$(gtaw next)
+  [ "$(jget "$OUT" 'd.get("node")')" = done ] && break
+done
+expect "$(jget "$OUT" 'd["node"]')" done "P1 session end"
+for f in shipping.ship-paid-orders loyalty.on-order-created; do
+  STATUS=$(gtaw status)
+  expect "$(jget "$STATUS" '" ".join(sorted(set(i["status"] for i in d["items"] if i["id"].startswith("'"$f"'/"))))')" \
+    "defect-found passed" "$f item states"
+done
+git diff --quiet || fail "the work tree is dirty after the P1 flows"
 
 printf '\nE2E PASSED (%s)\n' "$WORK"

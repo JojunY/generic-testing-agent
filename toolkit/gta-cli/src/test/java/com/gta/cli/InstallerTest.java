@@ -139,4 +139,37 @@ class InstallerTest {
         assertTrue(Files.exists(root.resolve(".github/agents/gta-old.agent.md")));
         assertEquals(List.of(".github/agents/gta-old.agent.md"), out.get("obsoleteKept"));
     }
+
+    @Test
+    void shouldInstallTheCiGateWorkflowOnlyWhenAskedAndKeepItOnUpgrade() throws Exception {
+        Path workflow = root.resolve(".github/workflows/gta-gate.yml");
+        new Installer(root).install("copilot", null, null, false);
+        assertFalse(Files.exists(workflow), "a CI workflow is written only on request");
+
+        new Installer(root).install("copilot", null, null, false, true);
+        String gate = Files.readString(workflow);
+        assertTrue(gate.contains("--reports target/surefire-reports"), gate);
+        assertTrue(gate.contains("mvn -B verify"), "no Maven wrapper in this service");
+
+        Files.writeString(workflow, "stale");
+        Files.writeString(
+                root.resolve(".gta/managed-files.json"),
+                Files.readString(root.resolve(".gta/managed-files.json"))
+                        .replace(Hashes.sha256(gate), Hashes.sha256("stale")));
+        new Installer(root).install(null, null, null, true);
+        assertTrue(Files.readString(workflow).contains("gta gate"), "an upgrade keeps the installed workflow current");
+    }
+
+    @Test
+    void shouldPointTheCiGateAtTheServiceModule() throws Exception {
+        Files.createDirectories(root.resolve(".gta"));
+        Files.writeString(root.resolve(".gta/config.json"), "{\"build\":{\"module\":\"order-api\"}}");
+        Files.writeString(root.resolve("mvnw"), "#!/bin/sh\n");
+
+        new Installer(root).install("copilot", null, null, false, true);
+
+        String gate = Files.readString(root.resolve(".github/workflows/gta-gate.yml"));
+        assertTrue(gate.contains("--reports order-api/target/surefire-reports"), gate);
+        assertTrue(gate.contains("./mvnw -B verify"), gate);
+    }
 }

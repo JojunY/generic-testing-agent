@@ -79,7 +79,7 @@ final class SpecWorkflow {
         List<String> issues = new ArrayList<>(extraIssues);
         if (Files.exists(specPath)) {
             issues.addAll(SpecLinter.lint(
-                    SpecParser.parse(specPath), flowId, RefResolver.of(paths.root()), registry, paths.root()));
+                    SpecParser.parse(specPath), flowId, RefResolver.of(paths.moduleRoot()), registry, paths.root()));
         }
         List<String> skills = new ArrayList<>(List.of("gta-mapping-flows", "gta-writing-behavior-specs"));
         if ("pr".equals(st.mode)) {
@@ -305,7 +305,7 @@ final class SpecWorkflow {
                         "Fields owned by gtaw were changed: " + owned,
                         "Revert them (status, rev, ticks, source=confirmed/defaulted, the Answers section) and submit again");
             }
-            RefResolver refs = RefResolver.of(paths.root());
+            RefResolver refs = RefResolver.of(paths.moduleRoot());
             SpecEditor ed = new SpecEditor(spec.text);
             List<String> notes = new ArrayList<>();
             List<String> firstPass = SpecLinter.lint(spec, flowId, null, registry, paths.root());
@@ -379,7 +379,7 @@ final class SpecWorkflow {
     }
 
     List<String> staleRefs(Spec spec) {
-        RefResolver refs = RefResolver.of(paths.root());
+        RefResolver refs = RefResolver.of(paths.moduleRoot());
         List<String> stale = new ArrayList<>();
         for (Spec.Requirement r : spec.requirements) {
             List<CommentMeta.Entry> entries = r.meta.entries();

@@ -5,8 +5,12 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/** All well-known locations inside a service repository (plan §5.2, §10.1). */
-public record GtaPaths(Path root) {
+/**
+ * All well-known locations inside a service repository (plan §5.2, §10.1). {@code root} is the repository root, where
+ * git and {@code .gta/} live. {@code module} is the Maven module that holds the service ({@code build.module}, plan §15
+ * P1), "" for a single-module repository: sources, tests and build output resolve under it.
+ */
+public record GtaPaths(Path root, String module) {
     /** Maven source layout, relative to the module root (forward slashes, as git reports paths). */
     public static final String MAIN_JAVA = "src/main/java";
 
@@ -14,16 +18,52 @@ public record GtaPaths(Path root) {
     public static final String TEST_JAVA = "src/test/java";
     public static final String TEST_RESOURCES = "src/test/resources";
 
+    public GtaPaths {
+        module = module == null ? "" : module.replace('\\', '/').replaceAll("^/+|/+$", "");
+    }
+
+    public GtaPaths(Path root) {
+        this(root, "");
+    }
+
+    /** The same repository with the service in {@code module}. */
+    public GtaPaths withModule(String module) {
+        return new GtaPaths(root, module);
+    }
+
+    /** Directory of the service's own pom.xml and source tree. */
+    public Path moduleRoot() {
+        return module.isEmpty() ? root : root.resolve(module);
+    }
+
+    /** A module-relative path (src/test/java/...) as a repository-relative one, as git and ownsFiles use them. */
+    public String inModule(String moduleRelative) {
+        return inModule(module, moduleRelative);
+    }
+
+    public static String inModule(String module, String moduleRelative) {
+        return module == null || module.isEmpty() ? moduleRelative : module + "/" + moduleRelative;
+    }
+
     public Path mainJava() {
-        return root.resolve(MAIN_JAVA);
+        return moduleRoot().resolve(MAIN_JAVA);
+    }
+
+    public Path mainResources() {
+        return moduleRoot().resolve(MAIN_RESOURCES);
     }
 
     public Path testJava() {
-        return root.resolve(TEST_JAVA);
+        return moduleRoot().resolve(TEST_JAVA);
     }
 
     public Path testResources() {
-        return root.resolve(TEST_RESOURCES);
+        return moduleRoot().resolve(TEST_RESOURCES);
+    }
+
+    /** Surefire's report directory of the service module. */
+    public Path surefireReports() {
+        return moduleRoot().resolve("target/surefire-reports");
     }
 
     /** Source file of a test class, e.g. com.acme.OrderIT -> src/test/java/com/acme/OrderIT.java. */
@@ -31,9 +71,13 @@ public record GtaPaths(Path root) {
         return testJava().resolve(fqcn.replace('.', '/') + ".java");
     }
 
-    /** Repository-relative path of a test class source, as used in ownsFiles. */
-    public static String testSourceRel(String fqcn) {
-        return TEST_JAVA + "/" + fqcn.replace('.', '/') + ".java";
+    /** Repository-relative path of a test class source, as used in ownsFiles and shown to people. */
+    public String testSourceRel(String fqcn) {
+        return testSourceRel(module, fqcn);
+    }
+
+    public static String testSourceRel(String module, String fqcn) {
+        return inModule(module, TEST_JAVA + "/" + fqcn.replace('.', '/') + ".java");
     }
 
     private static final Pattern SPEC_PATH = Pattern.compile(
@@ -144,7 +188,7 @@ public record GtaPaths(Path root) {
 
     /** Where gta-junit writes scenario results during a test run. */
     public Path gtaResults() {
-        return root.resolve("target/gta-results");
+        return moduleRoot().resolve("target/gta-results");
     }
 
     public Path verifyLatest() {

@@ -46,8 +46,10 @@ capabilities:
     since: P1
     detect:
       buildDeps: [spring-kafka, spring-cloud-gcp-starter-pubsub, spring-cloud-stream, spring-jms,
-                  spring-boot-starter-artemis, mq-jms-spring-boot-starter]
-      annotations: ["@KafkaListener", "@JmsListener", "@ApplicationModuleListener", "@TransactionalEventListener"]
+                  spring-boot-starter-artemis, mq-jms-spring-boot-starter, spring-boot-starter-amqp,
+                  spring-cloud-aws-starter-sqs]
+      annotations: ["@KafkaListener", "@JmsListener", "@RabbitListener", "@SqsListener", "@ApplicationModuleListener",
+                    "@TransactionalEventListener"]
     layers: [unit, component, contract]
     diagrams: [sequence]
     skills: [gta-testing-event-flows, gta-using-embedded-dependencies]
@@ -70,6 +72,21 @@ capabilities:
     detect: { files: ["**/service.yaml", "**/helm/**/Chart.yaml", "**/k8s/**/*.yaml", "**/*.tf"] }
     layers: [system]
     skills: [gta-testing-deployed-systems]
+  - id: security              # never produces flows; adds the security skill to the flows of a secured service
+    since: P2
+    dispatch: false
+    detect:
+      buildDeps: [spring-boot-starter-security, spring-boot-starter-oauth2-resource-server,
+                  spring-boot-starter-oauth2-client]
+      annotations: ["@EnableWebSecurity", "@PreAuthorize", "@Secured", "@EnableMethodSecurity"]
+    skills: [gta-testing-spring-security]
+  - id: caching               # never produces flows; adds the caching skill to the flows of a service with caches
+    since: P2
+    dispatch: false
+    detect:
+      buildDeps: [spring-boot-starter-cache, caffeine, spring-boot-starter-data-redis]
+      annotations: ["@Cacheable", "@CacheEvict", "@CachePut", "@EnableCaching"]
+    skills: [gta-testing-caches]
   - id: data-dependencies     # never produces flows; adds the embedded-dependency skill to detected items
     since: P0
     dispatch: false

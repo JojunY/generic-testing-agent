@@ -91,7 +91,7 @@ class EngineTest {
         item.title = "valid order";
         item.layer = "component";
         item.testClass = "com.acme.OrderCreateIT";
-        item.ownsFiles.add(GtaPaths.testSourceRel(item.testClass));
+        item.ownsFiles.add(new GtaPaths(root).testSourceRel(item.testClass));
         item.oracle.source = "observed";
         store.savePlan(List.of(item));
     }
@@ -199,7 +199,7 @@ class EngineTest {
         st.items.get(ITEM).lock.tokens.add("201");
         st.items.get(ITEM).evidenceRunId = "r1";
         store.save(st);
-        Path test = root.resolve(GtaPaths.testSourceRel("com.acme.OrderCreateIT"));
+        Path test = root.resolve(new GtaPaths(root).testSourceRel("com.acme.OrderCreateIT"));
         Files.createDirectories(test.getParent());
         Files.writeString(test, "class OrderCreateIT {}\n");
         git("config", "commit.gpgsign", "true");
@@ -382,6 +382,34 @@ class EngineTest {
         assertEquals(ErrorCode.USAGE_UNKNOWN_ITEM, e.code());
     }
 
+    private Map<String, Object> nextOnApproved(String capability) throws Exception {
+        Files.createDirectories(paths.spec("order.create").getParent());
+        Files.writeString(
+                paths.spec("order.create"),
+                SpecTestData.CREATE_ORDER
+                        .replace("capability=rest-api", "capability=" + capability)
+                        .replace("status=draft", "status=approved rev=R1"));
+        return engine().next(null, "order.create", null, false);
+    }
+
+    @Test
+    void shouldWriteTestsForScheduledJobsAndMessagingFlowsFromP1() throws Exception {
+        for (String capability : List.of("scheduler", "messaging")) {
+            Map<String, Object> out = nextOnApproved(capability);
+
+            assertFalse(String.valueOf(out).contains("explain-only"), capability + ": " + out);
+            assertEquals("author", out.get("node"), capability + " is dispatched to the test author: " + out);
+            engine().abort(null);
+        }
+    }
+
+    @Test
+    void shouldKeepLaterCapabilitiesExplainOnly() throws Exception {
+        Map<String, Object> out = nextOnApproved("spring-batch");
+
+        assertTrue(String.valueOf(out).contains("explain-only"), out.toString());
+    }
+
     @Test
     void shouldRefuseToGuessTheCapabilityOfAFlowThatIsNotInTheCode() {
         GtaException e =
@@ -392,7 +420,7 @@ class EngineTest {
     }
 
     private ItemWorkflow.Dispatch dispatchWithDeveloperTest(WorkState st) throws Exception {
-        Path test = root.resolve(GtaPaths.testSourceRel("com.acme.OrderCreateIT"));
+        Path test = root.resolve(new GtaPaths(root).testSourceRel("com.acme.OrderCreateIT"));
         Files.createDirectories(test.getParent());
         Files.writeString(test, "class OrderCreateIT { @org.junit.jupiter.api.Test void mine() {} }\n");
         EngineContext ctx = new EngineContext(root, runner);

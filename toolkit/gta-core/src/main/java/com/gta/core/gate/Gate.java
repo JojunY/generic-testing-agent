@@ -335,7 +335,7 @@ public final class Gate {
             return out;
         }
         for (String f : git.changedFiles(baseRef)) {
-            if (f.startsWith(GtaPaths.MAIN_JAVA + "/")
+            if (f.startsWith(paths.inModule(GtaPaths.MAIN_JAVA + "/"))
                     && referencedClasses.stream().noneMatch(f::endsWith)) {
                 out.add(f);
             }

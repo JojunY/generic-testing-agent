@@ -14,6 +14,15 @@ class CapabilityRegistryTest {
     final CapabilityRegistry registry = CapabilityRegistry.loadBundled();
 
     @Test
+    void shouldActivateMessagingAndScheduledJobsInP1AndKeepLaterPhasesExplainOnly() {
+        assertEquals("P1", CapabilityRegistry.CURRENT_PHASE);
+        assertTrue(registry.capability("messaging").activeIn(CapabilityRegistry.CURRENT_PHASE));
+        assertTrue(registry.capability("scheduler").activeIn(CapabilityRegistry.CURRENT_PHASE));
+        assertFalse(registry.capability("spring-batch").activeIn(CapabilityRegistry.CURRENT_PHASE), "P2");
+        assertFalse(registry.capability("grpc-api").activeIn(CapabilityRegistry.CURRENT_PHASE), "P3");
+    }
+
+    @Test
     void shouldActivateRestApisInP0AndKeepLaterCapabilitiesExplainOnly() {
         CapabilityRegistry.Capability rest = registry.capability("rest-api");
 
@@ -29,5 +38,14 @@ class CapabilityRegistryTest {
     void shouldListTheSkillsOfACapabilityAndRefuseAnUnknownOne() {
         assertFalse(registry.skillsFor("rest-api", Set.of("rest-api")).isEmpty());
         assertThrows(GtaException.class, () -> registry.capability("teleport"));
+    }
+
+    @Test
+    void shouldAddCrossCuttingSkillsOnlyForDetectedCapabilities() {
+        assertFalse(registry.capability("security").dispatch, "security never produces flows of its own");
+        assertTrue(
+                registry.skillsFor("rest-api", Set.of("rest-api", "security")).contains("gta-testing-spring-security"));
+        assertFalse(registry.skillsFor("rest-api", Set.of("rest-api")).contains("gta-testing-spring-security"));
+        assertTrue(registry.skillsFor("rest-api", Set.of("caching")).contains("gta-testing-caches"));
     }
 }

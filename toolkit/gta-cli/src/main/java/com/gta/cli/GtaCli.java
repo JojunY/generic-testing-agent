@@ -205,9 +205,13 @@ public final class GtaCli implements Callable<Integer> {
         @Option(names = "--distribution-sha256", description = "sha256 of the jar at --distribution-url")
         String distributionSha;
 
+        @Option(names = "--ci", description = "Also install the CI gate workflow .github/workflows/gta-gate.yml")
+        boolean ci;
+
         @Override
         public Integer call() {
-            return print(parent, new Installer(parent.root).install(platform, distributionUrl, distributionSha, false));
+            return print(
+                    parent, new Installer(parent.root).install(platform, distributionUrl, distributionSha, false, ci));
         }
     }
 

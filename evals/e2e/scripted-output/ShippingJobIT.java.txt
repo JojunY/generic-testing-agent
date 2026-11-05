@@ -1,0 +1,59 @@
+package com.example.order.shipping;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.example.order.domain.Order;
+import com.example.order.domain.OrderRepository;
+import com.example.order.domain.OrderStatus;
+import com.gta.junit.KnownDefect;
+import java.math.BigDecimal;
+import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@Tag("component")
+@Tag("gta")
+@SpringBootTest
+class ShippingJobIT {
+
+    @Autowired
+    ShippingJob job;
+
+    @Autowired
+    OrderRepository repository;
+
+    private UUID order(OrderStatus status) {
+        UUID id = UUID.randomUUID();
+        repository.save(new Order(id, "c-1", new BigDecimal("40.00"), BigDecimal.ZERO, new BigDecimal("40.00"), status));
+        return id;
+    }
+
+    @Test
+    @Tag("flow:shipping.ship-paid-orders")
+    @Tag("scenario:shipping.ship-paid-orders/s01")
+    @Tag("characterization")
+    @DisplayName("[shipping.ship-paid-orders/s01] a paid order is shipped")
+    void shouldShipAPaidOrder() {
+        UUID id = order(OrderStatus.PAID);
+
+        job.shipPaidOrders();
+
+        assertThat(repository.findById(id).orElseThrow().status().name()).isEqualTo("SHIPPED");
+    }
+
+    @Test
+    @Tag("flow:shipping.ship-paid-orders")
+    @Tag("scenario:shipping.ship-paid-orders/s02")
+    @Tag("hardening")
+    @DisplayName("[shipping.ship-paid-orders/s02] an unpaid order is not shipped")
+    void shouldLeaveAnUnpaidOrderAlone() {
+        UUID id = order(OrderStatus.CREATED);
+
+        job.shipPaidOrders();
+
+        assertThat(repository.findById(id).orElseThrow().status().name()).isEqualTo("CREATED");
+    }
+}

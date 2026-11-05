@@ -153,4 +153,24 @@ class MavenRunnerTest {
         GtaException e = assertThrows(GtaException.class, () -> MavenRunner.javaHome("JAVA8_HOME", n -> null));
         assertEquals(ErrorCode.ENV_TOOL_UNAVAILABLE, e.code(), "never build silently with the wrong JDK");
     }
+
+    @Test
+    void shouldBuildTheServiceModuleAndTheModulesItNeedsFromTheRepositoryRoot() throws Exception {
+        assertEquals(List.of(), MavenRunner.moduleArgs(""));
+        assertEquals(List.of("-pl", "order-api", "-am"), MavenRunner.moduleArgs("order-api"));
+
+        paths = new GtaPaths(root, "order-api");
+        script(REPORT.replace("target/surefire-reports", "order-api/target/surefire-reports"));
+        RunResult r = new MavenRunner(paths, config)
+                .run(
+                        "r1",
+                        "i",
+                        new TestRunner.Options("com.acme.OrderControllerIT", null, false, false),
+                        Set.of(),
+                        Set.of());
+
+        String args = Files.readString(root.resolve("args.txt"));
+        assertTrue(args.contains("-pl order-api -am"), args);
+        assertEquals(2, r.cases.size(), "the module's own reports are read");
+    }
 }

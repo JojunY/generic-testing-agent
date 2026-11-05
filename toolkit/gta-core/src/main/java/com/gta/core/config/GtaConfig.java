@@ -38,6 +38,11 @@ public class GtaConfig {
          * per machine.
          */
         public String javaHomeEnv;
+        /**
+         * The Maven module that holds the service, relative to the repository root (for example "order-api"); "" for
+         * a single-module repository. gta works in one module at a time (plan §15, P1).
+         */
+        public String module = "";
     }
 
     public static class Spec {

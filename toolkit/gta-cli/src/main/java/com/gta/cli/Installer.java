@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
@@ -54,6 +55,17 @@ public final class Installer {
 
     public Map<String, Object> install(
             String platform, String distributionUrl, String distributionSha, boolean upgrade) {
+        return install(platform, distributionUrl, distributionSha, upgrade, false);
+    }
+
+    /** Path of the optional CI gate workflow ({@code init --ci}); once installed, upgrades keep it current. */
+    static final String CI_WORKFLOW = ".github/workflows/gta-gate.yml";
+
+    /**
+     * @param ci also install the CI gate workflow; an upgrade keeps it when it was installed before
+     */
+    public Map<String, Object> install(
+            String platform, String distributionUrl, String distributionSha, boolean upgrade, boolean ci) {
         Path managedFile = paths.managedFiles();
         Map<String, Object> managed =
                 Files.exists(managedFile) ? Json.read(managedFile, Map.class) : new LinkedHashMap<>();
@@ -83,8 +95,16 @@ public final class Installer {
         Map<String, Object> mergeManually = new LinkedHashMap<>();
         int skillFiles = 0;
 
+        Map<String, String> sources = new LinkedHashMap<>();
         for (String rel : manifest(platform)) {
-            String content = resource("gta/platform/" + platform + "/" + rel);
+            sources.put(rel, resource("gta/platform/" + platform + "/" + rel));
+        }
+        if (ci || previous.containsKey(CI_WORKFLOW)) {
+            sources.put(CI_WORKFLOW, ciWorkflow());
+        }
+        for (Map.Entry<String, String> source : sources.entrySet()) {
+            String rel = source.getKey();
+            String content = source.getValue();
             switch (rel) {
                 case "AGENTS.gta.md" -> {
                     writes.put(root.resolve("AGENTS.md"), mergedAgentsMd(content));
@@ -200,9 +220,24 @@ public final class Installer {
                 List.of(
                         "Set distributionUrl / distributionSha256Sum in .gta/wrapper/gta-wrapper.properties to the Nexus jar",
                         "Add com.gta:gta-junit (test scope) to pom.xml, or let the first foundation item do it",
-                        "Optional: add CODEOWNERS for .gta/** and the gta CI workflow (docs/guides/ci-integration.md)",
+                        "Optional: add CODEOWNERS for .gta/** and the CI gate (init --ci, docs/guides/ci-integration.md)",
                         "Commit, then developers type /gta in Copilot Chat or OpenCode"));
         return out;
+    }
+
+    /** The gate workflow for this repository: the service module's report folders, the Maven wrapper when there is one. */
+    String ciWorkflow() {
+        String module;
+        try {
+            module = GtaConfig.load(paths).build.module;
+        } catch (GtaException e) {
+            module = "";
+        }
+        String target = GtaPaths.inModule(module, "target");
+        String maven = Files.exists(root.resolve("mvnw")) ? "./mvnw" : "mvn";
+        return com.gta.core.brief.BriefWriter.template("gta-gate.yml.tmpl")
+                .replace("{{reports}}", target)
+                .replace("{{maven}}", maven);
     }
 
     private String wrapperProperties(String distributionUrl, String distributionSha) {

@@ -41,12 +41,18 @@ class DoctorChecksTest {
     }
 
     @Test
-    void shouldWarnThatMultiModuleServicesAreNotSupportedYet(@TempDir Path root) throws Exception {
-        Map<String, String> multi = check(pom(root, "<modules><module>api</module></modules>"), "modules");
+    void shouldAskForTheServiceModuleOfAMultiModuleRepository(@TempDir Path root) throws Exception {
+        Map<String, String> unset = check(pom(root, "<modules><module>api</module></modules>"), "modules");
+        assertEquals("fail", unset.get("status"), "gtaw cannot work on an aggregator pom");
+        assertTrue(unset.get("hint").contains("build.module"), unset.toString());
 
-        assertEquals("warn", multi.get("status"));
-        assertTrue(multi.get("detail").contains("api"), multi.toString());
-        assertTrue(multi.get("hint").contains("single-module"), multi.toString());
+        Files.createDirectories(root.resolve("api"));
+        Files.writeString(root.resolve("api/pom.xml"), "<project><artifactId>api</artifactId></project>");
+        Files.createDirectories(root.resolve(".gta"));
+        Files.writeString(root.resolve(".gta/config.json"), "{\"build\":{\"module\":\"api\"}}");
+        Map<String, String> set = check(root, "modules");
+        assertEquals("ok", set.get("status"));
+        assertTrue(set.get("detail").contains("module api"), set.toString());
     }
 
     @Test

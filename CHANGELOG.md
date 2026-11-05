@@ -5,6 +5,11 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 ## [Unreleased]
 
 ### Added
+- P2 groundwork: `security` and `caching` capabilities (detected; they add the new `gta-testing-spring-security` and `gta-testing-caches` skills to a service's flows from P2). Cross-cutting capabilities now follow their phase like the others. Spring Batch jobs (`@Bean Job`) are detected as flows.
+- `gtaw impact` follows the bean graph (a class that injects a changed class, transitively, and implementations of a changed interface) and config refs whose value changed, and says why each case needs review (`reasons`).
+- `gtaw init --ci` installs the CI gate workflow `.github/workflows/gta-gate.yml` as a managed file (kept current by `gtaw upgrade`), pointed at the service module's reports.
+- P1 capabilities write tests: message listeners (Kafka, Pub/Sub, JMS/MQ, and now RabbitMQ, SQS and application events) and scheduled jobs (`@Scheduled`, ShedLock, and now Quartz jobs). The oracle lock reads `verify(producer).send(...)` arguments as expected values, while what a test sends stays an input.
+- Multi-module Maven repositories: `build.module` names the service module; tests, fixtures and reports live in it, Maven runs from the root with `-pl <module> -am`, and the Boot version and Java level are inherited from the root pom. An aggregator without `build.module` is refused with a hint; `gtaw doctor` checks the setting. The scripted e2e also runs as a module (`GTA_E2E_MODULE`).
 - Services on Java 8 and 11: `gta-junit` is Java 8 bytecode, briefs name the service's level and `javax.*` for Spring Boot 2, `build.javaHomeEnv` runs Maven with the JDK an old build needs, and `gtaw doctor` warns (instead of failing) for Java 8 to 16.
 
 ### Changed
