@@ -104,6 +104,10 @@ public final class MavenRunner implements TestRunner {
         if (!toolOptions.isEmpty()) {
             env.put("JAVA_TOOL_OPTIONS", String.join(" ", toolOptions));
         }
+        String javaHome = javaHome(config.build.javaHomeEnv, System::getenv);
+        if (javaHome != null) {
+            env.put("JAVA_HOME", javaHome);
+        }
 
         long start = System.currentTimeMillis();
         ProcessRunner.Result proc;
@@ -181,5 +185,24 @@ public final class MavenRunner implements TestRunner {
                     "Cannot clear " + dir + ": " + e.getMessage(),
                     "Close programs that hold files in it (IDE, antivirus scan), then run the command again");
         }
+    }
+
+    /**
+     * The JDK Maven runs with: the directory in {@code build.javaHomeEnv}'s variable, or null to keep the inherited
+     * JAVA_HOME. A configured but unset variable fails instead of silently building with the wrong JDK.
+     */
+    static String javaHome(String envName, java.util.function.Function<String, String> getenv) {
+        if (envName == null || envName.isBlank()) {
+            return null;
+        }
+        String value = getenv.apply(envName);
+        if (value == null || value.isBlank()) {
+            throw new GtaException(
+                    ErrorCode.ENV_TOOL_UNAVAILABLE,
+                    "build.javaHomeEnv names " + envName + ", which is not set",
+                    "Set " + envName + " to the JDK this service builds with (for example a JDK 8), or remove"
+                            + " build.javaHomeEnv from .gta/config.json");
+        }
+        return value;
     }
 }

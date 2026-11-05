@@ -1134,7 +1134,7 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 ```json
 {
   "$schema": "./schemas/config.v1.schema.json", "schemaVersion": "1.0",
-  "build": { "tool": "maven", "basePackage": "auto", "maven": "auto" },
+  "build": { "tool": "maven", "basePackage": "auto", "maven": "auto", "javaHomeEnv": null },
   "dispatch": "subagent",
   "spec": { "maxQuestionsPerRound": 5, "maxClarifyRounds": 2, "maxSubmitAttempts": 3 },
   "environments": { "oracle": { "testUrl": null, "userEnv": "GTA_ORACLE_USER", "passwordEnv": "GTA_ORACLE_PASSWORD" } },
@@ -1457,7 +1457,7 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 | 18 | 部署环境上的系统测试（Karate、Kubernetes） | P4 | 只有 skill |
 | 19 | WebSocket、STOMP、SSE | P4 | *新增* |
 
-Java：支持 Java 17 及以上的服务，测试按服务自身的 Java 版本编写；CI 在 JDK 17、21、25 上构建 gta，每个新的 LTS 都会加入矩阵。Java 8 和 11 的服务（大多是已停止开源支持的 Spring Boot 2）不支持，`gtaw doctor` 会报失败。
+Java：以 Java 17 及以上的服务为主进行设计，少数 Java 8 或 11 的服务也支持。测试按服务自身的语言版本编写，Spring Boot 2.2 到 2.7 使用 `javax.*` 导入。`gta-junit` 编译为 Java 8 字节码，旧服务也能加载；gtaw 本身运行在 JDK 17+ 上。旧服务的构建需要自己的 JDK 时，用 `build.javaHomeEnv` 指定存放该 JDK 路径的环境变量，Maven 会以该 `JAVA_HOME` 运行。CI 在 JDK 17、21、25 上构建 gta，每个新的 LTS 都会加入矩阵。`gtaw doctor` 对 Java 8 到 16 给出警告，更旧的报失败。
 
 ---
 

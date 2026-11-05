@@ -220,6 +220,7 @@ public final class BriefWriter {
                 .append(profile.junitMajor)
                 .append(" · ")
                 .append(javaLine(profile.javaMajor))
+                .append(namespaceLine(profile.bootMajor))
                 .append(" · no containers (see the embedded-dependencies skill)\n");
         b.append(
                 "- Never `Thread.sleep`; use Awaitility. Never `@Disabled`. Never put the actual value where the expected value goes.\n\n");
@@ -393,7 +394,12 @@ public final class BriefWriter {
 
     /** The language level the test must compile at: the service's, or the floor gta supports when the pom says nothing. */
     static String javaLine(int javaMajor) {
-        int level = javaMajor >= 17 ? javaMajor : 17;
+        int level = javaMajor > 0 ? javaMajor : 17;
         return "Java " + level + " (no language features or JDK APIs newer than Java " + level + ")";
+    }
+
+    /** Spring Boot 2 predates the jakarta.* namespace; generated imports must match the service. */
+    static String namespaceLine(int bootMajor) {
+        return bootMajor == 2 ? " · javax.* imports (Spring Boot 2), not jakarta.*" : "";
     }
 }

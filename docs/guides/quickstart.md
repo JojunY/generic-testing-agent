@@ -147,6 +147,9 @@ already has approved specs. Test names follow [test-naming.md](test-naming.md).
 
 - `dispatch: "inline"`: use this if your Copilot build cannot run subagents; the orchestrator then does each node itself.
 - Oracle credentials are read from the named environment variables and never stored.
+- `build.javaHomeEnv`: for a service whose build needs an older JDK (for example Java 8 with Spring Boot 2), the name of an
+  environment variable holding that JDK, such as `"JAVA8_HOME"`. Maven then runs with that `JAVA_HOME`; gtaw itself still
+  needs JDK 17 or newer.
 
 ## When something goes wrong
 

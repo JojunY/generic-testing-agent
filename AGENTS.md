@@ -49,7 +49,7 @@ These are the rules for working on this repository. They do not apply to service
 - New behaviour needs a unit test whose assertions state documented behaviour, never a snapshot of today's output. Changes to the loop also need the scripted e2e (`evals/e2e/run.sh`) to pass.
 - Tests are named after their source (`<Name>Test` in the same package, [docs/guides/test-naming.md](docs/guides/test-naming.md)); `MirroredTestNamesTest` enforces it, and exceptions go in `toolkit/test-mirror-allowlist.txt` with a reason.
 - gta-core keeps at least 90 % line coverage, and the core decisions (`oracle`, `state`, `run`, `engine.Triage`) also 80 % branch coverage; `jacoco:check` fails the build below it.
-- Keep the Java toolkit on Java 17 language level. Keep `gta-junit` compiled against JUnit 5.14 so it works on Boot 3.5 and 4.x.
+- Keep the Java toolkit on Java 17 language level. Keep `gta-junit` compiled against JUnit 5.14 and for Java 8 (its main code only) so it works on Boot 2.2 to 4.x and on services still on Java 8 or 11; `GtaResultsListenerTest` checks the bytecode version.
 - Do not add a primitive (hook, MCP server, plugin, handoff) without updating plan §4.0 and showing why the existing ones are not enough.
 
 ## Before you push

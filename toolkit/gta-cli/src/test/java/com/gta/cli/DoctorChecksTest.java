@@ -195,16 +195,46 @@ class DoctorChecksTest {
         assertEquals("fail", out.get("overall"));
     }
 
-    @Test
-    void shouldRefuseAServiceOnAJavaOlderThan17(@TempDir Path root) throws Exception {
+    private static void javaPom(Path root, String version) throws Exception {
         Files.writeString(
                 root.resolve("pom.xml"),
-                "<project><artifactId>a</artifactId><properties><java.version>11</java.version></properties></project>");
+                "<project><artifactId>a</artifactId><properties><java.version>" + version
+                        + "</java.version></properties></project>");
+    }
+
+    @Test
+    void shouldAcceptServicesOnJava8To16WithAWarningAndRefuseOlderOnes(@TempDir Path root) throws Exception {
+        javaPom(root, "11");
+        Map<String, String> java11 = check(root, "service-java");
+        assertEquals("warn", java11.get("status"));
+        assertTrue(java11.get("detail").contains("written for Java 11"), java11.toString());
+        assertTrue(java11.get("hint").contains("build.javaHomeEnv"), "an old build may need its own JDK");
+
+        javaPom(root, "1.8");
+        assertEquals("warn", status(root, "service-java"));
+
+        javaPom(root, "1.7");
         assertEquals("fail", status(root, "service-java"));
 
-        Files.writeString(
-                root.resolve("pom.xml"),
-                "<project><artifactId>a</artifactId><properties><java.version>21</java.version></properties></project>");
+        javaPom(root, "21");
         assertEquals("ok", status(root, "service-java"));
+    }
+
+    @Test
+    void shouldCheckTheBuildJdkOnlyWhenOneIsConfigured(@TempDir Path root) throws Exception {
+        assertThrows(java.util.NoSuchElementException.class, () -> check(root, "build-jdk"));
+
+        Files.createDirectories(root.resolve(".gta"));
+        Files.writeString(root.resolve(".gta/config.json"), "{\"build\":{\"javaHomeEnv\":\"GTA_TEST_NO_SUCH_JDK\"}}");
+        assertEquals("fail", status(root, "build-jdk"));
+    }
+
+    @Test
+    void shouldExplainSpringBoot2Support(@TempDir Path root) throws Exception {
+        Files.writeString(root.resolve("pom.xml"), pomWith("2.7.18", "", ""));
+
+        Map<String, String> boot = check(root, "spring-boot");
+        assertEquals("warn", boot.get("status"));
+        assertTrue(boot.get("hint").contains("javax"), boot.toString());
     }
 }

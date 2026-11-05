@@ -32,6 +32,12 @@ public class GtaConfig {
         public String basePackage = "auto";
         /** Maven executable; "auto" = ./mvnw when present, otherwise mvn. */
         public String maven = "auto";
+        /**
+         * Name of an environment variable holding the JDK this service builds with (for example a JDK 8 for an old
+         * Spring Boot 2 service); null = Maven uses the JDK gtaw runs on. A name, not a path, because paths differ
+         * per machine.
+         */
+        public String javaHomeEnv;
     }
 
     public static class Spec {

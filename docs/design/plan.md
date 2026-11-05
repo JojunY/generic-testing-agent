@@ -1136,7 +1136,7 @@ The state of each item in `.gta/work/state.json`:
 ```json
 {
   "$schema": "./schemas/config.v1.schema.json", "schemaVersion": "1.0",
-  "build": { "tool": "maven", "basePackage": "auto", "maven": "auto" },
+  "build": { "tool": "maven", "basePackage": "auto", "maven": "auto", "javaHomeEnv": null },
   "dispatch": "subagent",
   "spec": { "maxQuestionsPerRound": 5, "maxClarifyRounds": 2, "maxSubmitAttempts": 3 },
   "environments": { "oracle": { "testUrl": null, "userEnv": "GTA_ORACLE_USER", "passwordEnv": "GTA_ORACLE_PASSWORD" } },
@@ -1475,9 +1475,11 @@ registry entry, an eval fixture and one pilot service.
 | 18 | System tests on deployed environments (Karate, Kubernetes) | P4 | skill only |
 | 19 | WebSocket, STOMP, SSE | P4 | *new* |
 
-Java: services on Java 17 or newer, tests written at the service's own level; CI builds gta on JDK 17, 21 and 25, and
-each new LTS joins the matrix. Java 8 and 11 services (mostly Spring Boot 2, out of open-source support) are not
-supported; `gtaw doctor` fails them.
+Java: designed for services on Java 17 or newer, and a few on Java 8 or 11 are supported too. Tests are written at the
+service's own language level, with `javax.*` imports for Spring Boot 2.2 to 2.7. `gta-junit` is Java 8 bytecode, so an old
+service can load it; gtaw itself runs on JDK 17+. When an old build needs its own JDK, `build.javaHomeEnv` names the
+variable that holds it, and Maven runs with that `JAVA_HOME`. CI builds gta on JDK 17, 21 and 25, and each new LTS joins
+the matrix. `gtaw doctor` warns for Java 8 to 16 and fails anything older.
 
 ---
 

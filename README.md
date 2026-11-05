@@ -58,7 +58,7 @@ Then open the service in VS Code, IntelliJ or OpenCode and type `/gta`.
 
 ## Supported now (P0)
 
-- **Supported:** Maven services on Spring Boot 4.1 (and 3.5), Java 17+, on Windows, macOS and Linux.
+- **Supported:** Maven services on Spring Boot 4.1 and 3.5 (2.2 to 2.7 too), Java 17+ (a few on Java 8 or 11 too), on Windows, macOS and Linux. gtaw itself needs JDK 17+.
 - **Writes tests for:** REST APIs. Other capabilities (scheduler, Batch, messaging, workflows, Beam, deployed systems) are detected and can be explained and specified now; their test authoring switches on in later phases (see `core/registry/capabilities.yaml` and plan §15).
 - **No containers needed:**
   - Oracle runs against a shared test schema or H2 in Oracle mode;

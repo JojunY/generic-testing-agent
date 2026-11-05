@@ -2,11 +2,14 @@ package com.gta.core.run;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
+import com.gta.core.error.ErrorCode;
+import com.gta.core.error.GtaException;
 import com.gta.core.util.ProcessRunner;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -140,5 +143,14 @@ class MavenRunnerTest {
         gates.stabilityTimezone = "Pacific/Chatham";
         gates.stabilityLocale = "tr";
         assertEquals("-Duser.timezone=Pacific/Chatham -Duser.language=tr", MavenRunner.stabilityVariantOptions(gates));
+    }
+
+    @Test
+    void shouldRunMavenWithTheConfiguredJdkAndFailWhenItsVariableIsUnset() {
+        assertEquals(null, MavenRunner.javaHome(null, n -> "/ignored"), "no setting keeps the inherited JAVA_HOME");
+        assertEquals("/opt/jdk8", MavenRunner.javaHome("JAVA8_HOME", n -> "JAVA8_HOME".equals(n) ? "/opt/jdk8" : null));
+
+        GtaException e = assertThrows(GtaException.class, () -> MavenRunner.javaHome("JAVA8_HOME", n -> null));
+        assertEquals(ErrorCode.ENV_TOOL_UNAVAILABLE, e.code(), "never build silently with the wrong JDK");
     }
 }

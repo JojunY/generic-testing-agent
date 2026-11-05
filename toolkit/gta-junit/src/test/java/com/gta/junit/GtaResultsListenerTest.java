@@ -87,4 +87,17 @@ class GtaResultsListenerTest {
         assertEquals("null", GtaResultsListener.quote(null));
         assertEquals("\"a\\\"b\\\\c\\nd\"", GtaResultsListener.quote("a\"b\\c\nd"));
     }
+
+    @org.junit.jupiter.api.Test
+    void shouldStayLoadableByServicesOnJava8() throws Exception {
+        for (Class<?> type : new Class<?>[] {GtaResultsListener.class, KnownDefectExtension.class, Fingerprint.class}) {
+            try (java.io.DataInputStream in =
+                    new java.io.DataInputStream(type.getResourceAsStream(type.getSimpleName() + ".class"))) {
+                in.readInt(); // magic
+                in.readUnsignedShort(); // minor
+                org.junit.jupiter.api.Assertions.assertEquals(
+                        52, in.readUnsignedShort(), type + " must be Java 8 bytecode (class version 52)");
+            }
+        }
+    }
 }
