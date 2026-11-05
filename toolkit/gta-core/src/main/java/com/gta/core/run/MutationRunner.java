@@ -42,6 +42,9 @@ public final class MutationRunner {
     private final Git git;
     private final String javaExecutable;
 
+    /** PIT runs from the Maven test classpath; a Gradle build gets no mutation result yet (plan §15 P3). */
+    static final String GRADLE_UNSUPPORTED = "mutation testing needs a Maven build; skipped for this Gradle build";
+
     public MutationRunner(GtaPaths paths, GtaConfig config) {
         // PIT runs on the JVM gtaw runs on (17+); the service's bytecode, even Java 8, runs there too
         this(paths, config, ProcessHandle.current().info().command().orElse("java"));
@@ -73,6 +76,10 @@ public final class MutationRunner {
         out.put("classes", List.copyOf(lines.keySet()));
         if (lines.isEmpty()) {
             out.put("result", "no production class changed since " + base);
+            return out;
+        }
+        if (GradleRunner.selected(paths, config)) {
+            out.put("result", GRADLE_UNSUPPORTED);
             return out;
         }
         Path work = paths.work().resolve("pit");
@@ -155,6 +162,9 @@ public final class MutationRunner {
     public CanFail canFail(String itemId, Map<String, Set<String>> methodsByClass, String testClass) {
         if (methodsByClass.isEmpty()) {
             return new CanFail(CanFail.NOT_APPLICABLE, 0, 0, "the scenario cites no method");
+        }
+        if (GradleRunner.selected(paths, config)) {
+            return new CanFail(CanFail.NOT_APPLICABLE, 0, 0, GRADLE_UNSUPPORTED);
         }
         Path work = paths.work().resolve("pit").resolve(itemId.replaceAll("[^A-Za-z0-9.-]", "_"));
         List<Mutant> mutants = run(work, methodsByClass.keySet(), List.of(testClass)).stream()

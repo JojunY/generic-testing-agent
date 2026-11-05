@@ -16,16 +16,16 @@ jobs:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }           # the gate reads the base branch's specs and shards
       - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: "21", cache: maven }
+        with: { distribution: temurin, java-version: "21", cache: {{cache}} }
       - name: Build and run tests
-        run: {{maven}} -B verify
+        run: {{build}}
       - name: gta gate
         env:
           GTA_NEXUS_USER: ${{ secrets.NEXUS_USER }}          # used by gtaw to download the pinned gta-cli jar
           GTA_NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
         run: |
           ./gtaw gate --base "origin/${{ github.base_ref }}" \
-            --reports {{reports}}/surefire-reports --reports {{reports}}/failsafe-reports > gate.json || echo "GATE_FAILED=1" >> "$GITHUB_ENV"
+            {{reports}} > gate.json || echo "GATE_FAILED=1" >> "$GITHUB_ENV"
           ./gtaw report --kind pr-comment > pr-comment.md
           cat gate.json
       - name: Comment on the PR

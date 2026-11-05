@@ -156,8 +156,11 @@ already has approved specs. Test names follow [test-naming.md](test-naming.md).
 - `build.module`: in a multi-module repository, the module that holds the service, such as `"order-api"`. `.gta/` stays at
   the repository root; tests are written into that module and Maven runs with `-pl <module> -am`. `gtaw doctor` fails
   until it is set.
+- `build.tool`: `auto` (default) builds with Gradle when the service has `build.gradle(.kts)` and no `pom.xml`, otherwise
+  with Maven; `maven` or `gradle` forces one. `build.gradle` names the Gradle executable (default: `./gradlew` when present).
+  gta-junit writes its results to `target/gta-results/` in a Gradle build too: add it to `.gitignore`.
 - `build.javaHomeEnv`: for a service whose build needs an older JDK (for example Java 8 with Spring Boot 2), the name of an
-  environment variable holding that JDK, such as `"JAVA8_HOME"`. Maven then runs with that `JAVA_HOME`; gtaw itself still
+  environment variable holding that JDK, such as `"JAVA8_HOME"`. Maven or Gradle then runs with that `JAVA_HOME`; gtaw itself still
   needs JDK 17 or newer.
 
 ## When something goes wrong

@@ -90,6 +90,9 @@ public final class Planner {
             f.ownsFiles.add(GtaPaths.inModule(profile.module, GtaPaths.TEST_JAVA + "/" + basePath + "support/**"));
             f.ownsFiles.add(GtaPaths.inModule(profile.module, GtaPaths.TEST_RESOURCES + "/**"));
             f.ownsFiles.add(GtaPaths.inModule(profile.module, "pom.xml"));
+            // a Gradle service's test dependencies go into its build script instead
+            f.ownsFiles.add(GtaPaths.inModule(profile.module, "build.gradle"));
+            f.ownsFiles.add(GtaPaths.inModule(profile.module, "build.gradle.kts"));
             f.priority = "p0";
             f.scenarioRevision = "foundation";
             for (PlanItem i : items) {

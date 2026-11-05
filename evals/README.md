@@ -30,6 +30,19 @@ A reactive Spring Boot 4.1 catalog: a WebFlux endpoint, a GraphQL query and a gR
 
 `e2e/run-catalog.sh` opts the repository into P3 (`"phase": "P3"`) and takes the three flows from spec to a pinned defect.
 
+## Fixture: `fixtures/invoice-service`
+
+A Spring Boot 4.1 MVC service built with Gradle (Kotlin DSL, no pom.xml), with one seeded defect that
+`docs/business-rules.md` contradicts.
+
+| Id | Where | Defect |
+|---|---|---|
+| D13 | `InvoiceController#quote` (rest-api) | `>` instead of `>=`: an invoice of exactly 100 gets no discount |
+
+`e2e/run-gradle.sh` checks that doctor and the profile read `build.gradle.kts`, adds gta-junit to the build script in the
+foundation item, and takes the flow from spec to a pinned defect with every test run through Gradle. It needs Gradle
+8.14 or newer on PATH and gta-junit in the local Maven repository (`mvn install`).
+
 ## Scripted end-to-end run: `e2e/run.sh`
 
 `e2e/scripted-output/` holds what a correct analyst, author and reviewer would produce for `order.create-order`. The script plays those nodes and asserts each decision gtaw makes:

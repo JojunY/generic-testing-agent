@@ -18,8 +18,23 @@
       "properties": {
         "tool": {
           "enum": [
-            "maven"
-          ]
+            "auto",
+            "maven",
+            "gradle"
+          ],
+          "description": "\"auto\" = gradle when the service has build.gradle(.kts) and no pom.xml, else maven"
+        },
+        "gradle": {
+          "type": "string",
+          "description": "\"auto\" = gradlew if present, else gradle"
+        },
+        "module": {
+          "type": "string",
+          "description": "the module (or Gradle subproject) that holds the service in a multi-module repository"
+        },
+        "javaHomeEnv": {
+          "type": "string",
+          "description": "name of an environment variable holding the JDK the service builds with"
         },
         "basePackage": {
           "type": "string",

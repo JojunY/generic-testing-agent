@@ -1,0 +1,46 @@
+package com.example.invoice.api;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.gta.junit.KnownDefect;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.web.servlet.MockMvc;
+
+@Tag("component")
+@Tag("gta")
+@SpringBootTest
+@AutoConfigureMockMvc
+class InvoiceControllerIT {
+
+    @Autowired
+    MockMvc mvc;
+
+    @Test
+    @Tag("flow:invoice.quote")
+    @Tag("scenario:invoice.quote/s01")
+    @Tag("characterization")
+    @DisplayName("[invoice.quote/s01] a small invoice pays the full amount")
+    void shouldChargeTheFullAmountBelowTheDiscountThreshold() throws Exception {
+        mvc.perform(get("/api/invoices/quote").param("amount", "40"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(40.00));
+    }
+
+    @Test
+    @Tag("flow:invoice.quote")
+    @Tag("scenario:invoice.quote/s02")
+    @Tag("hardening")
+    @DisplayName("[invoice.quote/s02] an invoice of exactly 100 gets the discount")
+    void shouldDiscountAnInvoiceOfExactlyTheThreshold() throws Exception {
+        mvc.perform(get("/api/invoices/quote").param("amount", "100"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(90.00));
+    }
+}

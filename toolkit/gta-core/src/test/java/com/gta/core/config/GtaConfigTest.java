@@ -56,4 +56,13 @@ class GtaConfigTest {
         GtaException e = assertThrows(GtaException.class, () -> load("{ \"spec\": { \"source\": \"jira\" } }"));
         assertEquals(ErrorCode.CONFIG_INVALID, e.code());
     }
+
+    @Test
+    void shouldReadTheBuildToolAndRefuseAnUnknownOne() throws Exception {
+        assertEquals("auto", load("{}").build.tool, "auto: Gradle when the service has a Gradle build and no pom.xml");
+        assertEquals("gradle", load("{ \"build\": { \"tool\": \"gradle\" } }").build.tool);
+
+        GtaException e = assertThrows(GtaException.class, () -> load("{ \"build\": { \"tool\": \"ant\" } }"));
+        assertEquals(ErrorCode.CONFIG_INVALID, e.code());
+    }
 }

@@ -172,4 +172,29 @@ class InstallerTest {
         assertTrue(gate.contains("--reports order-api/target/surefire-reports"), gate);
         assertTrue(gate.contains("./mvnw -B verify"), gate);
     }
+
+    @Test
+    void shouldInstallIntoAGradleServiceAndRunItsGateThroughGradle() throws Exception {
+        Files.delete(root.resolve("pom.xml"));
+        Files.writeString(root.resolve("build.gradle.kts"), "plugins { java }\n");
+        Files.writeString(root.resolve("gradlew"), "#!/bin/sh\n");
+
+        new Installer(root).install("copilot", null, null, false, true);
+
+        String gate = Files.readString(root.resolve(".github/workflows/gta-gate.yml"));
+        assertTrue(gate.contains("./gradlew --console=plain test"), gate);
+        assertTrue(gate.contains("--reports build/test-results/test"), gate);
+        assertTrue(gate.contains("cache: gradle"), gate);
+        assertFalse(gate.contains("surefire"), gate);
+    }
+
+    @Test
+    void shouldRefuseADirectoryWithoutAMavenOrGradleBuild() throws Exception {
+        Files.delete(root.resolve("pom.xml"));
+
+        GtaException e = assertThrows(
+                GtaException.class, () -> new Installer(root).install("copilot", null, null, false, false));
+
+        assertTrue(e.getMessage().contains("build.gradle"), e.getMessage());
+    }
 }

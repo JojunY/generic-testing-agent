@@ -38,24 +38,29 @@ public final class DoctorChecks {
                 git ? "git work tree" : "not a git work tree",
                 "Run gtaw inside the service repository");
 
-        boolean mvnw = Files.exists(root.resolve(ProcessRunner.isWindows() ? "mvnw.cmd" : "mvnw"));
-        boolean mvn;
+        GtaPaths repositoryPaths = new GtaPaths(root);
+        boolean gradle;
         try {
-            mvn = mvnw
-                    || ProcessRunner.run(
-                                    root,
-                                    ProcessRunner.isWindows()
-                                            ? ProcessRunner.cmd("cmd", "/c", "mvn", "-v")
-                                            : ProcessRunner.cmd("mvn", "-v"))
-                            .ok();
+            GtaConfig config = GtaConfig.load(repositoryPaths);
+            gradle = com.gta.core.run.GradleRunner.selected(repositoryPaths.withModule(config.build.module), config);
         } catch (GtaException e) {
-            mvn = false;
+            gradle = false; // the config check below reports it
         }
-        add(
-                "maven",
-                mvn ? "ok" : "fail",
-                mvnw ? "Maven wrapper" : mvn ? "mvn on PATH" : "no Maven",
-                "Install Maven or add the Maven wrapper");
+        if (gradle) {
+            buildTool(
+                    "gradle",
+                    ProcessRunner.isWindows() ? "gradlew.bat" : "gradlew",
+                    "gradle",
+                    "Gradle",
+                    "Install Gradle or add the Gradle wrapper");
+        } else {
+            buildTool(
+                    "maven",
+                    ProcessRunner.isWindows() ? "mvnw.cmd" : "mvnw",
+                    "mvn",
+                    "Maven",
+                    "Install Maven or add the Maven wrapper");
+        }
 
         List<String> dependencies = List.of();
         String module = configuredModule();
@@ -76,7 +81,7 @@ public final class DoctorChecks {
                     "service-java",
                     serviceJava == 0 || serviceJava >= 17 ? "ok" : serviceJava >= 8 ? "warn" : "fail",
                     serviceJava == 0
-                            ? "Java level not set in pom.xml (tests are written for Java 17)"
+                            ? "Java level not set in the build file (tests are written for Java 17)"
                             : "Java " + serviceJava
                                     + (serviceJava < 17 ? ": tests are written for Java " + serviceJava : ""),
                     serviceJava >= 8
@@ -101,11 +106,12 @@ public final class DoctorChecks {
                     junit ? "test dependency present" : "missing",
                     "Add com.gta:gta-junit (scope test) from Nexus; the first foundation item can do it");
             boolean failsafe = pom.plugins.contains("maven-failsafe-plugin");
-            add(
-                    "failsafe",
-                    failsafe ? "ok" : "warn",
-                    failsafe ? "configured" : "not configured",
-                    "gtaw runs *IT classes through Surefire -Dtest; add Failsafe so mvn verify runs them in CI");
+            if (!gradle)
+                add(
+                        "failsafe",
+                        failsafe ? "ok" : "warn",
+                        failsafe ? "configured" : "not configured",
+                        "gtaw runs *IT classes through Surefire -Dtest; add Failsafe so mvn verify runs them in CI");
         } catch (GtaException e) {
             add("pom", "fail", e.getMessage(), e.hint());
         }
@@ -231,6 +237,28 @@ public final class DoctorChecks {
     }
 
     /** build.module from .gta/config.json; "" when unset or when the config cannot be read (the config check reports that). */
+    /** The build tool's check: its wrapper in the repository, or the executable on PATH. */
+    private void buildTool(String name, String wrapper, String executable, String label, String hint) {
+        boolean hasWrapper = Files.exists(root.resolve(wrapper));
+        boolean found;
+        try {
+            found = hasWrapper
+                    || ProcessRunner.run(
+                                    root,
+                                    ProcessRunner.isWindows()
+                                            ? ProcessRunner.cmd("cmd", "/c", executable, "-v")
+                                            : ProcessRunner.cmd(executable, "-v"))
+                            .ok();
+        } catch (GtaException e) {
+            found = false;
+        }
+        add(
+                name,
+                found ? "ok" : "fail",
+                hasWrapper ? label + " wrapper" : found ? executable + " on PATH" : "no " + label,
+                hint);
+    }
+
     private String configuredModule() {
         try {
             String m = GtaConfig.load(new GtaPaths(root)).build.module;

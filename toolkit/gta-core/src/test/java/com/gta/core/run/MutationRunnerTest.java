@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -223,5 +224,17 @@ class MutationRunnerTest {
                 new MutationRunner(new com.gta.core.config.GtaPaths(dir), new com.gta.core.config.GtaConfig())
                         .canFail("i", Map.of(), "a.LTest")
                         .verdict());
+    }
+
+    @Test
+    void shouldSkipMutationTestingForAGradleBuild() throws Exception {
+        Files.writeString(dir.resolve("build.gradle"), "plugins { id 'java' }");
+        MutationRunner runner =
+                new MutationRunner(new com.gta.core.config.GtaPaths(dir), new com.gta.core.config.GtaConfig());
+
+        MutationRunner.CanFail r = runner.canFail("i", Map.of("a.L", Set.of("m")), "a.LTest");
+
+        assertEquals(MutationRunner.CanFail.NOT_APPLICABLE, r.verdict());
+        assertEquals(MutationRunner.GRADLE_UNSUPPORTED, r.detail());
     }
 }

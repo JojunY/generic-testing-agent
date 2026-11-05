@@ -1490,6 +1490,14 @@ Java level are inherited from the root pom when the module does not set them, an
 several service modules changes `build.module` between sessions. An aggregator pom without `build.module` is refused
 with a hint instead of being profiled as a service with no flows. The scripted e2e runs both layouts.
 
+Gradle builds (implemented): with `build.tool` `auto` (the default) a module with `build.gradle(.kts)` and no `pom.xml`
+builds with Gradle (`./gradlew` when present). gtaw reads the Boot plugin version, dependencies, Java level and
+`include`d subprojects from the script text without running Gradle, and runs tests with an init script it writes to
+`.gta/work/gradle/`, which selects the scenario's tag and passes gta-junit its results directory; the service's build
+script is never changed by gtaw. `build.module` names a subproject (`:a:b:test`). The Test task's JUnit XML is read like
+Surefire's (its testcases are named by display name and its messages carry the exception type, both normalised).
+Mutation testing needs the Maven test classpath, so `gtaw mutate` and the can-fail check report Gradle builds as `n/a`.
+
 A repository can opt into a later phase early with `"phase": "P3"` in `.gta/config.json` (never an earlier one): its
 capabilities then write tests before they are on for everyone. Pilot services, which each phase's exit criteria need,
 use it, and so do the evals that must pass before a phase is switched on.
@@ -1510,7 +1518,7 @@ registry entry, an eval fixture and one pilot service.
 | 9 | Caching (Spring Cache, Redis, Caffeine) | P2 | tests written; the skill attaches to the flows of a service with caches |
 | 10 | Spring Batch | P2 | tests written; each `@Bean Job` is a flow |
 | 11 | Reactive WebFlux | P3 | tests written with the `phase: "P3"` preview; a handler returning `Mono`/`Flux` is a `webflux` flow |
-| 12 | Gradle builds | P3 | *new*; Maven only today |
+| 12 | Gradle builds | P3 | supported: Groovy and Kotlin DSL builds are read, tests run through Gradle; `gtaw mutate` and the can-fail check stay Maven-only |
 | 13 | GCP data (BigQuery, GCS) | P0 / P4 | a dependency with fakes; SQL in the system layer from P4 |
 | 14 | gRPC | P3 | tests written with the `phase: "P3"` preview; each RPC of a generated `*ImplBase` subclass is a flow |
 | 15 | Workflows and state machines (Temporal, Camunda, Spring Statemachine) | P3 | detected, spec only |

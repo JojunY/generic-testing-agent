@@ -154,7 +154,7 @@ public final class BriefWriter {
                     .append(
                             "context and its embedded dependencies start (no business assertions). It is the `--smoke` baseline. ")
                     .append(
-                            "You may add test-scope dependencies to `pom.xml` (versions managed by the Spring Boot parent stay unversioned), ")
+                            "You may add test-scope dependencies to the build file (`pom.xml`, or `build.gradle(.kts)` for Gradle; versions managed by Spring Boot stay unversioned), ")
                     .append(
                             "shared test support classes and test resources. Make sure `com.gta:gta-junit` is a test dependency.\n\n");
         } else {

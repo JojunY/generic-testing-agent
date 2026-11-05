@@ -27,6 +27,8 @@ public final class PomInfo {
     public List<String> dependencies = new ArrayList<>();
     public List<String> modules = new ArrayList<>();
     public List<String> plugins = new ArrayList<>();
+    /** {@code maven} or {@code gradle}: which build file this was read from. */
+    public String tool = "maven";
 
     /**
      * The service module's pom, with what a module usually inherits from the root pom: the Spring Boot version and the
@@ -37,10 +39,11 @@ public final class PomInfo {
             return read(repository);
         }
         Path moduleRoot = repository.resolve(module);
-        if (!Files.exists(moduleRoot.resolve("pom.xml"))) {
+        if (!Files.exists(moduleRoot.resolve("pom.xml"))
+                && gradleBuildFile(moduleRoot).isEmpty()) {
             throw new GtaException(
                     ErrorCode.ENV_UNSUPPORTED_BUILD,
-                    "build.module is " + module + ", but " + module + "/pom.xml does not exist",
+                    "build.module is " + module + ", but " + module + " has no pom.xml or build.gradle(.kts)",
                     "Set build.module in .gta/config.json to the folder of the module that holds the service");
         }
         PomInfo info = read(moduleRoot);
@@ -56,11 +59,14 @@ public final class PomInfo {
 
     public static PomInfo read(Path root) {
         Path pom = root.resolve("pom.xml");
+        if (!Files.exists(pom) && gradleBuildFile(root).isPresent()) {
+            return readGradle(root);
+        }
         if (!Files.exists(pom)) {
             throw new GtaException(
                     ErrorCode.ENV_UNSUPPORTED_BUILD,
                     "No pom.xml in " + root,
-                    "gta v1 supports Maven projects; run gtaw from the module that contains pom.xml");
+                    "gta supports Maven and Gradle builds; run gtaw where pom.xml or build.gradle(.kts) is");
         }
         try {
             DocumentBuilderFactory f = DocumentBuilderFactory.newInstance();
@@ -132,6 +138,89 @@ public final class PomInfo {
         } catch (Exception e) {
             throw new GtaException(
                     ErrorCode.ENV_UNSUPPORTED_BUILD, "Cannot parse pom.xml: " + e.getMessage(), "Fix pom.xml");
+        }
+    }
+
+    /** {@code build.gradle.kts} or {@code build.gradle} of a directory. */
+    public static java.util.Optional<Path> gradleBuildFile(Path dir) {
+        for (String name : List.of("build.gradle.kts", "build.gradle")) {
+            if (Files.exists(dir.resolve(name))) {
+                return java.util.Optional.of(dir.resolve(name));
+            }
+        }
+        return java.util.Optional.empty();
+    }
+
+    private static final java.util.regex.Pattern BOOT_PLUGIN = java.util.regex.Pattern.compile(
+            "id\\s*\\(?\\s*[\"']org\\.springframework\\.boot[\"']\\s*\\)?\\s*version\\s*\\(?\\s*[\"']([^\"']+)[\"']");
+    private static final java.util.regex.Pattern DEPENDENCY = java.util.regex.Pattern.compile(
+            "\\b(?:implementation|api|compileOnly|runtimeOnly|testImplementation|testRuntimeOnly|developmentOnly)"
+                    + "\\s*\\(?\\s*[\"']([^:\"']+):([^:\"']+)(?::[^\"']*)?[\"']");
+    private static final java.util.regex.Pattern JAVA_LEVEL = java.util.regex.Pattern.compile(
+            "JavaLanguageVersion\\.of\\(\\s*(\\d+)\\s*\\)|(?:source|target)Compatibility\\s*=\\s*(?:JavaVersion\\.VERSION_(?:1_)?(\\d+)|[\"']?(?:1\\.)?(\\d+)[\"']?)");
+    private static final java.util.regex.Pattern INCLUDE =
+            java.util.regex.Pattern.compile("(?m)^\\s*include\\s*\\(?([^)\\n]+)\\)?");
+
+    /**
+     * The parts of a Gradle build gta needs, read from the build script text (Groovy or Kotlin DSL): the Spring Boot
+     * plugin version, the declared dependencies, the Java toolchain or compatibility level, and the subprojects of
+     * settings.gradle(.kts). gta does not run Gradle to read them, so a value computed in the script is not seen.
+     */
+    static PomInfo readGradle(Path root) {
+        PomInfo info = new PomInfo();
+        info.tool = "gradle";
+        info.artifactId = String.valueOf(root.toAbsolutePath().normalize().getFileName());
+        try {
+            String build =
+                    Files.readString(gradleBuildFile(root).orElseThrow(), java.nio.charset.StandardCharsets.UTF_8);
+            java.util.regex.Matcher boot = BOOT_PLUGIN.matcher(build);
+            if (boot.find()) {
+                info.bootVersion = boot.group(1);
+            }
+            java.util.regex.Matcher dep = DEPENDENCY.matcher(build);
+            while (dep.find()) {
+                info.dependencies.add(dep.group(2));
+            }
+            java.util.regex.Matcher level = JAVA_LEVEL.matcher(build);
+            if (level.find()) {
+                for (int g = 1; g <= 3; g++) {
+                    if (level.group(g) != null) {
+                        info.javaRelease = level.group(g);
+                        break;
+                    }
+                }
+            }
+            for (String name : List.of("settings.gradle.kts", "settings.gradle")) {
+                Path settings = root.resolve(name);
+                if (Files.exists(settings)) {
+                    String text = Files.readString(settings, java.nio.charset.StandardCharsets.UTF_8);
+                    java.util.regex.Matcher m = INCLUDE.matcher(text);
+                    while (m.find()) {
+                        for (String part : m.group(1).split(",")) {
+                            String module = part.strip()
+                                    .replaceAll("^[\"']|[\"']$", "")
+                                    .replaceAll("^:", "")
+                                    .replace(':', '/');
+                            if (!module.isEmpty()) {
+                                info.modules.add(module);
+                            }
+                        }
+                    }
+                    java.util.regex.Matcher project = java.util.regex.Pattern.compile(
+                                    "rootProject\\.name\\s*=\\s*[\"']([^\"']+)[\"']")
+                            .matcher(text);
+                    if (project.find()) {
+                        info.artifactId = project.group(1);
+                    }
+                    break;
+                }
+            }
+            return info;
+        } catch (java.io.IOException e) {
+            throw new GtaException(
+                    ErrorCode.ENV_UNSUPPORTED_BUILD,
+                    "Cannot read the Gradle build: " + e.getMessage(),
+                    "Fix the build file");
         }
     }
 

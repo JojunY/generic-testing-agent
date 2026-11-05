@@ -1,6 +1,7 @@
 package com.gta.core.run;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.gta.core.error.ErrorCode;
@@ -162,5 +163,15 @@ class SurefireReportParserTest {
         Files.writeString(reports.resolve("failsafe-summary.xml"), "<failsafe-summary result=\"254\"");
 
         assertEquals(1, SurefireReportParser.parse(List.of(reports), gtaResults).size());
+    }
+
+    @Test
+    void shouldDropTheTypePrefixGradlePutsInFrontOfTheMessage() {
+        assertEquals(
+                "boom",
+                SurefireReportParser.withoutTypePrefix(
+                        "java.lang.IllegalStateException: boom", "java.lang.IllegalStateException"));
+        assertEquals("boom", SurefireReportParser.withoutTypePrefix("boom", "java.lang.IllegalStateException"));
+        assertNull(SurefireReportParser.withoutTypePrefix(null, "x.Y"));
     }
 }
