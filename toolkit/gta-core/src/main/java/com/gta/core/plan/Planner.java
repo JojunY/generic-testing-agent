@@ -5,6 +5,7 @@ import com.gta.core.profile.ServiceProfile;
 import com.gta.core.registry.CapabilityRegistry;
 import com.gta.core.spec.Ref;
 import com.gta.core.spec.Spec;
+import com.gta.core.spec.SpecLinter;
 import com.gta.core.util.Ids;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -51,10 +52,13 @@ public final class Planner {
                 item.title = s.title;
                 item.capability = capability.id;
                 item.layer = layer;
-                item.intent = switch (s.source()) {
-                    case "confirmed", "documented" -> "hardening";
-                    default -> "characterization";
-                };
+                item.intent = s.meta.get("hint.intent")
+                        .filter(SpecLinter.INTENTS::contains)
+                        .orElse(
+                                switch (s.source()) {
+                                    case "confirmed", "documented" -> "hardening";
+                                    default -> "characterization";
+                                });
                 item.skills = new ArrayList<>(skills);
                 item.oracle.type = s.meta.getOr("hint.oracle", "state");
                 item.oracle.source = s.source();

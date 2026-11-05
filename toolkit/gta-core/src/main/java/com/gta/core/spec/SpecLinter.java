@@ -16,6 +16,9 @@ import java.util.Set;
 public final class SpecLinter {
     private static final Set<Integer> RISK_VALUES = Set.of(1, 2, 3, 4, 6, 9);
     private static final List<String> LAYERS = List.of("unit", "slice", "component", "contract", "system");
+    /** Scenario intents a spec may ask for: a test that must fail now (incident), or a PR's catching test. */
+    public static final List<String> INTENTS = List.of("reproducing", "catching");
+
     private static final List<String> ORACLES =
             List.of("state", "response", "message", "property", "golden", "contract");
     private static final List<String> DIAGRAMS =
@@ -115,6 +118,9 @@ public final class SpecLinter {
                 s.meta.get("hint.layer")
                         .filter(l -> !LAYERS.contains(l))
                         .ifPresent(l -> issues.add(sw + ": hint.layer must be one of " + LAYERS));
+                s.meta.get("hint.intent")
+                        .filter(i -> !INTENTS.contains(i))
+                        .ifPresent(i -> issues.add(sw + ": hint.intent must be one of " + INTENTS));
                 s.meta.get("hint.oracle")
                         .filter(o -> !ORACLES.contains(o))
                         .ifPresent(o -> issues.add(sw + ": hint.oracle must be one of " + ORACLES));

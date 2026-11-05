@@ -232,6 +232,12 @@ public final class BriefWriter {
                 .append(" · no containers (see the embedded-dependencies skill)\n");
         b.append(
                 "- Never `Thread.sleep`; use Awaitility. Never `@Disabled`. Never put the actual value where the expected value goes.\n\n");
+        if ("reproducing".equals(item.intent) && !"known-defect".equals(state.intentOverride)) {
+            b.append("## Reproducing an incident\n\nThis test reproduces a reported incident: it asserts the expected"
+                    + " behaviour the spec states and must fail on the current code, for the reason the incident"
+                    + " describes. Do not change production code, and do not add `@KnownDefect`: gtaw checks the failure"
+                    + " and a human confirms the defect first.\n\n");
+        }
         if ("known-defect".equals(state.intentOverride)) {
             b.append(
                             "## Confirmed defect\n\nA human confirmed this failure is a product defect. Annotate the test method with ")

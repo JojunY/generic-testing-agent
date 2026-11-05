@@ -263,17 +263,14 @@ public final class GtaCli implements Callable<Integer> {
         @Option(names = "--takeover", description = "Take over the session of another chat (human only)")
         boolean takeover;
 
-        @Option(names = "--intent", description = "PR mode: the PR description, a documented intent for the analyst")
+        @Option(
+                names = "--intent",
+                description = "PR mode: the PR description; incident mode: the incident report (what happened, what was"
+                        + " expected). Both are documented intent for the analyst")
         String intent;
 
         @Override
         public Integer call() {
-            if ("incident".equals(mode)) {
-                throw new GtaException(
-                        ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE,
-                        "--mode incident is not available yet",
-                        "Use --mode flow with --target <flowId>, or --mode pr");
-            }
             return print(parent, engine(parent).next(mode, target, base, takeover, intent));
         }
     }

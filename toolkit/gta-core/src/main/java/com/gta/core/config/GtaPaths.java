@@ -131,6 +131,13 @@ public record GtaPaths(Path root, String module) {
         return gta().resolve("escalations");
     }
 
+    /** The incident reports of a flow (incident mode), tracked next to its spec so scenarios can cite them. */
+    public Path incidents(String flowId) {
+        Path spec = spec(flowId);
+        String name = String.valueOf(spec.getFileName());
+        return spec.resolveSibling(name.substring(0, name.length() - ".spec.md".length()) + ".incidents.md");
+    }
+
     public Path spec(String flowId) {
         int dot = flowId.indexOf('.');
         return specs().resolve(flowId.substring(0, dot)).resolve(flowId.substring(dot + 1) + ".spec.md");

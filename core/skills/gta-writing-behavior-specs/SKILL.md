@@ -28,8 +28,10 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
 3. Requirements in EARS (`references/ears.md`), each with refs (`references/refs.md`).
 4. Scenarios: derive them systematically (`references/test-design-techniques.md`), not by intuition. Each THEN names an observable result with the expected value in backticks; if no literal value exists, add `check=reviewer` to the scenario comment.
 5. Priority per scenario, for the test case ledger and regression scope: `priority=P0` core path (run every time), `P1` important branch, `P2` edge case. Without it gtaw uses P1.
-6. Sources: `observed` (code shows it), `documented` (`doc=README.md#timeouts quote="returns 503 after 3 seconds"`), `assumed` (a guess — needs a question).
-7. Questions (`## Open questions`): at most 5, highest impact first. Format:
+6. Intent (optional): `hint.intent=reproducing` for the scenario of an incident (its test must fail on the current
+   code; incident briefs ask for it), `hint.intent=catching` for a risk a PR introduces. Without it the source decides.
+7. Sources: `observed` (code shows it), `documented` (`doc=README.md#timeouts quote="returns 503 after 3 seconds"`), `assumed` (a guess — needs a question).
+8. Questions (`## Open questions`): at most 5, highest impact first. Format:
 
    ```markdown
    <!-- gta: id=order.create/q01 impact=high affects=order.create/s03 -->
@@ -37,7 +39,7 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
       - [ ] A) No retry (= current code)
       - [ ] B) Retry once → s03 THEN adds "the gateway is called `2` times"
    ```
-8. Findings (`## Findings`): `doc-drift` (docs disagree with code) or `behavior-suspect` (code looks wrong).
+9. Findings (`## Findings`): `doc-drift` (docs disagree with code) or `behavior-suspect` (code looks wrong).
 9. Submit with the command in the brief and fix lint issues.
 
 ## Rules

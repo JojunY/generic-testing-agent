@@ -94,6 +94,50 @@ expect "$(jget "$STATUS" '" ".join(sorted(set(i["status"] for i in d["items"] if
   "defect-found passed" "invoice.quote item states"
 git diff --quiet || fail "the work tree is dirty"
 
+step "incident mode: a reported overcharge becomes a reproducing test"
+OUT=$(gtaw next --mode incident --target invoice.quote \
+  --intent "A customer was charged 100.00 for an invoice of 100.00. Our terms say invoices of 100 or more get 10 % off.")
+expect "$(jget "$OUT" 'd["node"]')" analyze "incident node"
+grep -q "hint.intent=reproducing" "$(jget "$OUT" 'd["brief"]')" || fail "the analyst brief should ask for a reproducing scenario"
+grep -q "invoices of 100 or more get 10 % off" .gta/specs/invoice/quote.incidents.md || fail "the report should be kept next to the spec"
+TOKEN=$(jget "$OUT" 'd["token"]')
+python3 - .gta/specs/invoice/quote.spec.md "$AGENT/s03-incident.scenario.md" <<'PY'
+import sys
+spec, scenario = sys.argv[1:]
+s = open(spec).read()
+open(spec, "w").write(s.replace("## Invariants", open(scenario).read() + "## Invariants", 1))
+PY
+OUT=$(gtaw submit --spec invoice.quote --token "$TOKEN")
+expect "$(jget "$OUT" 'd["rev"]')" R2 "incident spec revision"
+OUT=$(gtaw next)
+expect "$(jget "$OUT" 'd["type"]')" approve "the human confirms the expectation"
+gtaw answer "approve invoice.quote@R2" >/dev/null
+OUT=$(cap_item invoice.quote/s03)
+grep -q "Reproducing an incident" "$(jget "$OUT" 'd["brief"]')" || fail "the author brief should say the test must fail"
+python3 - src/test/java/com/example/invoice/api/InvoiceControllerIT.java "$AGENT/s03.method.java.txt" <<'PY'
+import sys
+path, method = sys.argv[1:]
+s = open(path).read().rstrip()
+open(path, "w").write(s[: s.rindex("}")] + open(method).read())
+PY
+OUT=$(gtaw submit --item "invoice.quote/s03#component-01" --token "$(jget "$OUT" 'd["token"]')")
+jget "$OUT" 'd["result"]' | grep -q '^needs-human' || fail "a reproducing test that fails goes to the human: $OUT"
+OUT=$(gtaw next)
+expect "$(jget "$OUT" 'd["type"]')" defect "defect confirmation"
+gtaw answer A >/dev/null
+OUT=$(cap_item invoice.quote/s03)
+TOKEN=$(jget "$OUT" 'd["token"]')
+FP=$(grep -o 'failure = "[0-9a-f]*"' "$(jget "$OUT" 'd["brief"]')" | head -1 | grep -o '[0-9a-f]\{12\}')
+sed -i "s|    @DisplayName(\"\[invoice.quote/s03\]|    @KnownDefect(id = \"invoice.quote/s03\", failure = \"$FP\")\n&|" src/test/java/com/example/invoice/api/InvoiceControllerIT.java
+OUT=$(gtaw submit --item "invoice.quote/s03#component-01" --token "$TOKEN")
+jget "$OUT" 'd["result"]' | grep -q '^defect-found' || fail "s03 pin: $OUT"
+echo "ok   invoice.quote/s03 reproduces the incident and is pinned ($FP)"
+for _ in $(seq 1 5); do
+  OUT=$(gtaw next)
+  [ "$(jget "$OUT" 'd.get("node")')" = done ] && break
+done
+git diff --quiet || fail "the work tree is dirty after the incident"
+
 step "PR mode: a change to the quote re-opens its flow with the PR description as intent"
 sed -i 's|new BigDecimal("0.90")|new BigDecimal("0.85")|' src/main/java/com/example/invoice/api/InvoiceController.java
 git commit -qam "Raise the discount to 15 %"

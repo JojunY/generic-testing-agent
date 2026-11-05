@@ -157,4 +157,16 @@ class BriefWriterTest {
         org.junit.jupiter.api.Assertions.assertTrue(
                 b.toString().contains("source=documented") && b.toString().contains("Never edit"), b.toString());
     }
+
+    @Test
+    void shouldTellTheAuthorThatAReproducingTestMustFail() throws Exception {
+        PlanItem incident = item();
+        incident.intent = "reproducing";
+
+        String text = Files.readString(
+                new BriefWriter(new GtaPaths(root)).author(9, state(), incident, spec(), new ServiceProfile()));
+
+        assertTrue(text.contains("must fail on the current code"), text);
+        assertTrue(text.contains("do not add `@KnownDefect`"), "a human confirms the defect before any pin: " + text);
+    }
 }

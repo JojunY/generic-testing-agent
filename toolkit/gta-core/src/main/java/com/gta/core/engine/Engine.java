@@ -86,7 +86,9 @@ public final class Engine {
             }
             ServiceProfile profile = ensureProfile(target != null || startPr);
             Map<String, Object> prScope = null;
-            if (target != null) {
+            if ("incident".equals(mode)) {
+                startIncident(st, profile, target, intent);
+            } else if (target != null) {
                 st.activeFlow = resolveTarget(target, profile);
                 st.pending = null;
             } else if (startPr) {
@@ -106,6 +108,38 @@ public final class Engine {
             }
             store.save(st);
             return out;
+        }
+    }
+
+    /**
+     * Incident mode (plan §6): the report is kept next to the flow's spec, so a scenario can cite it as documented, and
+     * the analyst is briefed to add the reproducing scenario; an approved spec goes back to the analyst for it.
+     */
+    private void startIncident(WorkState st, ServiceProfile profile, String target, String report) {
+        if (target == null || report == null || report.isBlank()) {
+            throw new GtaException(
+                    ErrorCode.USAGE_INVALID_ARGUMENT,
+                    "--mode incident needs the flow (--target) and the incident report (--intent)",
+                    "Run ./gtaw next --mode incident --target <flowId> --intent \"<what happened and what was expected>\"");
+        }
+        st.activeFlow = resolveTarget(target, profile);
+        st.pending = null;
+        st.incident = report.strip();
+        Path incidents = paths.incidents(st.activeFlow);
+        String previous;
+        try {
+            previous = Files.exists(incidents)
+                    ? Files.readString(incidents, java.nio.charset.StandardCharsets.UTF_8)
+                    : "# Incidents of " + st.activeFlow + "\n";
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
+        com.gta.core.util.AtomicFiles.write(
+                incidents,
+                previous + "\n## Incident " + java.time.LocalDate.now(java.time.ZoneOffset.UTC) + "\n\n" + st.incident
+                        + "\n");
+        if (Files.exists(paths.spec(st.activeFlow))) {
+            st.specWork.computeIfAbsent(st.activeFlow, k -> new WorkState.SpecWork()).needsRevision = true;
         }
     }
 

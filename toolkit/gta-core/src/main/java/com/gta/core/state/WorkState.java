@@ -29,6 +29,8 @@ public class WorkState {
     public List<String> prQueue = new ArrayList<>();
     /** PR mode: the PR description, a documented intent for the analyst. */
     public String prIntent;
+    /** Incident mode: the reported incident the active flow reproduces. */
+    public String incident;
 
     /** Analyst work on one flow's spec. */
     public static class SpecWork {

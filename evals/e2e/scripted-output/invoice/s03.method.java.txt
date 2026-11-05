@@ -1,0 +1,11 @@
+
+    @Test
+    @Tag("flow:invoice.quote")
+    @Tag("scenario:invoice.quote/s03")
+    @DisplayName("[invoice.quote/s03] an invoice of exactly 100.00 gets the discount (incident)")
+    void shouldDiscountTheInvoiceFromTheIncident() throws Exception {
+        mvc.perform(get("/api/invoices/quote").param("amount", "100.00"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(90.00));
+    }
+}
