@@ -21,6 +21,9 @@ public final class PomInfo {
     public String parentArtifactId;
     public String parentVersion;
     public String bootVersion;
+    /** The service's Java release from its properties ({@code maven.compiler.release}, {@code java.version}, …); null if not set. */
+    public String javaRelease;
+
     public List<String> dependencies = new ArrayList<>();
     public List<String> modules = new ArrayList<>();
     public List<String> plugins = new ArrayList<>();
@@ -71,6 +74,17 @@ public final class PomInfo {
                     }
                 }
             }
+            Element props = childElement(project, "properties");
+            if (props != null) {
+                for (String key : List.of(
+                        "maven.compiler.release", "java.version", "maven.compiler.target", "maven.compiler.source")) {
+                    String v = resolve(child(props, key), props);
+                    if (v != null && !v.isBlank() && !v.startsWith("$")) {
+                        info.javaRelease = v.startsWith("1.") ? v.substring(2) : v;
+                        break;
+                    }
+                }
+            }
             Element modules = childElement(project, "modules");
             if (modules != null) {
                 for (Element m : children(modules, "module")) {
@@ -110,6 +124,23 @@ public final class PomInfo {
     /** JUnit follows the Spring Boot parent: Boot 4 manages JUnit 6, Boot 3.5 manages JUnit 5. */
     public int junitMajor() {
         return bootMajor() >= 4 ? 6 : 5;
+    }
+
+    /** Resolves one {@code ${property}} reference against the same properties block. */
+    private static String resolve(String value, Element props) {
+        if (value != null && value.startsWith("${") && value.endsWith("}")) {
+            return child(props, value.substring(2, value.length() - 1));
+        }
+        return value;
+    }
+
+    /** The Java release as a number (17, 21, …), 0 when unknown. */
+    public int javaMajor() {
+        try {
+            return javaRelease == null ? 0 : Integer.parseInt(javaRelease.split("\\.")[0].strip());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     private static String child(Element e, String name) {

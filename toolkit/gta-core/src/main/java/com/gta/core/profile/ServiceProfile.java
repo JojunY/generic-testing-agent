@@ -10,6 +10,9 @@ public class ServiceProfile {
     public String bootVersion;
     public int bootMajor;
     public int junitMajor;
+    /** The service's Java release (17, 21, …); 0 when its pom does not say. */
+    public int javaMajor;
+
     public String basePackage;
     /** The @SpringBootApplication class, or null when there is none. */
     public String applicationClass;

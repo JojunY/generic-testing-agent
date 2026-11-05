@@ -170,9 +170,7 @@ class CaseLedgersTest {
     void shouldDeleteOnlyTheTestsOfConfirmedRetiredCases() throws Exception {
         Path test = paths.testSource(TEST_CLASS);
         Files.createDirectories(test.getParent());
-        Files.writeString(
-                test,
-                """
+        Files.writeString(test, """
                 package com.acme.order;
 
                 class OrderControllerIT {

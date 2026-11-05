@@ -18,9 +18,7 @@ class SpecLinterTest {
     private List<String> lint(String text) throws Exception {
         Path src = root.resolve("src/main/java/com/acme/order");
         Files.createDirectories(src);
-        Files.writeString(
-                src.resolve("OrderController.java"),
-                """
+        Files.writeString(src.resolve("OrderController.java"), """
                 package com.acme.order;
                 public class OrderController { public Object create() { return null; } }
                 """);
@@ -84,8 +82,7 @@ class SpecLinterTest {
 
     @Test
     void shouldAcceptCommentsBeforeTheDiagramTypeAndTheTwoStyleClasses() {
-        String diagram =
-                """
+        String diagram = """
                 %% order.create: the client creates an order
                 flowchart LR
                   C[Client] --> API[OrderController]:::focus
@@ -101,8 +98,7 @@ class SpecLinterTest {
 
     @Test
     void shouldRejectThemeOverridesAndOtherStyling() {
-        String diagram =
-                """
+        String diagram = """
                 %%{init: {'theme':'dark'}}%%
                 flowchart TD
                   A --> B
@@ -123,8 +119,7 @@ class SpecLinterTest {
                 .contains("unsupported mermaid type"));
     }
 
-    private static final String BROKEN =
-            """
+    private static final String BROKEN = """
             # Order.Create — broken on purpose
             <!-- gta: flowId=Order.Create capability=teleport risk=5 status=sketch -->
 

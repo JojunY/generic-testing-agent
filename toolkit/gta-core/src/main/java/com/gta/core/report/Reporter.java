@@ -28,13 +28,12 @@ public final class Reporter {
         StringBuilder b = new StringBuilder();
         b.append(prComment ? "## gta — behaviour & test report\n\n" : "# gta report\n\n");
         if (gate != null) {
-            String icon =
-                    switch (gate.decision) {
-                        case "pass" -> "✅";
-                        case "concerns" -> "⚠️";
-                        case "waived" -> "🟡";
-                        default -> "❌";
-                    };
+            String icon = switch (gate.decision) {
+                case "pass" -> "✅";
+                case "concerns" -> "⚠️";
+                case "waived" -> "🟡";
+                default -> "❌";
+            };
             b.append("**Gate:** ")
                     .append(icon)
                     .append(' ')

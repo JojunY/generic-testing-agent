@@ -66,6 +66,14 @@ public final class DoctorChecks {
                     pom.bootMajor() >= 3 ? "ok" : "warn",
                     "Spring Boot " + pom.bootVersion + " → JUnit " + pom.junitMajor(),
                     "gta targets Spring Boot 3.5 and 4.x");
+            int serviceJava = pom.javaMajor();
+            add(
+                    "service-java",
+                    serviceJava == 0 || serviceJava >= 17 ? "ok" : "fail",
+                    serviceJava == 0
+                            ? "Java level not set in pom.xml (tests are written for Java 17)"
+                            : "Java " + serviceJava,
+                    "gta-junit and the tests gta writes need Java 17 or newer; services on an older Java are not supported");
             add(
                     "modules",
                     pom.modules.isEmpty() ? "ok" : "warn",

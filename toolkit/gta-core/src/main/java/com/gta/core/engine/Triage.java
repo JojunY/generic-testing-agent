@@ -70,10 +70,11 @@ final class Triage {
                     yield "item cancelled; the developer's test class is left alone";
                 }
                 case "C" -> "the name is checked again on the next step";
-                default -> throw new GtaException(
-                        ErrorCode.USAGE_UNPARSEABLE_ANSWER,
-                        "Option " + letter + " is not available",
-                        "Reply A, B or C");
+                default ->
+                    throw new GtaException(
+                            ErrorCode.USAGE_UNPARSEABLE_ANSWER,
+                            "Option " + letter + " is not available",
+                            "Reply A, B or C");
             };
         } else if ("defect".equals(p.type) && letter.equals("A")) {
             s.intentOverride = "known-defect";

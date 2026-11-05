@@ -33,14 +33,12 @@ class ReporterTest {
     }
 
     private static Gate.Result gate() throws Exception {
-        return Json.MAPPER.readValue(
-                """
+        return Json.MAPPER.readValue("""
                 {"decision": "fail", "base": "origin/main", "checkedScenarios": 2,
                  "failures": [{"code": "GATE_SCENARIO_REGRESSED", "target": "order.create/s01", "message": "now failing"},
                               {"code": "GATE_UNSTABLE_TEST", "target": "order.create/s02", "message": "flaky", "waived": true}],
                  "concerns": [{"code": "GATE_ASSUMED_CLAIM", "target": "order.create/s02", "message": "assumed"}]}
-                """,
-                Gate.Result.class);
+                """, Gate.Result.class);
     }
 
     private static WorkState state() {

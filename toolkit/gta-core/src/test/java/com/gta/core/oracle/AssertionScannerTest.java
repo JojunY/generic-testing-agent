@@ -12,8 +12,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 class AssertionScannerTest {
     static final String SCENARIO = "order.create/s01";
-    static final String TEST =
-            """
+    static final String TEST = """
             package com.acme;
             class OrderIT {
                 static final String CREATED = "CREATED";
@@ -93,8 +92,7 @@ class AssertionScannerTest {
 
     @Test
     void shouldResolveConstantsStatusNamesAndMatchers() throws Exception {
-        AssertionScanner.ScenarioOracle o = scanSource(
-                """
+        AssertionScanner.ScenarioOracle o = scanSource("""
                     static final String TOTAL = "50.00";
                     @Test @Tag("scenario:order.create/s01")
                     void shouldCreate() throws Exception {
@@ -119,8 +117,7 @@ class AssertionScannerTest {
     void shouldWatchFixturesSqlAndSetupAsInputs() throws Exception {
         Files.createDirectories(dir.resolve("resources"));
         Files.writeString(dir.resolve("resources/s01.request.json"), "{\"subtotal\": 50}");
-        String body =
-                """
+        String body = """
                     @BeforeEach void seed() { repo.save(order()); }
                     @Test @Tag("scenario:order.create/s01") @Sql("classpath:/s01.data.sql")
                     void shouldCreate() { post(fixture("s01.request.json")); assertThat(status).isEqualTo(201); }
@@ -157,8 +154,7 @@ class AssertionScannerTest {
 
     @Test
     void shouldCountEveryKindOfTestMethodButNoHelper() throws Exception {
-        AssertionScanner.ScenarioOracle o = scanSource(
-                """
+        AssertionScanner.ScenarioOracle o = scanSource("""
                     @ParameterizedTest @Tag("scenario:order.create/s01") void a(int x) { assertThat(x).isEqualTo(1); }
                     @RepeatedTest(2) @Tag("scenario:order.create/s01") void b() { assertThat(y).isEqualTo(2); }
                     @TestFactory @Tag("scenario:order.create/s01") Object c() { assertThat(z).isEqualTo(3); return null; }
@@ -174,8 +170,7 @@ class AssertionScannerTest {
 
     @Test
     void shouldTakeExpectedValuesFromAMatcherEvenInsideTheRequestChain() throws Exception {
-        AssertionScanner.ScenarioOracle o = scanSource(
-                """
+        AssertionScanner.ScenarioOracle o = scanSource("""
                     @Test @Tag("scenario:order.create/s01")
                     void shouldPay() throws Exception {
                         mvc.perform(post("/api/pay").content("REQUEST-BODY")).andExpect(content().string("PAID"));
@@ -200,8 +195,7 @@ class AssertionScannerTest {
     void shouldWatchSqlScriptsFieldsAndSetupButNotOtherScenarios() throws Exception {
         Files.createDirectories(dir.resolve("resources"));
         Files.writeString(dir.resolve("resources/s01.data.sql"), "insert into orders values (1);");
-        String body =
-                """
+        String body = """
                     private final int seedCount = 1;
                     @BeforeAll static void start() { db.start(); }
                     @Test @Tag("scenario:order.create/s01") @Sql("s01.data.sql")

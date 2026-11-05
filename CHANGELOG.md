@@ -4,6 +4,11 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 
 ## [Unreleased]
 
+### Changed
+- Briefs ask for tests at the service's own Java level (from `maven.compiler.release`, `java.version`, …) instead of "Java 17+", so a Java 17 service gets no newer syntax or APIs.
+- `gtaw doctor` fails a service on a Java older than 17 (`service-java`); CI also builds on JDK 25.
+- `docs/guides/quickstart.zh-CN.md`: a Chinese copy of the quickstart.
+
 ## [0.1.0] — 2026-11-05 (P0 preview: REST APIs only)
 
 The first release. Other capabilities are explain-only until their phase (see the capability registry). Findings from the P0a platform validation go into 0.1.1.

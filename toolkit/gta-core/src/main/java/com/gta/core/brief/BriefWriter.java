@@ -218,7 +218,9 @@ public final class BriefWriter {
                 .append(profile.bootVersion == null ? "?" : profile.bootVersion)
                 .append(" · JUnit ")
                 .append(profile.junitMajor)
-                .append(" · Java 17+ · no containers (see the embedded-dependencies skill)\n");
+                .append(" · ")
+                .append(javaLine(profile.javaMajor))
+                .append(" · no containers (see the embedded-dependencies skill)\n");
         b.append(
                 "- Never `Thread.sleep`; use Awaitility. Never `@Disabled`. Never put the actual value where the expected value goes.\n\n");
         if ("known-defect".equals(state.intentOverride)) {
@@ -387,5 +389,11 @@ public final class BriefWriter {
 
     public static String token(String sessionId, int seq) {
         return sessionId + ":" + String.format("%04d", seq);
+    }
+
+    /** The language level the test must compile at: the service's, or the floor gta supports when the pom says nothing. */
+    static String javaLine(int javaMajor) {
+        int level = javaMajor >= 17 ? javaMajor : 17;
+        return "Java " + level + " (no language features or JDK APIs newer than Java " + level + ")";
     }
 }

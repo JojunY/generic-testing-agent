@@ -17,9 +17,7 @@ class PomInfoTest {
 
     @Test
     void shouldReadTheBootParentDependenciesAndPlugins() throws Exception {
-        Files.writeString(
-                root.resolve("pom.xml"),
-                """
+        Files.writeString(root.resolve("pom.xml"), """
                 <project>
                   <parent><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-parent</artifactId><version>3.5.4</version></parent>
                   <artifactId>billing</artifactId>
@@ -52,5 +50,28 @@ class PomInfoTest {
         assertThrows(GtaException.class, () -> PomInfo.read(root));
         Files.writeString(root.resolve("pom.xml"), "<project>");
         assertThrows(GtaException.class, () -> PomInfo.read(root));
+    }
+
+    private int javaOf(String properties) throws Exception {
+        Files.writeString(
+                root.resolve("pom.xml"),
+                "<project><artifactId>a</artifactId><properties>" + properties + "</properties></project>");
+        return PomInfo.read(root).javaMajor();
+    }
+
+    @Test
+    void shouldReadTheServiceJavaLevelFromTheUsualProperties() throws Exception {
+        assertEquals(21, javaOf("<java.version>21</java.version>"), "the Spring Boot parent's property");
+        assertEquals(
+                17,
+                javaOf("<maven.compiler.release>17</maven.compiler.release><java.version>21</java.version>"),
+                "the compiler's own release wins");
+        assertEquals(
+                25,
+                javaOf(
+                        "<java.version>25</java.version><maven.compiler.release>${java.version}</maven.compiler.release>"),
+                "one property reference is resolved");
+        assertEquals(8, javaOf("<maven.compiler.source>1.8</maven.compiler.source>"), "1.8 is Java 8");
+        assertEquals(0, javaOf(""), "unknown when the pom does not say");
     }
 }

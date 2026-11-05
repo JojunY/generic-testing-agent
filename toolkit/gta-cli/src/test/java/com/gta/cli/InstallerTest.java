@@ -50,8 +50,7 @@ class InstallerTest {
 
     @Test
     void shouldNotRewriteJsoncButReportTheKeysToAdd() throws Exception {
-        String jsonc =
-                """
+        String jsonc = """
                 {
                   // team setting
                   "java.jdt.ls.java.home": "C:/jdk17", // local

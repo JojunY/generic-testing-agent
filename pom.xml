@@ -137,9 +137,10 @@
               <include>src/test/java/**/*.java</include>
             </includes>
             <palantirJavaFormat>
-              <!-- A new formatter version reformats the code: bump it together with a reformat commit
+              <!-- 2.50.0 fails on JDK 25 (it calls a javac internal that JDK 25 removed).
+                   A new formatter version reformats the code: bump it together with a reformat commit
                    listed in .git-blame-ignore-revs -->
-              <version>2.50.0</version>
+              <version>2.102.0</version>
               <style>PALANTIR</style>
             </palantirJavaFormat>
             <removeUnusedImports/>

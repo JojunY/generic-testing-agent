@@ -39,9 +39,7 @@ class SurefireReportParserTest {
 
     @Test
     void shouldReadOutcomesFromSurefireXml() throws Exception {
-        report(
-                "com.acme.OrderIT",
-                """
+        report("com.acme.OrderIT", """
                 <testcase classname="com.acme.OrderIT" name="passes()"/>
                 <testcase classname="com.acme.OrderIT" name="fails()"><failure type="org.opentest4j.AssertionFailedError" message="expected: &lt;201&gt; but was: &lt;500&gt;">stack</failure></testcase>
                 <testcase classname="com.acme.OrderIT" name="breaks()"><error type="java.lang.IllegalStateException" message="boom">stack</error></testcase>
@@ -62,15 +60,12 @@ class SurefireReportParserTest {
 
     @Test
     void shouldKeepTheScenarioTagsOfParameterizedAndRepeatedTests() throws Exception {
-        report(
-                "com.acme.OrderIT",
-                """
+        report("com.acme.OrderIT", """
                 <testcase classname="com.acme.OrderIT" name="rejects(String)[1]"/>
                 <testcase classname="com.acme.OrderIT" name="rejects(String)[2]"/>
                 <testcase classname="com.acme.OrderIT" name="retries()[3]"/>
                 """);
-        tags(
-                """
+        tags("""
                 {"className":"com.acme.OrderIT","method":"rejects","tags":["gta","scenario:order.create/s02"]}
                 {"className":"com.acme.OrderIT","method":"retries","tags":["gta","scenario:order.create/s03"]}
                 """);
@@ -120,9 +115,7 @@ class SurefireReportParserTest {
 
     @Test
     void shouldSkipOnlyTheBrokenLineOfTheListenerOutput() throws Exception {
-        report(
-                "com.acme.OrderIT",
-                """
+        report("com.acme.OrderIT", """
                 <testcase classname="com.acme.OrderIT" name="first()"/>
                 <testcase classname="com.acme.OrderIT" name="second()"/>
                 """);

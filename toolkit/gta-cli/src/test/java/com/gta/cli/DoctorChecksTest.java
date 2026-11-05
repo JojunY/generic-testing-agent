@@ -194,4 +194,17 @@ class DoctorChecksTest {
 
         assertEquals("fail", out.get("overall"));
     }
+
+    @Test
+    void shouldRefuseAServiceOnAJavaOlderThan17(@TempDir Path root) throws Exception {
+        Files.writeString(
+                root.resolve("pom.xml"),
+                "<project><artifactId>a</artifactId><properties><java.version>11</java.version></properties></project>");
+        assertEquals("fail", status(root, "service-java"));
+
+        Files.writeString(
+                root.resolve("pom.xml"),
+                "<project><artifactId>a</artifactId><properties><java.version>21</java.version></properties></project>");
+        assertEquals("ok", status(root, "service-java"));
+    }
 }
