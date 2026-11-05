@@ -298,4 +298,25 @@ class ProfilerTest {
         assertEquals("GraphQL mutation cancel", flows.get("order-graphql.cancel").trigger);
         assertEquals(6, flows.get("order-graphql.cancel").risk, "a mutation is riskier than a query");
     }
+
+    @Test
+    void shouldTurnEachRpcOfAGrpcServiceIntoAFlow() throws Exception {
+        source("com/acme/order/grpc/StockGrpcService.java", """
+                package com.acme.order.grpc;
+                @Service
+                public class StockGrpcService extends StockServiceGrpc.StockServiceImplBase {
+                    @Override
+                    public void getStock(StockRequest request, StreamObserver<StockReply> reply) {}
+                    private void helper(StreamObserver<StockReply> reply) {}
+                }
+                """);
+
+        Map<String, ServiceProfile.EntryPoint> flows =
+                byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"));
+
+        ServiceProfile.EntryPoint rpc = flows.get("stock.get-stock");
+        assertEquals("grpc-api", rpc.capability, flows.keySet().toString());
+        assertEquals("gRPC StockService.getStock", rpc.trigger);
+        assertTrue(flows.keySet().stream().noneMatch(f -> f.endsWith(".helper")), "only overridden RPCs are flows");
+    }
 }

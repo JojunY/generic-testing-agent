@@ -18,7 +18,10 @@ capabilities:
     skills: [gta-testing-reactive-apis, gta-stubbing-with-wiremock, gta-testing-api-contracts]
   - id: grpc-api
     since: P3
-    detect: { buildDeps: [grpc-stub, spring-grpc-spring-boot-starter], files: ["**/*.proto"] }
+    detect:
+      buildDeps: [grpc-stub, spring-grpc-spring-boot-starter, spring-boot-starter-grpc-server,
+                  spring-boot-starter-grpc-client]
+      files: ["**/*.proto"]
     layers: [unit, component, contract]
     diagrams: [sequence]
     skills: [gta-testing-spring-apis, gta-testing-api-contracts]

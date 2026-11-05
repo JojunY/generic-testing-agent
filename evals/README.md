@@ -18,15 +18,17 @@ A small Spring Boot 4.1 service: a REST API to create, get, cancel and ship orde
 
 ## Fixture: `fixtures/catalog-service`
 
-A reactive Spring Boot 4.1 catalog: a WebFlux endpoint and a GraphQL query, each with a seeded defect that
+A reactive Spring Boot 4.1 catalog: a WebFlux endpoint, a GraphQL query and a gRPC service (stubs generated from
+`src/main/proto`), each with a seeded defect that
 `docs/business-rules.md` contradicts.
 
 | Id | Where | Defect |
 |---|---|---|
 | D10 | `ProductController#reserve` (webflux) | no stock check: a reservation larger than the stock succeeds |
 | D11 | `ProductGraphqlController#productsUpTo` (graphql-api) | `<` instead of `<=`: a product at exactly the maximum is left out |
+| D12 | `StockGrpcService#getStock` (grpc-api) | `>=` instead of `>`: a product with no stock is reported available |
 
-`e2e/run-catalog.sh` opts the repository into P3 (`"phase": "P3"`) and takes both flows from spec to a pinned defect.
+`e2e/run-catalog.sh` opts the repository into P3 (`"phase": "P3"`) and takes the three flows from spec to a pinned defect.
 
 ## Scripted end-to-end run: `e2e/run.sh`
 

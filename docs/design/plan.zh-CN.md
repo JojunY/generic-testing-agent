@@ -463,7 +463,10 @@ capabilities:
     skills: [gta-testing-reactive-apis, gta-stubbing-with-wiremock, gta-testing-api-contracts]
   - id: grpc-api
     since: P3
-    detect: { buildDeps: [grpc-stub, spring-grpc-spring-boot-starter], files: ["**/*.proto"] }
+    detect:
+      buildDeps: [grpc-stub, spring-grpc-spring-boot-starter, spring-boot-starter-grpc-server,
+                  spring-boot-starter-grpc-client]
+      files: ["**/*.proto"]
     layers: [unit, component, contract]
     diagrams: [sequence]
     skills: [gta-testing-spring-apis, gta-testing-api-contracts]
@@ -1482,7 +1485,7 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 | 11 | 响应式 WebFlux | P3 | 开启 `phase: "P3"` 预览后自动写测试；返回 `Mono`/`Flux` 的 handler 是 `webflux` 流程 |
 | 12 | Gradle 构建 | P3 | *新增*；目前只支持 Maven |
 | 13 | GCP 数据（BigQuery、GCS） | P0 / P4 | 作为依赖使用 fake；SQL 从 P4 起在 system 层测试 |
-| 14 | gRPC | P3 | 能识别，只写 spec |
+| 14 | gRPC | P3 | 开启 `phase: "P3"` 预览后自动写测试；继承生成的 `*ImplBase` 的每个 RPC 是一个流程 |
 | 15 | 工作流与状态机（Temporal、Camunda、Spring Statemachine） | P3 | 能识别，只写 spec |
 | 16 | GraphQL | P3 | 开启 `phase: "P3"` 预览后自动写测试；`@QueryMapping`/`@MutationMapping` handler 是流程 |
 | 17 | Beam / Dataflow 管道 | P3 | 能识别，只写 spec |
