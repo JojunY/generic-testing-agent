@@ -154,4 +154,71 @@ class AssertionScannerTest {
                 AssertionScanner.missingThenLiterals(java.util.List.of("5"), java.util.Set.of("50")),
                 "short values must match exactly");
     }
+
+    @Test
+    void shouldCountEveryKindOfTestMethodButNoHelper() throws Exception {
+        AssertionScanner.ScenarioOracle o = scanSource(
+                """
+                    @ParameterizedTest @Tag("scenario:order.create/s01") void a(int x) { assertThat(x).isEqualTo(1); }
+                    @RepeatedTest(2) @Tag("scenario:order.create/s01") void b() { assertThat(y).isEqualTo(2); }
+                    @TestFactory @Tag("scenario:order.create/s01") Object c() { assertThat(z).isEqualTo(3); return null; }
+                    @Test @Tags({@Tag("gta"), @Tag("scenario:order.create/s01")}) void d() { assertThat(w).isEqualTo(4); }
+                    @Tag("scenario:order.create/s01") void helper() { assertThat(v).isEqualTo(5); }
+                """);
+
+        assertEquals(4, o.methods());
+        assertTrue(
+                o.tokens().containsAll(List.of("1", "2", "3", "4")), o.tokens().toString());
+        assertFalse(o.tokens().contains("5"), "a helper without a test annotation is not a scenario");
+    }
+
+    @Test
+    void shouldTakeExpectedValuesFromAMatcherEvenInsideTheRequestChain() throws Exception {
+        AssertionScanner.ScenarioOracle o = scanSource(
+                """
+                    @Test @Tag("scenario:order.create/s01")
+                    void shouldPay() throws Exception {
+                        mvc.perform(post("/api/pay").content("REQUEST-BODY")).andExpect(content().string("PAID"));
+                    }
+                """);
+
+        assertTrue(o.tokens().contains("PAID"), o.tokens().toString());
+        assertFalse(o.tokens().contains("REQUEST-BODY"), "the request body is an input");
+        assertFalse(o.tokens().contains("/api/pay"), "the request path is an input");
+    }
+
+    @Test
+    void shouldLockAMatcherInsideAnExpectationAsPartOfThatExpectation() throws Exception {
+        List<String> statements = scan(TEST).assertionStatements();
+
+        assertEquals(3, statements.size(), statements.toString());
+        assertTrue(statements.contains("andExpect(status().isCreated())"), statements.toString());
+        assertTrue(statements.stream().noneMatch(st -> st.startsWith("isCreated")), "not locked on its own");
+    }
+
+    @Test
+    void shouldWatchSqlScriptsFieldsAndSetupButNotOtherScenarios() throws Exception {
+        Files.createDirectories(dir.resolve("resources"));
+        Files.writeString(dir.resolve("resources/s01.data.sql"), "insert into orders values (1);");
+        String body =
+                """
+                    private final int seedCount = 1;
+                    @BeforeAll static void start() { db.start(); }
+                    @Test @Tag("scenario:order.create/s01") @Sql("s01.data.sql")
+                    void shouldCreate() { assertThat(status).isEqualTo(201); }
+                    @Test @Tag("scenario:order.create/s02")
+                    void other() { assertThat(status).isEqualTo(400); }
+                """;
+        String before = scanSource(body).watchedHash();
+
+        assertEquals(before, scanSource(body.replace("400", "409")).watchedHash(), "another scenario is not an input");
+        assertFalse(before.equals(scanSource(body.replace("= 1;", "= 2;")).watchedHash()), "a field is an input");
+        assertFalse(
+                before.equals(
+                        scanSource(body.replace("db.start()", "db.reset()")).watchedHash()),
+                "@BeforeAll too");
+
+        Files.writeString(dir.resolve("resources/s01.data.sql"), "insert into orders values (2);");
+        assertFalse(before.equals(scanSource(body).watchedHash()), "a changed @Sql script changes the inputs");
+    }
 }

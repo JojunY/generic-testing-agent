@@ -155,6 +155,7 @@ class TriageTest {
         failedWith("expected: <50.00> but was: <55.00>");
         s.lock = new Lock();
         s.lock.tokens = new ArrayList<>(List.of("201", "50.00"));
+        s.lock.statements = new ArrayList<>(List.of("isEqualTo(201)", "value(50.00)"));
 
         Map<String, Object> out = ctx.triage.applyTriage(st, item("observed"), s, "spec-error", "tax is included");
 
@@ -163,6 +164,14 @@ class TriageTest {
         assertTrue(spec.contains("rev=R3"), "a corrected spec is a new revision");
         assertEquals(List.of("201", "55.00"), store.planItem(ITEM).oracle.then);
         assertEquals(List.of("201", "55.00"), s.lock.tokens);
+        assertEquals(List.of("isEqualTo(201)"), s.lock.statements, "the old assertion is no longer locked");
+        assertEquals(
+                com.gta.core.spec.SpecParser.parse(paths.spec("order.create"))
+                        .scenario("order.create/s01")
+                        .orElseThrow()
+                        .revision(),
+                store.planItem(ITEM).scenarioRevision,
+                "the plan follows the corrected scenario, so a plan sync does not see it as changed");
         assertEquals(ItemStatus.REPAIRING, s.status);
         assertTrue(st.pendingReview.get(0).contains("`50.00` → `55.00`"), "listed for re-confirmation");
         assertTrue(String.valueOf(out.get("result")).contains("order.create@R3"), out.toString());

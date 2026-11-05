@@ -149,4 +149,25 @@ class SurefireReportParserTest {
         assertEquals("rejects", SurefireReportParser.methodName("rejects(String, int)[12]"));
         assertEquals("plain", SurefireReportParser.methodName("plain"));
     }
+
+    @Test
+    void shouldRefuseAReportWithADoctype() throws Exception {
+        Files.writeString(
+                reports.resolve("TEST-com.acme.OrderIT.xml"),
+                "<?xml version=\"1.0\"?><!DOCTYPE t [<!ENTITY x SYSTEM \"file:///etc/hostname\">]>"
+                        + "<testsuite><testcase classname=\"com.acme.OrderIT\" name=\"&x;\"/></testsuite>");
+
+        GtaException e =
+                assertThrows(GtaException.class, () -> SurefireReportParser.parse(List.of(reports), gtaResults));
+
+        assertEquals(ErrorCode.ENV_TEST_REPORTS_UNUSABLE, e.code(), "external entities are never resolved");
+    }
+
+    @Test
+    void shouldReadOnlyTestReportFiles() throws Exception {
+        report("com.acme.OrderIT", "<testcase classname=\"com.acme.OrderIT\" name=\"passes()\"/>\n");
+        Files.writeString(reports.resolve("failsafe-summary.xml"), "<failsafe-summary result=\"254\"");
+
+        assertEquals(1, SurefireReportParser.parse(List.of(reports), gtaResults).size());
+    }
 }

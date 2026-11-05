@@ -11,10 +11,9 @@ Who does what:
 mvn -B deploy -DaltDeploymentRepository=nexus::https://nexus.example.com/repository/maven-releases
 ```
 
-This publishes two artifacts:
-
-- `com.gta:gta-cli:<version>` (the shaded `gta-cli.jar`)
-- `com.gta:gta-junit:<version>` (a test-scope dependency of services)
+This publishes `com.gta:gta-cli:<version>` (the shaded jar) and `com.gta:gta-junit:<version>` (a test-scope dependency
+of services), plus the supporting artifacts. The full release procedure, with the checksum and tag, is in
+[releasing.md](releasing.md).
 
 All downloads, for the wrapper and for Maven, go through the company Nexus proxy.
 

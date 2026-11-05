@@ -250,8 +250,16 @@ public final class Installer {
         String current = read(agents).orElse("");
         int b = current.indexOf(BEGIN);
         int e = current.indexOf(END);
-        if (b >= 0 && e > b) {
+        boolean oneBlock = b >= 0 && e > b && current.lastIndexOf(BEGIN) == b && current.lastIndexOf(END) == e;
+        if (oneBlock) {
             return current.substring(0, b) + wrapped + current.substring(e + END.length());
+        }
+        if (b >= 0 || e >= 0) {
+            // replacing between mismatched markers could delete the team's own text
+            throw new GtaException(
+                    ErrorCode.CONFIG_INVALID,
+                    "AGENTS.md has a damaged gta block (" + BEGIN + " and " + END + " must appear once each, in order)",
+                    "Fix or remove the gta block in AGENTS.md by hand and re-run init; nothing was written");
         }
         return (current.isBlank() ? "# AGENTS.md\n\n" : current.stripTrailing() + "\n\n") + wrapped + "\n";
     }

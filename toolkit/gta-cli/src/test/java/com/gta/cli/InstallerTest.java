@@ -78,6 +78,25 @@ class InstallerTest {
     }
 
     @Test
+    void shouldRefuseAnAgentsMdWhoseGtaBlockIsDamagedAndLeaveTeamTextAlone() throws Exception {
+        String begin = "<!-- gta:begin -->";
+        String end = "<!-- gta:end -->";
+        List<String> damaged = List.of(
+                "# Team\n" + begin + "\nold\nTeam text\n",
+                "# Team\nTeam text\n" + end + "\n",
+                "# Team\n" + end + "\nTeam text\n" + begin + "\n",
+                begin + "\na\n" + end + "\nTeam text\n" + begin + "\nb\n" + end + "\n");
+        for (String text : damaged) {
+            Files.writeString(root.resolve("AGENTS.md"), text);
+
+            assertThrows(GtaException.class, () -> new Installer(root).install("copilot", null, null, false), text);
+
+            assertEquals(text, Files.readString(root.resolve("AGENTS.md")));
+            assertFalse(Files.exists(root.resolve(".gta/managed-files.json")), text);
+        }
+    }
+
+    @Test
     void shouldBeIdempotent() throws Exception {
         new Installer(root).install("copilot", null, null, false);
         String first = Files.readString(root.resolve("AGENTS.md"));

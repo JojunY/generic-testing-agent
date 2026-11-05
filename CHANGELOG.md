@@ -13,11 +13,15 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - Oracle shard keys are validated; error codes from older state files no longer crash.
 - The wrapper never puts Nexus credentials on a command line, and reports download failures as JSON.
 
+### Fixed (round 4; see docs/reviews/round-4-plan.md)
+- `init` and `upgrade` refuse an `AGENTS.md` whose gta block is damaged (a lone, reversed or duplicated marker) instead of replacing the text between mismatched markers.
+
 ### Added (round 3)
 - Test case ledger per flow (`.gta/specs/<domain>/<flow>.cases.md`) and `.gta/specs/INDEX.md`, maintained row by row by gtaw; `gtaw cases [--rebuild]`, `gtaw cases confirm-retired`, `gtaw impact --base`.
 - Session reports are tracked in `.gta/reports/<date>-<session>.md` and committed with the ledger changes they list.
 - Scenario `priority=P0|P1|P2`; a `naming-conflict` decision when the test class gta would write belongs to a developer.
 - A spec submit notes scenarios without `priority=` (they count as P1); `gtaw doctor` warns that multi-module services are not supported yet.
+- `docs/guides/releasing.md`; tests for every `gtaw doctor` decision and for the oracle lock cases a mutation run found untested.
 - `docs/guides/test-naming.md`, `docs/guides/diagram-style.md`, the artifact-map and package-layer diagrams.
 
 ### Changed (round 3)
