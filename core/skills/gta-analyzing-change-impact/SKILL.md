@@ -7,7 +7,7 @@ description: Updates gta behaviour specs for a pull request - maps changed metho
 
 ## Quick start
 
-1. gtaw lists the affected flows (their `ref` hashes changed) and marks their specs `stale`.
+1. `./gtaw next --mode pr --intent "<PR description>"` lists the affected flows (their refs changed, or a changed class has an entry point without a spec), marks the approved ones `stale`, and works through them in order; the brief quotes the PR description.
 2. For each affected flow, read the diff of the referenced code and the PR description.
 3. Update only the requirements and scenarios whose behaviour changes; the spec diff is the behaviour-change summary reviewers see.
 
