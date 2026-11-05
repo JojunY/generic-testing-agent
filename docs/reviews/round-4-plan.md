@@ -87,3 +87,41 @@ Ordered by value. "Size" is a rough effort estimate.
 | A Windows coverage gate and an exemption list | Same code is gated on Linux; Windows-only paths are run by the Windows job. |
 | A permanent PIT gate in every build | Unknown score, real build cost; R5 first. |
 | More tests for `GtaCli` command classes | Thin delegation to `Engine`, already run end to end by `evals/e2e/run.sh`. |
+
+## Status
+
+| Id | Status | Result |
+|---|---|---|
+| R1 | **prepared; the release itself is the platform team's** | `docs/guides/releasing.md`. Rehearsed here: `mvn deploy` at `0.1.0` into a file repository publishes five artifacts (`gta-cli`, `gta-junit`, `gta-core`, `gta-harness-gen`, `gta-parent`; the quickstart said two, now fixed); the deployed `gta-cli-0.1.0.jar` prints its version and `init` pins its URL and sha256. Not done: the version bump, the Nexus upload, the tag and the GitHub Release. |
+| R2 | done | `init`/`upgrade` refuse a lone, reversed or duplicated gta marker and write nothing (`InstallerTest`). |
+| R3 | done | `DoctorChecks` 74/94 branches (79 %, was 38 %), lines 95 %. The rest are the Maven-on-PATH and Windows branches, which depend on the machine. |
+| R4 | after P0a | – |
+| R5 | done | see below |
+
+### R5: mutation run on `oracle`, `state`, `run`, `engine.Triage`
+
+PIT 1.19.6 with the JUnit 5 plugin, run from the command line, not added to the build.
+
+| | Mutants | Killed | No coverage | Survived | Test strength | Score |
+|---|---|---|---|---|---|---|
+| before | 338 | 251 | 45 | 42 | 85.7 % | 74.3 % |
+| after | 338 | 271 | 43 | 24 | 91.9 % | 80.2 % |
+
+What the survivors showed, and what was done:
+
+- **Oracle lock gaps (fixed with tests):** no test proved that `@ParameterizedTest`, `@RepeatedTest`, `@TestFactory`
+  and `@Tags` count as scenario methods while a tagged helper does not; that a request body or path is never an
+  expected value; that a matcher inside `andExpect` is locked with it; that fields, `@BeforeAll` and `@Sql` scripts
+  are inputs while another scenario's test is not.
+- **Auto-correction (fixed with tests):** nothing checked that a corrected expectation also drops the old locked
+  statement and refreshes the plan's scenario revision (without it, the next plan sync would see a changed scenario).
+- **Reports (fixed with tests):** a report with a `DOCTYPE` is refused; only `TEST-*.xml` files are read.
+  `StateStore.peekPlan` returns the saved plan.
+- **Redundant code (removed):** the `@Sql` loop in `AssertionScanner.scan` repeated what the loop over the method's
+  string literals already does.
+- **Accepted:** the messages that triage returns to the agent (replaced by an empty map, the state is still right);
+  boundary mutants that cannot change a result (`i > 0` vs `i >= 0` on a name that never starts with `(`);
+  each of the two XML hardening features blocks external entities alone, so removing one is not observable.
+
+Decision: **no mutation gate.** The score is good, the remaining survivors are accepted above, and a PIT run takes
+minutes. Run it again by hand when the oracle lock or triage changes.

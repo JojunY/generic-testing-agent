@@ -72,4 +72,16 @@ class StateStoreTest {
 
         assertTrue(Files.exists(paths.state()), "status and report must not move files aside");
     }
+
+    @Test
+    void shouldReadTheSavedPlanWithoutTakingTheLock() throws Exception {
+        StateStore store = new StateStore(new GtaPaths(root));
+        assertEquals(0, store.peekPlan().size(), "no plan yet");
+
+        com.gta.core.plan.PlanItem item = new com.gta.core.plan.PlanItem();
+        item.id = "order.create/s01#component-01";
+        store.savePlan(java.util.List.of(item));
+
+        assertEquals("order.create/s01#component-01", store.peekPlan().get(0).id);
+    }
 }

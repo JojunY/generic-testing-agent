@@ -192,13 +192,9 @@ public final class AssertionScanner {
                     watched.append(normalize(stmt));
                 }
             }
+            // every string of the method, its annotations (@Sql) included, may name a fixture
             for (StringLiteralExpr s : m.findAll(StringLiteralExpr.class)) {
                 hashResource(s.getValue(), testResources, watched);
-            }
-            for (AnnotationExpr a : m.getAnnotations()) {
-                if (a.getNameAsString().equals("Sql")) {
-                    a.findAll(StringLiteralExpr.class).forEach(s -> hashResource(s.getValue(), testResources, watched));
-                }
             }
         }
         // setup methods and fields belong to the inputs of every scenario in the class
