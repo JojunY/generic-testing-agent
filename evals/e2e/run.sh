@@ -82,7 +82,7 @@ s = open("pom.xml").read()
 dep = """    <dependency>
       <groupId>com.gta</groupId>
       <artifactId>gta-junit</artifactId>
-      <version>0.1.0-SNAPSHOT</version>
+      <version>0.1.0</version>
       <scope>test</scope>
     </dependency>
   </dependencies>"""
