@@ -19,6 +19,7 @@ import com.gta.core.run.FailureClassifier;
 import com.gta.core.run.RunResult;
 import com.gta.core.run.TestOutcome;
 import com.gta.core.spec.Spec;
+import com.gta.core.spec.SpecParser;
 import com.gta.core.state.ItemStatus;
 import com.gta.core.state.StateStore;
 import com.gta.core.state.WorkState;
@@ -183,6 +184,40 @@ final class ItemWorkflow {
         return node("author", extra);
     }
 
+    /** The refs of the requirement a scenario belongs to: the code its test exercises. */
+    List<String> requirementRefs(PlanItem item) {
+        Path specPath = paths.spec(item.flowId);
+        if (!Files.exists(specPath)) {
+            return List.of();
+        }
+        for (Spec.Requirement r : SpecParser.parse(specPath).requirements) {
+            if (r.scenarios.stream().anyMatch(sc -> item.ref.equals(sc.id()))) {
+                return r.refs();
+            }
+        }
+        return List.of();
+    }
+
+    /** What the assessor of a failing catching test needs (plan §6): the base run, the PR intent, the rules. */
+    static String catchingDetails(WorkState st, WorkState.ItemState s) {
+        String base = st.prBase == null ? "the base" : "`" + st.prBase + "`";
+        String onBase = switch (String.valueOf(s.onBase)) {
+            case "passes" -> "On " + base + " this test passes, so the change made it fail: a catch candidate.";
+            case "new" ->
+                "The code this scenario cites is new on this branch (not on " + base
+                        + "), so there is no earlier behaviour to compare with: judge it from the spec and the PR.";
+            case "fails" ->
+                "On " + base + " this test fails too: the failure predates the change, so it is not a catch"
+                        + " and gtaw refuses `product-defect` (report a pre-existing defect with `/gta incident`).";
+            default -> "gtaw could not run it on " + base + " (new code or new test support): judge from the diff.";
+        };
+        return "\n\n## Catching test (assess it)\n\n" + onBase
+                + (st.prIntent == null ? "" : "\n\nPR description:\n\n> " + st.prIntent.replace("\n", "\n> "))
+                + "\n\nFollow `references/catching-assessment.md`: `expected-change` when the PR means this behaviour,"
+                + " `product-defect` for a catch you would bet on (a human confirms it), `spec-gap` when the PR is"
+                + " silent. Report only catches you would bet on.";
+    }
+
     Map<String, Object> reviewNode(WorkState st, WorkState.ItemState s, PlanItem item, Spec spec, String kind) {
         // the verdict must come back with this token: it binds the verdict to this review round
         st.seq++;
@@ -204,7 +239,8 @@ final class ItemWorkflow {
                     + "Decide whether the test, the spec or the product is wrong. Never recommend changing the expected value to the actual value."
                     + (s.verdict != null && s.verdict.equals("flaky")
                             ? "\n\ngtaw re-ran it and got different results: likely `flaky`."
-                            : "");
+                            : "")
+                    + ("catching".equals(item.intent) ? catchingDetails(st, s) : "");
         }
         Path brief = briefs.review(st.seq, s, item, spec, kind, details);
         Map<String, Object> extra = new LinkedHashMap<>();
@@ -450,6 +486,10 @@ final class ItemWorkflow {
         s.lastError = lastError(s, code, message);
         s.lastError.defectFingerprint = FailureClassifier.knownDefectFingerprint(first.failureType, first.message);
         s.verdict = consistent < 2 ? "flaky" : null;
+        if ("catching".equals(item.intent) && consistent == 2) {
+            // rule before the assessor (plan §6): did the change make it fail? the base run decides
+            s.onBase = ctx.runs.onBase(st.prBase, item, requirementRefs(item));
+        }
         if ("reproducing".equals(item.intent) && consistent == 2 && code == ErrorCode.TEST_ASSERTION_FAILED) {
             s.reason = "defect: reproducing test fails for the reported reason";
             return needsHuman(st, item, s, s.reason);

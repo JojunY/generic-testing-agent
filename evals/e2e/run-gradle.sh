@@ -138,15 +138,74 @@ for _ in $(seq 1 5); do
 done
 git diff --quiet || fail "the work tree is dirty after the incident"
 
-step "PR mode: a change to the quote re-opens its flow with the PR description as intent"
+step "PR mode: the branch changes the quote and adds a late fee; a catching test catches its bug (D16)"
 sed -i 's|new BigDecimal("0.90")|new BigDecimal("0.85")|' src/main/java/com/example/invoice/api/InvoiceController.java
-git commit -qam "Raise the discount to 15 %"
-OUT=$(gtaw next --mode pr --base main --intent "Invoices of 100 or more now get 15 % off instead of 10 %")
+python3 - src/main/java/com/example/invoice/api/InvoiceController.java "$AGENT/late-fee.method.java.txt" <<'PY'
+import sys
+path, method = sys.argv[1:]
+s = open(path).read().rstrip()
+open(path, "w").write(s[: s.rindex("}")] + open(method).read())
+PY
+git commit -qam "Raise the discount to 15 % and add a late fee"
+OUT=$(gtaw next --mode pr --base main \
+  --intent "Invoices of 100 or more now get 15 % off instead of 10 %. Adds a late fee of 5.00 for invoices paid after their due day.")
 expect "$(jget "$OUT" 'd["node"]')" analyze "PR mode node"
-expect "$(jget "$OUT" 'd["flowId"]')" invoice.quote "affected flow"
-expect "$(jget "$OUT" '" ".join(d["pr"]["flows"])')" invoice.quote "PR flows"
+expect "$(jget "$OUT" 'd["flowId"]')" invoice.quote "first affected flow"
+expect "$(jget "$OUT" '" ".join(d["pr"]["flows"])')" "invoice.quote invoice.late-fee" "PR flows (stale spec, new entry point)"
 grep -q "status=stale" .gta/specs/invoice/quote.spec.md || fail "the approved spec should be stale"
 grep -q "15 % off instead of 10 %" "$(jget "$OUT" 'd["brief"]')" || fail "the analyst brief should quote the PR description"
 echo "ok   the analyst brief quotes the PR description"
+OUT=$(gtaw submit --spec invoice.quote --token "$(jget "$OUT" 'd["token"]')")
+REV=$(jget "$OUT" 'd["rev"]')
+OUT=$(gtaw next)
+expect "$(jget "$OUT" 'd["type"]')" approve "quote re-approval"
+gtaw answer "approve invoice.quote@$REV" >/dev/null
+OUT=$(gtaw next)
+expect "$(jget "$OUT" 'd["node"]')" analyze "the next PR flow"
+expect "$(jget "$OUT" 'd["flowId"]')" invoice.late-fee "the new entry point"
+cp "$AGENT/late-fee.spec.md" .gta/specs/invoice/late-fee.spec.md
+OUT=$(gtaw submit --spec invoice.late-fee --token "$(jget "$OUT" 'd["token"]')")
+expect "$(jget "$OUT" 'd["rev"]')" R1 "late-fee spec revision"
+OUT=$(gtaw next)
+gtaw answer "approve invoice.late-fee@R1" >/dev/null
+OUT=$(cap_item invoice.late-fee/s01)
+python3 - src/test/java/com/example/invoice/api/InvoiceControllerIT.java "$AGENT/late-fee-tests.method.java.txt" <<'PY'
+import sys
+path, method = sys.argv[1:]
+s = open(path).read().rstrip()
+open(path, "w").write(s[: s.rindex("}")] + open(method).read())
+PY
+gtaw submit --item "invoice.late-fee/s01#component-01" --token "$(jget "$OUT" 'd["token"]')" >/dev/null
+OUT=$(gtaw next)
+expect "$(jget "$OUT" 'd["kind"]')" oracle-review "late-fee s01 review"
+OUT=$(gtaw submit --review "invoice.late-fee/s01#component-01" --token "$(jget "$OUT" 'd["token"]')" --verdict accept --reason "asserts 200 and 5.00")
+jget "$OUT" 'd["result"]' | grep -q '^passed' || fail "late-fee s01: $OUT"
+OUT=$(cap_item invoice.late-fee/s02)
+OUT=$(gtaw submit --item "invoice.late-fee/s02#component-01" --token "$(jget "$OUT" 'd["token"]')")
+expect "$(jget "$OUT" 'd["code"]')" TEST_ASSERTION_FAILED "the catching test fails on the branch"
+OUT=$(gtaw next)
+expect "$(jget "$OUT" 'd["kind"]')" triage "catching assessment"
+BRIEF="$(jget "$OUT" 'd["brief"]')"
+grep -q "Catching test (assess it)" "$BRIEF" || fail "the assessor brief should say it is a catching test"
+grep -q "new on this branch" "$BRIEF" || fail "the base check should see the late fee is new"
+echo "ok   the assessor brief has the base check and the PR description"
+gtaw submit --review "invoice.late-fee/s02#component-01" --token "$(jget "$OUT" 'd["token"]')" --verdict product-defect --reason "charged on the due day (D16)" >/dev/null
+OUT=$(gtaw next)
+expect "$(jget "$OUT" 'd["type"]')" defect "the human confirms the catch"
+gtaw answer A >/dev/null
+OUT=$(cap_item invoice.late-fee/s02)
+TOKEN=$(jget "$OUT" 'd["token"]')
+FP=$(grep -o 'failure = "[0-9a-f]*"' "$(jget "$OUT" 'd["brief"]')" | head -1 | grep -o '[0-9a-f]\{12\}')
+sed -i "s|    @DisplayName(\"\[invoice.late-fee/s02\]|    @KnownDefect(id = \"invoice.late-fee/s02\", failure = \"$FP\")\n&|" src/test/java/com/example/invoice/api/InvoiceControllerIT.java
+OUT=$(gtaw submit --item "invoice.late-fee/s02#component-01" --token "$TOKEN")
+jget "$OUT" 'd["result"]' | grep -q '^defect-found' || fail "late-fee s02 pin: $OUT"
+for _ in $(seq 1 5); do
+  OUT=$(gtaw next)
+  [ "$(jget "$OUT" 'd.get("node")')" = done ] && break
+done
+expect "$(jget "$OUT" 'd["node"]')" done "PR session end"
+grep -rq "Catching hits: 1 of 1" .gta/reports || fail "the report should count the catching hit"
+echo "ok   the report counts 1 catching hit"
+git diff --quiet || fail "the work tree is dirty after the PR session"
 
 printf '\nE2E PASSED (%s)\n' "$WORK"

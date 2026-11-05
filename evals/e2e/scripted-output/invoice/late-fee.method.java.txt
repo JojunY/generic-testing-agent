@@ -1,0 +1,9 @@
+
+    /** The late fee of an invoice paid {@code daysLate} days after its due day (D16 seeded: >= instead of >). */
+    @GetMapping("/late-fee")
+    public LateFee lateFee(@RequestParam int daysLate) {
+        return new LateFee(daysLate >= 0 ? new BigDecimal("5.00") : BigDecimal.ZERO.setScale(2));
+    }
+
+    public record LateFee(BigDecimal fee) {}
+}

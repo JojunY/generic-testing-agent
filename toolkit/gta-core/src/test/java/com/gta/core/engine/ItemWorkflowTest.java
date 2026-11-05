@@ -101,4 +101,26 @@ class ItemWorkflowTest {
                 assertThrows(GtaException.class, () -> items().submitReview(s.id, "t", "accept", ""))
                         .code());
     }
+
+    @Test
+    void shouldTellTheAssessorWhatTheBaseRunShowed() {
+        WorkState st = new WorkState();
+        st.prBase = "origin/main";
+        st.prIntent = "Adds a late fee";
+        WorkState.ItemState s = new WorkState.ItemState();
+
+        s.onBase = "passes";
+        String passes = ItemWorkflow.catchingDetails(st, s);
+        org.junit.jupiter.api.Assertions.assertTrue(passes.contains("the change made it fail"), passes);
+        org.junit.jupiter.api.Assertions.assertTrue(passes.contains("> Adds a late fee"), "the PR intent: " + passes);
+        s.onBase = "fails";
+        org.junit.jupiter.api.Assertions.assertTrue(
+                ItemWorkflow.catchingDetails(st, s).contains("refuses `product-defect`"));
+        s.onBase = "new";
+        org.junit.jupiter.api.Assertions.assertTrue(
+                ItemWorkflow.catchingDetails(st, s).contains("new on this branch"));
+        s.onBase = null;
+        org.junit.jupiter.api.Assertions.assertTrue(
+                ItemWorkflow.catchingDetails(st, s).contains("could not run it on `origin/main`"));
+    }
 }

@@ -12,6 +12,8 @@ import com.gta.core.run.TestRunner;
 import com.gta.core.state.StateStore;
 import com.gta.core.util.Git;
 import com.gta.core.util.Ids;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,6 +22,7 @@ import java.util.Set;
 
 /** Every test run gtaw makes (item runs, stability runs, the gate's full run) and how their results are reported. */
 final class TestRuns {
+    private final EngineContext ctx;
     private final GtaPaths paths;
     private final Git git;
     private final TestRunner runner;
@@ -28,6 +31,7 @@ final class TestRuns {
     private Set<String> testClasses;
 
     TestRuns(EngineContext ctx) {
+        this.ctx = ctx;
         this.paths = ctx.paths;
         this.git = ctx.git;
         this.runner = ctx.runner;
@@ -42,6 +46,63 @@ final class TestRuns {
                 new TestRunner.Options(item.testClass, tag, variant, random),
                 productionClasses(),
                 testClasses());
+    }
+
+    /**
+     * A failing catching test run on the PR's base (plan §6): the base's production code with this branch's test tree.
+     * {@code passes} means the change made it fail (a catch candidate); {@code fails} means the failure predates the
+     * change; {@code new} when the code the scenario cites does not exist on the base; {@code unknown} when there is no
+     * base or the test does not run there (new test support, a build problem).
+     */
+    String onBase(String base, PlanItem item, List<String> refs) {
+        if (base == null) {
+            return "unknown";
+        }
+        Path checkout = paths.work().resolve("base-run");
+        git.removeWorktree(checkout);
+        try {
+            git.addWorktree(checkout, base);
+            GtaPaths there = new GtaPaths(checkout).withModule(paths.module());
+            com.gta.core.profile.RefResolver onBaseCode = com.gta.core.profile.RefResolver.of(there.moduleRoot());
+            if (refs.stream().anyMatch(r -> onBaseCode.hash(r).isEmpty())) {
+                return "new"; // the code the scenario cites does not exist on the base: nothing to compare with
+            }
+            copyTree(paths.moduleRoot().resolve("src/test"), there.moduleRoot().resolve("src/test"));
+            String tag = "scenario:" + item.ref;
+            RunResult r = ctx.runnerFor(there)
+                    .run(
+                            Ids.newRunId(git.head()) + "-base",
+                            item.id,
+                            new TestRunner.Options(item.testClass, tag, false, false),
+                            productionClasses(),
+                            testClasses());
+            if (r.compileError || r.cases.isEmpty()) {
+                return "unknown";
+            }
+            return r.failures().isEmpty() ? "passes" : "fails";
+        } catch (GtaException | java.io.UncheckedIOException e) {
+            return "unknown";
+        } finally {
+            git.removeWorktree(checkout);
+        }
+    }
+
+    private static void copyTree(Path from, Path to) {
+        if (!Files.isDirectory(from)) {
+            return;
+        }
+        try (java.util.stream.Stream<Path> files = Files.walk(from)) {
+            for (Path f : files.filter(Files::isRegularFile).toList()) {
+                Path target = to.resolve(from.relativize(f).toString());
+                Path dir = target.getParent();
+                if (dir != null) {
+                    Files.createDirectories(dir);
+                }
+                Files.copy(f, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
     }
 
     /** Every test tagged {@code gta}, as the gate needs it. */

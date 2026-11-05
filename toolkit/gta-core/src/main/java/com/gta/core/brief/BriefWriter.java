@@ -326,7 +326,9 @@ public final class BriefWriter {
             b.append(
                     "- `test-defect` — the test is wrong (setup, input, mechanics); the locked expected values stay\n");
             b.append("- `flaky` — nondeterministic; only waiting/synchronisation may change\n");
-            if ("confirmed".equals(item.oracle.source) || "documented".equals(item.oracle.source)) {
+            if ("catching".equals(item.intent)) {
+                b.append("- `product-defect` — a catch: the change broke this behaviour (a human will confirm)\n");
+            } else if ("confirmed".equals(item.oracle.source) || "documented".equals(item.oracle.source)) {
                 b.append(
                         "- `product-defect` — the code violates a confirmed/documented expectation (a human will confirm)\n");
             }

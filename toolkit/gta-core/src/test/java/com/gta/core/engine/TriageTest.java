@@ -255,4 +255,43 @@ class TriageTest {
         assertEquals(false, s.sharesDeveloperFile);
         assertTrue(String.valueOf(out.get("result")).contains("checked again"));
     }
+
+    // ------------------------------------------------------------------ catching tests (plan §6, P3)
+
+    private static PlanItem catching() {
+        PlanItem i = item("observed");
+        i.intent = "catching";
+        return i;
+    }
+
+    @Test
+    void shouldRefuseACatchThatFailsOnTheBaseToo() {
+        s.onBase = "fails";
+
+        GtaException e = assertThrows(
+                GtaException.class, () -> ctx.triage.applyTriage(st, catching(), s, "product-defect", "looks broken"));
+
+        assertEquals(ErrorCode.USAGE_INVALID_ARGUMENT, e.code(), "the change did not cause it: " + e.getMessage());
+    }
+
+    @Test
+    void shouldSendACatchCandidateToAHumanWhateverItsOracleSource() {
+        s.onBase = "passes";
+
+        ctx.triage.applyTriage(st, catching(), s, "product-defect", "the change dropped the null check");
+
+        assertEquals(ItemStatus.NEEDS_HUMAN, s.status, "an observed catching scenario can still be a catch");
+        assertTrue(s.reason.startsWith("defect:"), "the human gets the defect decision: " + s.reason);
+    }
+
+    @Test
+    void shouldLetAHumanJudgeASpecErrorOnACatchingTestInsteadOfCorrectingIt() throws Exception {
+        String before = Files.readString(paths.spec("order.create"));
+        failedWith("expected: <201> but was: <500>");
+
+        ctx.triage.applyTriage(st, catching(), s, "spec-error", "the new code answers 500");
+
+        assertEquals(ItemStatus.NEEDS_HUMAN, s.status);
+        assertEquals(before, Files.readString(paths.spec("order.create")), "the THEN is not auto-corrected");
+    }
 }
