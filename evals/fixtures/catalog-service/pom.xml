@@ -13,11 +13,12 @@
   <groupId>com.example</groupId>
   <artifactId>catalog-service</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <description>Fixture for gta evals: a reactive (WebFlux), GraphQL, gRPC and Temporal catalog with seeded defects.</description>
+  <description>Fixture for gta evals: a reactive (WebFlux), GraphQL, gRPC, Temporal and Beam catalog with seeded defects.</description>
 
   <properties>
     <java.version>17</java.version>
     <temporal.version>1.40.0</temporal.version>
+    <beam.version>2.77.0</beam.version>
   </properties>
 
   <dependencies>
@@ -37,6 +38,30 @@
       <groupId>io.temporal</groupId>
       <artifactId>temporal-sdk</artifactId>
       <version>${temporal.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.beam</groupId>
+      <artifactId>beam-sdks-java-core</artifactId>
+      <version>${beam.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.beam</groupId>
+      <artifactId>beam-runners-direct-java</artifactId>
+      <version>${beam.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.beam</groupId>
+      <artifactId>beam-sdks-java-testing-junit</artifactId>
+      <version>${beam.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <!-- Beam's TestPipeline implements JUnit 4's TestRule, even when the JUnit 5 extension runs it -->
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.13.2</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.temporal</groupId>

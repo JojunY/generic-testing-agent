@@ -42,6 +42,7 @@ public final class AssertionScanner {
             "isNotEqualTo",
             "containsExactly",
             "containsExactlyInAnyOrder",
+            "containsInAnyOrder", // Beam PAssert, Hamcrest
             "containsEntry",
             "contains",
             "hasSize",

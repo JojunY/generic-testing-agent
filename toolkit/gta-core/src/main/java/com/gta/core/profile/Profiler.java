@@ -44,6 +44,8 @@ public final class Profiler {
             "WorkflowImpl",
             "Workflow",
             "StateMachineConfig",
+            "Transform",
+            "Pipeline",
             "GrpcService",
             "Controller",
             "Resource",
@@ -254,6 +256,15 @@ public final class Profiler {
                         e.trigger = "Spring Statemachine " + c.getNameAsString();
                         e.risk = 6;
                     }
+                    if (isBeamTransform(c)
+                            && m.getNameAsString().equals("expand")
+                            && m.getParameters().size() == 1) {
+                        // a composite PTransform is a flow: run on the DirectRunner with TestPipeline and PAssert
+                        e = base(c, fqcn, m, "beam-pipeline", "transform");
+                        e.flowId = e.flowId.substring(0, e.flowId.indexOf('.')) + ".transform";
+                        e.trigger = "Beam transform " + c.getNameAsString();
+                        e.risk = 6;
+                    }
                     if (m.getAnnotationByName("Scheduled").isPresent()) {
                         e = base(c, fqcn, m, "scheduler", "schedule");
                         e.trigger = m.getAnnotationByName("Scheduled").get().toString();
@@ -398,6 +409,11 @@ public final class Profiler {
                         .anyMatch(t -> workflowMethods
                                 .getOrDefault(t.getNameAsString(), Set.of())
                                 .contains(m.getNameAsString()));
+    }
+
+    /** A composite Beam transform: extends {@code PTransform<InputT, OutputT>}. */
+    static boolean isBeamTransform(ClassOrInterfaceDeclaration c) {
+        return c.getExtendedTypes().stream().anyMatch(t -> t.getNameAsString().equals("PTransform"));
     }
 
     /** A Spring Statemachine configuration: extends (Enum)StateMachineConfigurerAdapter. */

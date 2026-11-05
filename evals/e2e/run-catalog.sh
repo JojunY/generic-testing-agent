@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Scripted end-to-end run of gtaw against evals/fixtures/catalog-service (plan §15 P3): a WebFlux endpoint, a
-# GraphQL query, a gRPC call and a Temporal workflow, each from spec to a pinned seeded defect (D10-D12, D14). The repository opts into P3 with
+# GraphQL query, a gRPC call, a Temporal workflow and a Beam transform, each from spec to a pinned seeded defect
+# (D10-D12, D14, D15). The repository opts into P3 with
 # `phase` in .gta/config.json, since those capabilities are not on by default yet.
 #
 # Needs: the same as run.sh. Usage: evals/e2e/run-catalog.sh [work-dir]
@@ -97,13 +98,17 @@ cap_flow restock.restock restock.spec.md RestockWorkflowImplTest.java.txt \
   src/test/java/com/example/catalog/restock/RestockWorkflowImplTest.java "no compensation on a failed stock update (D14)" \
   gta-testing-workflows unit
 
+cap_flow low-stock.transform low-stock.spec.md LowStockTransformTest.java.txt \
+  src/test/java/com/example/catalog/report/LowStockTransformTest.java "2 left is not reported (D15)" \
+  gta-testing-beam-pipelines unit
+
 step "session end"
 for _ in $(seq 1 5); do
   OUT=$(gtaw next)
   [ "$(jget "$OUT" 'd.get("node")')" = done ] && break
 done
 expect "$(jget "$OUT" 'd["node"]')" done "session end"
-for f in product.reserve product-graphql.products-up-to stock.get-stock restock.restock; do
+for f in product.reserve product-graphql.products-up-to stock.get-stock restock.restock low-stock.transform; do
   STATUS=$(gtaw status)
   expect "$(jget "$STATUS" '" ".join(sorted(set(i["status"] for i in d["items"] if i["id"].startswith("'"$f"'/"))))')" \
     "defect-found passed" "$f item states"

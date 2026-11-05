@@ -371,4 +371,24 @@ class ProfilerTest {
                 flows.keySet().toString());
         assertEquals("workflow", process.capability);
     }
+
+    @Test
+    void shouldTurnEachCompositeBeamTransformIntoAFlow() throws Exception {
+        source("com/acme/order/report/LowStockTransform.java", """
+                package com.acme.order.report;
+                public class LowStockTransform extends PTransform<PCollection<KV<String, Integer>>, PCollection<String>> {
+                    @Override
+                    public PCollection<String> expand(PCollection<KV<String, Integer>> stock) { return null; }
+                    static boolean low(int stock) { return stock < 3; }
+                }
+                """);
+
+        Map<String, ServiceProfile.EntryPoint> flows =
+                byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"));
+
+        ServiceProfile.EntryPoint transform = flows.get("low-stock.transform");
+        assertEquals("beam-pipeline", transform.capability, flows.keySet().toString());
+        assertEquals("method:com.acme.order.report.LowStockTransform#expand", transform.ref);
+        assertTrue(flows.keySet().stream().noneMatch(f -> f.endsWith(".low")), "helpers are not flows");
+    }
 }

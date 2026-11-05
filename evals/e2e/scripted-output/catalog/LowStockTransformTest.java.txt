@@ -1,0 +1,48 @@
+package com.example.catalog.report;
+
+import com.gta.junit.KnownDefect;
+import org.apache.beam.sdk.testing.PAssert;
+import org.apache.beam.sdk.testing.TestPipeline;
+import org.apache.beam.sdk.testing.TestPipelineExtension;
+import org.apache.beam.sdk.transforms.Create;
+import org.apache.beam.sdk.values.KV;
+import org.apache.beam.sdk.values.PCollection;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+@Tag("unit")
+@Tag("gta")
+class LowStockTransformTest {
+
+    @RegisterExtension
+    final TestPipelineExtension pipeline = TestPipelineExtension.create();
+
+    @Test
+    @Tag("flow:low-stock.transform")
+    @Tag("scenario:low-stock.transform/s01")
+    @Tag("characterization")
+    @DisplayName("[low-stock.transform/s01] an almost sold-out product is reported")
+    void shouldReportAProductWithOneLeft(TestPipeline p) {
+        PCollection<String> report =
+                p.apply(Create.of(KV.of("Kettle", 1), KV.of("Toaster", 12))).apply(new LowStockTransform());
+
+        PAssert.that(report).containsInAnyOrder("Kettle");
+        p.run().waitUntilFinish();
+    }
+
+    @Test
+    @Tag("flow:low-stock.transform")
+    @Tag("scenario:low-stock.transform/s02")
+    @Tag("hardening")
+    @DisplayName("[low-stock.transform/s02] a product with 2 left is reported")
+    void shouldReportAProductWithTwoLeft(TestPipeline p) {
+        PCollection<String> report =
+                p.apply(Create.of(KV.of("Kettle", 1), KV.of("Mixer", 2), KV.of("Toaster", 12)))
+                        .apply(new LowStockTransform());
+
+        PAssert.that(report).containsInAnyOrder("Kettle", "Mixer");
+        p.run().waitUntilFinish();
+    }
+}
