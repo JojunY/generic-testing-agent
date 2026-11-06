@@ -56,6 +56,11 @@ class ServiceModeTest {
         assertEquals(List.of("order.create"), ServiceMode.waitingFlows(st));
         st.pending = pending("order.cancel");
         assertFalse(ServiceMode.park(st), "the last flow asks now");
+        st.queue.add("order.refund");
+        st.pending.type = "question";
+        assertFalse(ServiceMode.park(st), "an author waits for its answer: questions are asked at once");
+        st.queue.clear();
+        st.pending.type = "answer";
         st.mode = "flow";
         st.queue.add("order.get");
         assertFalse(ServiceMode.park(st), "flow mode never parks");

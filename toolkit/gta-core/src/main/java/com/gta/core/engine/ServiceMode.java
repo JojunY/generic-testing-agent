@@ -36,7 +36,9 @@ final class ServiceMode {
      * when the decision must be asked now.
      */
     static boolean park(WorkState st) {
-        if (!MODE.equals(st.mode) || st.pending == null || st.queue.isEmpty()) {
+        // an author's question is asked now: the item keeps its scope baseline while it waits, and other flows'
+        // changes made in between would read as out of scope when it resumes
+        if (!MODE.equals(st.mode) || st.pending == null || "question".equals(st.pending.type) || st.queue.isEmpty()) {
             return false;
         }
         st.parked.add(st.pending);
@@ -57,6 +59,8 @@ final class ServiceMode {
 
     /** The flows of the parked decisions, for the status block. */
     static List<String> waitingFlows(WorkState st) {
-        return st.parked.stream().map(p -> p.flowId).distinct().toList();
+        return MODE.equals(st.mode)
+                ? st.parked.stream().map(p -> p.flowId).distinct().toList()
+                : List.of();
     }
 }

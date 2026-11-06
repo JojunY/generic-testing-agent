@@ -89,6 +89,9 @@ public final class Engine {
             boolean startPr = "pr".equals(mode) && target == null;
             boolean startService = ServiceMode.MODE.equals(mode) && target == null;
             if (mode != null) {
+                if (!ServiceMode.MODE.equals(mode)) {
+                    st.parked.clear(); // only service mode asks parked decisions; their flows ask again when worked on
+                }
                 st.mode = mode;
             }
             ServiceProfile profile = ensureProfile(target != null || startPr || startService);
@@ -315,8 +318,8 @@ public final class Engine {
         if (next.node() != null) {
             return next.node();
         }
-        boolean flowDone = next.sessionOverReason().startsWith("all items of")
-                || (ServiceMode.MODE.equals(st.mode) && next.sessionOverReason().startsWith("remaining items"));
+        boolean flowDone = next.end() == ItemWorkflow.Dispatch.End.FLOW_DONE
+                || (ServiceMode.MODE.equals(st.mode) && next.end() == ItemWorkflow.Dispatch.End.FLOW_BLOCKED);
         if (flowDone) {
             Map<String, Object> other = moveOn(st, profile, base); // the next flow, in the same session
             if (other != null) {

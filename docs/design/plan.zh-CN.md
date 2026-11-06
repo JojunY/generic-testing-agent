@@ -883,7 +883,7 @@ gta 要让从没用过它的开发者也能上手。人看到的所有内容都�
 
 | 模式 | 流程（D = gtaw，A = agent，H = 人） | 产出 |
 |---|---|---|
-| `service`（P4；没有进行中的工作时执行 `/gta`） | D profile → 按类型和风险列出找到的 flow → H 选择（带推荐：全部，风险高的先做）→ flow 排进队列，每个按 flow 模式执行。某个 flow 在等人时不会挡住其他 flow：gtaw 先把它的决定暂放，继续做下一个 flow；等队列里没有不需要人就能继续的 flow 时，再按先后顺序询问暂放的决定；状态区块会列出还在等你的 flow。`gtaw next --mode service` | 整个服务的规格、测试和用例台账 |
+| `service`（P4；没有进行中的工作时执行 `/gta`） | D profile → 按类型和风险列出找到的 flow → H 选择（带推荐：全部，风险高的先做）→ flow 排进队列，每个按 flow 模式执行。某个 flow 在等人时不会挡住其他 flow：gtaw 先把它的决定暂放（测试作者的提问会立即询问，因为作者在等答案），继续做下一个 flow；等队列里没有不需要人就能继续的 flow 时，再按先后顺序询问暂放的决定；状态区块会列出还在等你的 flow。`gtaw next --mode service` | 整个服务的规格、测试和用例台账 |
 | `explain <flowId\|path>` | D profile → A analyst | 全景图、时序图、规格草稿、问题；只读。回答并批准后自动转为 flow 模式 |
 | 默认（flow） | D → A analyst → H 回答 → H 批准 → D 计划 → 循环（A test-author ⇄ D check → D submit → A reviewer）→ D verify → D 报告 | 测试、oracle 分片、报告 |
 | `pr` | D impact：diff → 受影响的方法、配置项、bean（沿着注入关系追踪）→ flow，标为 `stale`<br>→ A analyst：把 PR 描述作为 `documented` 意图，只在意图不清时提问<br>→ H 批准（也可以在 PR 中进行）→ 后续同上 | 测试、PR 评论（行为变更摘要、findings、新增确认项、未映射的改动） |

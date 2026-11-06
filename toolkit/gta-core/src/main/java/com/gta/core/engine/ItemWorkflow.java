@@ -58,16 +58,27 @@ final class ItemWorkflow {
     }
 
     /**
-     * The next node for the items of one flow, or {@link Dispatch#sessionOver(String)} when nothing is left for this session;
-     * the engine then runs the session end. Keeping that decision out of here keeps this class independent of {@link SessionEnd}.
+     * The next node for the items of one flow, or why nothing is left for this session ({@code end}); the engine then
+     * moves to another flow or runs the session end. Keeping that decision out of here keeps this class independent of
+     * {@link SessionEnd}.
      */
-    record Dispatch(Map<String, Object> node, String sessionOverReason) {
-        static Dispatch of(Map<String, Object> node) {
-            return new Dispatch(node, null);
+    record Dispatch(Map<String, Object> node, End end, String sessionOverReason) {
+        /** Why the items of a flow have nothing left for this session. */
+        enum End {
+            /** every item of the flow is done */
+            FLOW_DONE,
+            /** the remaining items wait on dependencies that did not pass */
+            FLOW_BLOCKED,
+            /** the session's item budget is spent */
+            BUDGET
         }
 
-        static Dispatch sessionOver(String reason) {
-            return new Dispatch(null, reason);
+        static Dispatch of(Map<String, Object> node) {
+            return new Dispatch(node, null, null);
+        }
+
+        static Dispatch sessionOver(End end, String reason) {
+            return new Dispatch(null, end, reason);
         }
     }
 
@@ -113,6 +124,7 @@ final class ItemWorkflow {
         }
         if (st.itemsThisSession >= config.budgets.maxItemsPerSession) {
             return Dispatch.sessionOver(
+                    Dispatch.End.BUDGET,
                     "session budget reached (" + st.itemsThisSession + " items); run /gta again to continue");
         }
         PlanItem conflict = null;
@@ -146,10 +158,10 @@ final class ItemWorkflow {
         }
         boolean blocked =
                 items.stream().anyMatch(i -> !st.items.get(i.id).status.terminal());
-        return Dispatch.sessionOver(
-                blocked
-                        ? "remaining items are blocked by dependencies that did not pass"
-                        : "all items of " + spec.flowId() + " are done");
+        return blocked
+                ? Dispatch.sessionOver(
+                        Dispatch.End.FLOW_BLOCKED, "remaining items are blocked by dependencies that did not pass")
+                : Dispatch.sessionOver(Dispatch.End.FLOW_DONE, "all items of " + spec.flowId() + " are done");
     }
 
     private static final Pattern GTA_TAG = Pattern.compile("@Tag\\(\\s*\"gta\"\\s*\\)");

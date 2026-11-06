@@ -106,6 +106,12 @@ public final class Spec {
             return meta.get("source").orElse(inheritedSource);
         }
 
+        /** {@code P0} core path, {@code P1} important branch (the default), {@code P2} edge case (plan §10.6). */
+        public String priority() {
+            String p = meta.getOr("priority", "P1").toUpperCase(java.util.Locale.ROOT);
+            return p.matches("P[012]") ? p : "P1";
+        }
+
         /** Expected-value literals written in backticks in THEN clauses (plan §3.3, §5.3). */
         public List<String> thenLiterals() {
             List<String> out = new ArrayList<>();

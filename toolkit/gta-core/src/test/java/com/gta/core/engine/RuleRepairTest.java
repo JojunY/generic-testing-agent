@@ -101,6 +101,24 @@ class RuleRepairTest {
     }
 
     @Test
+    void shouldKeepTheTagsOutOfTheMethodBodyWhenTheDeclarationSharesTheLine() {
+        PlanItem item = item();
+        item.intent = "hardening";
+        item.priority = "p0";
+        String oneLine = TEST.replace(
+                "@Tag(\"gta\")\n    @DisplayName(\"[price.update-price/s01] an update returns the new price\")\n    void shouldReturnTheNewPrice() {",
+                "@Test @Tag(\"scenario:price.update-price/s01\") void shouldReturnTheNewPrice() {");
+        assertTrue(oneLine.contains("void shouldReturnTheNewPrice() {"), oneLine);
+
+        String text = RuleRepair.normalizeTags(oneLine, item, new java.util.ArrayList<>());
+
+        assertTrue(
+                text.contains(
+                        "    @Tag(\"hardening\")\n    @Tag(\"p0\")\n    @Test @Tag(\"scenario:price.update-price/s01\") void"),
+                text);
+    }
+
+    @Test
     void shouldFindTheScenarioTagAmongOthersOnOneLine() {
         PlanItem item = item();
         item.intent = "characterization";

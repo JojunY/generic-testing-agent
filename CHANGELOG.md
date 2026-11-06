@@ -5,6 +5,14 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 ## [Unreleased]
 
 ### Fixed
+- Review round 2:
+  - service mode no longer parks a test author's question: the waiting item kept its scope baseline, so other flows' changes in between read as out of scope when it resumed;
+  - an own answer may say "approve" ("2: a manager must approve refunds"), and one written after a comma ("OK, 2: a manager signs off") is read as an own answer, not as option A;
+  - the intent and priority tags no longer land inside the method body when the scenario tag shares a line with the declaration;
+  - items planned by an earlier version take the scenario's priority instead of keeping a risk-based one;
+  - a non-service mode drops parked decisions instead of listing them as waiting forever;
+  - `gtaw run --tags` refuses only the tag `system`, not a flow or scenario named after it;
+  - a scenario's priority has one source (`Spec.Scenario.priority`), and the engine moves between flows on a typed dispatch outcome instead of matching message text.
 - OpenCode's gta agents allowed every `./gtaw` command, so `gate waive`, `relock` or `abort` ran without a person confirming them (Copilot asks). The agents now allow the same subcommands as Copilot's auto-approve list and ask for every other gtaw command, `note` included, so an agent cannot record a note as if a person had said it.
 - A skipped test (`@Disabled`, a failed assumption) was not a failure, so it went to review as if it had passed: an author could disable the test to get it through. It is now refused (`POLICY_TEST_SKIPPED`) and goes back to the author.
 - `OK, but change s02` on an approval prompt approved the spec, and on a decision took the recommended option: only a bare `OK` takes a recommendation now, anything more is a change request (approval) or is refused (decision).

@@ -698,6 +698,14 @@ class EngineTest {
                     ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE,
                     assertThrows(GtaException.class, () -> e.runTests(false, "system"))
                             .code());
+            assertEquals(
+                    ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE,
+                    assertThrows(GtaException.class, () -> e.runTests(false, "p0 & system"))
+                            .code());
+            assertEquals(
+                    4,
+                    e.runTests(false, "!system & flow:order.system").cases.size(),
+                    "only the tag system is refused, not a name that contains it");
             assertTrue(e.cases(true).toString().contains("1 approved spec"));
             assertTrue(((List<?>) e.impact(null).get("needsReview")).isEmpty(), "nothing changed since the base");
 
