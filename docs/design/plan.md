@@ -1499,7 +1499,8 @@ script is never changed by gtaw. `build.module` names a subproject (`:a:b:test`)
 Surefire's (its testcases are named by display name and its messages carry the exception type, both normalised).
 Mutation testing needs the Maven test classpath, so `gtaw mutate` and the can-fail check report Gradle builds as `n/a`.
 
-A repository can opt into a later phase early with `"phase": "P3"` in `.gta/config.json` (never an earlier one): its
+P3 is the current phase: its capabilities write tests by default. A repository can opt into a later phase early with
+`"phase": "P4"` in `.gta/config.json` (never an earlier one): its
 capabilities then write tests before they are on for everyone. Pilot services, which each phase's exit criteria need,
 use it, and so do the evals that must pass before a phase is switched on.
 
@@ -1518,13 +1519,13 @@ registry entry, an eval fixture and one pilot service.
 | 8 | Security (Spring Security, OAuth2, JWT) | P2 | tests written; the skill attaches to the flows of a secured service |
 | 9 | Caching (Spring Cache, Redis, Caffeine) | P2 | tests written; the skill attaches to the flows of a service with caches |
 | 10 | Spring Batch | P2 | tests written; each `@Bean Job` is a flow |
-| 11 | Reactive WebFlux | P3 | tests written with the `phase: "P3"` preview; a handler returning `Mono`/`Flux` is a `webflux` flow |
+| 11 | Reactive WebFlux | P3 | tests written; a handler returning `Mono`/`Flux` is a `webflux` flow |
 | 12 | Gradle builds | P3 | supported: Groovy and Kotlin DSL builds are read, tests run through Gradle; `gtaw mutate` and the can-fail check stay Maven-only |
 | 13 | GCP data (BigQuery, GCS) | P0 / P4 | a dependency with fakes; SQL in the system layer from P4 |
-| 14 | gRPC | P3 | tests written with the `phase: "P3"` preview; each RPC of a generated `*ImplBase` subclass is a flow |
-| 15 | Workflows and state machines (Temporal, Camunda, Spring Statemachine) | P3 | tests written with the `phase: "P3"` preview; each Temporal `@WorkflowMethod` implementation, each state machine's transitions and each `*.bpmn` process is a flow |
-| 16 | GraphQL | P3 | tests written with the `phase: "P3"` preview; `@QueryMapping`/`@MutationMapping` handlers are flows |
-| 17 | Beam / Dataflow pipelines | P3 | tests written with the `phase: "P3"` preview; each composite `PTransform` is a flow, run on the DirectRunner with `TestPipeline` and `PAssert` |
+| 14 | gRPC | P3 | tests written; each RPC of a generated `*ImplBase` subclass is a flow |
+| 15 | Workflows and state machines (Temporal, Camunda, Spring Statemachine) | P3 | tests written; each Temporal `@WorkflowMethod` implementation, each state machine's transitions and each `*.bpmn` process is a flow |
+| 16 | GraphQL | P3 | tests written; `@QueryMapping`/`@MutationMapping` handlers are flows |
+| 17 | Beam / Dataflow pipelines | P3 | tests written; each composite `PTransform` is a flow, run on the DirectRunner with `TestPipeline` and `PAssert` |
 | 18 | System tests on deployed environments (Karate, Kubernetes) | P4 | skill only |
 | 19 | WebSocket, STOMP, SSE | P4 | *new* |
 

@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Scripted end-to-end run of gtaw against evals/fixtures/catalog-service (plan §15 P3): a WebFlux endpoint, a
 # GraphQL query, a gRPC call, a Temporal workflow and a Beam transform, each from spec to a pinned seeded defect
-# (D10-D12, D14, D15). The repository opts into P3 with
-# `phase` in .gta/config.json, since those capabilities are not on by default yet.
+# (D10-D12, D14, D15). These capabilities are on by default since P3, so the repository has no `phase` setting.
 #
 # Needs: the same as run.sh. Usage: evals/e2e/run-catalog.sh [work-dir]
 set -euo pipefail
@@ -23,7 +22,6 @@ cp -r "$REPO/evals/fixtures/catalog-service/." "$WORK/"
 cd "$WORK"
 rm -rf target
 printf 'target/\n' > .gitignore
-mkdir -p .gta && printf '{ "phase": "P3" }\n' > .gta/config.json
 git init -q -b main && git add -A && git commit -qm "catalog-service fixture"
 java -jar "$GTA_CLI_JAR" --root . init --platform copilot >/dev/null 2>&1
 git add -A && git commit -qm "gta init"

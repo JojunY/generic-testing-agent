@@ -15,12 +15,23 @@ class CapabilityRegistryTest {
     final CapabilityRegistry registry = CapabilityRegistry.loadBundled();
 
     @Test
-    void shouldActivateEveryCapabilityUpToP2AndKeepLaterPhasesExplainOnly() {
-        assertEquals("P2", CapabilityRegistry.CURRENT_PHASE);
-        for (String id : List.of("messaging", "scheduler", "spring-batch", "db-migration", "security", "caching")) {
+    void shouldActivateEveryCapabilityUpToP3AndKeepLaterPhasesExplainOnly() {
+        assertEquals("P3", CapabilityRegistry.CURRENT_PHASE);
+        for (String id : List.of(
+                "messaging",
+                "scheduler",
+                "spring-batch",
+                "db-migration",
+                "security",
+                "caching",
+                "webflux",
+                "grpc-api",
+                "graphql-api",
+                "workflow",
+                "beam-pipeline")) {
             assertTrue(registry.capability(id).activeIn(CapabilityRegistry.CURRENT_PHASE), id);
         }
-        assertFalse(registry.capability("grpc-api").activeIn(CapabilityRegistry.CURRENT_PHASE), "P3");
+        assertFalse(registry.capability("deployed-runtime").activeIn(CapabilityRegistry.CURRENT_PHASE), "P4");
     }
 
     @Test
@@ -53,9 +64,9 @@ class CapabilityRegistryTest {
     @Test
     void shouldLetARepositoryOptIntoALaterPhaseButNeverAnEarlierOne() {
         assertEquals(CapabilityRegistry.CURRENT_PHASE, CapabilityRegistry.effectivePhase(null));
-        assertEquals("P3", CapabilityRegistry.effectivePhase("P3"), "a pilot service previews P3");
+        assertEquals("P4", CapabilityRegistry.effectivePhase("P4"), "a pilot service previews P4");
         assertEquals(CapabilityRegistry.CURRENT_PHASE, CapabilityRegistry.effectivePhase("P0"), "never below current");
-        assertThrows(com.gta.core.error.GtaException.class, () -> CapabilityRegistry.effectivePhase("phase3"));
-        assertTrue(registry.capability("webflux").activeIn(CapabilityRegistry.effectivePhase("P3")));
+        assertThrows(com.gta.core.error.GtaException.class, () -> CapabilityRegistry.effectivePhase("phase4"));
+        assertTrue(registry.capability("deployed-runtime").activeIn(CapabilityRegistry.effectivePhase("P4")));
     }
 }

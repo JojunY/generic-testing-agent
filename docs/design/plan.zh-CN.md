@@ -1471,7 +1471,7 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 
 Gradle 构建（已实现）：`build.tool` 为 `auto`（默认）时，有 `build.gradle(.kts)` 而没有 `pom.xml` 的模块用 Gradle 构建（存在 `./gradlew` 时用它）。gtaw 不运行 Gradle，而是从脚本文本读取 Boot 插件版本、依赖、Java 版本和 `include` 的子项目；运行测试时使用它写到 `.gta/work/gradle/` 的 init 脚本，选择场景的 tag 并把结果目录传给 gta-junit；gtaw 从不修改服务的构建脚本。`build.module` 指定子项目（`:a:b:test`）。Test 任务的 JUnit XML 按 Surefire 的格式读取（其 testcase 以显示名命名、消息带异常类型，两者都会被规范化）。变异测试需要 Maven 的测试 classpath，所以 `gtaw mutate` 和 can-fail 检查对 Gradle 构建报告 `n/a`。
 
-仓库可以在 `.gta/config.json` 中用 `"phase": "P3"` 提前启用后续阶段（不能设为更早的阶段）：这些能力就会在对所有人开放前开始写测试。各阶段退出标准需要的试点服务，以及开放某阶段之前必须通过的 eval，都用这个设置。
+P3 是当前阶段，它的能力默认就会写测试。仓库可以在 `.gta/config.json` 中用 `"phase": "P4"` 提前启用后续阶段（不能设为更早的阶段）：这些能力就会在对所有人开放前开始写测试。各阶段退出标准需要的试点服务，以及开放某阶段之前必须通过的 eval，都用这个设置。
 
 标为*新增*的能力还没有注册表条目和 skill：每个都随自己的 skill、注册表条目、eval fixture 和 1 个试点服务一起交付。
 
@@ -1487,13 +1487,13 @@ Gradle 构建（已实现）：`build.tool` 为 `auto`（默认）时，有 `bui
 | 8 | 安全（Spring Security、OAuth2、JWT） | P2 | 自动写测试；skill 附加到有安全配置的服务的流程 |
 | 9 | 缓存（Spring Cache、Redis、Caffeine） | P2 | 自动写测试；skill 附加到使用缓存的服务的流程 |
 | 10 | Spring Batch | P2 | 自动写测试；每个 `@Bean Job` 是一个流程 |
-| 11 | 响应式 WebFlux | P3 | 开启 `phase: "P3"` 预览后自动写测试；返回 `Mono`/`Flux` 的 handler 是 `webflux` 流程 |
+| 11 | 响应式 WebFlux | P3 | 自动写测试；返回 `Mono`/`Flux` 的 handler 是 `webflux` 流程 |
 | 12 | Gradle 构建 | P3 | 已支持：读取 Groovy 和 Kotlin DSL 构建，测试经 Gradle 运行；`gtaw mutate` 和 can-fail 检查仍只支持 Maven |
 | 13 | GCP 数据（BigQuery、GCS） | P0 / P4 | 作为依赖使用 fake；SQL 从 P4 起在 system 层测试 |
-| 14 | gRPC | P3 | 开启 `phase: "P3"` 预览后自动写测试；继承生成的 `*ImplBase` 的每个 RPC 是一个流程 |
-| 15 | 工作流与状态机（Temporal、Camunda、Spring Statemachine） | P3 | 启用 `phase: "P3"` 预览后自动写测试；每个 Temporal `@WorkflowMethod` 实现、每个状态机的 transitions、每个 `*.bpmn` 流程都是一个流程 |
-| 16 | GraphQL | P3 | 开启 `phase: "P3"` 预览后自动写测试；`@QueryMapping`/`@MutationMapping` handler 是流程 |
-| 17 | Beam / Dataflow 管道 | P3 | 启用 `phase: "P3"` 预览后自动写测试；每个组合 `PTransform` 都是一个流程，用 `TestPipeline` 和 `PAssert` 在 DirectRunner 上运行 |
+| 14 | gRPC | P3 | 自动写测试；继承生成的 `*ImplBase` 的每个 RPC 是一个流程 |
+| 15 | 工作流与状态机（Temporal、Camunda、Spring Statemachine） | P3 | 自动写测试；每个 Temporal `@WorkflowMethod` 实现、每个状态机的 transitions、每个 `*.bpmn` 流程都是一个流程 |
+| 16 | GraphQL | P3 | 自动写测试；`@QueryMapping`/`@MutationMapping` handler 是流程 |
+| 17 | Beam / Dataflow 管道 | P3 | 自动写测试；每个组合 `PTransform` 都是一个流程，用 `TestPipeline` 和 `PAssert` 在 DirectRunner 上运行 |
 | 18 | 部署环境上的系统测试（Karate、Kubernetes） | P4 | 只有 skill |
 | 19 | WebSocket、STOMP、SSE | P4 | *新增* |
 

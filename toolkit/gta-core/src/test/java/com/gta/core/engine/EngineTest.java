@@ -396,8 +396,17 @@ class EngineTest {
     }
 
     @Test
-    void shouldWriteTestsForTheCapabilitiesOfP1AndP2() throws Exception {
-        for (String capability : List.of("scheduler", "messaging", "spring-batch", "db-migration")) {
+    void shouldWriteTestsForTheCapabilitiesOfP1ToP3() throws Exception {
+        for (String capability : List.of(
+                "scheduler",
+                "messaging",
+                "spring-batch",
+                "db-migration",
+                "webflux",
+                "grpc-api",
+                "graphql-api",
+                "workflow",
+                "beam-pipeline")) {
             Map<String, Object> out = nextOnApproved(capability);
 
             assertFalse(String.valueOf(out).contains("explain-only"), capability + ": " + out);
@@ -408,7 +417,7 @@ class EngineTest {
 
     @Test
     void shouldKeepLaterCapabilitiesExplainOnly() throws Exception {
-        Map<String, Object> out = nextOnApproved("grpc-api");
+        Map<String, Object> out = nextOnApproved("deployed-runtime");
 
         assertTrue(String.valueOf(out).contains("explain-only"), out.toString());
     }

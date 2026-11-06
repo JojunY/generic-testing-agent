@@ -192,7 +192,7 @@
     "phase": {
       "type": "string",
       "pattern": "^P[0-9]$",
-      "description": "Opt into a later roadmap phase early, e.g. P3"
+      "description": "Opt into a later roadmap phase early, e.g. P4"
     }
   }
 }
