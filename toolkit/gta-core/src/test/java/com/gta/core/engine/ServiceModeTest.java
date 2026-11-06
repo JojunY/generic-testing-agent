@@ -33,12 +33,14 @@ class ServiceModeTest {
         WorkState st = new WorkState();
         st.parked.add(pending("old.flow"));
 
-        assertTrue(ServiceMode.start(st, profile));
+        ServiceMode.start(st, profile);
 
         assertEquals("order.create", st.activeFlow);
         assertEquals(List.of("order.cancel", "order.get"), st.queue);
         assertTrue(st.parked.isEmpty(), "a new service run starts without old decisions");
-        assertFalse(ServiceMode.start(new WorkState(), new ServiceProfile()), "no flows");
+        WorkState none = new WorkState();
+        ServiceMode.start(none, new ServiceProfile());
+        assertNull(none.activeFlow, "no flows");
     }
 
     @Test

@@ -18,8 +18,8 @@ final class ServiceMode {
 
     private ServiceMode() {}
 
-    /** Queues every flow of the service, riskiest first, and makes the first one active; false when there is none. */
-    static boolean start(WorkState st, ServiceProfile profile) {
+    /** Queues every flow of the service, riskiest first, and makes the first one active (none: no active flow). */
+    static void start(WorkState st, ServiceProfile profile) {
         Set<String> flows = new LinkedHashSet<>();
         profile.entrypoints.stream()
                 .sorted(Comparator.comparingInt((ServiceProfile.EntryPoint e) -> -e.risk))
@@ -28,7 +28,6 @@ final class ServiceMode {
         st.parked.clear();
         st.pending = null;
         st.activeFlow = st.queue.isEmpty() ? null : st.queue.remove(0);
-        return st.activeFlow != null;
     }
 
     /**

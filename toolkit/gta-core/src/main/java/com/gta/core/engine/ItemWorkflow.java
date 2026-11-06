@@ -351,7 +351,7 @@ final class ItemWorkflow {
             s.questions.add(q);
             s.token = null; // the brief that asked is spent; the answer comes with a new one
             st.pending = ctx.prompts.authorQuestion(item, q.question, q.recommended);
-            st.event(false, "ev.question", item.isFoundation() ? item.id : item.ref);
+            st.event(false, "ev.question", item.label());
             store.save(st);
             return NodeResults.answerNode(st.pending);
         }
@@ -378,7 +378,7 @@ final class ItemWorkflow {
         q.answer = ok ? p.recommended : reply;
         st.pending = null;
         PlanItem item = store.planItem(p.itemId);
-        st.event(false, "ev.question.answered", item.isFoundation() ? item.id : item.ref);
+        st.event(false, "ev.question.answered", item.label());
         return result("answer recorded for " + p.itemId + "; run ./gtaw next for the author's new brief", null);
     }
 
@@ -658,7 +658,7 @@ final class ItemWorkflow {
             return needsHuman(st, item, s, "repair attempts exhausted (" + s.attempts + "): " + code.name());
         }
         st.move(s, ItemStatus.REPAIRING);
-        st.event(false, "ev.test.repair", item.isFoundation() ? item.id : item.ref, code.name());
+        st.event(false, "ev.test.repair", item.label(), code.name());
         Map<String, Object> more = new LinkedHashMap<>();
         more.put("code", code.name());
         more.put("attemptsLeft", config.budgets.maxAttemptsPerItem - s.attempts);
@@ -682,7 +682,7 @@ final class ItemWorkflow {
         }
         st.consecutiveFailures++;
         st.itemsThisSession++;
-        st.event(false, "ev.needs.human", item.isFoundation() ? item.id : item.ref, firstLines(reason, 1));
+        st.event(false, "ev.needs.human", item.label(), firstLines(reason, 1));
         ctx.escalations.writeEscalation(item, s, reason);
         return result("needs-human: " + item.id + " — " + reason, null);
     }
@@ -696,7 +696,7 @@ final class ItemWorkflow {
         st.sessionPassed.add(item.id);
         st.itemsThisSession++;
         st.consecutiveFailures = 0;
-        st.event(false, "ev.test.passed", item.isFoundation() ? item.id : item.ref);
+        st.event(false, "ev.test.passed", item.label());
         return result(
                 "passed: " + item.id + " (run " + runId + ", commit "
                         + (s.commit == null ? "-" : s.commit.substring(0, 7)) + ")",
