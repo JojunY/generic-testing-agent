@@ -1582,7 +1582,7 @@ P4 是当前阶段，它的能力（包括 `websocket`）默认就会写测试�
 | 16 | GraphQL | P3 | 自动写测试；`@QueryMapping`/`@MutationMapping` handler 是流程 |
 | 17 | Beam / Dataflow 管道 | P3 | 自动写测试；每个组合 `PTransform` 都是一个流程，用 `TestPipeline` 和 `PAssert` 在 DirectRunner 上运行 |
 | 18 | 部署环境上的系统测试（Karate、Kubernetes） | — | 不在范围内：团队自行测试 SIT 和 UAT（§7.7） |
-| 19 | WebSocket、STOMP、SSE | P4 | 能识别，有 `gta-testing-streaming-endpoints` skill；eval 通过后开始写测试 |
+| 19 | WebSocket、STOMP、SSE | P4 | 会写测试；STOMP handler、`WebSocketHandler` 和事件流（`SseEmitter`、`ServerSentEvent`、`text/event-stream`）都是 flow |
 
 Java：以 Java 17 及以上的服务为主进行设计，少数 Java 8 或 11 的服务也支持。测试按服务自身的语言版本编写，Spring Boot 2.2 到 2.7 使用 `javax.*` 导入。`gta-junit` 编译为 Java 8 字节码，旧服务也能加载；gtaw 本身运行在 JDK 17+ 上。旧服务的构建需要自己的 JDK 时，用 `build.javaHomeEnv` 指定存放该 JDK 路径的环境变量，Maven 会以该 `JAVA_HOME` 运行。CI 在 JDK 17、21、25 上构建 gta，每个新的 LTS 都会加入矩阵。`gtaw doctor` 对 Java 8 到 16 给出警告，更旧的报失败。
 

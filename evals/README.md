@@ -16,6 +16,7 @@ A small Spring Boot 4.1 service: a REST API to create, get, cancel and ship orde
 | D8 | `ArchiveJobConfig#archiveShipped` (spring-batch) | cancelled orders are archived too | same |
 | D9 | `V2__customer_tier.sql` (db-migration) | `>` instead of `>=`: 100 points stay BASIC | same, with `ref=file:` |
 | D17 | `QuoteController#requestQuote` (websocket, STOMP) | `>` instead of `>=`: an order of exactly 10 items gets no bulk discount | same, and the brief loads the streaming-endpoints skill |
+| D18 | `QuoteStreamController#ladder` (websocket, server-sent events) | the loop stops one tier early: the ladder never sends 20 items | same |
 
 ## Fixture: `fixtures/catalog-service`
 
@@ -64,8 +65,8 @@ the new endpoint catches D16, a human confirms it, and the report counts one cat
   `admin.purge-cancelled` (security), `price.update-price` (caching), `archive-job.archive-orders` (spring-batch) and
   `db.customer-tier` (db-migration), each from spec to approval, a passing scenario, and its seeded defect (D4-D9)
   triaged, confirmed and pinned;
-- then `quote.request-quote` (websocket, on by default since P4): a STOMP client against the random port
-  passes s01 and catches D17.
+- then the websocket flows (on by default since P4): `quote.request-quote`, where a STOMP client against the random
+  port passes s01 and catches D17, and `quote-stream.ladder`, where MockMvc reads the event stream and catches D18.
 
 `GTA_E2E_MODULE=order-service evals/e2e/run.sh` runs the same script with the fixture as a module of a multi-module
 repository (`build.module`); CI runs both.

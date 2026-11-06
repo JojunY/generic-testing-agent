@@ -1627,7 +1627,7 @@ registry entry, an eval fixture and one pilot service.
 | 16 | GraphQL | P3 | tests written; `@QueryMapping`/`@MutationMapping` handlers are flows |
 | 17 | Beam / Dataflow pipelines | P3 | tests written; each composite `PTransform` is a flow, run on the DirectRunner with `TestPipeline` and `PAssert` |
 | 18 | System tests on deployed environments (Karate, Kubernetes) | — | out of scope: teams test SIT and UAT themselves (§7.7) |
-| 19 | WebSocket, STOMP, SSE | P4 | detected, with the `gta-testing-streaming-endpoints` skill; tests are written once its eval passes |
+| 19 | WebSocket, STOMP, SSE | P4 | tests written; STOMP handlers, `WebSocketHandler`s and event streams (`SseEmitter`, `ServerSentEvent`, `text/event-stream`) are flows |
 
 Java: designed for services on Java 17 or newer, and a few on Java 8 or 11 are supported too. Tests are written at the
 service's own language level, with `javax.*` imports for Spring Boot 2.2 to 2.7. `gta-junit` is Java 8 bytecode, so an old

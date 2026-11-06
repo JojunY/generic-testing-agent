@@ -329,6 +329,9 @@ cap_flow db.customer-tier customer-tier.spec.md DbCustomerTierIT.java.txt \
 cap_flow quote.request-quote request-quote.spec.md QuoteControllerIT.java.txt \
   "${P}src/test/java/com/example/order/quote/QuoteControllerIT.java" "the bulk discount starts above 10 items instead of at 10 (D17)" \
   gta-testing-streaming-endpoints
+cap_flow quote-stream.ladder ladder.spec.md QuoteStreamControllerIT.java.txt \
+  "${P}src/test/java/com/example/order/quote/QuoteStreamControllerIT.java" "the ladder stops before the last tier (D18)" \
+  gta-testing-streaming-endpoints
 
 step "P1 and P2 session end"
 for _ in $(seq 1 5); do
@@ -337,7 +340,7 @@ for _ in $(seq 1 5); do
 done
 expect "$(jget "$OUT" 'd["node"]')" done "P1 and P2 session end"
 for f in shipping.ship-paid-orders loyalty.on-order-created admin.purge-cancelled price.update-price \
-         archive-job.archive-orders db.customer-tier quote.request-quote; do
+         archive-job.archive-orders db.customer-tier quote.request-quote quote-stream.ladder; do
   STATUS=$(gtaw status)
   expect "$(jget "$STATUS" '" ".join(sorted(set(i["status"] for i in d["items"] if i["id"].startswith("'"$f"'/"))))')" \
     "defect-found passed" "$f item states"

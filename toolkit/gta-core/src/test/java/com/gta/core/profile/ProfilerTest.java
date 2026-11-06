@@ -300,7 +300,7 @@ class ProfilerTest {
     }
 
     @Test
-    void shouldTurnStompHandlersAndWebSocketHandlersIntoWebsocketFlows() throws Exception {
+    void shouldTurnStompHandlersWebSocketHandlersAndEventStreamsIntoWebsocketFlows() throws Exception {
         source("com/acme/order/ws/PriceController.java", """
                 package com.acme.order.ws;
                 @Controller
@@ -312,6 +312,21 @@ class ProfilerTest {
                     @SubscribeMapping("/latest")
                     public PriceUpdate latest() { return null; }
                     public void helper() {}
+                }
+                """);
+        source("com/acme/order/ws/PriceStreamController.java", """
+                package com.acme.order.ws;
+                @RestController
+                @RequestMapping("/api/prices")
+                public class PriceStreamController {
+                    @GetMapping("/ticks")
+                    public SseEmitter ticks() { return null; }
+                    @GetMapping("/live")
+                    public Flux<ServerSentEvent<Price>> live() { return null; }
+                    @GetMapping(path = "/feed", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+                    public Flux<Price> feed() { return null; }
+                    @GetMapping("/all")
+                    public Flux<Price> all() { return null; }
                 }
                 """);
         source("com/acme/order/ws/EchoHandler.java", """
@@ -333,6 +348,10 @@ class ProfilerTest {
         assertEquals("STOMP subscribe /prices/latest", flows.get("price.latest").trigger);
         assertEquals(3, flows.get("price.latest").risk, "a subscription only reads");
         assertTrue(!flows.containsKey("price.helper"), "a method without a mapping is no flow");
+        assertEquals("websocket", flows.get("price-stream.ticks").capability, "SseEmitter is a stream");
+        assertEquals("websocket", flows.get("price-stream.live").capability, "Flux<ServerSentEvent> too");
+        assertEquals("websocket", flows.get("price-stream.feed").capability, "and produces text/event-stream");
+        assertEquals("webflux", flows.get("price-stream.all").capability, "a plain Flux stays webflux");
         assertEquals(
                 "websocket",
                 flows.values().stream()
