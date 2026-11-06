@@ -80,6 +80,11 @@ class GtaResultsListenerTest {
                 .anyMatch(l -> l.contains("\"method\":\"skipped\"") && l.contains("\"outcome\":\"skipped\"")));
         assertTrue(lines.stream()
                 .anyMatch(l -> l.contains("\"method\":\"pinned\"") && l.contains("\"outcome\":\"known-defect\"")));
+        assertTrue(
+                lines.stream()
+                        .anyMatch(
+                                l -> l.contains("\"method\":\"pinned\"") && l.contains("\"tags\":[\"known-defect\"]")),
+                "@KnownDefect carries the known-defect tag, so -Dgroups=known-defect selects the pins");
     }
 
     @Test

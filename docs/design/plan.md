@@ -1164,11 +1164,13 @@ from the agent: gtaw's rule repair adds or corrects them before a run.
 | `gta` and the layer (`unit`, `slice`, `component`, `contract`) | class | the plan item | the gate runs every `gta` test; select one layer |
 | `flow:<flowId>`, `scenario:<scenarioId>` | method | the spec | gtaw runs one scenario; traceability |
 | the intent: exactly one of `characterization`, `hardening`, `reproducing`, `catching` | method | the scenario's source and `hint.intent` | `-Dgroups=hardening` runs the tests of confirmed behaviour |
-| the priority: `p0`, `p1`, `p2` | method | the scenario's `priority` | `mvn verify -Dgroups=p0` runs the must-pass set when packaging or deploying, without gta |
+| the priority: `p0`, `p1`, `p2` | method | the scenario's `priority` (P1 when absent) | `mvn verify -Dgroups=p0` runs the must-pass set when packaging or deploying, without gta |
 | `known-defect` | method, automatic | `@KnownDefect` carries it (meta-annotation) | after a fix, `-Dgroups=known-defect` shows which pins to remove |
 
 - One expression syntax everywhere, JUnit tag expressions: `gtaw run --tags "p0 & component"` replaces `--layer`
-  (kept as an alias), and `gtaw impact` prints its regression scope as a ready `-Dgroups` expression.
+  (kept as an alias), and `gtaw impact` prints its regression scope as a ready `-Dgroups` expression (`groups`).
+- gtaw sets the intent and priority tags of the item's method before every run; tests written before P4 get them at
+  their next run, and `impact` names scenarios, so its expression also selects them.
 - Not tags, on purpose: the capability (the flow's spec has it), fidelity and duration (the report has them, and a
   duration tag would churn), owners (CODEOWNERS), and anything that skips or quarantines a test (§5.3).
 - Reserved: `remote`, for opt-in SIT/UAT tests (§15 P5).

@@ -116,4 +116,88 @@ final class RuleRepair {
         }
         return out;
     }
+
+    /** The intent tags (plan §9.5): every gta test method carries exactly one. */
+    static final List<String> INTENT_TAGS = List.of("characterization", "hardening", "reproducing", "catching");
+
+    private static final Pattern MANAGED_TAG =
+            Pattern.compile("[ \\t]*@Tag\\(\\s*\"(?:characterization|hardening|reproducing|catching|p[0-3])\"\\s*\\)");
+
+    /**
+     * Before every run (plan §9.5): the method tagged with the item's scenario carries exactly one intent tag and one
+     * priority tag, the plan's. Tags come from the spec and the plan, never from the author: wrong or duplicate ones are
+     * replaced. Assertions are never touched.
+     *
+     * @return what changed; empty when the tags were already right or the method has no scenario tag
+     */
+    static List<String> normalizeTags(Path testFile, PlanItem item) {
+        if (item.isFoundation() || item.intent == null || item.priority == null || !Files.exists(testFile)) {
+            return List.of();
+        }
+        try {
+            String text = Files.readString(testFile, StandardCharsets.UTF_8);
+            List<String> done = new ArrayList<>();
+            String fixed = normalizeTags(text, item, done);
+            if (!done.isEmpty()) {
+                AtomicFiles.write(testFile, fixed);
+            }
+            return done;
+        } catch (IOException e) {
+            return List.of();
+        }
+    }
+
+    static String normalizeTags(String text, PlanItem item, List<String> done) {
+        Matcher scenario = Pattern.compile("@Tag\\(\\s*\"scenario:" + Pattern.quote(item.ref) + "\"\\s*\\)")
+                .matcher(text);
+        if (!scenario.find()) {
+            return text;
+        }
+        List<String> lines = new ArrayList<>(List.of(text.split("\n", -1)));
+        int at = (int) text.substring(0, scenario.start())
+                .chars()
+                .filter(c -> c == '\n')
+                .count();
+        // the method's annotations: the lines starting with @ around the scenario tag
+        int first = at;
+        while (first > 0 && lines.get(first - 1).strip().startsWith("@")) {
+            first--;
+        }
+        int last = at;
+        while (last + 1 < lines.size() && lines.get(last + 1).strip().startsWith("@")) {
+            last++;
+        }
+        List<String> present = new ArrayList<>();
+        for (int i = first; i <= last; i++) {
+            Matcher tag = MANAGED_TAG.matcher(lines.get(i));
+            while (tag.find()) {
+                present.add(tag.group().strip());
+            }
+        }
+        String intentTag = "@Tag(\"" + item.intent + "\")";
+        String priorityTag = "@Tag(\"" + item.priority + "\")";
+        if (present.equals(List.of(intentTag, priorityTag))) {
+            return text;
+        }
+        String indent = lines.get(at)
+                .substring(
+                        0, lines.get(at).length() - lines.get(at).stripLeading().length());
+        List<String> block = new ArrayList<>();
+        for (int i = first; i <= last; i++) {
+            String line = MANAGED_TAG.matcher(lines.get(i)).replaceAll("");
+            if (!line.isBlank()) {
+                block.add(line);
+            }
+            if (i == at) {
+                block.add(indent + intentTag);
+                block.add(indent + priorityTag);
+            }
+        }
+        List<String> out = new ArrayList<>(lines.subList(0, first));
+        out.addAll(block);
+        out.addAll(lines.subList(last + 1, lines.size()));
+        done.add("set the tags of [" + item.ref + "] to " + item.intent + " and " + item.priority
+                + (present.isEmpty() ? "" : " (was " + String.join(" ", present) + ")"));
+        return String.join("\n", out);
+    }
 }

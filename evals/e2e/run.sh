@@ -149,6 +149,8 @@ echo "ok   production edit reverted"
 TOKEN=$(author s01)
 gtaw submit --item "$ITEM" --token "$TOKEN" >/dev/null
 review_accept s01
+grep -A2 'scenario:order.create-order/s01' "$TEST" | grep -q '@Tag("p[0-2]")' || fail "gtaw did not set the priority tag of s01"
+echo "ok   gtaw set the intent and priority tags"
 
 step "s02: the author asks instead of guessing, the person takes the recommendation"
 ITEM="order.create-order/s02#component-01"; TOKEN=$(author s02)

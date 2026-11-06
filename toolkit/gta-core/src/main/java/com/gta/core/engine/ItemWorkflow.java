@@ -419,6 +419,8 @@ final class ItemWorkflow {
                             + protectedHits
                             + ". Use embedded dependencies, WireMock or the configured test database instead");
         }
+        // tags come from the spec and the plan, never from the author (plan §9.5)
+        RuleRepair.normalizeTags(paths.testSource(item.testClass), item);
         String runId = Ids.newRunId(git.head());
         RunResult run = ctx.runs.runItem(runId, item, false, false);
         s.evidenceRunId = runId;

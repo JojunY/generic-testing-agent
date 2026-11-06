@@ -313,7 +313,10 @@ final class CaseLedgers {
         out.put("reasons", reasons);
         out.put("regressionScope", List.copyOf(scope));
         out.put("testClasses", List.copyOf(tests));
-        out.put("tags", scope.stream().map(id -> "scenario:" + id).toList());
+        List<String> tags = scope.stream().map(id -> "scenario:" + id).toList();
+        out.put("tags", tags);
+        // the same scope for a plain build (plan §9.5): mvn verify -Dgroups="<groups>"
+        out.put("groups", String.join(" | ", tags));
         out.put("changedClasses", List.copyOf(Impact.changedClasses(paths, changed)));
         return out;
     }

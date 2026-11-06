@@ -13,6 +13,8 @@ class OrderControllerIT {                  // tests of com.acme.order.api.OrderC
 
     @Test
     @Tag("flow:order.create") @Tag("scenario:order.create/s03")
+    @Tag("hardening")
+    @Tag("p1")
     @DisplayName("[order.create/s03] gateway silent for 3 seconds")
     void shouldRespond503WhenGatewayTimesOut() {
         // arrange: inputs that produce the WHEN
@@ -25,7 +27,7 @@ class OrderControllerIT {                  // tests of com.acme.order.api.OrderC
 ## Workflow
 
 1. Put the test in the class and package the brief names; reuse support classes from sibling tests.
-2. Tags: the layer (`unit`, `slice`, `component`, `contract`) and `gta` on the class; `flow:<flowId>` and `scenario:<scenarioId>` on each method (several flows of one source class share its test class); add `characterization` when the brief says the intent is characterization.
+2. Tags: the layer (`unit`, `slice`, `component`, `contract`) and `gta` on the class; `flow:<flowId>`, `scenario:<scenarioId>`, the intent and the priority the brief names on each method (several flows of one source class share its test class). gtaw sets the intent and priority tags before every run, so never choose them yourself; never tag a test to skip it.
 3. Naming: the brief names the class: `<SourceClass><Suffix>` in the source's package (`references/naming.md`). Methods `should<Outcome>When<Condition>()`; `@DisplayName("[<scenarioId>] …")`.
 4. Test data: builders or Instancio with a fixed seed (`references/test-data.md`); fixtures in the test class's folder `src/test/resources/<package path>/<TestClass>/`.
 5. Use `./gtaw check` until it compiles and runs, then `./gtaw submit`.

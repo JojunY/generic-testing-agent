@@ -433,12 +433,23 @@ public final class GtaCli implements Callable<Integer> {
         @Option(names = "--smoke")
         boolean smoke;
 
-        @Option(names = "--layer")
+        @Option(
+                names = "--tags",
+                description = "JUnit tag expression over the gta tags, e.g. \"p0 & component\" or \"hardening\"")
+        String tags;
+
+        @Option(names = "--layer", description = "One layer; the same as --tags <layer>")
         String layer;
 
         @Override
         public Integer call() {
-            RunResult r = engine(parent).runTests(smoke, layer);
+            if (tags != null && layer != null) {
+                throw new GtaException(
+                        ErrorCode.USAGE_INVALID_ARGUMENT,
+                        "--tags and --layer select the same thing",
+                        "Use --tags \"" + layer + " & <more>\"");
+            }
+            RunResult r = engine(parent).runTests(smoke, tags != null ? tags : layer);
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("runId", r.runId);
             out.put("tests", r.cases.size());

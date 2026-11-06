@@ -114,11 +114,25 @@ class PlannerTest {
     }
 
     @Test
-    void shouldMapRiskToPriority() {
-        assertEquals("p0", Planner.priority(9));
-        assertEquals("p1", Planner.priority(6));
-        assertEquals("p2", Planner.priority(3));
-        assertEquals("p3", Planner.priority(1));
+    void shouldTakeThePriorityTagFromTheScenario() {
+        Spec p0 = SpecParser.parseText(SpecTestData.CREATE_ORDER.replace(
+                "id=order.create/s01 source=observed", "id=order.create/s01 source=observed priority=P0"));
+
+        assertEquals(
+                "p0",
+                Planner.plan(p0, CapabilityRegistry.loadBundled(), profile()).get(1).priority);
+        assertEquals(
+                "p1",
+                Planner.plan(spec(), CapabilityRegistry.loadBundled(), profile())
+                        .get(1)
+                        .priority,
+                "a scenario without priority counts as P1");
+        assertEquals(
+                "p0",
+                Planner.plan(spec(), CapabilityRegistry.loadBundled(), profile())
+                        .get(0)
+                        .priority,
+                "seed");
     }
 
     @Test

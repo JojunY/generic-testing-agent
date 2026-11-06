@@ -140,6 +140,18 @@ class injects changed (directly or further down), or when a config key it cites 
 `./gtaw cases confirm-retired <ids>` (or `--all`). `./gtaw cases --rebuild` creates the ledgers for a service that
 already has approved specs. Test names follow [test-naming.md](test-naming.md).
 
+**Selecting tests by tag.** Every gta test carries tags from its spec: `gta`, the layer, `flow:<id>`, `scenario:<id>`,
+its intent (`characterization`, `hardening`, `reproducing`, `catching`) and its priority (`p0`, `p1`, `p2`); a pinned
+defect also carries `known-defect`. gtaw sets them, and they work without gta:
+
+```
+./gtaw run --tags "p0 & component"     # through gtaw
+mvn verify -Dgroups=p0                  # the must-pass set, e.g. before packaging
+mvn verify -Dgroups=known-defect        # after a fix: which pins to remove
+```
+
+`./gtaw impact` prints its regression scope as `groups`, ready for `-Dgroups="…"`.
+
 ## Configuration (optional)
 
 `.gta/config.json` overrides the defaults. Only the keys you set are used.

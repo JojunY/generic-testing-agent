@@ -67,7 +67,7 @@ public final class Planner {
                 item.testClass = testClass(source, layer, domain, flowName, profile);
                 item.ownsFiles.add(GtaPaths.testSourceRel(profile.module, item.testClass));
                 item.ownsFiles.add(GtaPaths.inModule(profile.module, fixtureFolder(item.testClass) + "/**"));
-                item.priority = priority(spec.risk());
+                item.priority = priority(s);
                 item.scenarioRevision = s.revision();
                 items.add(item);
             }
@@ -107,18 +107,14 @@ public final class Planner {
         return items;
     }
 
-    public static String priority(int risk) {
-        if (risk >= 9) {
-            return "p0";
-        }
-        if (risk >= 6) {
-            return "p1";
-        }
-        if (risk >= 3) {
-            return "p2";
-        }
-        return "p3";
+    /** The scenario's {@code priority} (P0 core path, P1 important branch, P2 edge case) as a tag; P1 when absent. */
+    public static String priority(Spec.Scenario s) {
+        String p = s.meta.getOr("priority", "P1").toLowerCase(java.util.Locale.ROOT);
+        return PRIORITY_TAGS.contains(p) ? p : "p1";
     }
+
+    /** The priority tags (plan §9.5). */
+    public static final List<String> PRIORITY_TAGS = List.of("p0", "p1", "p2");
 
     /** Test class suffix of each layer (docs/guides/test-naming.md); one test class per source class and suffix. */
     public static final Map<String, String> SUFFIX = Map.of(

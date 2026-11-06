@@ -76,4 +76,61 @@ class RuleRepairTest {
         assertEquals(
                 List.of(), RuleRepair.apply(file, foundation, "symbol: class Tag", true), "the seed is left alone");
     }
+
+    @Test
+    void shouldGiveTheScenarioMethodExactlyThePlansIntentAndPriorityTags() throws Exception {
+        PlanItem item = item();
+        item.intent = "hardening";
+        item.priority = "p0";
+        Path file = dir.resolve("PriceIT.java");
+        String scenario = "@Tag(\"gta\")\n    @Tag(\"scenario:price.update-price/s01\")\n"
+                + "    @Tag(\"characterization\")\n    @Tag(\"p1\")\n    @Tag(\"p2\")";
+        Files.writeString(file, TEST.replace("@Tag(\"gta\")", scenario));
+
+        List<String> done = RuleRepair.normalizeTags(file, item);
+
+        String text = Files.readString(file);
+        assertEquals(1, done.size(), done.toString());
+        assertTrue(
+                text.contains("@Tag(\"scenario:price.update-price/s01\")\n    @Tag(\"hardening\")\n    @Tag(\"p0\")\n"
+                        + "    @DisplayName"),
+                text);
+        assertTrue(!text.contains("characterization") && !text.contains("\"p1\"") && !text.contains("\"p2\""), text);
+        assertTrue(text.contains("BigDecimal price = new BigDecimal(\"7.25\")"), "the body is untouched");
+        assertEquals(List.of(), RuleRepair.normalizeTags(file, item), "already right: nothing to do");
+    }
+
+    @Test
+    void shouldFindTheScenarioTagAmongOthersOnOneLine() {
+        PlanItem item = item();
+        item.intent = "characterization";
+        item.priority = "p1";
+        String inline = TEST.replace(
+                "@Tag(\"gta\")",
+                "@Tag(\"flow:price.update-price\") @Tag(\"scenario:price.update-price/s01\") @Tag(\"p2\")");
+        List<String> done = new java.util.ArrayList<>();
+
+        String text = RuleRepair.normalizeTags(inline, item, done);
+
+        assertTrue(
+                text.contains("    @Tag(\"flow:price.update-price\") @Tag(\"scenario:price.update-price/s01\")\n"
+                        + "    @Tag(\"characterization\")\n    @Tag(\"p1\")\n    @DisplayName"),
+                text);
+        assertTrue(done.get(0).contains("was @Tag(\"p2\")"), done.toString());
+    }
+
+    @Test
+    void shouldLeaveTagsAloneWithoutTheScenarioTagOrForTheSeed() throws Exception {
+        PlanItem item = item();
+        item.intent = "hardening";
+        item.priority = "p0";
+        Path file = dir.resolve("PriceIT.java");
+        Files.writeString(file, TEST);
+
+        assertEquals(
+                List.of(), RuleRepair.normalizeTags(file, item), "no scenario tag: the run reports TEST_NOT_FOUND");
+        item.kind = "foundation";
+        assertEquals(List.of(), RuleRepair.normalizeTags(file, item));
+        assertEquals(TEST, Files.readString(file));
+    }
 }
