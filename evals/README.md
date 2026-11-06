@@ -92,7 +92,7 @@ Record the chosen models in `platforms/<platform>/mapping.yaml`.
 
 `e2e/run-adversarial.sh` plays an author that cheats on the items of `order.create-order` in `order-service`: it
 changes or removes an expected value, disables the test or skips it with an assumption, edits production code, forges a
-confirmation in the spec, names a production host and commits by itself. Each attack must be refused without gtaw
+confirmation in the spec and commits by itself. Each attack must be refused without gtaw
 committing the cheating test, and the run fails unless every one is caught (plan §14, metrics 3 and 4). CI runs it as
 `e2e (adversarial)`.
 

@@ -1002,14 +1002,13 @@ gta 要让从没用过它的开发者也能上手。人看到的所有内容都�
 ### 7.7 部署态（不在范围内）
 
 gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 Windows 启动服务，用自己的账号自行测试 SIT 和 UAT。gta 的职责是确保自己
-绝不触碰这些环境，尤其是生产环境：每次运行都会去掉云凭证以及开发者的 Spring profile 和配置变量；`safety.protectedHosts` 列出
-SIT、UAT 和生产环境的主机，gta 写的任何测试或 fixture 都不得出现这些主机（§13）。外部服务用 WireMock stub，再加上契约测试。以后可能加入使用者选择开启的 SIT/UAT 测试（§15 P5）；在那之前，这些主机和生产环境一样
-被拒绝。它们的设计已经确定：
+绝不触碰这些环境，尤其是生产环境：每次运行都会去掉云凭证以及开发者的 Spring profile 和配置变量；并且 test-author 和 reviewer
+的规则写明测试只在本地运行（§13）。不需要维护主机名单：agent 看到 URL 或 profile 文件里的 `prod`、`sit`、`uat` 就认得出来，认不出来的由环境隔离兜底。外部服务用 WireMock stub，再加上契约测试。以后可能加入使用者选择开启的 SIT/UAT 测试（§15 P5）。它们的设计已经确定：
 - 只在团队的部署流程中运行（`mvn verify -Dgroups=remote`）；gtaw 只在本地确认它们能编译、带有 `@Tag("remote")`，从不连接 SIT
   或 UAT，本地运行和门禁都排除 `remote`；
 - 默认只读；需要写入时必须在规格中标注，只能使用固定前缀（`gta-test-`）的数据，并且事后清理；
 - 凭证来自配置中指定名称的环境变量；gtaw 从不读取或记录它们的值；
-- 生产环境始终留在 `safety.protectedHosts` 中。
+- 生产环境永远不是选项。
 
 ### 7.8 数据库迁移
 
@@ -1256,7 +1255,6 @@ SIT、UAT 和生产环境的主机，gta 写的任何测试或 fixture 都不得
   "build": { "tool": "maven", "basePackage": "auto", "maven": "auto", "javaHomeEnv": null, "module": "" },
   "dispatch": "subagent",
   "output": { "language": "en" },
-  "safety": { "protectedHosts": [] },
   "spec": { "maxQuestionsPerRound": 5, "maxClarifyRounds": 2, "maxSubmitAttempts": 3, "source": "gta" },
   "environments": { "oracle": { "testUrl": null, "userEnv": "GTA_ORACLE_USER", "passwordEnv": "GTA_ORACLE_PASSWORD" } },
   "distribution": { "toolsUrl": "https://nexus.example.com/repository/gta-tools/" },
@@ -1502,7 +1500,7 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 | 测试完整性 | 禁止削弱断言、删除测试、加 `@Disabled`、把期望值改成实际值；由分流、期望值复核、oracle lock 和门禁共同强制执行 |
 | 供应链 | wrapper 校验 sha256，未锁定的 jar 拒绝运行；`doctor` 校验各受管文件的校验和 |
 | 提交 | gtaw 记录自己提交的 SHA；从不信任提交信息里的 trailer |
-| 云与凭证 | 每次运行：<br>- 把 `CLOUDSDK_CONFIG` 指向空的临时目录（运行后删除），并 unset `GOOGLE_APPLICATION_CREDENTIALS` 和 `KUBECONFIG`；<br>- 设置 `NO_GCE_CHECK=true`，把 `GCE_METADATA_HOST` 指向不可达的地址，以防 ADC 和 Workload Identity 回落到真实凭证；<br>- 去掉开发者的 Spring profile 和配置（`SPRING_PROFILES_ACTIVE`、`SPRING_CONFIG_*`、`SPRING_APPLICATION_JSON`，以及 `JAVA_TOOL_OPTIONS` 中的 `-Dspring.profiles…`/`-Dspring.config…`），所以设成 SIT、UAT 或生产环境的 shell 不会让测试选中那些配置；<br>- `safety.protectedHosts`：条目拥有的测试文件或 fixture 中出现受保护主机时，提交即被拒绝（`POLICY_PROTECTED_HOST`），Oracle 的 `testUrl` 指向受保护主机时配置无效；<br>- 结果中的密钥做脱敏。<br>没有 system 层：部署环境不在范围内（§7.7） |
+| 云与凭证 | 每次运行：<br>- 把 `CLOUDSDK_CONFIG` 指向空的临时目录（运行后删除），并 unset `GOOGLE_APPLICATION_CREDENTIALS` 和 `KUBECONFIG`；<br>- 设置 `NO_GCE_CHECK=true`，把 `GCE_METADATA_HOST` 指向不可达的地址，以防 ADC 和 Workload Identity 回落到真实凭证；<br>- 去掉开发者的 Spring profile 和配置（`SPRING_PROFILES_ACTIVE`、`SPRING_CONFIG_*`、`SPRING_APPLICATION_JSON`，以及 `JAVA_TOOL_OPTIONS` 中的 `-Dspring.profiles…`/`-Dspring.config…`），所以设成 SIT、UAT 或生产环境的 shell 不会让测试选中那些配置；<br>- 结果中的密钥做脱敏。<br>没有 system 层：部署环境不在范围内（§7.7） |
 | Prompt 注入 | 仓库内容、测试输出、外部响应一律当作数据，不当作指令 |
 | 审计 | git 中的规格（原话、渠道、修订号）、oracle 分片、升级记录、带 trailer 的 commit、PR 审批；CI artifact |
 
@@ -1550,7 +1548,7 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 | **P1 接入：多模块、事件、定时任务、PR 模式** | 多模块 Maven 服务（一次一个模块，Maven 以 `-pl <module> -am` 运行；已实现）；`messaging`（Kafka、Pub/Sub、JMS/MQ、RabbitMQ、SQS；已实现）；`scheduler`（`@Scheduled`、ShedLock、Quartz；已实现）；PR 模式：impact（方法、配置、bean 图；已实现）、alm-github CI 模板 `gta-gate.yml`（`gtaw init --ci`；已实现）、`gtaw next --mode pr`（受影响的流程标为 stale，并在一个会话内依次处理，PR 描述作为 documented 意图；已实现）、PR 评论、analyzing-change-impact；OpenCode 端到端 | 每个新能力各有 1 个试点服务跑通，另有 1 个多模块服务跑通；在真实 PR 上产出行为变更摘要，门禁上线（mutation 为 advisory） |
 | **P2 数据、安全与质量** | `db-migration`（Flyway、Liquibase；已实现）；`security`（Spring Security、OAuth2 resource server、JWT：已认证与被拒绝的路径、方法级安全；已实现）；`caching`（Spring Cache、Redis、Caffeine：命中、失效、读到旧值；已实现）；`spring-batch`（已实现）；`mutate` 和能失败检查（共用 PIT 集成；均已实现）；学习回路（已实现）；先规则后 LLM 的修复；`spec.source=openspec\|speckit`（已实现） | 每个新能力各有 1 个试点服务；mutation 在试点仓库校准后切换为 enforced |
 | **P3 响应式、Gradle、其他协议、catching** | `webflux`（用 `WebTestClient` 和 `StepVerifier` 测响应式端点和客户端）；Gradle 构建（在 Maven 之外增加第二个 `TestRunner` 和构建文件读取）；`grpc-api` 和 `graphql-api`；`workflow`（Temporal、Camunda、Spring Statemachine）；`beam-pipeline`；incident 模式（`gtaw next --mode incident --target <flowId> --intent "<报告>"`：报告以 `<flow>.incidents.md` 保存在规格旁边，并由一个 `hint.intent=reproducing` 场景引用；已实现）；catching 测试与 assessor（PR 模式下的 `hint.intent=catching` 场景；失败时 gtaw 在 PR 的 base 上再运行一次，若在 base 上也失败就拒绝 `product-defect`，再由 reviewer 评估、由人确认；报告统计 catching 命中数；已实现） | 每类各试点 1 个服务 |
-| **P4 易用性、生产环境防护、流式端点** | 按以下顺序：<br>- 易用性（§5.10、§9.5）：状态块和 `output.language`（`en`、`zh-CN`）；带推荐答案的问题和 `OK` 回复；test-author 的 `--question`；`/gta note`；覆盖整个服务、不因某个 flow 等人而停下的 service 模式；统一的 tag 词汇；<br>- 生产环境防护：每次运行去掉 Spring profile 和配置，`safety.protectedHosts`（已实现）；<br>- `websocket`（WebSocket、STOMP、SSE）：用 `gta-testing-streaming-endpoints` 在本地测试。<br>部署环境上的测试（`gtaw env`、Karate、Cloud Run/GKE/Dataflow 运行、BigQuery 临时数据集）不在范围内：团队自行测试 SIT 和 UAT（§7.7） | 一位没用过 gta 的开发者只靠 `/gta` 覆盖 1 个试点服务；衡量：每个 flow 的回复次数、用 `OK` 回答的比例、到第一个通过验证的测试所需的时间 |
+| **P4 易用性、生产环境防护、流式端点** | 按以下顺序：<br>- 易用性（§5.10、§9.5）：状态块和 `output.language`（`en`、`zh-CN`）；带推荐答案的问题和 `OK` 回复；test-author 的 `--question`；`/gta note`；覆盖整个服务、不因某个 flow 等人而停下的 service 模式；统一的 tag 词汇；<br>- 生产环境防护：每次运行去掉 Spring profile 和配置，以及 test-author 和 reviewer 的规则（已实现）；<br>- `websocket`（WebSocket、STOMP、SSE）：用 `gta-testing-streaming-endpoints` 在本地测试。<br>部署环境上的测试（`gtaw env`、Karate、Cloud Run/GKE/Dataflow 运行、BigQuery 临时数据集）不在范围内：团队自行测试 SIT 和 UAT（§7.7） | 一位没用过 gta 的开发者只靠 `/gta` 覆盖 1 个试点服务；衡量：每个 flow 的回复次数、用 `OK` 回答的比例、到第一个通过验证的测试所需的时间 |
 | **P5** | 暂缓，等有团队需要时再做：使用者选择开启的 SIT/UAT 测试（`@Tag("remote")`、`safety.remoteHosts`，默认关闭；生产环境永远禁止）、MCP 包装、SARIF、性能测试、并行编写、其他语言的适配器。<br>不计划（v11 决定）：hooks（早期拦截、`verified` 回答渠道）、插件分发、record-replay、native-image | 按需 |
 
 ### 能力顺序
@@ -1641,5 +1639,5 @@ Java：以 Java 17 及以上的服务为主进行设计，少数 Java 8 或 11 �
 | v8 | 按 Anthropic 的原语定义重新审计：<br>- 新增 agent / skill / workflow 的判定准则；<br>- 删去 system-tester（改为 test-author + skill），最终只有 4 个 agent；<br>- 不使用容器：新增 §7.0 依赖保真度策略；<br>- 门禁在本地运行，CI 可选；characterization 测试也受门禁保护；<br>- 根目录提供 `copilot/` 和 `opencode/` 两个文件夹；<br>- 增加模型映射；<br>- 针对只有代码、没有文档的现实做了调整 |
 | v9（最终版） | 按确认的环境定稿：<br>- Windows 开发机；<br>- Oracle（共享测试库 / H2 兼容模式）、BigQuery（fake，SQL 部分在 P4 测）；<br>- Pub/Sub 模拟器从 Nexus 分发、EmbeddedKafka、嵌入式 Artemis（MQ/JMS）；<br>- 所有依赖经 Nexus 代理，工具放在 Nexus 的 raw 仓库；<br>- P1 接入 alm-github CI 模板；<br>- 待确认问题清零 |
 | v9.1 | P0 已实现，完成两轮代码审查（见 [round-2-remediation.md](../reviews/round-2-remediation.md)）：<br>- 只有精确的批准才算批准，其他回复作为修改意见，展示后被改动的规格不予批准；<br>- 用提交账本代替 trailer，分片和状态失败即关闭，规格循环有上限，review 带 token，超时计入次数；<br>- 文档统一为英文，README 和本设计另有中文版；示意图由 `scripts/diagrams/render.py` 按 diagram-design 风格生成 |
-| v10 | P0 到 P3 已实现。P4 重新划定范围：<br>- 部署环境上的测试不在范围内：团队自行测试 SIT 和 UAT，gta 绝不触碰这些环境，尤其是生产环境（`safety.protectedHosts`、Spring profile 隔离）；<br>- 新手易用性：给人的统一状态块（`en` 或 `zh-CN`）、带推荐答案的问题和 `OK` 回复、`/gta note`、service 模式、统一的 tag 词汇（§5.10、§9.5） |
+| v10 | P0 到 P3 已实现。P4 重新划定范围：<br>- 部署环境上的测试不在范围内：团队自行测试 SIT 和 UAT，gta 绝不触碰这些环境，尤其是生产环境（Spring profile 隔离、agent 规则）；<br>- 新手易用性：给人的统一状态块（`en` 或 `zh-CN`）、带推荐答案的问题和 `OK` 回复、`/gta note`、service 模式、统一的 tag 词汇（§5.10、§9.5） |
 | v11 | P4 已实现并成为当前阶段。P5 精简：去掉 hooks、插件分发、record-replay 和 native-image；其余暂缓，等有团队需要时再做 |
