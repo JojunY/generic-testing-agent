@@ -58,4 +58,32 @@ class AnswerParserTest {
         }
         assertEquals(new AnswerParser.Approval("order.create", "R2"), AnswerParser.parse("  批准 order.create@R2。 "));
     }
+
+    @Test
+    void shouldReadOkAsTakingTheRecommendationsOnlyAtTheStart() {
+        AnswerParser.Answers ok = (AnswerParser.Answers) AnswerParser.parse("OK");
+        assertTrue(ok.onlyOk());
+
+        AnswerParser.Answers mixed = (AnswerParser.Answers) AnswerParser.parse("R2: ok, 2B");
+        assertTrue(mixed.acceptRecommended());
+        assertEquals(java.util.Map.of("2", "B"), mixed.picks());
+        assertEquals("R2", mixed.round());
+        assertTrue(((AnswerParser.Answers) AnswerParser.parse("好的")).onlyOk());
+
+        for (String notOk : java.util.List.of("not ok", "不同意", "不好")) {
+            assertThrows(
+                    GtaException.class, () -> AnswerParser.parse(notOk), notOk + " must not take the recommendations");
+        }
+    }
+
+    @Test
+    void shouldReadOwnAnswersAsFreeText() {
+        AnswerParser.Answers a =
+                (AnswerParser.Answers) AnswerParser.parse("OK\n2: retry twice, then answer 503 to 3A clients");
+
+        assertEquals(java.util.Map.of("2", "retry twice, then answer 503 to 3A clients"), a.ownAnswers());
+        assertTrue(a.picks().isEmpty(), "letters inside an own answer are not picks: " + a.picks());
+        assertTrue(a.acceptRecommended());
+        assertEquals(java.util.Map.of("2", "B"), ((AnswerParser.Answers) AnswerParser.parse("2: B")).picks());
+    }
 }

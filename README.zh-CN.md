@@ -21,7 +21,7 @@ gta 是一个面向 Java/Spring 服务、"先写规格再写测试"的测试 har
 ```
 /gta order.create
   → analyst 写出 .gta/specs/order/create.spec.md（EARS 需求、场景、Mermaid 图、问题）
-  → 你回答 "R1: 1B 其余默认"，然后回复 "批准 order.create@R2"（英文 "rest default"、"approve …" 同样有效）
+  → 每个问题都带推荐答案：你回复 "OK"（或 "OK, 2B"），再回复一次 "OK" 批准 R2
   → test author 编写 OrderCreateIT；gtaw 运行它、锁定期望值并提交
   → 与已确认期望不符的失败测试进入分流；确认的缺陷用 @KnownDefect 标注
   → 会话结束：稳定性运行、基于目标分支的质量门禁和报告

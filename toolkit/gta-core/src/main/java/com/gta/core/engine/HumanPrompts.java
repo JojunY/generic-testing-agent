@@ -7,43 +7,67 @@ import com.gta.core.plan.PlanItem;
 import com.gta.core.spec.Spec;
 import com.gta.core.state.WorkState;
 import com.gta.core.util.Ids;
+import java.util.List;
+import java.util.regex.Pattern;
 
 /** All human-facing text gtaw shows through the orchestrator: question rounds, approval and decision prompts. */
 final class HumanPrompts {
     private final GtaPaths paths;
+    private final Messages m;
 
     HumanPrompts(EngineContext ctx) {
         this.paths = ctx.paths;
+        this.m = Messages.of(ctx.config.output.language);
     }
 
+    /** The question round, every option spelled out, the recommended one marked (plan §3.5, §5.10). */
     String renderQuestions(Spec spec, String round) {
         StringBuilder b = new StringBuilder();
-        b.append("── ").append(spec.flowId()).append(" ").append(round).append(" questions (gtaw) ──\n");
-        b.append("Spec: ").append(paths.rel(spec.path)).append("\n");
-        for (Spec.Question q : spec.openQuestions()) {
+        List<Spec.Question> open = spec.openQuestions();
+        String count = open.size() == 1 ? m.t("questions.count.one") : m.t("questions.count.many", open.size());
+        b.append(m.t("questions.title", spec.flowId(), round, count)).append('\n');
+        b.append(m.t("spec", paths.rel(spec.path))).append("\n\n");
+        for (Spec.Question q : open) {
             b.append(q.number)
                     .append(". ")
-                    .append("high".equals(q.impact()) ? "[high] " : "")
+                    .append("high".equals(q.impact()) ? m.t("high") : "")
                     .append(q.text.replaceFirst("^\\[[^]]*]\\s*", ""))
                     .append('\n');
             for (Spec.Option o : q.options) {
-                b.append("     ").append(o.letter).append(") ").append(o.text).append('\n');
+                b.append("     ")
+                        .append(o.letter)
+                        .append(") ")
+                        .append(option(o))
+                        .append('\n');
             }
         }
         if (!spec.findings.isEmpty()) {
-            b.append("Findings:\n");
+            b.append(m.t("findings")).append('\n');
             spec.findings.forEach(f -> b.append("  - ")
                     .append(f.meta.getOr("kind", "finding"))
                     .append(": ")
                     .append(f.text)
                     .append('\n'));
         }
-        b.append("Reply like \"")
-                .append(round)
-                .append(": 1A 2B rest default\". High-impact questions need an explicit answer; ")
-                .append(
-                        "\"rest default\" picks the \"= current code\" option and only produces characterization tests.");
+        b.append('\n').append(m.t("questions.reply"));
         return b.toString();
+    }
+
+    private static final Pattern RECOMMENDED_MARK =
+            Pattern.compile("\\s*[(（]\\s*(?i:recommended|推荐|推薦)\\s*(?:[:：]\\s*([^)）]*))?[)）]\\s*");
+
+    /** The option's text with its {@code (recommended: why)} marker moved to the end as a pointer. */
+    String option(Spec.Option o) {
+        java.util.regex.Matcher r = RECOMMENDED_MARK.matcher(o.text);
+        String text = o.text;
+        String pointer = "";
+        if (r.find()) {
+            String why = r.group(1) == null ? "" : r.group(1).strip();
+            text = (o.text.substring(0, r.start()) + " " + o.text.substring(r.end())).strip();
+            pointer = why.isEmpty() ? m.t("recommended") : m.t("recommended.why", why);
+        }
+        text = text.replace("= current code", m.t("current.code"));
+        return text + pointer;
     }
 
     String renderApproval(Spec spec) {
@@ -57,27 +81,18 @@ final class HumanPrompts {
                 .filter(s -> s.source().equals("defaulted"))
                 .count();
         StringBuilder b = new StringBuilder();
-        b.append("── ").append(spec.flowId()).append("@").append(spec.rev()).append(" ready for approval ──\n");
-        b.append("Spec: ")
-                .append(paths.rel(spec.path))
-                .append(" — ")
-                .append(spec.requirements.size())
-                .append(" requirements, ")
-                .append(spec.scenarios().size())
-                .append(" scenarios (confirmed/documented ")
-                .append(confirmed)
-                .append(", observed ")
-                .append(observed)
-                .append(", defaulted ")
-                .append(defaulted)
-                .append(")\n");
-        b.append(
-                "Observed and defaulted scenarios become characterization tests (they lock current behaviour, not correctness).\n");
-        b.append("Reply \"approve ")
-                .append(spec.flowId())
-                .append("@")
-                .append(spec.rev())
-                .append("\" to approve, or say what to change.");
+        b.append(m.t("approval.title", spec.flowId(), spec.rev())).append('\n');
+        b.append(m.t(
+                        "approval.summary",
+                        paths.rel(spec.path),
+                        spec.requirements.size(),
+                        spec.scenarios().size()))
+                .append('\n');
+        b.append(m.t("approval.confirmed", confirmed)).append('\n');
+        if (observed + defaulted > 0) {
+            b.append(m.t("approval.locked", observed, defaulted)).append('\n');
+        }
+        b.append(m.t("approval.reply", spec.flowId(), spec.rev()));
         return b.toString();
     }
 
@@ -87,50 +102,50 @@ final class HumanPrompts {
         p.flowId = item.flowId;
         boolean defect = s.reason != null && s.reason.startsWith("defect:");
         p.type = defect ? "defect" : "escalation";
+        p.recommended = "A";
         StringBuilder b = new StringBuilder();
-        b.append("── ")
-                .append(item.id)
-                .append(defect ? " looks like a product defect" : " needs a human")
-                .append(" ──\n");
+        b.append(m.t(defect ? "defect.title" : "human.title", item.id)).append('\n');
         b.append(s.reason == null ? "" : s.reason.replaceFirst("^defect:\\s*", ""))
                 .append('\n');
         if (s.lastError != null && s.lastError.message != null) {
-            b.append("Last failure (")
-                    .append(s.lastError.code)
-                    .append("): ")
-                    .append(firstLines(s.lastError.message, 6))
+            b.append(m.t("last.failure", s.lastError.code, firstLines(s.lastError.message, 6)))
                     .append('\n');
         }
-        b.append("Escalation file: ")
-                .append(paths.rel(paths.escalations().resolve(Ids.itemKey(item.id) + ".md")))
-                .append("\n");
+        b.append(m.t("escalation.file", paths.rel(paths.escalations().resolve(Ids.itemKey(item.id) + ".md"))))
+                .append("\n\n");
         if (defect) {
-            b.append("  A) Confirm it is a defect (pin it with @KnownDefect and draft an issue)\n");
-            b.append("  B) The spec is wrong (back to review)\n");
-            b.append("  C) Retry\n");
+            b.append("  ")
+                    .append(m.t("defect.a"))
+                    .append(m.t("recommended.why", m.t("defect.why")))
+                    .append('\n');
+            b.append("  ").append(m.t("defect.b")).append('\n');
+            b.append("  ").append(m.t("defect.c")).append('\n');
         } else {
-            b.append("  A) Retry (after you fixed the cause)\n");
-            b.append("  B) Cancel this item\n");
+            b.append("  ")
+                    .append(m.t("escalation.a"))
+                    .append(m.t("recommended.why", m.t("escalation.why")))
+                    .append('\n');
+            b.append("  ").append(m.t("escalation.b")).append('\n');
         }
-        b.append("Reply with the letter.");
+        b.append(m.t("decision.reply"));
         p.prompt = b.toString();
         return p;
     }
 
-    /** Decision when the test class gta would write already exists and is not a gta test (plan §9.3, rule E5). */
+    /** Decision when the test class gta would write exists and is not a gta test (plan §9.3, rule E5). */
     WorkState.Pending namingConflict(PlanItem item, String lastAuthor) {
         WorkState.Pending p = new WorkState.Pending();
         p.type = "naming-conflict";
         p.itemId = item.id;
         p.flowId = item.flowId;
+        p.recommended = "A";
         String file = paths.testSourceRel(item.testClass);
-        p.prompt = "── " + item.id + ": the test class name is taken ──\n"
-                + "gta names this test " + file + " (one test class per source class and kind),\n"
-                + "but that file already exists and is not a gta test (last change by " + lastAuthor + ").\n"
-                + "  A) Let gta add its tests to that file (tagged gta; the diff shows every change to it)\n"
-                + "  B) Skip this test for now (the item is cancelled)\n"
-                + "  C) I renamed or moved my file: check again\n"
-                + "Reply with the letter.";
+        p.prompt = m.t("naming.title", item.id) + "\n"
+                + m.t("naming.body", file, lastAuthor) + "\n"
+                + "  " + m.t("naming.a") + m.t("recommended.why", m.t("naming.why")) + "\n"
+                + "  " + m.t("naming.b") + "\n"
+                + "  " + m.t("naming.c") + "\n"
+                + m.t("decision.reply");
         return p;
     }
 }

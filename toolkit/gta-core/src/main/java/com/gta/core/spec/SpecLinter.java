@@ -150,8 +150,13 @@ public final class SpecLinter {
                         qw
                                 + ": a normal-impact question needs an option marked '= current code' (picked by 'rest default')");
             }
+            if (!q.answered()
+                    && q.options.stream().filter(Spec.Option::isRecommended).count() != 1) {
+                issues.add(qw + ": mark exactly one option '(recommended: <why>)' - the answer you would pick, so"
+                        + " 'OK' can take it (plan §5.10)");
+            }
             for (Spec.Option o : q.options) {
-                if (!o.isCurrentCode() && !o.text.contains("→") && !o.text.contains("->")) {
+                if (!o.isCurrentCode() && !o.isOwnAnswer() && !o.text.contains("→") && !o.text.contains("->")) {
                     issues.add(qw + " option " + o.letter
                             + ": state the effect on THEN ('→ ...') or mark '= current code'");
                 }

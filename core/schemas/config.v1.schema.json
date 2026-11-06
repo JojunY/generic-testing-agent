@@ -82,6 +82,16 @@
         }
       }
     },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "language": {
+          "enum": ["en", "zh-CN"],
+          "description": "Language of what gta shows people: questions, prompts and the status block"
+        }
+      }
+    },
     "safety": {
       "type": "object",
       "additionalProperties": false,

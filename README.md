@@ -21,7 +21,7 @@ Coverage is not the goal. Tests should check what the service is *supposed* to d
 ```
 /gta order.create
   → analyst writes .gta/specs/order/create.spec.md (EARS requirements, scenarios, Mermaid diagram, questions)
-  → you answer "R1: 1B rest default", then "approve order.create@R2"   (Chinese replies such as 批准 work too)
+  → each question shows a recommended answer: you reply "OK" (or "OK, 2B"), then "OK" again to approve R2
   → test author writes OrderCreateIT; gtaw runs it, locks the expected values and commits it
   → a test that fails against a confirmed expectation is triaged; a confirmed defect is pinned with @KnownDefect
   → session end: stability runs, the quality gate against the base branch, and a report

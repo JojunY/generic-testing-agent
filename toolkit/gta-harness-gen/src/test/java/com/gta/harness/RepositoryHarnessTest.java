@@ -24,8 +24,13 @@ import org.junit.jupiter.api.Test;
 class RepositoryHarnessTest {
     static final Path REPO = Path.of("../..").toAbsolutePath().normalize();
     static final Pattern CJK = Pattern.compile("[\\u3000-\\u303f\\u4e00-\\u9fff\\uff00-\\uffef]+");
-    /** Chinese replies gtaw accepts (see docs/guides/quickstart.md) and the label of the language switch. */
-    static final Set<String> ALLOWED = Set.of("批准", "不批准", "其余默认", "其他默认", "代码现状", "简体中文");
+    /**
+     * Chinese replies and markers gtaw accepts (see docs/guides/quickstart.md), the full-width punctuation of their
+     * patterns, and the label of the language switch.
+     */
+    static final Set<String> ALLOWED = Set.of(
+            "批准", "不批准", "其余默认", "其他默认", "代码现状", "简体中文", "好", "好的", "确认", "確認", "同意", "不同意", "不好", "推荐", "推薦", "（推荐：",
+            "（", "）", "：");
 
     static final Set<String> TEXT =
             Set.of("md", "java", "yaml", "yml", "json", "txt", "sh", "cmd", "ps1", "xml", "tmpl", "properties", "py");
@@ -72,7 +77,8 @@ class RepositoryHarnessTest {
                         || rel.startsWith("opencode/") // generated from core/
                         || rel.contains("/src/test/") // tests of Chinese input
                         || rel.endsWith(".zh-CN.md")
-                        || rel.endsWith("spec/AnswerParser.java"); // the alias patterns themselves
+                        || rel.endsWith("spec/AnswerParser.java") // the alias patterns themselves
+                        || rel.endsWith("engine/Messages.java"); // the zh-CN messages of output.language (plan §11.5)
                 if (skipped || !(TEXT.contains(ext) || name.equals("gtaw"))) {
                     continue;
                 }

@@ -66,9 +66,10 @@ expect "$(jget "$OUT" 'd["rev"]')" R1 "spec revision"
 OUT=$(gtaw next)
 expect "$(jget "$OUT" 'd["type"]')" answer "question round"
 
-step "human answers R1: 1B (the threshold discount is a bug)"
-gtaw answer "R1: 1B" >/dev/null
+step "human takes the recommended answer (1B: the threshold discount is a bug)"
+gtaw answer "OK" >/dev/null
 grep -q 'id=order.create-order/s03 source=confirmed' .gta/specs/order/create-order.spec.md || fail "s03 not confirmed by gtaw"
+grep -q 'B(recommended)' .gta/specs/order/create-order.spec.md || fail "OK should be recorded as taking the recommendation"
 OUT=$(gtaw next)
 expect "$(jget "$OUT" 'd["node"]')" analyze "revision node"
 TOKEN=$(jget "$OUT" 'd["token"]')

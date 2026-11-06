@@ -28,6 +28,7 @@ public class GtaConfig {
     public Spec spec = new Spec();
     public Environments environments = new Environments();
     public Safety safety = new Safety();
+    public Output output = new Output();
     public Distribution distribution = new Distribution();
     public Budgets budgets = new Budgets();
     public QualityGates qualityGates = new QualityGates();
@@ -65,6 +66,11 @@ public class GtaConfig {
          * rewritten.
          */
         public String source = "gta";
+    }
+
+    /** What people read (plan §5.10): {@code en} or {@code zh-CN}. Specs, briefs, agents and code stay English. */
+    public static class Output {
+        public String language = "en";
     }
 
     /** gta tests run locally only; these hosts (SIT, UAT, production) must never appear in what gta writes or uses. */
@@ -135,6 +141,12 @@ public class GtaConfig {
     }
 
     void validate() {
+        if (!List.of("en", "zh-CN").contains(output.language)) {
+            throw new GtaException(
+                    ErrorCode.CONFIG_INVALID,
+                    "output.language must be en or zh-CN, not " + output.language,
+                    "Fix .gta/config.json");
+        }
         for (String host : safety.protectedHosts) {
             if (host == null || host.isBlank()) {
                 throw new GtaException(

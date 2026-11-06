@@ -51,13 +51,19 @@ final class Triage {
     }
 
     Map<String, Object> applyDecision(WorkState st, WorkState.Pending p, AnswerParser.Parsed parsed, String text) {
-        if (!(parsed instanceof AnswerParser.Choice c)) {
+        String letter;
+        if (parsed instanceof AnswerParser.Choice c) {
+            letter = c.letter();
+        } else if (parsed instanceof AnswerParser.Answers a && a.onlyOk() && p.recommended != null) {
+            letter = p.recommended; // OK takes the recommended option (plan §5.10)
+        } else {
             throw new GtaException(
-                    ErrorCode.USAGE_UNPARSEABLE_ANSWER, "Expected a single option letter", "Reply A, B or C");
+                    ErrorCode.USAGE_UNPARSEABLE_ANSWER,
+                    "Expected a single option letter",
+                    "Reply OK to take the recommended option, or the letter of another one");
         }
         WorkState.ItemState s = st.item(p.itemId);
         PlanItem item = store.planItem(p.itemId);
-        String letter = c.letter();
         String msg;
         if ("naming-conflict".equals(p.type)) {
             msg = switch (letter) {

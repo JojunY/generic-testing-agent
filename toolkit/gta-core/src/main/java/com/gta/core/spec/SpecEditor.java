@@ -69,6 +69,56 @@ public final class SpecEditor {
     }
 
     /** Ticks exactly one option of a question (all others are unticked). */
+    /**
+     * Adds a person's own answer to a question as a new, ticked option (plan §5.10) and returns its letter; the other
+     * options are unticked.
+     */
+    public String addOwnAnswer(String questionId, String answer) {
+        String[] lines = text.split("\\R", -1);
+        boolean inQuestion = false;
+        int lastOption = -1;
+        char next = 'A';
+        String indent = "   ";
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            if (line.contains("gta:") && line.contains("<!--")) {
+                if (inQuestion) {
+                    break;
+                }
+                inQuestion = CommentMeta.parse(line)
+                        .flatMap(m -> m.get("id"))
+                        .map(questionId::equals)
+                        .orElse(false);
+                continue;
+            }
+            if (line.trim().startsWith("## ")) {
+                if (inQuestion) {
+                    break;
+                }
+                continue;
+            }
+            if (inQuestion) {
+                Matcher o = OPTION.matcher(line);
+                if (o.find()) {
+                    lastOption = i;
+                    next = (char) (o.group(4).charAt(0) + 1);
+                    indent = line.substring(0, line.indexOf('-'));
+                    lines[i] = o.group(1) + " " + o.group(3);
+                }
+            }
+        }
+        if (lastOption < 0) {
+            throw new IllegalArgumentException("question " + questionId + " has no options");
+        }
+        String letter = String.valueOf(next);
+        String added = indent + "- [x] " + letter + ") "
+                + answer.replaceAll("\\s+", " ").strip() + " " + Spec.OWN_ANSWER;
+        java.util.List<String> out = new java.util.ArrayList<>(java.util.List.of(lines));
+        out.add(lastOption + 1, added);
+        text = String.join("\n", out);
+        return letter;
+    }
+
     public SpecEditor tick(String questionId, String letter) {
         String[] lines = text.split("\\R", -1);
         boolean inQuestion = false;

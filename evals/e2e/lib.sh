@@ -34,7 +34,7 @@ cap_flow() { # cap_flow <flowId> <spec> <test template> <test path> <triage reas
   expect "$(jget "$out" 'd["rev"]')" R1 "$flow spec revision"
   out=$(gtaw next)
   expect "$(jget "$out" 'd["type"]')" approve "$flow approval prompt"
-  gtaw answer "approve $flow@R1" >/dev/null
+  gtaw answer OK >/dev/null   # OK approves the revision the prompt shows
 
   out=$(cap_item "$flow/s01" "$layer")
   if [ -n "$skill" ]; then
@@ -57,7 +57,7 @@ cap_flow() { # cap_flow <flowId> <spec> <test template> <test path> <triage reas
   gtaw submit --review "$flow/s02#$layer-01" --token "$(jget "$out" 'd["token"]')" --verdict product-defect --reason "$reason" >/dev/null
   out=$(gtaw next)
   expect "$(jget "$out" 'd["type"]')" defect "$flow defect decision"
-  gtaw answer A >/dev/null
+  gtaw answer OK >/dev/null   # the recommended option: confirm the defect
   out=$(cap_item "$flow/s02" "$layer")   # the session may end on its item budget first
   token=$(jget "$out" 'd["token"]')
   fp=$(grep -o 'failure = "[0-9a-f]*"' "$(jget "$out" 'd["brief"]')" | head -1 | grep -o '[0-9a-f]\{12\}')
