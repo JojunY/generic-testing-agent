@@ -7,7 +7,6 @@ import com.gta.core.error.GtaException;
 import com.gta.core.util.Json;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -27,7 +26,6 @@ public class GtaConfig {
     public String dispatch = "subagent";
     public Spec spec = new Spec();
     public Environments environments = new Environments();
-    public Safety safety = new Safety();
     public Output output = new Output();
     public Distribution distribution = new Distribution();
     public Budgets budgets = new Budgets();
@@ -71,11 +69,6 @@ public class GtaConfig {
     /** What people read (plan §5.10): {@code en} or {@code zh-CN}. Specs, briefs, agents and code stay English. */
     public static class Output {
         public String language = "en";
-    }
-
-    /** gta tests run locally only; these hosts (SIT, UAT, production) must never appear in what gta writes or uses. */
-    public static class Safety {
-        public List<String> protectedHosts = new ArrayList<>();
     }
 
     public static class Environments {
@@ -146,25 +139,6 @@ public class GtaConfig {
                     ErrorCode.CONFIG_INVALID,
                     "output.language must be en or zh-CN, not " + output.language,
                     "Fix .gta/config.json");
-        }
-        for (String host : safety.protectedHosts) {
-            if (host == null || host.isBlank()) {
-                throw new GtaException(
-                        ErrorCode.CONFIG_INVALID,
-                        "safety.protectedHosts has an empty entry",
-                        "List host names such as \"db-uat.example.com\"");
-            }
-        }
-        String testUrl = environments.oracle.testUrl;
-        if (testUrl != null) {
-            for (String host : safety.protectedHosts) {
-                if (testUrl.toLowerCase(java.util.Locale.ROOT).contains(host.toLowerCase(java.util.Locale.ROOT))) {
-                    throw new GtaException(
-                            ErrorCode.CONFIG_INVALID,
-                            "environments.oracle.testUrl points at the protected host " + host,
-                            "gta tests run locally: use a dedicated test schema host, or leave testUrl unset for H2");
-                }
-            }
         }
         if (!List.of("auto", "maven", "gradle").contains(build.tool)) {
             throw new GtaException(

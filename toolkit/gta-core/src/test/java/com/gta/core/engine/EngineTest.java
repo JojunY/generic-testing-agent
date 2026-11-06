@@ -193,22 +193,6 @@ class EngineTest {
     }
 
     @Test
-    void shouldRefuseATestThatNamesAProtectedHostBeforeAnyRun() throws Exception {
-        Files.createDirectories(paths.gta());
-        Files.writeString(paths.config(), "{ \"safety\": { \"protectedHosts\": [\"orders-prod.acme.com\"] } }");
-        store.save(state(ItemStatus.AUTHORING));
-        Path test = root.resolve(paths.testSourceRel("com.acme.OrderCreateIT"));
-        Files.createDirectories(test.getParent());
-        Files.writeString(test, "class OrderCreateIT { String url = \"https://orders-prod.acme.com/api\"; }\n");
-
-        Map<String, Object> out = engine().submitItem(ITEM, TOKEN);
-
-        assertEquals(ErrorCode.POLICY_PROTECTED_HOST.name(), out.get("code"), out.toString());
-        assertEquals(0, runner.runs(), "a test that would reach production never runs");
-        assertEquals(ItemStatus.REPAIRING, item().status, "it goes back to the author");
-    }
-
-    @Test
     void shouldSendCommitsMadeOutsideGtawToAHuman() throws Exception {
         store.save(state(ItemStatus.AUTHORING));
         runner.then(outcome("passed"));

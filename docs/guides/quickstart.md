@@ -177,10 +177,6 @@ mvn verify -Dgroups=known-defect        # after a fix: which pins to remove
 - `build.tool`: `auto` (default) builds with Gradle when the service has `build.gradle(.kts)` and no `pom.xml`, otherwise
   with Maven; `maven` or `gradle` forces one. `build.gradle` names the Gradle executable (default: `./gradlew` when present).
   gta-junit writes its results to `target/gta-results/` in a Gradle build too: add it to `.gitignore`.
-- `safety.protectedHosts`: your SIT, UAT and production host names, for example `["orders-uat.acme.com", "db-prod.acme.com"]`.
-  gta tests run locally only: gtaw refuses any test or fixture it writes that names one of these hosts, and an Oracle
-  `testUrl` on one. It also drops your shell's Spring profile (`SPRING_PROFILES_ACTIVE`) and Spring config variables for
-  its runs. `gtaw doctor` warns until the list is set.
 - `build.javaHomeEnv`: for a service whose build needs an older JDK (for example Java 8 with Spring Boot 2), the name of an
   environment variable holding that JDK, such as `"JAVA8_HOME"`. Maven or Gradle then runs with that `JAVA_HOME`; gtaw itself still
   needs JDK 17 or newer.

@@ -65,17 +65,4 @@ class GtaConfigTest {
         GtaException e = assertThrows(GtaException.class, () -> load("{ \"build\": { \"tool\": \"ant\" } }"));
         assertEquals(ErrorCode.CONFIG_INVALID, e.code());
     }
-
-    @Test
-    void shouldRefuseAnOracleTestUrlOnAProtectedHost() throws Exception {
-        String hosts = "\"safety\": { \"protectedHosts\": [\"db-prod.acme.com\"] }";
-        assertEquals(java.util.List.of("db-prod.acme.com"), load("{ " + hosts + " }").safety.protectedHosts);
-
-        GtaException e = assertThrows(
-                GtaException.class,
-                () -> load("{ " + hosts + ", \"environments\": { \"oracle\": { \"testUrl\":"
-                        + " \"jdbc:oracle:thin:@//DB-PROD.acme.com:1521/orders\" } } }"));
-        assertEquals(ErrorCode.CONFIG_INVALID, e.code());
-        assertThrows(GtaException.class, () -> load("{ \"safety\": { \"protectedHosts\": [\" \"] } }"));
-    }
 }
