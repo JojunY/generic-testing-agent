@@ -1,6 +1,5 @@
 package com.gta.core.engine;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -108,15 +107,17 @@ class StatusBlockTest {
     }
 
     @Test
-    void shouldRecommendTheRiskiestFlowThatIsNotApprovedYet() {
+    void shouldRecommendWorkingOnEveryFlowRiskiestFirst() {
         List<Map<String, Object>> candidates = List.of(
                 Map.of("flowId", "order.create", "risk", 6, "spec", "approved"),
-                Map.of("flowId", "order.cancel", "risk", 6, "spec", "none"),
-                Map.of("flowId", "order.get", "risk", 2, "spec", "none"));
+                Map.of("flowId", "order.cancel", "risk", 6, "spec", "none"));
 
-        assertEquals("order.cancel", StatusBlock.recommendedFlow(candidates));
-        String pick = new StatusBlock(new EngineContext(root)).pick(candidates);
-        assertTrue(pick.contains("2. order.cancel (risk 6, spec: not written yet)  ← recommended"), pick);
-        assertTrue(pick.contains("Reply OK for the recommended flow"), pick);
+        String pick = new StatusBlock(new EngineContext(root)).pick(candidates, 12);
+
+        assertTrue(pick.contains("All 12 flows, riskiest first") && pick.contains("others  ← recommended"), pick);
+        assertTrue(
+                pick.contains("2. order.cancel (risk 6, spec: not written yet)\n"),
+                "no flow is recommended alone: " + pick);
+        assertTrue(pick.contains("Reply OK to work on all flows"), pick);
     }
 }

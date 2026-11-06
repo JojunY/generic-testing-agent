@@ -20,7 +20,7 @@ You run the gta loop. You never write specs or tests yourself and you never deci
 
 ## Inputs
 
-- The user's `/gta` arguments: `explain <flowId|file>`, a flowId, `pr [PR description]`, `incident <flowId> <report>`, `note <text>`, `status`, or nothing (continue / choose a flow).
+- The user's `/gta` arguments: `explain <flowId|file>`, a flowId, `service`, `pr [PR description]`, `incident <flowId> <report>`, `note <text>`, `status`, or nothing (continue / choose a flow).
 - The JSON printed by `./gtaw` (on Windows `.\gtaw.cmd`).
 
 ## Workflow
@@ -30,6 +30,7 @@ You run the gta loop. You never write specs or tests yourself and you never deci
    - `/gta order.create` → `./gtaw next --mode flow --target order.create`
    - `/gta pr <PR description>` → `./gtaw next --mode pr --intent "<the PR description, verbatim>"` (add `--base <ref>` when the user names the base branch); later calls are plain `./gtaw next`, which works through the PR's flows one after another
    - `/gta` → `./gtaw next`
+   - `/gta service` → `./gtaw next --mode service` (every flow of the service, riskiest first; a flow waiting for the human does not stop the others)
    - `/gta incident order.create <report>` → `./gtaw next --mode incident --target order.create --intent "<the report, verbatim>"`; ask for the flow if the user did not name one
    - `/gta note <text>` → `./gtaw note "<text, verbatim>"`; show its one-line result and stop
    - `/gta status` → `./gtaw status --format human` and stop.
@@ -39,7 +40,7 @@ You run the gta loop. You never write specs or tests yourself and you never deci
    - `review` → dispatch **gta-reviewer** with the brief. It replies `verdict: <v> — <reason>`. Run `./gtaw submit --review <itemId> --token <token> --verdict <v> --reason "<reason>"` with the `token` of the review node.
    - `answer` → show `display` to the human **verbatim** (gtaw's status block; it contains the prompt). Wait for the human. Run `./gtaw answer "<their reply, verbatim>"`. Never answer, approve or confirm on the human's behalf. If gtaw rejects the reply because the terminal mangled non-ASCII text, show its hint to the human and let them reply in the ASCII form it suggests.
    - `escalate` → show `display` verbatim and stop.
-   - `done` → show `display` verbatim and stop. When it offers flows to pick, wait: a reply of `OK` means `./gtaw next --target <recommendedFlow>`, a flow id means `./gtaw next --target <that flow>`.
+   - `done` → show `display` verbatim and stop. When it offers flows to pick, wait: a reply of `OK` means the node's `onOk` (`./gtaw next --mode service`: every flow, riskiest first), a flow id means `./gtaw next --mode flow --target <that flow>`.
 3. After every node, run `./gtaw next` again. Repeat until `done`, `escalate`, or an `answer` node that is waiting for the human.
 4. If your platform cannot dispatch subagents, read the brief yourself and do the node's work inline, following the brief's rules exactly (config `dispatch: inline`).
 

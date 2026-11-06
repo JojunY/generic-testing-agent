@@ -81,7 +81,8 @@ Open Copilot Chat (agent mode) or OpenCode in the service and type:
 
 | You type | What happens |
 |---|---|
-| `/gta` | continue, or list the riskiest flows to pick from |
+| `/gta` | continue, or list the flows; `OK` works on all of them (`service`) |
+| `/gta service` | every flow of the service, riskiest first; while one flow waits for your answer, gta goes on with the others and asks you once it cannot go on without you |
 | `/gta explain order.create` | write the behaviour spec and questions only, no tests |
 | `/gta order.create` | spec → questions → approval → tests for that flow |
 | `/gta pr <PR description>` | re-check and test the flows your branch changes, with the PR description as the intended behaviour |

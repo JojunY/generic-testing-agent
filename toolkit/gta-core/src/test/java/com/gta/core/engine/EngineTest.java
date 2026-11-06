@@ -731,6 +731,77 @@ class EngineTest {
             assertEquals(null, store.load().session);
         }
 
+        @Test
+        void shouldGoOnWithTheOtherFlowsWhileOneWaitsForAPersonInServiceMode() throws Exception {
+            Map<String, Object> pick = loop().next(null, null, null, false);
+            assertEquals("./gtaw next --mode service", pick.get("onOk"), "every flow is the recommendation");
+            assertTrue(String.valueOf(pick.get("display")).contains("riskiest first"), pick.toString());
+
+            Map<String, Object> first = loop().next("service", null, null, false);
+            assertEquals("analyze", first.get("node"), first.toString());
+            WorkState st = store.load();
+            List<String> all = new ArrayList<>(List.of(st.activeFlow));
+            all.addAll(st.queue);
+            assertTrue(all.size() > 2 && all.contains(FLOW), "every detected flow is queued: " + all);
+            // work on the order flow first, as if it were the riskiest
+            st.queue.remove(FLOW);
+            st.queue.add(0, st.activeFlow);
+            st.activeFlow = FLOW;
+            st.specWork.clear();
+            store.save(st);
+
+            Map<String, Object> out = loop().next(null, null, null, false);
+            assertEquals(FLOW, out.get("flowId"), out.toString());
+            Files.createDirectories(paths.spec(FLOW).getParent());
+            Files.copy(SCRIPTED.resolve("create-order.spec.md"), paths.spec(FLOW));
+            loop().submitSpec(FLOW, token(out));
+
+            Map<String, Object> other = loop().next(null, null, null, false);
+            assertEquals("analyze", other.get("node"), "the question waits, gta goes on: " + other);
+            String otherFlow = String.valueOf(other.get("flowId"));
+            assertTrue(!FLOW.equals(otherFlow), other.toString());
+            assertEquals(
+                    List.of(FLOW),
+                    store.load().parked.stream().map(p -> p.flowId).toList());
+
+            // nothing else can go on without the person: the parked question is asked
+            st = store.load();
+            st.queue.clear();
+            store.save(st);
+            loop().abort(otherFlow);
+            Map<String, Object> asked = loop().next(null, null, null, false);
+            assertEquals("answer", asked.get("node"), asked.toString());
+            assertEquals(FLOW, asked.get("flowId"));
+            assertTrue(store.load().parked.isEmpty());
+            loop().answer("OK");
+            assertEquals("analyze", loop().next(null, null, null, false).get("node"), "the order flow goes on");
+        }
+
+        @Test
+        void shouldTellThePersonWhichOtherFlowsWaitForThem() throws Exception {
+            loop().next("service", null, null, false);
+            WorkState st = store.load();
+            WorkState.Pending parked = new WorkState.Pending();
+            parked.type = "approve";
+            parked.flowId = "order.cancel-order";
+            parked.prompt = "approve?";
+            st.parked.add(parked);
+            WorkState.Pending now = new WorkState.Pending();
+            now.type = "approve";
+            now.flowId = st.activeFlow;
+            now.prompt = "approve this?";
+            st.pending = now;
+            st.queue.clear();
+            store.save(st);
+
+            Map<String, Object> out = loop().next(null, null, null, false);
+
+            assertTrue(
+                    String.valueOf(out.get("display"))
+                            .contains("Also waiting for you, asked after this one: order.cancel-order"),
+                    out.toString());
+        }
+
         private void session() throws Exception {
             // analyze: spec R1 with one high-impact question
             Map<String, Object> out = loop().next("flow", FLOW, null, false);

@@ -82,16 +82,21 @@ public final class Engine {
             WorkState st = store.load();
             Map<String, Object> recovered = ctx.sessions.touchSession(st, takeover);
             boolean startPr = "pr".equals(mode) && target == null;
+            boolean startService = ServiceMode.MODE.equals(mode) && target == null;
             if (mode != null) {
                 st.mode = mode;
             }
-            ServiceProfile profile = ensureProfile(target != null || startPr);
+            ServiceProfile profile = ensureProfile(target != null || startPr || startService);
             Map<String, Object> prScope = null;
             if ("incident".equals(mode)) {
                 startIncident(st, profile, target, intent);
             } else if (target != null) {
                 st.activeFlow = resolveTarget(target, profile);
                 st.pending = null;
+                st.queue.clear(); // one flow: what other modes queued or parked is asked again when they come back
+                st.parked.clear();
+            } else if (startService) {
+                ServiceMode.start(st, profile);
             } else if (startPr) {
                 prScope = ctx.pr.start(st, profile, base == null ? ctx.sessionEnd.defaultBase() : base, intent);
             }
@@ -123,15 +128,23 @@ public final class Engine {
         Messages m = ctx.status.messages();
         String display;
         switch (node) {
-            case "answer" ->
-                display = ctx.status.render(st, "state.waiting", String.valueOf(out.get("prompt")), m.t("next.reply"));
+            case "answer" -> {
+                List<String> waiting = ServiceMode.waitingFlows(st);
+                String needs = String.valueOf(out.get("prompt"))
+                        + (waiting.isEmpty() ? "" : "\n\n" + m.t("parked.more", String.join(", ", waiting)));
+                display = ctx.status.render(st, "state.waiting", needs, m.t("next.reply"));
+            }
             case "escalate" ->
                 display = ctx.status.render(st, "state.blocked", String.valueOf(out.get("message")), m.t("next.reply"));
             case "done" -> {
                 if (out.get("candidates") instanceof List<?> c && !c.isEmpty()) {
                     List<Map<String, Object>> candidates = (List<Map<String, Object>>) c;
-                    out.put("recommendedFlow", StatusBlock.recommendedFlow(candidates));
-                    display = ctx.status.render(st, "state.waiting", ctx.status.pick(candidates), m.t("next.pick"));
+                    out.put("onOk", "./gtaw next --mode service"); // the recommendation: every flow, riskiest first
+                    display = ctx.status.render(
+                            st,
+                            "state.waiting",
+                            ctx.status.pick(candidates, ((Number) out.get("flowCount")).intValue()),
+                            m.t("next.pick"));
                 } else if (out.get("report") != null) {
                     display = ctx.status.render(st, "state.done", null, m.t("next.report", out.get("report")));
                 } else {
@@ -177,12 +190,37 @@ public final class Engine {
         }
     }
 
+    /**
+     * The next node. In service mode a decision that waits for a person is parked while another queued flow can go
+     * on (plan §6), so a person's time goes to the questions only once gta cannot go on without them.
+     */
     private Map<String, Object> step(WorkState st, ServiceProfile profile, String base) {
+        Map<String, Object> out = flowStep(st, profile, base);
+        while ("answer".equals(out.get("node")) && ServiceMode.park(st)) {
+            out = flowStep(st, profile, base);
+        }
+        return out;
+    }
+
+    /**
+     * The active flow has nothing left to do: the next queued flow, else (service mode) a parked decision, else null.
+     */
+    private Map<String, Object> moveOn(WorkState st, ServiceProfile profile, String base) {
+        String queued = PrMode.advance(st);
+        if (queued != null) {
+            st.activeFlow = queued;
+            return step(st, profile, base);
+        }
+        return ServiceMode.unpark(st) ? answerNode(st.pending) : null;
+    }
+
+    private Map<String, Object> flowStep(WorkState st, ServiceProfile profile, String base) {
         if (st.pending != null) {
             return answerNode(st.pending);
         }
         if (st.activeFlow == null) {
-            return chooseFlow(profile);
+            Map<String, Object> other = moveOn(st, profile, base); // service mode goes on after an aborted flow
+            return other != null ? other : chooseFlow(profile);
         }
         String flowId = st.activeFlow;
         Path specPath = paths.spec(flowId);
@@ -247,14 +285,17 @@ public final class Engine {
             return answerNode(p);
         }
         if (!"approved".equals(spec.status())) {
-            String queued = PrMode.advance(st);
-            if (queued != null) {
-                st.activeFlow = queued;
-                return step(st, profile, base);
+            Map<String, Object> other = moveOn(st, profile, base);
+            if (other != null) {
+                return other;
             }
             return done("Flow " + flowId + " is " + spec.status() + "; nothing to do", null);
         }
         if (explainOnly) {
+            Map<String, Object> other = ServiceMode.MODE.equals(st.mode) ? moveOn(st, profile, base) : null;
+            if (other != null) {
+                return other; // the spec is the documentation; nothing to test in this phase
+            }
             return done(
                     "Capability " + capability + " is explain-only in "
                             + CapabilityRegistry.effectivePhase(config.phase) + " (active from " + cap.since
@@ -269,11 +310,12 @@ public final class Engine {
         if (next.node() != null) {
             return next.node();
         }
-        if (next.sessionOverReason().startsWith("all items of")) {
-            String queued = PrMode.advance(st); // PR mode: the next affected flow, in the same session
-            if (queued != null) {
-                st.activeFlow = queued;
-                return step(st, profile, base);
+        boolean flowDone = next.sessionOverReason().startsWith("all items of")
+                || (ServiceMode.MODE.equals(st.mode) && next.sessionOverReason().startsWith("remaining items"));
+        if (flowDone) {
+            Map<String, Object> other = moveOn(st, profile, base); // the next flow, in the same session
+            if (other != null) {
+                return other;
             }
         }
         return ctx.sessionEnd.finishSession(st, next.sessionOverReason(), base);
@@ -299,8 +341,12 @@ public final class Engine {
         Map<String, Object> extra = new LinkedHashMap<>();
         extra.put(
                 "message",
-                "No flow selected. Ask the human which flow to work on, then run ./gtaw next --target <flowId>");
+                "No flow selected. Show display; on OK run ./gtaw next --mode service (every flow, riskiest first),"
+                        + " on a flow id ./gtaw next --mode flow --target <flowId>");
         extra.put("candidates", candidates);
+        extra.put(
+                "flowCount",
+                profile.entrypoints.stream().map(e -> e.flowId).distinct().count());
         return node("done", extra);
     }
 
@@ -432,6 +478,8 @@ public final class Engine {
             if (st.pending != null && flowId.equals(st.pending.flowId)) {
                 st.pending = null;
             }
+            st.parked.removeIf(p -> flowId.equals(p.flowId));
+            st.queue.remove(flowId);
             if (flowId.equals(st.activeFlow)) {
                 st.activeFlow = null;
             }

@@ -87,7 +87,7 @@ class PrModeTest {
     @Test
     void shouldMoveToTheNextQueuedFlowOnlyInPrMode() {
         WorkState st = new WorkState();
-        st.prQueue = new ArrayList<>(List.of("order.cancel"));
+        st.queue = new ArrayList<>(List.of("order.cancel"));
         assertNull(PrMode.advance(st), "flow mode never jumps to another flow");
         st.mode = "pr";
         assertEquals("order.cancel", PrMode.advance(st));

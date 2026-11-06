@@ -252,7 +252,7 @@ public final class GtaCli implements Callable<Integer> {
         @CommandLine.ParentCommand
         GtaCli parent;
 
-        @Option(names = "--mode", description = "explain | flow | pr | incident")
+        @Option(names = "--mode", description = "service | explain | flow | pr | incident")
         String mode;
 
         @Option(names = "--target", description = "flowId (e.g. order.create) or a source file/class name")

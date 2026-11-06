@@ -8,10 +8,11 @@ Run the gta loop for this repository. Arguments from the user: {{args}}
 
 - `explain <flowId|file>` — write a behaviour spec and questions only (read-only for code)
 - `<flowId>` — spec, questions, approval, then tests for that flow
+- `service` — every flow of the service, riskiest first; while one flow waits for your answer, gta goes on with the others
 - `pr [PR description]` — the flows this branch changes: re-check their specs against the diff and the description, then test them
 - `incident <flowId> <report>` — turn a reported incident into a reproducing test that fails on today's code; the fix stays with the developers
 - `note <text>` — tell gta something about the service (a rule, a known quirk); gta keeps it in `.gta/notes.md` and its specs cite it
 - `status` — show flows, items and what is waiting for the human
-- nothing — continue the current work, or list the riskiest flows to choose from
+- nothing — continue the current work, or list the flows with `service` recommended
 
 Follow your agent instructions: call `./gtaw next` (Windows: `.\gtaw.cmd next`), dispatch nodes, show gtaw prompts verbatim, and pass the human's replies verbatim to `./gtaw answer`.

@@ -893,11 +893,11 @@ to `.gta/notes.md`, committed by gtaw. Analyst briefs list the notes, and a scen
 
 ## 6. Modes
 
-Usage: `/gta [explain|pr|incident|note|status] [notes]`. Without arguments it continues the work in progress, or starts service mode.
+Usage: `/gta [service|explain|pr|incident|note|status] [notes]`. Without arguments it continues the work in progress, or offers service mode as the recommendation.
 
 | Mode | Flow (D = gtaw, A = agent, H = human) | Output |
 |---|---|---|
-| `service` (P4; `/gta` with nothing in progress) | D profile → overview of the flows found, by kind and risk → H picks, with a recommendation (all, riskiest first) → the flows are queued and each runs as in flow mode. A flow waiting for a person does not stop the others: gtaw goes on with the next one and comes back when the answer arrives | specs, tests and ledgers for the whole service |
+| `service` (P4; `/gta` with nothing in progress) | D profile → overview of the flows found, by kind and risk → H picks, with a recommendation (all, riskiest first) → the flows are queued and each runs as in flow mode. A flow waiting for a person does not stop the others: gtaw parks its decision, goes on with the next flow, and asks the parked decisions, oldest first, once no queued flow can go on without the person; the status block names the flows still waiting. `gtaw next --mode service` | specs, tests and ledgers for the whole service |
 | `explain <flowId\|path>` | D profile → A analyst | overview diagram, sequence diagram, draft spec, questions; read-only. After answers and approval it turns into flow mode |
 | default (flow) | D → A analyst → H answers → H approves → D plan → loop (A test-author ⇄ D check → D submit → A reviewer) → D verify → D report | tests, oracle shards, report |
 | `pr` | D impact: diff → affected methods, config keys and beans (following injection) → flows, marked `stale`<br>→ A analyst: the PR description is a `documented` intent; questions only where the intent is unclear<br>→ H approves (also possible in the PR) → then as above | tests, PR comment (behaviour change summary, findings, new confirmations, unmapped changes) |

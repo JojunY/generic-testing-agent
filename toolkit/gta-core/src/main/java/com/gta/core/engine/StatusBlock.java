@@ -92,37 +92,27 @@ final class StatusBlock {
                 .count();
     }
 
-    /** The flow candidates as a decision with the riskiest flow without an approved spec recommended. */
-    String pick(List<Map<String, Object>> candidates) {
+    /**
+     * The flow candidates as a decision. Working on all of them, riskiest first (service mode, plan §6), is recommended:
+     * flows that wait for a person do not stop the others.
+     */
+    String pick(List<Map<String, Object>> candidates, int allFlows) {
         StringBuilder b = new StringBuilder(m.t("pick.title")).append('\n');
-        String recommended = recommendedFlow(candidates);
+        b.append(m.t("pick.all", allFlows)).append(m.t("recommended")).append('\n');
         for (int i = 0; i < candidates.size(); i++) {
             Map<String, Object> c = candidates.get(i);
             String spec = String.valueOf(c.get("spec"));
             b.append(m.t(
-                    "pick.item",
-                    i + 1,
-                    c.get("flowId"),
-                    ((Number) c.get("risk")).intValue(),
-                    "none".equals(spec) ? m.t("spec.none") : m.has("spec." + spec) ? m.t("spec." + spec) : spec));
-            if (c.get("flowId").equals(recommended)) {
-                b.append(m.t("recommended"));
-            }
-            b.append('\n');
+                            "pick.item",
+                            i + 1,
+                            c.get("flowId"),
+                            ((Number) c.get("risk")).intValue(),
+                            "none".equals(spec)
+                                    ? m.t("spec.none")
+                                    : m.has("spec." + spec) ? m.t("spec." + spec) : spec))
+                    .append('\n');
         }
         return b.append(m.t("pick.reply")).toString();
-    }
-
-    /** The riskiest candidate that is not approved yet; candidates come riskiest first. */
-    static String recommendedFlow(List<Map<String, Object>> candidates) {
-        return candidates.stream()
-                .filter(c -> !"approved".equals(c.get("spec")))
-                .map(c -> String.valueOf(c.get("flowId")))
-                .findFirst()
-                .orElse(
-                        candidates.isEmpty()
-                                ? null
-                                : String.valueOf(candidates.get(0).get("flowId")));
     }
 
     Messages messages() {
