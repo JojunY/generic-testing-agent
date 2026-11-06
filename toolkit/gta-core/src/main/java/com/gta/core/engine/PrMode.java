@@ -71,10 +71,11 @@ final class PrMode {
                 unmapped.add(cls);
             }
         }
-        st.prQueue = new ArrayList<>(flows);
+        st.queue = new ArrayList<>(flows);
+        st.parked.clear();
         st.prBase = base;
         st.prIntent = intent == null || intent.isBlank() ? null : intent.strip();
-        st.activeFlow = st.prQueue.isEmpty() ? null : st.prQueue.remove(0);
+        st.activeFlow = st.queue.isEmpty() ? null : st.queue.remove(0);
         st.pending = null;
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("base", base);
@@ -84,8 +85,10 @@ final class PrMode {
         return out;
     }
 
-    /** The next queued flow once the active one has nothing left to do in this session, or null. */
+    /** PR and service mode: the next queued flow once the active one has nothing left to do, or null. */
     static String advance(WorkState st) {
-        return "pr".equals(st.mode) && !st.prQueue.isEmpty() ? st.prQueue.remove(0) : null;
+        return ("pr".equals(st.mode) || ServiceMode.MODE.equals(st.mode)) && !st.queue.isEmpty()
+                ? st.queue.remove(0)
+                : null;
     }
 }

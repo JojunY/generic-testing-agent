@@ -81,7 +81,8 @@ java -jar gta-cli-<version>.jar --root path/to/service init --platform copilot \
 
 | 输入 | 效果 |
 |---|---|
-| `/gta` | 继续，或列出风险最高的流程供你选择 |
+| `/gta` | 继续，或列出流程；回复 `OK` 就处理全部流程（`service`） |
+| `/gta service` | 处理服务的全部流程，风险高的先做；某个流程等你回答时，gta 先做其他流程，等到没有你就无法继续时再问你 |
 | `/gta explain order.create` | 只写行为 spec 和问题，不写测试 |
 | `/gta order.create` | spec → 提问 → 批准 → 为该流程写测试 |
 | `/gta pr <PR 描述>` | 以 PR 描述为预期行为，重新检查并测试本分支改动到的流程 |

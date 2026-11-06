@@ -1,5 +1,6 @@
 package com.gta.core.state;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.gta.core.change.Baseline;
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
@@ -25,8 +26,14 @@ public class WorkState {
     public List<String> pendingReview = new ArrayList<>();
     public boolean sessionEnded;
     public Map<String, SpecWork> specWork = new LinkedHashMap<>();
-    /** PR mode (plan §6): the affected flows still to work on, after the active one. */
-    public List<String> prQueue = new ArrayList<>();
+    /** PR and service mode (plan §6): the flows still to work on, after the active one. */
+    @JsonAlias("prQueue")
+    public List<String> queue = new ArrayList<>();
+    /**
+     * Service mode: decisions of flows that wait for a person while gta works on the other flows; each is asked once
+     * nothing else can go on without a person.
+     */
+    public List<Pending> parked = new ArrayList<>();
     /** PR mode: the base the branch is compared with; catching tests are also run on it. */
     public String prBase;
     /** PR mode: the PR description, a documented intent for the analyst. */
