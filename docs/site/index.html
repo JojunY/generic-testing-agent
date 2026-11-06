@@ -3,25 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>gta — tests that find bugs</title>
-  <meta name="description" content="gta reads a Spring service, asks what the code cannot tell, locks the expected values and catches what is wrong. Inside GitHub Copilot or OpenCode.">
-  <meta name="theme-color" content="#08090a">
+  <title>gta — AI writes the tests. gtaw keeps them honest.</title>
+  <meta name="description" content="gta reads your Spring service, asks what the code cannot tell, locks your answers as expected values and reports real bugs instead of hiding them. Inside GitHub Copilot and OpenCode.">
+  <meta name="theme-color" content="#09090b">
   <meta name="color-scheme" content="dark">
   <link rel="alternate" hreflang="zh-CN" href="index.zh-CN.html">
   <link rel="stylesheet" href="site.css">
-  <noscript><style>.reveal, .load { opacity: 1; transform: none; animation: none; }</style></noscript>
+  <script>document.documentElement.classList.add('js')</script>
 </head>
 <body>
 
 <nav class="nav">
   <div class="wrap">
-    <a class="brand" href="#top" aria-label="gta home">
-      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x=".75" y=".75" width="20.5" height="20.5" rx="6" fill="none" stroke="#fff" stroke-opacity=".28"/><path d="M6.5 11.4l3 3 6-6.8" fill="none" stroke="#8b9cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      gta
-    </a>
+    <a class="brand" href="#top" aria-label="gta home"><span class="dots" aria-hidden="true"><i style="background:var(--orchestrator)"></i><i style="background:var(--analyst)"></i><i style="background:var(--author)"></i><i style="background:var(--reviewer)"></i></span>gta</a>
     <div class="links">
       <a class="hide-sm" href="#how">How it works</a>
-      <a class="hide-sm" href="#trust">Why trust it</a>
+      <a class="hide-sm" href="#cheat">Try to cheat</a>
       <a class="hide-sm" href="#start">Get started</a>
       <a class="lang" href="index.zh-CN.html" hreflang="zh-CN" lang="zh-CN">简体中文</a>
     </div>
@@ -29,191 +26,333 @@
 </nav>
 
 <header class="hero" id="top">
-  <canvas id="field" aria-hidden="true"></canvas>
+  <div class="ruler top" aria-hidden="true"><canvas></canvas></div>
+  <div class="ruler left" aria-hidden="true"><canvas></canvas></div>
   <div class="wrap">
-    <div class="badge load"><b>Spring Boot 2.2 – 4</b> GitHub Copilot · OpenCode</div>
-    <h1 class="load d1">Tests that find bugs, not just coverage.</h1>
-    <p class="sub load d2">gta reads your Spring service, asks you what the code cannot tell, locks what you expect, and catches what is wrong.</p>
-    <div class="cta load d3">
+    <div class="chip later"><span class="team" aria-hidden="true"><i style="background:var(--orchestrator)"></i><i style="background:var(--analyst)"></i><i style="background:var(--author)"></i><i style="background:var(--reviewer)"></i></span>4 agents at work on a Spring service</div>
+    <h1 aria-label="AI writes the tests. gtaw keeps them honest."><span class="ai">AI writes the tests.</span><br><span class="det">gtaw keeps them honest.</span></h1>
+    <p class="sub later l2">gta reads your Spring service, asks you what the code cannot tell, locks your answers as the expected values, and reports real bugs instead of hiding them. It runs inside GitHub Copilot and OpenCode.</p>
+    <div class="cta later l3">
       <a class="btn primary" href="#start">Get started <span class="arrow">→</span></a>
-      <a class="btn" href="#how">How it works</a>
+      <a class="btn" href="#problem">See why it matters</a>
     </div>
+    <div class="facts-line later l4"><span>Spring Boot 2.2 – 4.1</span><span>Java 8+</span><span>Maven &amp; Gradle</span><span>Windows · macOS · Linux</span></div>
   </div>
-
-  <div class="product load d4">
-    <div class="ide" data-ide role="img" aria-label="An IDE where gta's four agents work on order.create: the analyst writes the spec and asks a question, you reply OK, the test author writes a test, it fails with expected 10.00, got 0.00, the reviewer calls it a product defect, and after your OK gta pins it and commits.">
-      <div class="ide-bar"><i></i><i></i><i></i><span>order-service</span></div>
-      <div class="ide-grid">
-        <div class="pane chat"><div class="pane-h">Chat · /gta</div><div class="chat-log"></div><div class="chat-input">Message gta…</div></div>
-        <div class="pane editor"><div class="tabs"></div><pre class="code"></pre></div>
-        <div class="pane term"><div class="pane-h">Terminal</div><pre class="term-log"></pre></div>
-      </div>
-    </div>
-  </div>
-<script type="application/json" id="demo-script">
-{
-  "placeholder": "Message gta…",
-  "agents": {
-    "orchestrator": { "name": "gta-orchestrator", "color": "#8b9cff" },
-    "analyst": { "name": "gta-analyst", "color": "#7fd1c2" },
-    "author": { "name": "gta-test-author", "color": "#e3c48f" },
-    "reviewer": { "name": "gta-reviewer", "color": "#c9a8ff" }
-  },
-  "steps": [
-    { "you": "/gta order.create" },
-    { "by": "orchestrator", "say": "order.create: 5 scenarios. The analyst writes the spec." },
-    { "by": "analyst", "file": "create-order.spec.md", "code": [
-      [["h", "### s03 · discount at the threshold"]],
-      [["c", "\u003c!-- source: OrderService.java:42 -->"]],
-      "GIVEN a cart with subtotal 100.00",
-      "WHEN  the order is created" ] },
-    { "by": "analyst", "say": "The code cannot tell: is a subtotal of exactly 100.00 discounted?\nA) Yes, 10 % from 100.00 <span class=\"rec\">← recommended</span>\nB) No, only above 100.00", "wait": 1400 },
-    { "you": "OK" },
-    { "by": "analyst", "file": "create-order.spec.md", "code": [
-      "THEN  discount 10.00, total 90.00",
-      [["c", "\u003c!-- confirmed by you -->"]] ] },
-    { "by": "author", "file": "OrderControllerIT.java", "code": [
-      [["k", "@Test"]],
-      [["k", "void "], ["", "discountsAtTheThreshold() {"]],
-      [["", "  post("], ["s", "\"/orders\""], ["", ", cart("], ["s", "\"100.00\""], ["", "))"]],
-      [["", "    .andExpect(jsonPath("], ["s", "\"$.discount\""], ["", ").value(10.00));"]],
-      "}" ] },
-    { "by": "author", "cmd": "gtaw submit --item order.create/s03", "out": [
-      ["bad", "✗ s03 failed: expected 10.00, got 0.00"],
-      ["dim", "s03: gtaw re-ran it twice with the same result (not flaky)"] ] },
-    { "by": "reviewer", "say": "<span class=\"bad\">Product defect.</span> OrderService.java:42 uses &gt; where the spec says &gt;=.", "wait": 1200 },
-    { "by": "orchestrator", "say": "Needs you · s03 looks like a product defect\nA) Pin it with @KnownDefect <span class=\"rec\">← recommended</span>\nB) The spec is wrong: back to review", "wait": 1400 },
-    { "you": "OK" },
-    { "by": "orchestrator", "cmd": "gtaw answer OK", "out": [
-      ["ok", "✓ s03 pinned with @KnownDefect · committed"],
-      ["dim", "defects found: 1 · src/main unchanged"] ] },
-    { "by": "orchestrator", "say": "<span class=\"good\">Done.</span> The tests are committed and the defect is reported. Nothing in src/main changed." }
-  ]
-}
-</script>
 </header>
 
-<div class="with">
-  <div class="wrap reveal">
-    <span>Works with</span><b>GitHub Copilot</b><b>OpenCode</b><b>VS Code</b><b>IntelliJ IDEA</b><b>Maven</b><b>Gradle</b><b>Java 8+</b>
-  </div>
-</div>
-
 <main>
-  <section id="how">
+  <section id="problem" class="center">
     <div class="wrap">
-      <div class="eyebrow reveal">How it works</div>
-      <h2 class="title reveal">One command. Agents do the work, a deterministic tool decides.</h2>
-      <p class="lede reveal">The agents read code and write tests. <code>gtaw</code>, a plain command-line tool, decides everything an AI could get wrong: whether a test passed, what it must assert, what gets committed.</p>
-      <div class="steps reveal">
-        <div class="step"><div class="n">01</div>
-          <div class="glyph"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#8a8f98" stroke-width="1.5" stroke-linecap="round"><rect x="8" y="5" width="24" height="30" rx="3"/><path d="M13 13h14M13 19h14M13 25h9"/></svg></div>
-          <h3>Read</h3><p>gta maps every flow of the service and writes what it does as a behaviour spec, citing the code for each claim.</p></div>
-        <div class="step"><div class="n">02</div>
-          <div class="glyph"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#8a8f98" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a3 3 0 013-3h22a3 3 0 013 3v15a3 3 0 01-3 3H17l-7 6v-6H9a3 3 0 01-3-3z"/><path d="M17 13.5a3 3 0 115 2.2c-1 .7-2 1.3-2 2.6" stroke="#8b9cff"/><circle cx="20" cy="22" r=".6" fill="#8b9cff" stroke="#8b9cff"/></svg></div>
-          <h3>Ask</h3><p>What the code cannot tell becomes a question with a recommended answer. Most of the time you reply <b>OK</b>.</p></div>
-        <div class="step"><div class="n">03</div>
-          <div class="glyph"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#8a8f98" stroke-width="1.5" stroke-linecap="round"><rect x="9" y="17" width="22" height="17" rx="3"/><path d="M14 17v-5a6 6 0 0112 0v5"/><path d="M20 23v5" stroke="#8b9cff"/></svg></div>
-          <h3>Lock</h3><p>The expected values come from the spec you approved. gtaw locks them: nobody bends a test to make it pass.</p></div>
-        <div class="step"><div class="n">04</div>
-          <div class="glyph"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#8a8f98" stroke-width="1.5" stroke-linecap="round"><circle cx="20" cy="20" r="12"/><path d="M20 4v6M20 30v6M4 20h6M30 20h6"/><circle cx="20" cy="20" r="2.5" fill="#f2564b" stroke="none"/></svg></div>
-          <h3>Catch</h3><p>A test that fails for a real reason is pinned as a known defect and reported, never “fixed” to green.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="trust" class="rule">
-    <div class="wrap">
-      <div class="eyebrow reveal">Why you can trust it</div>
-      <h2 class="title reveal">An AI writes the tests. It does not get to grade them.</h2>
-      <div class="bento">
-        <div class="card tall reveal">
-          <div>
-            <div class="stat">8<span>/8</span></div>
-            <p>cheating attempts caught in the adversarial run, repeated on every change. Nothing reached a commit.</p>
-          </div>
-          <ul class="attacks">
-            <li>expected value changed ×2</li>
-            <li>assertion removed</li>
-            <li>@Disabled</li>
-            <li>assumption that always fails</li>
-            <li>production code edited</li>
-            <li>confirmation forged in the spec</li>
-            <li>commit behind gtaw’s back</li>
+      <div class="kicker reveal" style="--k:var(--bad)">The problem</div>
+      <h2 class="title reveal">Ask an AI to make a failing test pass, and it will.</h2>
+      <p class="lede reveal">Usually by changing the test. The build turns green, the bug ships, and nobody is told. gta takes that move away.</p>
+      <div class="versus reveal">
+        <div class="vs without">
+          <div class="vs-h"><b>Without gta</b><span>OrderControllerIT.java</span></div>
+<pre><span class="k">@Test</span>
+<span class="k">void</span> discountsAtTheThreshold() {
+  post(<span class="s">"/orders"</span>, cart(<span class="s">"100.00"</span>))
+    .andExpect(jsonPath(<span class="s">"$.discount"</span>)
+      .value(<span class="val">10.00</span>));
+}</pre>
+          <ul class="out">
+            <li class="bad on">✗ expected 10.00, got 0.00</li>
+            <li class="dim">the agent changes the expected value</li>
+            <li class="ok">✓ 1 test passed · build green</li>
           </ul>
+          <div class="verdict"><i></i>The bug ships. <span>Nobody is told.</span></div>
         </div>
-        <div class="card reveal"><h3>Expected values are locked</h3><p>Once a test reaches the code, its expected values cannot change without a person relocking them.</p></div>
-        <div class="card reveal"><h3>Out-of-scope edits are reverted</h3><p>An agent may touch only the files of its item. Production code never changes.</p></div>
-        <div class="card reveal"><h3>A skipped test is not a pass</h3><p><code>@Disabled</code> or a failing assumption sends the test back. It never counts as green.</p></div>
-        <div class="card reveal"><h3>It asks instead of guessing</h3><p>Every question comes with a recommended answer and a reason. A test author who is unsure asks too.</p></div>
-        <div class="card reveal"><h3>Local only</h3><p>Every run drops your shell’s Spring profile and cloud credentials. SIT, UAT and production stay untouched.</p></div>
-        <div class="card reveal"><h3>Tests that can fail</h3><p>Mutation testing checks that a test fails when the code is wrong. A test that passes whatever happens goes back.</p></div>
+        <div class="vs with">
+          <div class="vs-h"><b>With gta</b><span>OrderControllerIT.java</span></div>
+<pre><span class="k">@Test</span>
+<span class="k">void</span> discountsAtTheThreshold() {
+  post(<span class="s">"/orders"</span>, cart(<span class="s">"100.00"</span>))
+    .andExpect(jsonPath(<span class="s">"$.discount"</span>)
+      .value(<span class="val">10.00</span>));<svg class="lock" width="13" height="14" viewBox="0 0 13 14" aria-label="locked"><rect x="1" y="6" width="11" height="7.5" rx="1.5" fill="#f4f4f5"/><path d="M3.5 6V4.2a3 3 0 016 0V6" fill="none" stroke="#f4f4f5" stroke-width="1.6"/></svg>
+}</pre>
+          <ul class="out">
+            <li class="bad on">✗ expected 10.00, got 0.00</li>
+            <li class="bad">✗ gtaw: POLICY_ORACLE_MODIFIED, the edit is refused</li>
+            <li class="dim">re-ran twice: same result, not flaky</li>
+            <li class="ok">→ reported as a defect, pinned with @KnownDefect</li>
+          </ul>
+          <div class="verdict"><i></i>The bug is caught. <span>A person decides what happens next.</span></div>
+        </div>
+      </div>
+      <button class="replay" type="button" data-replay>↻ Play again</button>
+    </div>
+  </section>
+
+  <section id="how" class="rule">
+    <div class="wrap">
+      <div class="kicker reveal" style="--k:var(--orchestrator)">How it works</div>
+      <h2 class="title reveal">One command. Four agents. <em>One referee.</em></h2>
+      <p class="lede reveal">Type <code>/gta</code> and watch the relay. The agents read code and write tests. <code>gtaw</code>, a plain program, runs every test and makes every decision an AI could get wrong.</p>
+      <div class="stages reveal">
+        <button class="stage on" type="button" style="--k:var(--analyst)"><span class="n">01</span><h3><i></i>Read</h3><p>The analyst reads the code and writes what it does as a spec, citing the line for every claim.</p><span class="bar"><b></b></span></button>
+        <button class="stage" type="button" style="--k:var(--analyst)"><span class="n">02</span><h3><i></i>Ask</h3><p>What the code cannot tell becomes a question with a recommended answer. You reply OK.</p><span class="bar"><b></b></span></button>
+        <button class="stage" type="button" style="--k:var(--author)"><span class="n">03</span><h3><i></i>Lock</h3><p>Your answer becomes the expected value. gtaw locks it before the test runs.</p><span class="bar"><b></b></span></button>
+        <button class="stage" type="button" style="--k:var(--reviewer)"><span class="n">04</span><h3><i></i>Catch</h3><p>A test that fails for a real reason is reported as a defect, never bent to pass.</p><span class="bar"><b></b></span></button>
+      </div>
+      <div class="ide reveal" data-ide role="img" aria-label="An IDE where gta's agents work on order.create: the analyst writes the spec and asks whether a subtotal of exactly 100.00 is discounted, you reply OK and approve, the test author writes the test, gtaw locks 10.00 and the test fails with 0.00, the reviewer calls it a product defect, and after your OK gta pins it with @KnownDefect.">
+        <div class="ide-bar"><i></i><i></i><i></i><span class="file">order-service</span>
+          <div class="hud"><span class="avatars" aria-hidden="true"><span style="--c:var(--orchestrator)">O</span><span style="--c:var(--analyst)">A</span><span style="--c:var(--author)">T</span><span style="--c:var(--reviewer)">R</span></span><span class="count">0/16</span><button type="button" data-restart>↻ Replay</button></div>
+        </div>
+        <div class="ide-grid">
+          <div class="pane chat"><div class="pane-h">Chat · /gta</div><div class="chat-log"></div><div class="chat-input">Message gta…</div></div>
+          <div class="pane editor"><div class="tabs"></div><pre class="code"></pre></div>
+          <div class="pane term"><div class="pane-h">Terminal · gtaw</div><pre class="term-log"></pre></div>
+        </div>
       </div>
     </div>
   </section>
 
-  <section id="what" class="rule">
+  <section id="team" class="rule">
     <div class="wrap">
-      <div class="eyebrow reveal">What it tests</div>
+      <div class="kicker reveal" style="--k:var(--author)">The team</div>
+      <h2 class="title reveal">Four agents do the work. One program keeps score.</h2>
+      <p class="lede reveal">Every agent has one job and a fence around it. The scoring is done by something that cannot be talked into anything.</p>
+      <div class="team-grid">
+        <article class="member reveal" data-agent="orchestrator" style="--c:var(--orchestrator)"><div class="role">the one you talk to</div><h3>gta-orchestrator</h3><p>Takes your <code>/gta</code>, hands each job to the right agent and every result to gtaw. Shows you one status block, in English or Chinese.</p><div class="may">may: talk to you, run gtaw</div></article>
+        <article class="member reveal" data-agent="analyst" style="--c:var(--analyst)"><div class="role">reads the code</div><h3>gta-analyst</h3><p>Turns a flow into a behaviour spec with a diagram, citing the code for each claim. Asks what the code cannot tell.</p><div class="may">may: write the spec</div></article>
+        <article class="member reveal" data-agent="author" style="--c:var(--author)"><div class="role">writes the tests</div><h3>gta-test-author</h3><p>Writes one test per brief, from the approved spec. When unsure, it asks instead of guessing.</p><div class="may">may: write its own test files</div></article>
+        <article class="member reveal" data-agent="reviewer" style="--c:var(--reviewer)"><div class="role">judges the result</div><h3>gta-reviewer</h3><p>Checks that the assertions match the spec, and judges every failure: a product defect, a test defect or a spec error.</p><div class="may">may: read, nothing else</div></article>
+      </div>
+      <div class="referee reveal">
+        <div>
+          <div class="role">the referee · not an AI</div>
+          <h3>gtaw</h3>
+          <p>A deterministic Java program. Same input, same decision, every time. It has no cursor on this page because it never guesses.</p>
+        </div>
+        <ul>
+          <li><b>runs</b>every test, and re-runs failures to rule out flakiness</li>
+          <li><b>locks</b>the expected values from the approved spec</li>
+          <li><b>reverts</b>any edit outside an agent's own files</li>
+          <li><b>commits</b>every change itself, so history stays honest</li>
+          <li><b>decides</b>what passed. Only gtaw can say so.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="cheat" class="rule">
+    <div class="wrap">
+      <div class="kicker reveal" style="--k:var(--author)">Try it</div>
+      <h2 class="title reveal">Try to cheat. gtaw will not let you.</h2>
+      <p class="lede reveal">You are the test author, and your test fails: the code returns 0.00 where the spec says 10.00. Pick a shortcut to make it pass.</p>
+      <div class="arena">
+        <div class="reveal">
+          <div class="score"><b data-score>0<span>/7</span></b><small>shortcuts caught</small></div>
+          <div class="attacks">
+            <button class="attack" type="button"><span class="n">01</span><span><span class="t">Change the expected value</span><span class="why">.value(10.00) → .value(0.00)</span></span><span class="st">try</span></button>
+            <button class="attack" type="button"><span class="n">02</span><span><span class="t">Delete the assertion</span><span class="why">no assertion, no failure</span></span><span class="st">try</span></button>
+            <button class="attack" type="button"><span class="n">03</span><span><span class="t">Add @Disabled</span><span class="why">a skipped test is not red</span></span><span class="st">try</span></button>
+            <button class="attack" type="button"><span class="n">04</span><span><span class="t">Skip it with an assumption</span><span class="why">assumeTrue(false)</span></span><span class="st">try</span></button>
+            <button class="attack" type="button"><span class="n">05</span><span><span class="t">Quietly fix the production code</span><span class="why">&gt; becomes &gt;&zwnj;= in OrderService</span></span><span class="st">try</span></button>
+            <button class="attack" type="button"><span class="n">06</span><span><span class="t">Forge a confirmation in the spec</span><span class="why">observed → confirmed</span></span><span class="st">try</span></button>
+            <button class="attack" type="button"><span class="n">07</span><span><span class="t">Commit it yourself</span><span class="why">git commit, behind gtaw’s back</span></span><span class="st">try</span></button>
+          </div>
+        </div>
+        <div class="reveal">
+          <div class="editor">
+            <div class="tabs"></div>
+            <pre class="code"></pre>
+            <pre class="term-log" aria-live="polite"></pre>
+          </div>
+          <div class="won">7 of 7 caught, and none of it reached a commit. These attacks, and one more, run in CI on every change to gta: <code>evals/e2e/run-adversarial.sh</code>. <button class="replay" type="button" data-again>↻ Try again</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="promises" class="rule">
+    <div class="wrap">
+      <div class="kicker reveal" style="--k:var(--ok)">Built to be trusted</div>
+      <h2 class="title reveal">Safe to run on a real service, today.</h2>
+      <div class="promises reveal">
+        <div class="promise"><svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#a1a1aa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 4l11 4v8c0 7-5 12-11 15C12 28 7 23 7 16V8z"/><path d="M13 18l3.5 3.5L23 15" stroke="#3fd27f"/></svg><h3>Production stays untouched</h3><p>Tests run locally only. Every run drops your shell’s Spring profile and cloud credentials, so SIT, UAT and production are never reached.</p></div>
+        <div class="promise"><svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#a1a1aa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="9" width="26" height="18" rx="3"/><path d="M5 15h26M11 21h6"/><path d="M27 5L9 31" stroke="#ff4d4d"/></svg><h3>No containers needed</h3><p>Kafka and JMS run embedded, BigQuery and GCS use fakes, Oracle runs on H2 in Oracle mode or a shared test schema.</p></div>
+        <div class="promise"><svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#a1a1aa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="12"/><path d="M18 2v6M18 28v6M2 18h6M28 18h6"/><circle cx="18" cy="18" r="2.6" fill="#ff4d4d" stroke="none"/></svg><h3>Tests that can fail</h3><p>Mutation testing breaks the code on purpose and checks the test notices. A test that passes whatever happens goes back.</p></div>
+        <div class="promise"><svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#a1a1aa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a3 3 0 013-3h18a3 3 0 013 3v12a3 3 0 01-3 3H15l-6 5v-5a3 3 0 01-3-3z"/><path d="M14 13.5a4 4 0 117 2.6c-1 .8-3 1.5-3 3" stroke="#2ed3c6"/></svg><h3>It asks, it never guesses</h3><p>Every question comes with a recommended answer and the reason. Most of the time your whole reply is <code>OK</code>.</p></div>
+        <div class="promise"><svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#a1a1aa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h13l6 6v20H9z"/><path d="M22 5v6h6M13 18h11M13 23h7"/></svg><h3>Your words are the record</h3><p>Answers and approvals go into the spec and the commit, so a reviewer sees who decided what, and when.</p></div>
+        <div class="promise"><svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#a1a1aa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="13"/><path d="M5 18h26M18 5c4 4 5 9 5 13s-1 9-5 13c-4-4-5-9-5-13s1-9 5-13z"/></svg><h3>In English or Chinese</h3><p>Set <code>output.language</code> to <code>zh-CN</code> and every question and status block speaks Chinese. Replies like <code>OK</code> work in both.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="flows" class="rule">
+    <div class="wrap">
+      <div class="kicker reveal" style="--k:var(--analyst)">What it tests</div>
       <h2 class="title reveal">The flows a Spring service is made of.</h2>
-      <div class="caps reveal">
-        <div class="cap">REST APIs<small>Spring MVC · WebFlux</small></div>
-        <div class="cap">Messaging<small>Kafka · Pub/Sub · JMS · RabbitMQ · SQS</small></div>
-        <div class="cap">Scheduled jobs<small>@Scheduled · ShedLock</small></div>
-        <div class="cap">Spring Batch<small>jobs and steps</small></div>
-        <div class="cap">Database migrations<small>Flyway · Liquibase</small></div>
-        <div class="cap">Security rules<small>@PreAuthorize · @Secured</small></div>
-        <div class="cap">Caches<small>@Cacheable · @CacheEvict</small></div>
-        <div class="cap">gRPC and GraphQL<small>services and resolvers</small></div>
-        <div class="cap">Workflows<small>Temporal · Camunda · Statemachine</small></div>
-        <div class="cap">Beam pipelines<small>PTransforms checked with PAssert</small></div>
-        <div class="cap">Realtime<small>WebSocket · STOMP · SSE</small></div>
-        <div class="cap">Builds<small>Maven and Gradle, multi-module</small></div>
+      <p class="lede reveal"><code>/gta</code> finds them all and starts with the riskiest. A flow that waits for you does not stop the others.</p>
+      <div class="flows reveal">
+        <div class="flow" style="--c:var(--analyst)"><h3>REST APIs</h3><p>with security rules and caches</p></div>
+        <div class="flow" style="--c:var(--orchestrator)"><h3>Messaging</h3><p>Kafka · Pub/Sub · JMS/MQ · RabbitMQ · SQS</p></div>
+        <div class="flow" style="--c:var(--author)"><h3>Scheduled jobs</h3><p>@Scheduled · Quartz</p></div>
+        <div class="flow" style="--c:var(--reviewer)"><h3>Spring Batch</h3><p>jobs and steps</p></div>
+        <div class="flow" style="--c:var(--author)"><h3>Migrations</h3><p>Flyway · Liquibase</p></div>
+        <div class="flow" style="--c:var(--analyst)"><h3>WebFlux</h3><p>reactive endpoints</p></div>
+        <div class="flow" style="--c:var(--reviewer)"><h3>gRPC</h3><p>services</p></div>
+        <div class="flow" style="--c:var(--orchestrator)"><h3>GraphQL</h3><p>handlers</p></div>
+        <div class="flow" style="--c:var(--reviewer)"><h3>Workflows</h3><p>Temporal · Statemachine · BPMN</p></div>
+        <div class="flow" style="--c:var(--orchestrator)"><h3>Beam</h3><p>transforms, checked with PAssert</p></div>
+        <div class="flow" style="--c:var(--analyst)"><h3>Realtime</h3><p>WebSocket · STOMP · SSE</p></div>
+        <div class="flow" style="--c:var(--author)"><h3>Any build</h3><p>Maven · Gradle · multi-module</p></div>
       </div>
     </div>
   </section>
 
-  <section class="rule">
+  <section id="platforms" class="rule">
     <div class="wrap">
-      <div class="eyebrow reveal">Where it runs</div>
-      <h2 class="title reveal">Two platforms, the same gta.</h2>
-      <div class="bento two">
-        <div class="card reveal"><h3>GitHub Copilot</h3><p>VS Code and IntelliJ IDEA. The agents in <code>.github/agents</code>, the command in <code>.github/prompts</code>.</p></div>
-        <div class="card reveal"><h3>OpenCode</h3><p>The same four agents, command and guardrails, in <code>.opencode/</code>. Privileged commands ask a person on both.</p></div>
+      <div class="kicker reveal" style="--k:var(--orchestrator)">Where it runs</div>
+      <h2 class="title reveal">Two platforms. Equal in every way.</h2>
+      <p class="lede reveal">Both are generated from one source, so neither gets a lesser gta.</p>
+      <div class="platforms">
+        <div class="platform reveal"><h3>GitHub Copilot</h3><p>In VS Code and IntelliJ IDEA. Agents in <code>.github/agents</code>, the command in <code>.github/prompts</code>.</p><ul><li>the same 4 agents and /gta</li><li>the same guardrails and gtaw</li><li>privileged commands ask a person</li></ul></div>
+        <div class="platform reveal"><h3>OpenCode</h3><p>In the terminal. The agents, the command and the permissions live in <code>.opencode/</code>.</p><ul><li>the same 4 agents and /gta</li><li>the same guardrails and gtaw</li><li>privileged commands ask a person</li></ul></div>
       </div>
     </div>
   </section>
 
   <section id="start" class="rule">
     <div class="wrap">
-      <div class="eyebrow reveal">Get started</div>
-      <h2 class="title reveal">Five minutes to install. Then one command.</h2>
-      <div class="start reveal">
-        <div class="start-row"><span class="n">01</span><div><code>java -jar gta-cli.jar --root my-service init --platform copilot</code><p>Writes the agents, the <code>/gta</code> command and <code>.gta/</code> into the service. Use <code>--platform opencode</code> for OpenCode. Commit it.</p></div>
-          <button class="copy" type="button" data-copy="java -jar gta-cli.jar --root my-service init --platform copilot" data-done="Copied">Copy</button></div>
-        <div class="start-row"><span class="n">02</span><div><code>/gta</code><p>In the chat. gta lists the service’s flows, riskiest first. Reply <b>OK</b> to cover all of them.</p></div>
-          <button class="copy" type="button" data-copy="/gta" data-done="Copied">Copy</button></div>
-        <div class="start-row"><span class="n">03</span><div><code>OK</code><p>Questions, the spec and defects come to you with a recommendation. The tests come back committed.</p></div></div>
+      <div class="kicker reveal" style="--k:var(--ok)">Get started</div>
+      <h2 class="title reveal">Install once. Then it is one command.</h2>
+      <div class="steps reveal">
+        <div class="row"><span class="n" style="--c:var(--orchestrator)">1</span><div><code>java -jar gta-cli.jar --root my-service init --platform copilot</code><p>Once per service, usually by the tech lead. Use <code>--platform opencode</code> for OpenCode, then commit the result.</p></div><button class="copy" type="button" data-copy="java -jar gta-cli.jar --root my-service init --platform copilot" data-done="Copied">Copy</button></div>
+        <div class="row"><span class="n" style="--c:var(--analyst)">2</span><div><code>./gtaw doctor</code><p>Checks Java, the build and the test setup. On Windows: <code>.\gtaw.cmd doctor</code>.</p></div><button class="copy" type="button" data-copy="./gtaw doctor" data-done="Copied">Copy</button></div>
+        <div class="row"><span class="n" style="--c:var(--author)">3</span><div><code>/gta</code><p>In the chat. gta lists the service’s flows, riskiest first. Reply <code>OK</code> to cover them all.</p></div><button class="copy" type="button" data-copy="/gta" data-done="Copied">Copy</button></div>
+        <div class="row"><span class="n" style="--c:var(--reviewer)">4</span><div><code>OK</code><p>Answer the questions, approve the spec, review the commits. Tests and defects come back with a recommendation.</p></div></div>
       </div>
       <p class="after reveal"><a href="../guides/quickstart.md">Read the quickstart</a> · <a href="../design/plan.md">Read the design</a></p>
     </div>
   </section>
 
+  <section id="faq" class="rule">
+    <div class="wrap">
+      <div class="kicker reveal" style="--k:var(--analyst)">Questions</div>
+      <h2 class="title reveal">New to this? Start here.</h2>
+      <div class="faq reveal">
+        <details class="q"><summary>Can it touch production?</summary><p>No. gta only runs tests on your machine. Every run drops your shell’s Spring profile and cloud credentials, and the agents’ rules allow local dependencies only. Deployed environments, SIT and UAT included, are out of scope.</p></details>
+        <details class="q"><summary>Do I need Docker or an API key?</summary><p>Neither. Dependencies run embedded or as fakes. The agents use the model your Copilot or OpenCode already provides; gtaw itself is a local Java program that calls no AI.</p></details>
+        <details class="q"><summary>What if gta is not sure about something?</summary><p>It asks you. Every question comes with the answer it recommends and why, so a plain <code>OK</code> is usually enough. What the agents cannot know, you can tell them once with <code>/gta note</code>.</p></details>
+        <details class="q"><summary>What is a known defect?</summary><p>A test that fails because the code is wrong. gta pins it with <code>@KnownDefect</code>: the build stays green and the defect is reported. Once someone fixes the code, the test fails until the annotation comes off, so nothing gets forgotten.</p></details>
+        <details class="q"><summary>Does it just chase coverage?</summary><p>No. Coverage is for reference only. gta checks whether each approved scenario is verified, whether the tests can fail (mutation testing) and whether they are stable.</p></details>
+        <details class="q"><summary>Which Java and Spring versions?</summary><p>Spring Boot 2.2 to 4.1, services on Java 8 and up, Maven or Gradle, single or multi-module, on Windows, macOS and Linux. gtaw itself needs JDK 17+.</p></details>
+      </div>
+    </div>
+  </section>
+
   <section class="final rule">
     <div class="wrap">
-      <h2 class="title reveal">Agents write. gtaw decides.</h2>
+      <h2 class="title reveal">Open your service. Type <span class="mono">/gta</span>.</h2>
+      <p class="lede reveal">The agents are ready. Move your pointer: they follow.</p>
       <div class="cta reveal">
-        <a class="btn primary" href="#start">Get started <span class="arrow">→</span></a>
-        <a class="btn" href="../guides/quickstart.md">Quickstart</a>
+        <a class="btn primary" href="../guides/quickstart.md">Read the quickstart <span class="arrow">→</span></a>
+        <a class="btn" href="../design/plan.md">Read the design</a>
       </div>
     </div>
   </section>
 </main>
 
 <footer>
-  <div class="wrap"><span>gta — generic testing agent</span><a href="index.zh-CN.html" hreflang="zh-CN" lang="zh-CN">简体中文</a></div>
+  <div class="wrap"><span>gta — generic testing agent · Agents write. gtaw decides.</span><a href="index.zh-CN.html" hreflang="zh-CN" lang="zh-CN">简体中文</a></div>
 </footer>
 
+<script type="application/json" id="copy">
+{
+  "agents": {
+    "orchestrator": { "name": "gta-orchestrator", "color": "#8b7bff" },
+    "analyst": { "name": "gta-analyst", "color": "#2ed3c6" },
+    "author": { "name": "gta-test-author", "color": "#ffb02e" },
+    "reviewer": { "name": "gta-reviewer", "color": "#f472d0" },
+    "you": { "name": "You", "color": "#ffffff" }
+  },
+  "demo": {
+    "placeholder": "Message gta…",
+    "locked": "locked",
+    "steps": [
+      { "stage": 0, "you": "/gta order.create" },
+      { "stage": 0, "by": "orchestrator", "say": "order.create has 5 scenarios. The analyst reads the code first." },
+      { "stage": 0, "by": "analyst", "file": "create-order.spec.md", "code": [
+        [["h", "### s03 · discount at the threshold"]],
+        [["c", "<!-- source: OrderService.java:42 -->"]],
+        "GIVEN a cart with subtotal 100.00",
+        "WHEN  the order is created" ] },
+      { "stage": 1, "by": "analyst", "wait": 1700, "say": "<span class=\"hd\">── order.create · 1 question for you ──</span>\nIs a subtotal of exactly 100.00 discounted?\nA) Yes, 10 % from 100.00<span class=\"rec\">  ← recommended</span>\nB) No, only above 100.00" },
+      { "stage": 1, "you": "OK" },
+      { "stage": 1, "by": "analyst", "file": "create-order.spec.md", "code": [
+        "THEN  discount 10.00, total 90.00",
+        [["c", "<!-- source=confirmed: you replied OK -->"]] ] },
+      { "stage": 1, "by": "orchestrator", "wait": 1200, "say": "<span class=\"hd\">── order.create@r2 ready for approval ──</span>\nReply OK to approve order.create@r2, or say what to change." },
+      { "stage": 1, "you": "OK" },
+      { "stage": 2, "by": "orchestrator", "cmd": "gtaw answer OK", "out": [["ok", "✓ order.create: spec r2 approved and committed"]] },
+      { "stage": 2, "by": "author", "file": "OrderControllerIT.java", "code": [
+        [["k", "@Test"]],
+        [["k", "void "], ["", "discountsAtTheThreshold() {"]],
+        [["", "  post("], ["s", "\"/orders\""], ["", ", cart("], ["s", "\"100.00\""], ["", "))"]],
+        [["", "    .andExpect(jsonPath("], ["s", "\"$.discount\""], ["", ").value("], ["num", "10.00"], ["", "));"]],
+        "}" ] },
+      { "stage": 2, "by": "author", "cmd": "gtaw submit --item order.create/s03", "lock": "10.00", "out": [
+        ["bad", "✗ order.create/s03: test failed: expected 10.00, got 0.00"],
+        ["dim", "order.create/s03: gtaw re-ran it twice with the same result (not flaky)"] ] },
+      { "stage": 3, "by": "reviewer", "wait": 1300, "say": "order.create/s03: <span class=\"bad\">a product defect</span>: the threshold uses &gt; instead of &gt;=" },
+      { "stage": 3, "by": "orchestrator", "wait": 1700, "say": "<span class=\"hd\">── order.create/s03 looks like a product defect ──</span>\nA) Yes, a defect: pin it with @KnownDefect (the build stays green) and draft an issue<span class=\"rec\">  ← recommended</span>\nB) No, the spec is wrong: back to review" },
+      { "stage": 3, "you": "OK" },
+      { "stage": 3, "by": "orchestrator", "cmd": "gtaw answer OK", "out": [["ok", "✓ order.create/s03: confirmed defect pinned with @KnownDefect"]] },
+      { "stage": 3, "by": "orchestrator", "say": "<span class=\"good\">Done for now.</span> The defect is reported, not hidden, and nothing in src/main changed." }
+    ]
+  },
+  "cheat": {
+    "caught": "caught",
+    "submit": "gtaw submit --item order.create/s03",
+    "intro": [["bad", "✗ order.create/s03: test failed: expected 10.00, got 0.00"], ["dim", "your move, test author"]],
+    "files": {
+      "test": { "name": "OrderControllerIT.java", "lines": [
+        [["k", "@Test"]],
+        [["k", "void "], ["", "discountsAtTheThreshold() {"]],
+        [["", "  post("], ["s", "\"/orders\""], ["", ", cart("], ["s", "\"100.00\""], ["", "))"]],
+        [["", "    .andExpect(jsonPath("], ["s", "\"$.discount\""], ["", ").value("], ["num", "10.00"], ["", "));"]],
+        "}" ] },
+      "prod": { "name": "OrderService.java", "lines": [
+        [["k", "BigDecimal "], ["", "discount(BigDecimal subtotal) {"]],
+        [["", "  "], ["k", "if"], ["", " (subtotal.compareTo(THRESHOLD) > 0)"]],
+        [["", "    "], ["k", "return"], ["", " subtotal.multiply(RATE);"]],
+        [["", "  "], ["k", "return"], ["", " ZERO;"]],
+        "}" ] },
+      "spec": { "name": "create-order.spec.md", "lines": [
+        [["h", "### s03 · discount at the threshold"]],
+        [["c", "<!-- source=confirmed: you replied OK -->"]],
+        "THEN  discount 10.00, total 90.00",
+        [["h", "### s04 · discount above the threshold"]],
+        [["c", "<!-- source=observed: read from the code -->"]] ] }
+    },
+    "attacks": [
+      { "file": "test", "line": 3, "edit": "replace", "from": "10.00", "to": "0.00",
+        "out": [["bad", "✗ POLICY_ORACLE_MODIFIED"], ["", "Locked expected values were changed or removed: [10.00]. Restore them; only a human can relock."]],
+        "after": [["dim", "↺ back to the test author: restore 10.00"]] },
+      { "file": "test", "line": 3, "edit": "strike",
+        "out": [["bad", "✗ POLICY_ORACLE_MISMATCH"], ["", "Expected values from the spec are not asserted: [10.00]"]],
+        "after": [["dim", "↺ back to the test author: assert it again"]] },
+      { "file": "test", "line": 0, "edit": "insert", "text": [["k", "@Disabled"]],
+        "out": [["bad", "✗ POLICY_TEST_SKIPPED"], ["", "Skipped, so nothing was verified. Remove @Disabled and assumptions that skip the test."]],
+        "after": [["dim", "↺ a skipped test never counts as green"]] },
+      { "file": "test", "line": 2, "edit": "insert", "text": [["", "  assumeTrue("], ["k", "false"], ["", ");"]],
+        "out": [["bad", "✗ POLICY_TEST_SKIPPED"], ["", "Skipped, so nothing was verified. Remove @Disabled and assumptions that skip the test."]],
+        "after": [["dim", "↺ a skipped test never counts as green"]] },
+      { "file": "prod", "line": 1, "edit": "replace", "from": "> 0", "to": ">\u200c= 0",
+        "out": [["bad", "✗ POLICY_OUT_OF_SCOPE_CHANGE"], ["", "Changed files outside ownsFiles were reverted: [OrderService.java]"]],
+        "after": [["ok", "↺ reverted by gtaw. Fixing the bug is a person’s call."]] },
+      { "file": "spec", "line": 4, "edit": "replace", "from": "source=observed: read from the code", "to": "source=confirmed: you replied OK",
+        "out": [["bad", "✗ POLICY_OUT_OF_SCOPE_CHANGE"], ["", "Changed files outside ownsFiles were reverted: [create-order.spec.md]"]],
+        "after": [["ok", "↺ reverted by gtaw. Only your own words confirm a scenario."]] },
+      { "edit": "commit", "cmd": "git commit -am \"make the test pass\"",
+        "out": [["bad", "✗ POLICY_OUT_OF_SCOPE_CHANGE"], ["", "commits made outside gtaw: 3f9c2a1. Agents must not run git."]],
+        "after": [["dim", "↺ stopped: a person looks at the commit"]] }
+    ]
+  }
+}
+</script>
 <script src="site.js"></script>
 </body>
 </html>
