@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Lints this repository's core/, checks that the committed copilot/ and opencode/ folders are up to date, and enforces
- * the documentation language rule (English, with Chinese only in *.zh-CN.md copies and the accepted reply aliases).
+ * the documentation language rule (English, with Chinese only in *.zh-CN.md (and *.zh-CN.html) copies and the accepted reply aliases).
  */
 class RepositoryHarnessTest {
     static final Path REPO = Path.of("../..").toAbsolutePath().normalize();
@@ -77,6 +77,7 @@ class RepositoryHarnessTest {
                         || rel.startsWith("opencode/") // generated from core/
                         || rel.contains("/src/test/") // tests of Chinese input
                         || rel.endsWith(".zh-CN.md")
+                        || rel.endsWith(".zh-CN.html") // the Chinese copy of the introduction page
                         || rel.endsWith("spec/AnswerParser.java") // the alias patterns themselves
                         || rel.endsWith("engine/Messages.java"); // the zh-CN messages of output.language (plan §11.5)
                 if (skipped || !(TEXT.contains(ext) || name.equals("gtaw"))) {

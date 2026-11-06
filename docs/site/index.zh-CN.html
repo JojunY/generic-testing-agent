@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-CN" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>gta — 能发现缺陷的测试</title>
+  <meta name="description" content="gta 读懂 Spring 服务，把代码看不出的地方问清楚，锁定期望值，抓出真正的缺陷。运行在 GitHub Copilot 或 OpenCode 中。">
+  <meta name="theme-color" content="#faf9f5">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<nav class="nav">
+  <a class="wordmark" href="#top">gta<i>.</i></a>
+  <div class="nav-links">
+    <a class="hide-sm" href="#how">工作方式</a>
+    <a class="hide-sm" href="#trust">为什么可信</a>
+    <a class="hide-sm" href="#start">开始使用</a>
+    <a class="lang" href="index.html" hreflang="en">English</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <canvas id="swarm" data-defect="s03 · 期望 10.00，实际 0.00" aria-hidden="true"></canvas>
+  <div class="hero-copy">
+    <h1>能发现缺陷的测试，<em>而不只是覆盖率。</em></h1>
+    <p>gta 读懂你的 Spring 服务，把代码看不出的地方问清楚，锁定你期望的结果，抓出真正的错误。运行在 GitHub Copilot 或 OpenCode 中。</p>
+    <div class="cta">
+      <a class="btn solid" href="#start">开始使用</a>
+      <a class="btn" href="#how">输入 <span class="kbd">/gta</span> 看看</a>
+    </div>
+  </div>
+  <div class="scroll-hint" aria-hidden="true"></div>
+</header>
+
+<main>
+  <section id="how">
+    <div class="wrap">
+      <div class="eyebrow reveal">工作方式</div>
+      <h2 class="reveal">一条命令。agent 干活，确定性的工具做决定。</h2>
+      <p class="lede reveal">agent 负责读代码、写测试。凡是 AI 可能出错的判断，都交给普通命令行工具 <code>gtaw</code>：测试过没过、必须断言什么、什么可以提交。</p>
+      <div class="steps">
+        <div class="step reveal"><div class="n">01</div><h3>读</h3><p>gta 找出服务里的每个 flow，把它的行为写成规格，每一条都注明来自哪段代码。</p></div>
+        <div class="step reveal"><div class="n">02</div><h3>问</h3><p>代码看不出的地方变成问题，并附上推荐答案。大多数时候你只要回复 <b>OK</b>。</p></div>
+        <div class="step reveal"><div class="n">03</div><h3>锁</h3><p>期望值来自你批准的规格，由 gtaw 锁定：没有人能为了让测试通过而改掉它。</p></div>
+        <div class="step reveal"><div class="n">04</div><h3>抓</h3><p>因真实原因失败的测试会被标记为已知缺陷并报告，绝不会被“修”成绿灯。</p></div>
+      </div>
+
+      <div class="demo">
+        <ul class="reveal">
+          <li><b>同一个区块，固定五个部分。</b>刚才发生了什么、确认了什么、需要你做什么、下一步是什么。</li>
+          <li><b>每个问题都有推荐答案。</b>gta 从不猜测；它会问你，并说明它会选哪个、为什么。</li>
+          <li><b>你的原话就是记录。</b>回答和批准写进规格和提交记录，审查的人看得到谁决定了什么。</li>
+        </ul>
+        <div class="term reveal" data-terminal>
+          <div class="term-bar"><i></i><i></i><i></i><span>order-service — Copilot Chat</span></div>
+          <pre class="term-body"><span class="l you" data-type data-wait="200">/gta order.create</span><span class="l dim" data-wait="500">  … 规格已批准，已写 5 个测试，s03 两次失败</span><span class="l" data-wait="500"> </span><span class="l hd">── gta · order.create ── 等你处理</span><span class="l">进度：规格已批准 ▸ 测试 3/5 通过 ▸ 发现 1 个缺陷</span><span class="l"> </span><span class="l hd">刚才发生了什么</span><span class="l">  1. order.create/s03：测试失败：expected 10.00, got 0.00</span><span class="l">  2. order.create/s03：reviewer 判定为产品缺陷：门槛用了 &gt; 而不是 &gt;=</span><span class="l"> </span><span class="l hd">已确认</span><span class="l ok">  ✓ order.create/s03：gtaw 重跑 2 次，结果一致（不是不稳定）</span><span class="l"> </span><span class="l hd">需要你</span><span class="l">  ── order.create/s03 疑似产品缺陷 ──</span><span class="l">  A) 是缺陷：用 @KnownDefect 标记（构建保持绿灯）<span class="rec">  ← 推荐</span></span><span class="l">  B) 不是，规格写错了：退回重新审查</span><span class="l dim">  回复 OK 接受推荐，或回复其他选项的字母。</span><span class="l"> </span><span class="l you" data-type data-wait="900">OK</span><span class="l ok" data-wait="600">✓ order.create/s03：已确认的缺陷已用 @KnownDefect 标注 · 已提交</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="trust" class="paper">
+    <div class="wrap">
+      <div class="eyebrow reveal">为什么可信</div>
+      <h2 class="reveal">测试由 AI 来写，但评分轮不到它。</h2>
+      <div class="trust">
+        <div class="stat reveal">
+          <div class="big"><span data-count="8">8</span>/8</div>
+          <p>对抗测试中的作弊手法全部被拦下，每次改动都会重跑：改期望值、停用测试、改生产代码、伪造确认、绕过 gta 自己提交。</p>
+        </div>
+        <div class="facts">
+          <div class="fact reveal"><h3>期望值被锁定</h3><p>测试一旦接触到被测代码，它的期望值就不能再改，除非由人重新锁定。</p></div>
+          <div class="fact reveal"><h3>越界改动会被还原</h3><p>agent 只能改自己条目的文件，生产代码永远不变。</p></div>
+          <div class="fact reveal"><h3>跳过的测试不算通过</h3><p><code>@Disabled</code> 或失败的 assumption 会被退回，永远不会算成绿灯。</p></div>
+          <div class="fact reveal"><h3>不确定就问，不猜</h3><p>问题都附推荐答案和理由；测试作者拿不准时也会先问。</p></div>
+          <div class="fact reveal"><h3>只在本地运行</h3><p>每次运行都会去掉你 shell 里的 Spring profile 和云凭证，SIT、UAT 和生产环境都不会被碰到。</p></div>
+          <div class="fact reveal"><h3>测试必须会失败</h3><p>变异测试会确认代码错了测试就会失败，不管怎样都通过的测试会被退回。</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="what">
+    <div class="wrap">
+      <div class="eyebrow reveal">测什么</div>
+      <h2 class="reveal">组成 Spring 服务的各种 flow。</h2>
+      <div class="chips reveal">
+        <span class="chip">REST API</span><span class="chip">Kafka · Pub/Sub · JMS · RabbitMQ · SQS</span><span class="chip">定时任务</span>
+        <span class="chip">Spring Batch</span><span class="chip">Flyway · Liquibase</span><span class="chip">安全规则</span><span class="chip">缓存</span>
+        <span class="chip">WebFlux</span><span class="chip">gRPC</span><span class="chip">GraphQL</span><span class="chip">Temporal · Camunda · Statemachine</span>
+        <span class="chip">Beam 管道</span><span class="chip">WebSocket · STOMP · SSE</span><span class="chip">Maven 与 Gradle<small>多模块</small></span>
+        <span class="chip">Spring Boot 2.2 – 4<small>Java 8+</small></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="paper">
+    <div class="wrap">
+      <div class="eyebrow reveal">在哪里用</div>
+      <h2 class="reveal">两个平台，同一个 gta。</h2>
+      <div class="platforms">
+        <div class="platform reveal"><h3>GitHub Copilot</h3><p>VS Code 和 IntelliJ IDEA。agent 在 <code>.github/agents</code>，命令在 <code>.github/prompts</code>。</p></div>
+        <div class="platform reveal"><h3>OpenCode</h3><p>同样的四个 agent、命令和护栏，放在 <code>.opencode/</code>。两个平台上的特权命令都要人确认。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="start">
+    <div class="wrap">
+      <div class="eyebrow reveal">开始使用</div>
+      <h2 class="reveal">五分钟安装，之后只要一条命令。</h2>
+      <div class="start">
+        <div class="reveal"><h3>安装到服务里</h3><pre>java -jar gta-cli.jar --root my-service \
+  init --platform copilot   # 或 opencode</pre><p>写入 agent、<code>/gta</code> 命令和 <code>.gta/</code>，然后提交。</p></div>
+        <div class="reveal"><h3>打开聊天</h3><pre>/gta</pre><p>gta 列出服务里的 flow，风险高的在前。回复 <b>OK</b> 就全部覆盖。</p></div>
+        <div class="reveal"><h3>回答、批准、合并</h3><pre>OK</pre><p>问题、规格和缺陷都带着推荐答案来找你。测试写好后已经提交。</p></div>
+      </div>
+      <p class="lede reveal"><a href="../guides/quickstart.zh-CN.md">阅读快速上手</a> · <a href="../design/plan.zh-CN.md">设计文档</a></p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap"><span>gta — generic testing agent</span><span>agent 写，gtaw 决定。</span></div>
+</footer>
+
+<script src="site.js"></script>
+</body>
+</html>

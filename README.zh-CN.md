@@ -46,7 +46,7 @@ gta 是一个面向 Java/Spring 服务、"先写规格再写测试"的测试 har
 
 ## 快速开始
 
-详见 [docs/guides/quickstart.zh-CN.md](docs/guides/quickstart.zh-CN.md)（[English](docs/guides/quickstart.md)）。简要步骤：
+一页式介绍：在浏览器中打开 [docs/site/index.zh-CN.html](docs/site/index.zh-CN.html)。安装详见 [docs/guides/quickstart.zh-CN.md](docs/guides/quickstart.zh-CN.md)（[English](docs/guides/quickstart.md)）。简要步骤：
 
 ```bash
 mvn -B install                      # 在本仓库：构建并测试 toolkit
@@ -56,7 +56,7 @@ cd <service> && ./gtaw doctor       # Windows: .\gtaw.cmd doctor
 
 然后在 VS Code、IntelliJ 或 OpenCode 中打开服务，输入 `/gta`。
 
-## 当前支持（P0）
+## 当前支持
 
 - **环境：** Maven 和 Gradle 服务，Spring Boot 4.1 和 3.5（也支持 2.2 到 2.7），Java 17+（少数 Java 8 或 11 的服务也支持），Windows、macOS、Linux。gtaw 本身需要 JDK 17+。
 - **会写测试的能力：** REST API（含安全规则和缓存）、消息监听（Kafka、Pub/Sub、JMS/MQ、RabbitMQ、SQS）、定时任务（`@Scheduled`、Quartz）、Spring Batch 作业、Flyway/Liquibase 数据库迁移、WebFlux 端点、gRPC 服务、GraphQL handler、工作流（Temporal、Spring Statemachine、BPMN）和 Beam 转换。WebSocket、STOMP 和 SSE 端点（P4）。gta 只在本地运行测试：从不测试部署环境（SIT、UAT、生产环境），每次运行都会去掉你 shell 里的 Spring profile 和云凭证，agent 的规则也要求测试只用本地依赖（见设计文档 §7.7、§13）。
@@ -77,7 +77,7 @@ toolkit/     Java 源码：gta-core、gta-cli、gta-junit、gta-harness-gen（Ma
 wrapper/     安装到服务中的文件：gtaw、gtaw.cmd、gtaw-download.ps1（从 Nexus 下载锁定版本的 jar 并校验 sha256）
 scripts/     维护脚本：generate.sh（平台文件夹）、diagrams/render.py（docs/diagrams）
 evals/       带预埋缺陷的 order-service 样例和脚本化端到端测试
-docs/        guides/（快速开始、CI 接入、测试命名、图表风格、新增能力）、design/（设计）、reviews/（评审记录）、diagrams/
+docs/        site/（一页式介绍）、guides/（快速开始、CI 接入、测试命名、图表风格、新增能力）、design/（设计）、reviews/（评审记录）、diagrams/
 ```
 
 ## 开发

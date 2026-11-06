@@ -5,6 +5,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 ## [Unreleased]
 
 ### Fixed
+- The status block read "1 defects found"; it now reads "defects found: 1".
 - Review round 2:
   - service mode no longer parks a test author's question: the waiting item kept its scope baseline, so other flows' changes in between read as out of scope when it resumed;
   - an own answer may say "approve" ("2: a manager must approve refunds"), and one written after a comma ("OK, 2: a manager signs off") is read as an own answer, not as option A;
@@ -20,6 +21,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - A THEN value of `true` or `false` could never be satisfied: the oracle scanner ignored boolean literals. `isEqualTo(true)`, `isTrue()`, `isFalse()`, `assertTrue` and `assertFalse` now assert them (found by the Spring Batch eval).
 
 ### Added
+- A one-page introduction, `docs/site/index.html` and `index.zh-CN.html`: a swarm of cursors (the agents) forms the word gta while one stays out of line as the caught defect, then the four steps, gta's real status block typed out, why it can be trusted, what it tests, both platforms and how to start. Ivory, ink and terracotta, serif headings; no external assets, so it opens offline; it honours reduced motion.
 - Adversarial e2e (`evals/e2e/run-adversarial.sh`, CI `e2e (adversarial)`, plan §14 metrics 3 and 4): a scripted cheating author tries eight attacks on the items of one flow, and the run fails unless gtaw refuses every one before anything is committed.
 - Mutation testing on Gradle builds: `gtaw mutate --changed` and the can-fail check run PIT on the test runtime classpath that a gtaw init script lists (`.gta/work/pit/gta-pit.gradle`); PIT is resolved through the service's own repositories, and the build script never changes. The Gradle e2e kills a mutant of a changed line.
 - Server-sent event streams are `websocket` flows (`SseEmitter`, `ServerSentEvent`, `produces = text/event-stream`), so their briefs load the streaming-endpoints skill instead of the REST one. `order-service` gains an SSE quote ladder (seeded D18) that the main e2e takes to a pinned defect, and `references/sse.md` shows the verified `MockMvc` reading of a completed stream.
