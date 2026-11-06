@@ -39,6 +39,10 @@
    - Authoritative decisions come from two places: gtaw's change check for every node, and the gate anchored on the base branch. The gate runs locally; CI is optional.
    - Human confirmations carry the original words and channel and are listed in the PR comment, so normal PR review keeps watch (§5.5).
 9. **Onboarding**: the tech lead runs `./gtaw init` once per repository; developers need a single command, `/gta` (§12).
+10. **Usable by a newcomer (P4)**
+    - `/gta` on a service with nothing in progress covers the whole service, riskiest flows first; a flow waiting for a person does not stop the others.
+    - Everything a person sees is one fixed status block (state, what happened, checked, needs you, next), in English or Chinese.
+    - Every question comes with a recommended answer, so `OK` is often the whole reply; what the agent cannot know, people add once with `/gta note` (§5.10).
 
 ---
 
@@ -129,6 +133,8 @@
 | P13 | **Primitives on demand**: every agent/skill/prompt/instruction/hook/MCP needs a clear responsibility, or it is not introduced |
 | P11 | **CI does not depend on an LLM** |
 | P12 | **Eval-driven** |
+| P14 | **Never guess, ask cheaply**: what is uncertain becomes a question, and every question comes with a recommended answer |
+| P15 | **One contract for people**: everything a person sees is gtaw's status block, in their language |
 
 ### 2.5 Explicitly out of scope for v1
 
@@ -325,6 +331,8 @@ The diagrams of this document and the README are not Mermaid: they are rendered 
 5. **Authoritative approval**: normal PR review keeps watch. The PR comment gtaw generates lists every new `confirmed`, approval, `relock` and waiver of the change with original words and channel, so **any forgery is in front of the reviewer**. Questions can also be answered asynchronously by the product owner through the PR. If CODEOWNERS is enabled later, spec approval can be tightened to require CODEOWNERS without changing the design.
 
 Users may reply in Chinese: gtaw accepts `批准` for approve and `其余默认`/`其他默认` for rest default.
+
+From P4 replies get shorter (§5.10): `OK` takes every recommended answer, and on an approval prompt it approves exactly the revision the prompt shows. The forms above stay valid.
 
 ### 3.6 Coexisting with OpenSpec / Spec Kit (P2; implemented except the delta-format summary)
 
@@ -741,6 +749,8 @@ An illegal transition returns `STATE_ILLEGAL_TRANSITION`.
 - The PR comment lists every new confirmation of the change.
 - PR review has the final word.
 
+From P4 every row above reaches the person as part of the status block, with a recommended answer (§5.10).
+
 **Non-interactive mode**: CI only runs deterministic commands.
 
 ### 5.6 Error handling
@@ -818,12 +828,71 @@ In OpenCode, subagents get a `steps` limit and `doom_loop` is set to `ask`.
 
 ---
 
+### 5.10 Talking to people (P4)
+
+gta is meant for a developer who has never used it. Everything a person sees follows one contract, and every decision
+asked of them comes with a recommended answer.
+
+**The status block.** gtaw renders it for every node that reaches a person (`display` in the node's JSON). The
+orchestrator shows it verbatim and adds at most one line of its own; agents never write their own status for people.
+It has five parts, always in this order:
+
+```
+── gta · order.create ── waiting for you (1 decision)
+Progress: spec approved ▸ tests 3/5 passed ▸ 1 suspected defect
+
+What happened
+  1. The test of s02 failed: expected 409, got 201
+  2. The reviewer judged it a product defect: the stock is never checked
+
+Checked
+  ✓ gtaw re-ran it twice with the same result (not flaky)
+  ✓ the expectation comes from docs/business-rules.md
+
+Needs you
+  1. Is this a defect?
+     A) Yes: pin it as a known defect, the build stays green   ← recommended (the document says it must be refused)
+     B) No: the spec is wrong, test today's behaviour
+  Reply OK to take the recommendation, or B.
+
+Next: after your reply, s03 (2 scenarios left)
+```
+
+- **State** (first line): flow, stage and whom it waits for; **Progress**: spec → tests passed/total → defects.
+- **What happened**: at most 5 numbered lines.
+- **Checked**: who verified what (gtaw, the reviewer, a person), only facts gtaw recorded.
+- **Needs you**: the decisions, or "nothing, continuing".
+- **Next**: the next step and, when it waits, the exact reply.
+- No internal words: `observed`, `defaulted`, `documented` and `characterization` read as "read from the code",
+  "taken as is", "from <document>" and "locks today's behaviour".
+- **Language**: `output.language` (`en`, the default, or `zh-CN`) applies to the status block and every prompt. Specs,
+  briefs, agents and code stay English; replies are accepted in either language.
+
+**Questions with a recommended answer.** gta never guesses. What the analyst cannot read from the code or a document
+becomes a question, and an author who finds the brief unclear stops and asks
+(`gtaw submit --item <id> --token <t> --question "<what is unclear>"`) instead of assuming. Questions are cheap to answer:
+- Every question, of every kind (spec questions, defect confirmation, escalation, naming conflict), has exactly one
+  option marked recommended, with a one-line reason; the linter refuses a spec question without one. The
+  recommendation is the analyst's best judgement, not necessarily today's behaviour: when the code looks wrong and a
+  document says otherwise, the document's behaviour is recommended. `= current code` stays marked.
+- Each question carries its own context (why it is asked, what test each option produces), so it can be answered
+  without opening the spec.
+- At most 5 per round, highest impact first.
+- Replies: `OK` takes every recommendation; `2B` changes one; `2: <text>` answers in one's own words (the analyst
+  turns it into a revision); they combine (`OK, 2B`). Taking a recommendation is an explicit answer: the original
+  words are recorded, so the PR comment shows `OK` as "accepted the recommendations".
+
+**Notes: what the agent cannot know.** `/gta note <text>` (`gtaw note "<text>"`) appends the text, with date and author,
+to `.gta/notes.md`, committed by gtaw. Analyst briefs list the notes, and a scenario cites one as
+`source=documented doc=.gta/notes.md quote="…"`. People fill a gap once, in their own words, for every flow.
+
 ## 6. Modes
 
-Usage: `/gta [explain|pr|incident|status] [notes]`. Without arguments it continues the work in progress, or lists the riskiest flows to choose from.
+Usage: `/gta [explain|pr|incident|note|status] [notes]`. Without arguments it continues the work in progress, or starts service mode.
 
 | Mode | Flow (D = gtaw, A = agent, H = human) | Output |
 |---|---|---|
+| `service` (P4; `/gta` with nothing in progress) | D profile → overview of the flows found, by kind and risk → H picks, with a recommendation (all, riskiest first) → the flows are queued and each runs as in flow mode. A flow waiting for a person does not stop the others: gtaw goes on with the next one and comes back when the answer arrives | specs, tests and ledgers for the whole service |
 | `explain <flowId\|path>` | D profile → A analyst | overview diagram, sequence diagram, draft spec, questions; read-only. After answers and approval it turns into flow mode |
 | default (flow) | D → A analyst → H answers → H approves → D plan → loop (A test-author ⇄ D check → D submit → A reviewer) → D verify → D report | tests, oracle shards, report |
 | `pr` | D impact: diff → affected methods, config keys and beans (following injection) → flows, marked `stale`<br>→ A analyst: the PR description is a `documented` intent; questions only where the intent is unclear<br>→ H approves (also possible in the PR) → then as above | tests, PR comment (behaviour change summary, findings, new confirmations, unmapped changes) |
@@ -945,7 +1014,8 @@ gta does not test deployed environments, and never will (decided in P4). Teams s
 SIT and UAT themselves, with their own accounts. gta's part is to make sure it never touches them, production above
 all: every run drops cloud credentials and the developer's Spring profile and configuration variables, and
 `safety.protectedHosts` lists the SIT, UAT and production hosts no test or fixture gta writes may name (§13).
-External services are stubbed with WireMock, plus contract tests.
+External services are stubbed with WireMock, plus contract tests. Opt-in tests against SIT or UAT may come later
+(§15 P5); until then those hosts are refused like production.
 
 ### 7.8 Database migrations
 
@@ -1023,7 +1093,7 @@ External services are stubbed with WireMock, plus contract tests.
 | CLI subcommands and options | kebab-case | `gtaw verify --new` |
 | time | UTC, ISO 8601 | `2026-11-03T12:00:00Z` |
 | path separator | always `/` | — |
-| documentation language | English; README and this design also have a `*.zh-CN.md` copy. Users may talk to the agents in any language | — |
+| documentation language | English; README and this design also have a `*.zh-CN.md` copy. gta's messages to people follow `output.language` (`en` or `zh-CN`, §5.10); users may talk to the agents in any language | — |
 
 ### 9.2 Harness asset names
 
@@ -1057,7 +1127,7 @@ External services are stubbed with WireMock, plus contract tests.
 | test selection | explicit, never a plugin default: gtaw passes `-Dtest` from the suffix table; the service's Surefire runs `*Test`, Failsafe `*IT`; `E2ETest` runs only in its profile |
 | name conflicts | when the test class gta would write exists and is not a gta test, gtaw asks the developer (share the file, skip, or check again) and never decides itself |
 | test methods | `should<Outcome>When<Condition>()`, with `@DisplayName("[<scenarioId>] …")` |
-| JUnit tags | class: layer + `gta`; method: `flow:<flowId>` + `scenario:<scenarioId>`; characterization tests also `characterization` |
+| JUnit tags | one vocabulary, derived from the spec (§9.5) |
 | known defects | `@KnownDefect(id = "<findingId>", failure = "<fingerprint>")` |
 | fixtures / golden files | `src/test/resources/<package path>/<TestClass>/<sNN>.<role>.json`; golden output `<sNN>.approved.json` in the same folder |
 | test case ledger | `.gta/specs/<domain>/<flow-name>.cases.md` next to the spec, overview `.gta/specs/INDEX.md` (§10.6) |
@@ -1078,6 +1148,25 @@ External services are stubbed with WireMock, plus contract tests.
 | cloud resources | `gta-<shortRunId>-<purpose>`, converted per resource type (e.g. `gta_<shortRunId>_<purpose>` for BigQuery, upper-case `GTA_<shortRunId>` for Oracle schemas, hyphens replaced by underscores); labels `gta-run-id`, `gta-ttl-hours` | `gta-1103120000-k3f9-orders` |
 
 ---
+
+### 9.5 Tags: one vocabulary (P4)
+
+Tags are the one way to select gta tests, in gtaw and in a plain Maven build. They come from the spec and the plan, never
+from the agent: gtaw's rule repair adds or corrects them before a run.
+
+| Tag | On | From | Use |
+|---|---|---|---|
+| `gta` and the layer (`unit`, `slice`, `component`, `contract`) | class | the plan item | the gate runs every `gta` test; select one layer |
+| `flow:<flowId>`, `scenario:<scenarioId>` | method | the spec | gtaw runs one scenario; traceability |
+| the intent: exactly one of `characterization`, `hardening`, `reproducing`, `catching` | method | the scenario's source and `hint.intent` | `-Dgroups=hardening` runs the tests of confirmed behaviour |
+| the priority: `p0`, `p1`, `p2` | method | the scenario's `priority` | `mvn verify -Dgroups=p0` runs the must-pass set when packaging or deploying, without gta |
+| `known-defect` | method, automatic | `@KnownDefect` carries it (meta-annotation) | after a fix, `-Dgroups=known-defect` shows which pins to remove |
+
+- One expression syntax everywhere, JUnit tag expressions: `gtaw run --tags "p0 & component"` replaces `--layer`
+  (kept as an alias), and `gtaw impact` prints its regression scope as a ready `-Dgroups` expression.
+- Not tags, on purpose: the capability (the flow's spec has it), fidelity and duration (the report has them, and a
+  duration tag would churn), owners (CODEOWNERS), and anything that skips or quarantines a test (§5.3).
+- Reserved: `remote`, for opt-in SIT/UAT tests (§15 P5).
 
 ## 10. File contracts and schemas
 
@@ -1170,6 +1259,8 @@ The state of each item in `.gta/work/state.json`:
   "phase": null,
   "build": { "tool": "maven", "basePackage": "auto", "maven": "auto", "javaHomeEnv": null, "module": "" },
   "dispatch": "subagent",
+  "output": { "language": "en" },
+  "safety": { "protectedHosts": [] },
   "spec": { "maxQuestionsPerRound": 5, "maxClarifyRounds": 2, "maxSubmitAttempts": 3, "source": "gta" },
   "environments": { "oracle": { "testUrl": null, "userEnv": "GTA_ORACLE_USER", "passwordEnv": "GTA_ORACLE_PASSWORD" } },
   "distribution": { "toolsUrl": "https://nexus.example.com/repository/gta-tools/" },
@@ -1275,11 +1366,12 @@ evidence, the PR comment draft).
 | `gtaw doctor` | person | checks the JDK, available emulators, Maven and the parent version, the pinned wrapper jar, managed files and IDE settings (with auto-approve steps for IntelliJ) |
 | `gtaw next [--mode explain\|flow\|pr\|incident] [--target <flowId\|path>] [--base <ref>] [--intent <PR description\|incident report>]` · `gtaw next --takeover` | orchestrator · `--takeover` **people only** | runs the deterministic steps and returns the next node |
 | `gtaw check --item <id> --token <t>` | test-author | compiles and runs once; does not use a repair attempt |
-| `gtaw submit --item <id> --token <t>` · `--spec <flowId> --token <t>` · `--review <id> --token <t> --verdict <v> --reason "<text>"` | the matching agent / orchestrator | formally submits an item, a spec or a review verdict |
+| `gtaw submit --item <id> --token <t> [--question "<text>"]` · `--spec <flowId> --token <t>` · `--review <id> --token <t> --verdict <v> --reason "<text>"` | the matching agent / orchestrator | formally submits an item, a spec or a review verdict |
 | `gtaw answer "<original words>"` · `gtaw answer --file <utf-8 file>` | orchestrator | records the user's answer or approval (§3.5) |
 | `gtaw status` | anyone | phase of each flow, open questions, pending work (read-only) |
 | `gtaw abort [--flow <flowId>]` | **people only** | discards working state (keeps `.gta/work/recover/`) |
-| `gtaw run --smoke \| --layer <layer>` | gtaw internally / CI | runs the selected tests |
+| `gtaw run --smoke \| --tags <expression>` | gtaw internally / CI / person | runs the selected tests (§9.5); `--layer <layer>` is `--tags <layer>` |
+| `gtaw note "<text>"` (P4) | person, through `/gta note` | adds what the agent cannot know to `.gta/notes.md` (§5.10) |
 | `gtaw verify [--new]` | gtaw internally / CI | stability and expected-value check; from P2 also the can-fail check |
 | `gtaw mutate --changed [--base]` (P2, implemented) | CI / person | PIT on changed classes, filtered to the diff lines, using unit and slice tests only; advisory (exit 0). PIT runs from its command line with the service's test classpath, so the service's pom needs no plugin |
 | `gtaw gate --base <ref> --reports <dir>` · `gtaw gate waive <GATE_CODE> …` | CI / person | the gate; registering a waiver (**people only**) |
@@ -1360,7 +1452,7 @@ generic-testing-agent/
   - the skills and agents named by active registry entries (`since` ≤ current phase) exist;
   - schemas are valid;
   - `copilot/` and `opencode/` are in sync with `core/`;
-  - documentation is English except the `*.zh-CN.md` copies and the accepted Chinese reply aliases.
+  - documentation is English except the `*.zh-CN.md` copies, the accepted Chinese reply aliases and the zh-CN messages of `output.language`.
 - **Versions**: SemVer with `pom.xml` as the single source; the wrapper configuration pins the version and `managed-files.json` records the checksum of each managed file.
 - **Upgrades**: `gtaw upgrade`. Managed files edited locally are reported as conflicts, never overwritten; files a new version no longer ships are removed when untouched. Schema migrations wait until a v2 schema exists.
 
@@ -1473,8 +1565,8 @@ When an agent writes to these paths, the change check of §5.8 restores them. Ap
 | **P1 adoption: multi-module, events, schedules, PR mode** | multi-module Maven services (one module at a time, Maven with `-pl <module> -am`; implemented); `messaging` (Kafka, Pub/Sub, JMS/MQ, RabbitMQ, SQS; implemented); `scheduler` (`@Scheduled`, ShedLock, Quartz; implemented); PR mode: impact (methods, config, bean graph; implemented), the alm-github CI template `gta-gate.yml` (`gtaw init --ci`; implemented), `gtaw next --mode pr` (affected flows go stale and are worked through in one session, the PR description is documented intent; implemented), PR comments, analyzing-change-impact; OpenCode end to end | one pilot service per new capability, and one multi-module service, run end to end; behaviour change summaries on real PRs, the gate live (mutation advisory) |
 | **P2 data, security and quality** | `db-migration` (Flyway, Liquibase; implemented); `security` (Spring Security, OAuth2 resource servers, JWT: authenticated and forbidden paths, method security; implemented); `caching` (Spring Cache, Redis, Caffeine: hits, eviction, stale reads; implemented); `spring-batch` (implemented); `mutate` and the can-fail check (shared PIT integration; both implemented); learning loop (implemented); rules-before-LLM repair; `spec.source=openspec\|speckit` (implemented) | one pilot service per new capability; mutation switched to enforced after calibration on pilot repositories |
 | **P3 reactive, Gradle, other protocols, catching** | `webflux` (reactive endpoints and clients with `WebTestClient` and `StepVerifier`); Gradle builds (a second `TestRunner` and build-file reader next to Maven); `grpc-api` and `graphql-api`; `workflow` (Temporal, Camunda, Spring Statemachine); `beam-pipeline`; incident mode (`gtaw next --mode incident --target <flowId> --intent "<report>"`: the report is kept as `<flow>.incidents.md` next to the spec and cited by a `hint.intent=reproducing` scenario; implemented); catching tests and the assessor (`hint.intent=catching` scenarios in PR mode; a failing one is run on the PR's base, so `product-defect` is refused when it fails there too, then the reviewer assesses it and a human confirms; the report counts catching hits; implemented) | one pilot service per kind |
-| **P4 streaming endpoints and production safety** | `websocket` (WebSocket, STOMP, SSE: local tests with `gta-testing-streaming-endpoints`); production safety (Spring profile and configuration removed from every run, `safety.protectedHosts`; implemented). Tests against deployed environments (`gtaw env`, Karate, Cloud Run/GKE/Dataflow runs, BigQuery temporary datasets) are out of scope: teams test SIT and UAT themselves (§7.7) | one pilot service |
-| **P5** | optional hooks (early interception, a `verified` answer channel), MCP wrapping, plugin distribution, SARIF, record-replay, performance tests, native-image, parallel authoring, adapters for other languages | on demand |
+| **P4 usability, production safety, streaming endpoints** | in this order:<br>- usability (§5.10, §9.5): the status block and `output.language` (`en`, `zh-CN`); questions with a recommended answer and `OK` replies; `--question` for authors; `/gta note`; service mode, which covers a whole service and does not stop on a waiting flow; the tag vocabulary;<br>- production safety: Spring profile and configuration removed from every run, `safety.protectedHosts` (implemented);<br>- `websocket` (WebSocket, STOMP, SSE): local tests with `gta-testing-streaming-endpoints`.<br>Tests against deployed environments (`gtaw env`, Karate, Cloud Run/GKE/Dataflow runs, BigQuery temporary datasets) are out of scope: teams test SIT and UAT themselves (§7.7) | a developer new to gta covers one pilot service through `/gta` alone; measured: replies per flow, the share answered with `OK`, time to the first verified test |
+| **P5** | opt-in SIT/UAT tests (`@Tag("remote")`, `safety.remoteHosts`, off by default; production never); optional hooks (early interception, a `verified` answer channel), MCP wrapping, plugin distribution, SARIF, record-replay, performance tests, native-image, parallel authoring, adapters for other languages | on demand |
 
 ### Capability order
 
@@ -1549,7 +1641,7 @@ the matrix. `gtaw doctor` warns for Java 8 to 16 and fails anything older.
 - Available models: the GPT family, Gemini 4, Fusion standard/high (§11.4).
 - Windows developer machines; Oracle and BigQuery for data; Pub/Sub, Kafka and MQ for messaging.
 - Every dependency goes through the Nexus proxy, packages can be uploaded to Nexus, and CI (alm-github) can be connected.
-- Documentation is English, with Chinese copies of README and this design; users may write to the agents in Chinese.
+- Documentation is English, with Chinese copies of README and this design; gta's messages to people follow `output.language` (`en` or `zh-CN`); users may write to the agents in Chinese.
 - The Java package and Maven groupId stay `com.gta` for now; they move under the company domain later.
 
 **No open questions remain.** Two assumptions are verified in P0a:
@@ -1585,3 +1677,4 @@ the matrix. `gtaw doctor` warns for Java 8 to 16 and fails anything older.
 | v8 | re-audited against Anthropic's primitive definitions:<br>- criteria for agent / skill / workflow;<br>- system-tester dropped (test-author + skill), 4 agents in the end;<br>- no containers: new §7.0 dependency fidelity strategy;<br>- the gate runs locally, CI optional; characterization tests protected by the gate too;<br>- `copilot/` and `opencode/` folders at the root;<br>- model mapping;<br>- adjusted to services that have code but no documentation |
 | v9 (final design) | finalised for the confirmed environment:<br>- Windows developer machines;<br>- Oracle (shared test database / H2 compatibility mode), BigQuery (fakes, SQL tested in P4);<br>- Pub/Sub emulator distributed through Nexus, EmbeddedKafka, embedded Artemis (MQ/JMS);<br>- every dependency through the Nexus proxy, tools in a Nexus raw repository;<br>- alm-github CI template in P1;<br>- no open questions left |
 | v9.1 | P0 implemented, two code reviews applied (see [round-2-remediation.md](../reviews/round-2-remediation.md)):<br>- exact approvals only, change requests, approval refused after edits;<br>- commit ledger instead of trailers, fail-closed shards and state, bounded spec loop, review tokens, counted timeouts;<br>- English documentation with Chinese copies of README and this design; diagrams rendered by `scripts/diagrams/render.py` in the style of diagram-design |
+| v10 | P0 to P3 implemented. P4 rescoped:<br>- tests against deployed environments are out of scope: teams test SIT and UAT themselves, gta never touches them and production above all (`safety.protectedHosts`, Spring profile isolation);<br>- usability for newcomers: one status block for people in `en` or `zh-CN`, questions with a recommended answer and `OK` replies, `/gta note`, service mode, one tag vocabulary (§5.10, §9.5) |
