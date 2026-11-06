@@ -345,6 +345,19 @@ final class ItemWorkflow {
                                         : "; not restorable (pre-existing changes): " + scope.unrestorable()));
             }
         }
+        // tests run locally only: a protected host (SIT, UAT, production) in an owned file is refused before any run
+        List<String> protectedHits = com.gta.core.change.ProtectedHosts.named(
+                paths.root(), paths.moduleRoot().resolve("src/test"), item.ownsFiles, config.safety.protectedHosts);
+        if (!protectedHits.isEmpty()) {
+            return fail(
+                    st,
+                    item,
+                    s,
+                    ErrorCode.POLICY_PROTECTED_HOST,
+                    "gta tests run locally only; these files name a protected host (safety.protectedHosts): "
+                            + protectedHits
+                            + ". Use embedded dependencies, WireMock or the configured test database instead");
+        }
         String runId = Ids.newRunId(git.head());
         RunResult run = ctx.runs.runItem(runId, item, false, false);
         s.evidenceRunId = runId;

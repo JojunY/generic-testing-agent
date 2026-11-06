@@ -124,6 +124,13 @@ public final class DoctorChecks {
                     "ok",
                     Files.exists(paths.config()) ? ".gta/config.json valid" : "defaults (no .gta/config.json)",
                     "");
+            boolean hosts = !config.safety.protectedHosts.isEmpty();
+            add(
+                    "protected-hosts",
+                    hosts ? "ok" : "warn",
+                    hosts ? config.safety.protectedHosts.size() + " protected hosts" : "safety.protectedHosts not set",
+                    "List your SIT, UAT and production hosts in safety.protectedHosts (.gta/config.json): gtaw then"
+                            + " refuses any test or fixture that names one, so gta tests can only run locally");
             if (config.build.javaHomeEnv != null) {
                 String jdk = System.getenv(config.build.javaHomeEnv);
                 boolean present = jdk != null && Files.isDirectory(Path.of(jdk));

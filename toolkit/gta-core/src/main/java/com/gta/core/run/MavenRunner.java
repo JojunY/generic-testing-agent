@@ -76,8 +76,9 @@ public class MavenRunner implements TestRunner {
         Map<String, String> env = isolated.variables();
         List<String> toolOptions = new ArrayList<>();
         String inherited = System.getenv("JAVA_TOOL_OPTIONS");
-        if (inherited != null && !inherited.isBlank()) {
-            toolOptions.add(inherited);
+        if (inherited != null
+                && !IsolatedEnv.withoutSpringEnvironment(inherited).isEmpty()) {
+            toolOptions.add(IsolatedEnv.withoutSpringEnvironment(inherited));
         }
         if (options.stabilityVariant()) {
             toolOptions.add(stabilityVariantOptions(config.qualityGates));

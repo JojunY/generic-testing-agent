@@ -153,6 +153,7 @@ approve order.create@R2
 - `spec.source`：仓库自己维护规格时设为 `openspec` 或 `speckit`（`openspec/specs/`、`specs/`）。analyst 会把它们当作 documented 来源引用，绝不修改。
 - `build.module`：多模块仓库中服务所在的模块，例如 `"order-api"`。`.gta/` 留在仓库根目录；测试写进该模块，Maven 以 `-pl <module> -am` 运行。未设置时 `gtaw doctor` 报失败。
 - `build.tool`：`auto`（默认）在服务有 `build.gradle(.kts)` 而没有 `pom.xml` 时用 Gradle 构建，否则用 Maven；设为 `maven` 或 `gradle` 可强制指定。`build.gradle` 指定 Gradle 可执行文件（默认：存在时用 `./gradlew`）。在 Gradle 构建中 gta-junit 也把结果写到 `target/gta-results/`：请把它加入 `.gitignore`。
+- `safety.protectedHosts`：填写 SIT、UAT 和生产环境的主机名，例如 `["orders-uat.acme.com", "db-prod.acme.com"]`。gta 的测试只在本地运行：它写的任何测试或 fixture 出现这些主机时，gtaw 都会拒绝；Oracle 的 `testUrl` 指向这些主机时也会拒绝。gtaw 运行测试时也会去掉 shell 中的 Spring profile（`SPRING_PROFILES_ACTIVE`）和 Spring 配置变量。没设置这个列表时，`gtaw doctor` 会提醒。
 - `build.javaHomeEnv`：如果服务的构建需要更旧的 JDK（例如 Java 8 加 Spring Boot 2），填写存放该 JDK 路径的环境变量名，例如 `"JAVA8_HOME"`。Maven 或 Gradle 会以该 `JAVA_HOME` 运行；gtaw 本身仍需要 JDK 17 或更新版本。
 
 ## 出问题时

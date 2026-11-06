@@ -82,6 +82,17 @@
         }
       }
     },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "protectedHosts": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "SIT, UAT and production host names: gtaw refuses tests and fixtures that name one, and an Oracle testUrl on one"
+        }
+      }
+    },
     "environments": {
       "type": "object",
       "additionalProperties": false,

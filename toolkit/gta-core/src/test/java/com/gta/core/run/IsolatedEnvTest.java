@@ -23,4 +23,25 @@ class IsolatedEnvTest {
         }
         assertFalse(Files.exists(dir));
     }
+
+    @Test
+    void shouldNeverLetTheDevelopersSpringProfileReachAGtaRun() {
+        try (IsolatedEnv env = IsolatedEnv.create()) {
+            for (String name : java.util.List.of(
+                    "SPRING_PROFILES_ACTIVE",
+                    "SPRING_CONFIG_LOCATION",
+                    "SPRING_APPLICATION_JSON",
+                    "SPRING_CONFIG_IMPORT")) {
+                assertTrue(env.variables().containsKey(name), name);
+                assertNull(env.variables().get(name), name + " is removed, so a shell set to uat or prod stays out");
+            }
+        }
+
+        assertEquals(
+                "-Dhttps.proxyHost=127.0.0.1 -Xmx1g",
+                IsolatedEnv.withoutSpringEnvironment(
+                        "-Dhttps.proxyHost=127.0.0.1 -Dspring.profiles.active=prod -Xmx1g -Dspring.config.import=x"),
+                "the proxy and memory options stay, the Spring selection goes");
+        assertEquals("", IsolatedEnv.withoutSpringEnvironment("-Dspring.application.json={}"));
+    }
 }
