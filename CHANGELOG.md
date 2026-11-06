@@ -43,6 +43,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - Services on Java 8 and 11: `gta-junit` is Java 8 bytecode, briefs name the service's level and `javax.*` for Spring Boot 2, `build.javaHomeEnv` runs Maven with the JDK an old build needs, and `gtaw doctor` warns (instead of failing) for Java 8 to 16.
 
 ### Changed
+- Copilot and OpenCode are supported equally (plan v11): the plan no longer calls OpenCode secondary; OpenCode also allows `.\gtaw <command>` (PowerShell), both platforms auto-approve `gtaw note`, `gtaw doctor` explains OpenCode's approvals as it does Copilot's, and the e2e installs both (main and multi-module: Copilot; catalog and Gradle: OpenCode) and checks each platform's agents, command and approvals.
 - P5 trimmed (plan §15, v11): hooks, plugin distribution, record-replay and native-image are dropped; opt-in SIT/UAT tests (design recorded in §7.7), MCP wrapping, SARIF, performance tests, parallel authoring and other languages stay deferred until a team needs them.
 - P4 is the current phase: `websocket` flows write tests by default, without `"phase": "P4"`; the main e2e runs `quote.request-quote` without a `phase` setting.
 - Scope: gta does not test deployed environments (SIT, UAT, production), now or later, because teams test SIT and UAT themselves. The `deployed-runtime` capability, the `gta-testing-deployed-systems` skill, `gtaw env`, the Karate system layer and BigQuery temporary datasets are removed from the roadmap (plan §7.7, §15). `gtaw run --layer system` says so.

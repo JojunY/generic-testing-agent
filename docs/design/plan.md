@@ -2,9 +2,9 @@
 
 **English** | [简体中文](plan.zh-CN.md)
 
-> Status: **P0 implemented** (REST APIs; other capabilities open phase by phase, see the §15 roadmap) · Version: plan v9 · Date: 2026-11 · Code review and remediation record: [round-2-remediation.md](../reviews/round-2-remediation.md) · [round-3-plan.md](../reviews/round-3-plan.md)
+> Status: **P0 to P4 implemented**, P4 is the current phase (see the §15 roadmap) · Version: plan v11 · Date: 2026-11 · Code review and remediation record: [round-2-remediation.md](../reviews/round-2-remediation.md) · [round-3-plan.md](../reviews/round-3-plan.md)
 > Scope: a generic testing harness for Java services (mostly Spring)
-> Surfaces: **VS Code Copilot, IntelliJ IDEA Copilot** (primary), OpenCode (secondary)
+> Surfaces: **GitHub Copilot (VS Code, IntelliJ IDEA) and OpenCode**, supported equally: the same agents, command, guardrails and tests
 > Target environment: Maven; Spring Boot 4.1 mostly, a few 3.5; JUnit follows the Spring Boot parent; Java 17+; Windows developer machines; Oracle and BigQuery for data; Pub/Sub, Kafka and MQ for messaging; no containers locally; every dependency goes through the company Nexus proxy and the platform team can upload packages to Nexus; CI (alm-github) can be connected; most services have code but no specification documents. CODEOWNERS and branch protection are not enabled, and the Copilot preview policy is off
 > Namespace: every external asset uses the prefix `gta`. The revision history is in Appendix B
 
@@ -1429,7 +1429,7 @@ generic-testing-agent/
 | Prompt / commands | `.github/prompts/*.prompt.md`, `agent:` selects the agent | GA (2026-06) | `.opencode/commands/*.md` | only `/gta`, which selects the orchestrator |
 | Hooks | preview (off) | GA | plugin | **not used in v1** (§4.0, §4.5) |
 | MCP | supported | supported | supported | **not used in v1** (§4.0) |
-| Terminal auto-approve | `chat.tools.terminal.autoApprove` (workspace setting) | Settings > GitHub Copilot > Chat > Auto Approve (user level) | `permission.bash` | only `./gtaw next\|check\|submit\|answer\|status` |
+| Terminal auto-approve | `chat.tools.terminal.autoApprove` (workspace setting) | Settings > GitHub Copilot > Chat > Auto Approve (user level) | `permission.bash` | only `./gtaw next\|check\|submit\|answer\|note\|status` |
 | Request limit per turn | `chat.agent.maxRequests` | yes | `steps` | `maxItemsPerSession` = 5 |
 | Skills | `.github/skills/` | GA | `.opencode/skills/` | **not used** (`.gta/skills/` loaded by path instead) |
 | Handoffs / plugins | supported | unconfirmed | — | not used |
@@ -1504,7 +1504,7 @@ The same conversation works in Chinese: `R3: 1A 2A 其余默认` and `批准 ord
 - No containers are needed. `gtaw doctor` detects optional gcloud emulators; without them gta still runs and uses fakes for those dependencies.
 - Every error carries a hint. `docs/guides/quickstart.md` is a single page.
 
-**Prerequisites**: JDK 17+, Maven, Copilot agent mode (or OpenCode), a Mermaid preview; gcloud emulators optional.
+**Prerequisites**: JDK 17+, Maven, Copilot agent mode or OpenCode, a Mermaid preview; gcloud emulators optional.
 
 ---
 
@@ -1522,7 +1522,7 @@ When an agent writes to these paths, the change check of §5.8 restores them. Ap
 | Topic | Measures |
 |---|---|
 | Authoritative decisions | the change check of §5.8, the base-anchored gate (§10.5) and PR review. **Without branch protection the gate is only a red status check and cannot block a merge**, so making it a required check is recommended |
-| Privileged commands | `gate waive`, `relock`, `env`, `abort` and `next --takeover` are not on the terminal auto-approve list, so a person must confirm them; auto-approve covers only next/check/submit/answer/status |
+| Privileged commands | `gate waive`, `relock`, `env`, `abort` and `next --takeover` are not on the terminal auto-approve list, so a person must confirm them; auto-approve covers only next/check/submit/answer/note/status |
 | Production code | no mode of v1 changes it |
 | Human confirmations | auditable (§5.5); PR review has the final word |
 | Test integrity | weakening assertions, deleting tests, adding `@Disabled` and changing expected values to actual values are forbidden; triage, the expected-value check, the oracle lock and the gate enforce this together |
@@ -1542,7 +1542,7 @@ When an agent writes to these paths, the change check of §5.8 restores them. Ap
 | GitBug-Java | 199 reproducible Java bugs from 2023 for fail-to-pass evaluation of incident mode |
 | Defects4J | smoke testing only (probably in training data, and mostly libraries) |
 | Semantic seeding | seed bugs in access control, time zones, idempotency and transaction boundaries, plus decoys where "the documentation is outdated but the code is right" |
-| Platform evals | in both IDEs: agent visibility, subagent dispatch, inline mode, terminal auto-approve |
+| Platform evals | in both IDEs and OpenCode: agent visibility, subagent dispatch, inline mode, terminal auto-approve |
 | Adversarial evals | the agent tries to forge confirmations, tamper with expected values, change out-of-scope files, call privileged subcommands and commit by itself |
 
 **Metrics** (in priority order)

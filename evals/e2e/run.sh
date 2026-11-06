@@ -52,7 +52,7 @@ POM
   mkdir -p .gta && printf '{ "build": { "module": "%s" } }\n' "$MODULE" > .gta/config.json
 fi
 git init -q -b main && git add -A && git commit -qm "order-service fixture"
-java -jar "$GTA_CLI_JAR" --root . init --platform copilot >/dev/null 2>&1
+gta_init copilot
 git add -A && git commit -qm "gta init"
 git checkout -q -b feature/gta-tests
 

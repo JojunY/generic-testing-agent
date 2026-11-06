@@ -195,6 +195,21 @@ class DoctorChecksTest {
     }
 
     @Test
+    void shouldTellBothPlatformsWhatRunsWithoutAsking(@TempDir Path root) throws Exception {
+        Files.createDirectories(root.resolve(".gta"));
+        for (String platform : List.of("copilot", "opencode")) {
+            Files.writeString(
+                    root.resolve(".gta/managed-files.json"),
+                    "{\"platform\":\"" + platform + "\",\"version\":\"0.1.0\",\"files\":{}}");
+
+            Map<String, String> approve = check(root, "ide-auto-approve");
+
+            assertEquals("info", approve.get("status"), platform);
+            assertTrue(approve.get("detail").contains("next|check|submit|answer|note|status"), approve.toString());
+        }
+    }
+
+    @Test
     void shouldRollTheChecksUpIntoTheWorstStatus(@TempDir Path root) {
         Map<String, Object> out = new DoctorChecks(root).run();
 

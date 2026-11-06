@@ -2,9 +2,9 @@
 
 [English](plan.md) | **简体中文**
 
-> 状态：**P0 已实现**（REST API；其余能力按 §15 路线图分阶段开放）· 版本：plan v9 · 日期：2026-11 · 代码审查与修复记录见 [round-2-remediation.md](../reviews/round-2-remediation.md) · [round-3-plan.md](../reviews/round-3-plan.md)
+> 状态：**P0 到 P4 已实现**，当前阶段为 P4（见 §15 路线图）· 版本：plan v11 · 日期：2026-11 · 代码审查与修复记录见 [round-2-remediation.md](../reviews/round-2-remediation.md) · [round-3-plan.md](../reviews/round-3-plan.md)
 > 范围：面向 Java（以 Spring 为主）服务的通用测试 harness
-> 使用面：**VS Code Copilot、IntelliJ IDEA Copilot**（主），OpenCode（次）
+> 使用面：**GitHub Copilot（VS Code、IntelliJ IDEA）和 OpenCode**，两者同等支持：相同的 agent、命令、护栏和测试
 > 目标环境：Maven；Spring Boot 4.1 为主，少量 3.5；JUnit 跟随 Spring Boot parent；Java 17+；开发机为 Windows；数据存储为 Oracle 和 BigQuery；消息为 Pub/Sub、Kafka、MQ；本地不能使用任何容器；所有依赖都经过公司 Nexus 代理，平台团队可以向 Nexus 上传包；CI（alm-github）可以接入；多数服务只有代码，没有规范文档。不启用 CODEOWNERS 和分支保护，不开启 Copilot preview policy
 > 命名空间：所有对外资产统一使用前缀 `gta`。修订记录见附录 B
 
@@ -1404,7 +1404,7 @@ generic-testing-agent/
 | Prompt / commands | `.github/prompts/*.prompt.md`，用 `agent:` 指定 agent | GA（2026-06） | `.opencode/commands/*.md` | 只有 `/gta`，自动选中 orchestrator |
 | Hooks | Preview（不开启） | GA | plugin | **v1 不使用**（§4.0、§4.5） |
 | MCP | 支持 | 支持 | 支持 | **v1 不使用**（§4.0） |
-| 终端自动批准 | `chat.tools.terminal.autoApprove`（工作区设置） | Settings > GitHub Copilot > Chat > Auto Approve（用户级） | `permission.bash` | 只批准 `./gtaw next\|check\|submit\|answer\|status` |
+| 终端自动批准 | `chat.tools.terminal.autoApprove`（工作区设置） | Settings > GitHub Copilot > Chat > Auto Approve（用户级） | `permission.bash` | 只批准 `./gtaw next\|check\|submit\|answer\|note\|status` |
 | 单轮请求上限 | `chat.agent.maxRequests` | 有 | `steps` | `maxItemsPerSession` = 5 |
 | Skills | `.github/skills/` | GA | `.opencode/skills/` | **不使用**（改用 `.gta/skills/` 按路径加载） |
 | Handoffs / Plugins | 支持 | 未确认 | — | 不使用 |
@@ -1477,7 +1477,7 @@ GTA：共生成 6 个条目，本次会话先处理 5 个……
 - 不需要任何容器。`gtaw doctor` 会检测可选的 gcloud 模拟器，没有安装也能运行，只是对应依赖改用 fake。
 - 每个错误都附带 hint。`docs/guides/quickstart.md` 只有一页。
 
-**前置条件**：JDK 17+、Maven、启用了 Copilot agent 模式（或 OpenCode）、Mermaid 预览；gcloud 模拟器可选。
+**前置条件**：JDK 17+、Maven、启用了 Copilot agent 模式或 OpenCode、Mermaid 预览；gcloud 模拟器可选。
 
 ---
 
@@ -1495,7 +1495,7 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 | 主题 | 措施 |
 |---|---|
 | 权威裁决 | §5.8 的改动检查，加上以 base 为基准的门禁（§10.5），以及 PR review。**没有分支保护时，gate 只是一个红色的 status check，不能强制阻断合入**，所以建议以后至少把 gate 设为 required check |
-| 特权命令 | `gate waive`、`relock`、`env`、`abort`、`next --takeover` 不在终端自动批准列表中，需要人点击确认；自动批准只覆盖 next/check/submit/answer/status |
+| 特权命令 | `gate waive`、`relock`、`env`、`abort`、`next --takeover` 不在终端自动批准列表中，需要人点击确认；自动批准只覆盖 next/check/submit/answer/note/status |
 | 生产代码 | v1 的任何模式都不修改 |
 | 人工确认 | 可审计（§5.5）；以 PR review 为准 |
 | 测试完整性 | 禁止削弱断言、删除测试、加 `@Disabled`、把期望值改成实际值；由分流、期望值复核、oracle lock 和门禁共同强制执行 |
@@ -1515,7 +1515,7 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 | GitBug-Java | 199 个 2023 年的可复现 Java bug，用于 incident 模式的 fail-to-pass 评测 |
 | Defects4J | 只作冒烟测试（很可能已进入训练数据，且以库为主） |
 | 语义植入 | 植入权限、时区、幂等、事务边界类的 bug，同时放入"文档过时但代码正确"的诱饵 |
-| 平台 eval | 在两个 IDE 中验证：agent 可见性、子 agent 派发、inline 模式、终端自动批准 |
+| 平台 eval | 在两个 IDE 和 OpenCode 中验证：agent 可见性、子 agent 派发、inline 模式、终端自动批准 |
 | 对抗 eval | 让 agent 尝试伪造确认、篡改期望值、越界改动、调用特权子命令、自行提交 |
 
 **指标**（按优先级排列）
