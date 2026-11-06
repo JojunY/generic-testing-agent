@@ -41,6 +41,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - Services on Java 8 and 11: `gta-junit` is Java 8 bytecode, briefs name the service's level and `javax.*` for Spring Boot 2, `build.javaHomeEnv` runs Maven with the JDK an old build needs, and `gtaw doctor` warns (instead of failing) for Java 8 to 16.
 
 ### Changed
+- P4 is the current phase: `websocket` flows write tests by default, without `"phase": "P4"`; the main e2e runs `quote.request-quote` without a `phase` setting.
 - Scope: gta does not test deployed environments (SIT, UAT, production), now or later, because teams test SIT and UAT themselves. The `deployed-runtime` capability, the `gta-testing-deployed-systems` skill, `gtaw env`, the Karate system layer and BigQuery temporary datasets are removed from the roadmap (plan §7.7, §15). `gtaw run --layer system` says so.
 - P3 is the current phase: WebFlux, gRPC, GraphQL, workflows and Beam write tests by default, without `"phase": "P3"`. Deployed-system tests (P4) stay explain-only; `"phase": "P4"` previews them. The catalog e2e runs without a `phase` setting, and its CI job is now `e2e (catalog)`.
 - CI: the four scripted e2e runs (main, multi-module, catalog, Gradle) run as parallel jobs instead of one after another in `build (21)`, with the same scripts and coverage, so a PR waits about 17 minutes instead of about 41. A newer push to the same PR cancels the run it replaces; runs on `main` are never cancelled.

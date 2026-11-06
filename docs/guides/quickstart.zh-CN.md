@@ -164,7 +164,7 @@ mvn verify -Dgroups=known-defect        # 修复后：找出该删除的标注
 
 - `dispatch: "inline"`：如果你的 Copilot 版本无法运行子 agent，使用它；此时由 orchestrator 自己执行每个节点。
 - Oracle 的凭据从指定的环境变量读取，不会被保存。
-- `phase`：设为 `"P4"` 可在默认开放前使用下一阶段的能力（部署后系统测试）；用于试点服务。P3 的能力（WebFlux、gRPC、GraphQL、工作流、Beam）默认已开启。
+- `phase`：设为更晚的阶段（`"P5"`）可在默认开放前使用该阶段的能力；用于试点服务。P4 及之前的能力（WebFlux、gRPC、GraphQL、工作流、Beam、WebSocket/STOMP/SSE）默认已开启。
 - `spec.source`：仓库自己维护规格时设为 `openspec` 或 `speckit`（`openspec/specs/`、`specs/`）。analyst 会把它们当作 documented 来源引用，绝不修改。
 - `build.module`：多模块仓库中服务所在的模块，例如 `"order-api"`。`.gta/` 留在仓库根目录；测试写进该模块，Maven 以 `-pl <module> -am` 运行。未设置时 `gtaw doctor` 报失败。
 - `build.tool`：`auto`（默认）在服务有 `build.gradle(.kts)` 而没有 `pom.xml` 时用 Gradle 构建，否则用 Maven；设为 `maven` 或 `gradle` 可强制指定。`build.gradle` 指定 Gradle 可执行文件（默认：存在时用 `./gradlew`）。在 Gradle 构建中 gta-junit 也把结果写到 `target/gta-results/`：请把它加入 `.gitignore`。

@@ -16,7 +16,7 @@ class CapabilityRegistryTest {
 
     @Test
     void shouldActivateEveryCapabilityUpToP3AndKeepLaterPhasesExplainOnly() {
-        assertEquals("P3", CapabilityRegistry.CURRENT_PHASE);
+        assertEquals("P4", CapabilityRegistry.CURRENT_PHASE);
         for (String id : List.of(
                 "messaging",
                 "scheduler",
@@ -28,10 +28,10 @@ class CapabilityRegistryTest {
                 "grpc-api",
                 "graphql-api",
                 "workflow",
-                "beam-pipeline")) {
+                "beam-pipeline",
+                "websocket")) {
             assertTrue(registry.capability(id).activeIn(CapabilityRegistry.CURRENT_PHASE), id);
         }
-        assertFalse(registry.capability("websocket").activeIn(CapabilityRegistry.CURRENT_PHASE), "P4");
     }
 
     @Test
@@ -40,9 +40,7 @@ class CapabilityRegistryTest {
 
         assertTrue(rest.activeIn("P0"));
         assertEquals("component", rest.defaultLayer());
-        assertTrue(
-                registry.capabilities.stream().anyMatch(c -> !c.activeIn(CapabilityRegistry.CURRENT_PHASE)),
-                "later phases exist");
+        assertFalse(registry.capability("websocket").activeIn("P3"), "a capability is explain-only before its phase");
         assertEquals(4, CapabilityRegistry.phaseNumber("P4"));
     }
 

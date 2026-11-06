@@ -63,7 +63,12 @@ public final class Engine {
 
     /** For tests of gta: a fake {@link TestRunner} instead of Maven. */
     Engine(Path root, TestRunner runner) {
-        this.ctx = new EngineContext(root, runner);
+        this(new EngineContext(root, runner));
+    }
+
+    /** For tests of gta: a context they prepared, e.g. with a capability moved to a later phase. */
+    Engine(EngineContext ctx) {
+        this.ctx = ctx;
         this.paths = ctx.paths;
         this.config = ctx.config;
         this.registry = ctx.registry;

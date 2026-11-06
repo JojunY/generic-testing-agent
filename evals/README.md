@@ -15,7 +15,7 @@ A small Spring Boot 4.1 service: a REST API to create, get, cancel and ship orde
 | D7 | `PriceService#update` (caching) | no cache eviction, so the next read is stale | same, and the brief loads the caching skill |
 | D8 | `ArchiveJobConfig#archiveShipped` (spring-batch) | cancelled orders are archived too | same |
 | D9 | `V2__customer_tier.sql` (db-migration) | `>` instead of `>=`: 100 points stay BASIC | same, with `ref=file:` |
-| D17 | `QuoteController#requestQuote` (websocket, STOMP) | `>` instead of `>=`: an order of exactly 10 items gets no bulk discount | same, and the brief loads the streaming-endpoints skill (P4 preview) |
+| D17 | `QuoteController#requestQuote` (websocket, STOMP) | `>` instead of `>=`: an order of exactly 10 items gets no bulk discount | same, and the brief loads the streaming-endpoints skill |
 
 ## Fixture: `fixtures/catalog-service`
 
@@ -31,7 +31,7 @@ A reactive Spring Boot 4.1 catalog: a WebFlux endpoint, a GraphQL query, a gRPC 
 | D14 | `RestockWorkflowImpl#restock` (workflow, Temporal) | no compensation: a failed stock update leaves the supplier order open |
 | D15 | `LowStockTransform#expand` (beam-pipeline) | off by one: a product with exactly 2 in stock is left off the low-stock report |
 
-`e2e/run-catalog.sh` takes the five flows from spec to a pinned defect with no `phase` setting, since P3 is the current phase.
+`e2e/run-catalog.sh` takes the five flows from spec to a pinned defect with no `phase` setting: their capabilities are on since P3.
 
 ## Fixture: `fixtures/invoice-service`
 
@@ -64,7 +64,7 @@ the new endpoint catches D16, a human confirms it, and the report counts one cat
   `admin.purge-cancelled` (security), `price.update-price` (caching), `archive-job.archive-orders` (spring-batch) and
   `db.customer-tier` (db-migration), each from spec to approval, a passing scenario, and its seeded defect (D4-D9)
   triaged, confirmed and pinned;
-- then, with the repository opted into P4, `quote.request-quote` (websocket): a STOMP client against the random port
+- then `quote.request-quote` (websocket, on by default since P4): a STOMP client against the random port
   passes s01 and catches D17.
 
 `GTA_E2E_MODULE=order-service evals/e2e/run.sh` runs the same script with the fixture as a module of a multi-module

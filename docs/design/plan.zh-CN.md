@@ -1557,7 +1557,7 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 
 Gradle 构建（已实现）：`build.tool` 为 `auto`（默认）时，有 `build.gradle(.kts)` 而没有 `pom.xml` 的模块用 Gradle 构建（存在 `./gradlew` 时用它）。gtaw 不运行 Gradle，而是从脚本文本读取 Boot 插件版本、依赖、Java 版本和 `include` 的子项目；运行测试时使用它写到 `.gta/work/gradle/` 的 init 脚本，选择场景的 tag 并把结果目录传给 gta-junit；gtaw 从不修改服务的构建脚本。`build.module` 指定子项目（`:a:b:test`）。Test 任务的 JUnit XML 按 Surefire 的格式读取（其 testcase 以显示名命名、消息带异常类型，两者都会被规范化）。变异测试需要 Maven 的测试 classpath，所以 `gtaw mutate` 和 can-fail 检查对 Gradle 构建报告 `n/a`。
 
-P3 是当前阶段，它的能力默认就会写测试。仓库可以在 `.gta/config.json` 中用 `"phase": "P4"` 提前启用后续阶段（不能设为更早的阶段）：这些能力就会在对所有人开放前开始写测试。各阶段退出标准需要的试点服务，以及开放某阶段之前必须通过的 eval，都用这个设置。
+P4 是当前阶段，它的能力（包括 `websocket`）默认就会写测试。仓库可以在 `.gta/config.json` 中用 `"phase": "P5"` 提前启用后续阶段（不能设为更早的阶段）：这些能力就会在对所有人开放前开始写测试。各阶段退出标准需要的试点服务，以及开放某阶段之前必须通过的 eval，都用这个设置。
 
 标为*新增*的能力还没有注册表条目和 skill：每个都随自己的 skill、注册表条目、eval fixture 和 1 个试点服务一起交付。
 

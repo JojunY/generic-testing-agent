@@ -1597,8 +1597,8 @@ script is never changed by gtaw. `build.module` names a subproject (`:a:b:test`)
 Surefire's (its testcases are named by display name and its messages carry the exception type, both normalised).
 Mutation testing needs the Maven test classpath, so `gtaw mutate` and the can-fail check report Gradle builds as `n/a`.
 
-P3 is the current phase: its capabilities write tests by default. A repository can opt into a later phase early with
-`"phase": "P4"` in `.gta/config.json` (never an earlier one): its
+P4 is the current phase: its capabilities, `websocket` among them, write tests by default. A repository can opt into a
+later phase early with `"phase": "P5"` in `.gta/config.json` (never an earlier one): its
 capabilities then write tests before they are on for everyone. Pilot services, which each phase's exit criteria need,
 use it, and so do the evals that must pass before a phase is switched on.
 

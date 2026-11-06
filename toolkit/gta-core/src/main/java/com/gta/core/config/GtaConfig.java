@@ -21,7 +21,7 @@ public class GtaConfig {
 
     public String schemaVersion = "1.0";
     public Build build = new Build();
-    /** Opt into a later roadmap phase early (plan §15), e.g. "P3" for a pilot service; null = gta's current phase. */
+    /** Opt into a later roadmap phase early (plan §15), e.g. "P5" for a pilot service; null = gta's current phase. */
     public String phase;
 
     public String dispatch = "subagent";
