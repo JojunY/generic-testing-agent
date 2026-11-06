@@ -259,4 +259,17 @@ class SpecLinterTest {
 
         assertTrue(issues.stream().anyMatch(i -> i.contains("hint.intent must be one of")), issues.toString());
     }
+
+    @Test
+    void shouldAskForExactlyOneRecommendedOptionPerOpenQuestion() throws Exception {
+        String none = SpecTestData.CREATE_ORDER.replace(" (recommended: the README says \"at least 100\")", "");
+        String two = SpecTestData.CREATE_ORDER.replace("(= current code)", "(= current code) (recommended: keep it)");
+
+        for (String spec : List.of(none, two)) {
+            assertTrue(
+                    lint(spec).stream().anyMatch(i -> i.contains("mark exactly one option '(recommended")),
+                    lint(spec).toString());
+        }
+        assertTrue(lint(SpecTestData.CREATE_ORDER).isEmpty(), "one recommendation is right");
+    }
 }

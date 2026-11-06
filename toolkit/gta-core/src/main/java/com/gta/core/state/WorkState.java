@@ -57,6 +57,8 @@ public class WorkState {
         public String round;
         public String rev;
         public String prompt; // the exact block the orchestrator must show verbatim
+        /** Decisions: the recommended option letter, taken by a plain {@code OK} (plan §5.10). */
+        public String recommended;
     }
 
     public static class ItemState {

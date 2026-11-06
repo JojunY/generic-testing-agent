@@ -203,8 +203,17 @@ class TriageTest {
         WorkState.Pending p = new WorkState.Pending();
         p.type = type;
         p.itemId = ITEM;
+        p.recommended = "A";
         st.pending = p;
         return ctx.triage.applyDecision(st, p, AnswerParser.parse(letter), letter);
+    }
+
+    @Test
+    void shouldTakeTheRecommendedOptionOnOk() {
+        decide("defect", "OK");
+
+        assertEquals("known-defect", s.intentOverride, "OK takes A, the recommended option");
+        assertThrows(GtaException.class, () -> decide("defect", "OK, 2B"), "a decision takes one letter or OK");
     }
 
     @Test

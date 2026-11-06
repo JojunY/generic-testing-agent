@@ -37,8 +37,11 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
    <!-- gta: id=order.create/q01 impact=high affects=order.create/s03 -->
    1. [high impact] Should a gateway timeout be retried?
       - [ ] A) No retry (= current code)
-      - [ ] B) Retry once → s03 THEN adds "the gateway is called `2` times"
+      - [ ] B) Retry once → s03 THEN adds "the gateway is called `2` times" (recommended: the README promises one retry)
    ```
+
+   Mark exactly one option per question `(recommended: <why>)`, the answer you would pick; `OK` takes it. Recommend
+   what a document says over `= current code` when they disagree. Write questions in the language the brief names.
 9. Findings (`## Findings`): `doc-drift` (docs disagree with code) or `behavior-suspect` (code looks wrong).
 9. Submit with the command in the brief and fix lint issues.
 
@@ -48,6 +51,7 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
 - Suspicious behaviour becomes a question or finding (`references/suspicious-behavior.md`), never an approved requirement.
 - Generated OpenAPI (springdoc) is `observed`, not `documented`.
 - Normal-impact questions need a `= current code` option: "rest default" picks it and yields a characterization test.
+- Every open question has exactly one option marked `(recommended: <why>)`; "OK" takes it.
 
 ## References
 

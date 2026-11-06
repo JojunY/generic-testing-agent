@@ -223,4 +223,47 @@ class SpecWorkflowTest {
         assertEquals(
                 "analyze", engine().next(null, null, null, false).get("node"), "back to the analyst with the request");
     }
+
+    @Test
+    void shouldTakeTheRecommendedAnswersOnOkAndApproveTheShownRevisionOnOk() throws Exception {
+        Files.writeString(
+                paths.spec(FLOW),
+                scripted()
+                        .replace(
+                                "and total `90.00` (recommended: the Javadoc says \"at least the threshold\")",
+                                "and total `90.00`")
+                        .replace("(= current code)", "(= current code) (recommended: keep today's behaviour)"));
+        engine().submitSpec(FLOW, token);
+        engine().next(null, null, null, false);
+
+        engine().answer("OK");
+
+        String spec = Files.readString(paths.spec(FLOW));
+        assertTrue(
+                spec.contains("- [x] A) No discount at exactly 100.00"), "the recommended option is ticked: " + spec);
+        assertTrue(spec.contains("A(recommended)"), "the record says the recommendation was taken");
+        assertTrue(spec.contains("id=order.create-order/s03 source=confirmed"), "accepting is an explicit answer");
+        assertEquals("approve", engine().next(null, null, null, false).get("type"));
+        engine().answer("OK");
+        assertTrue(Files.readString(paths.spec(FLOW)).contains("status=approved"), "OK approves the shown revision");
+    }
+
+    @Test
+    void shouldAddAnOwnAnswerAsATickedOptionForTheAnalyst() throws Exception {
+        Files.writeString(paths.spec(FLOW), scripted());
+        engine().submitSpec(FLOW, token);
+        engine().next(null, null, null, false);
+
+        Map<String, Object> out = engine().answer("1: only for loyalty customers, at exactly 100.00");
+
+        String spec = Files.readString(paths.spec(FLOW));
+        assertTrue(
+                spec.contains("- [x] C) only for loyalty customers, at exactly 100.00 (own answer)"),
+                "gtaw adds the words as option C and ticks it: " + spec);
+        assertTrue(String.valueOf(out.get("result")).contains("the analyst will now rewrite"), out.toString());
+        Map<String, Object> revision = engine().next(null, null, null, false);
+        assertEquals("analyze", revision.get("node"));
+        assertTrue(Files.readString(root.resolve(String.valueOf(revision.get("brief"))))
+                .contains("the person's own answer: only for loyalty customers"));
+    }
 }

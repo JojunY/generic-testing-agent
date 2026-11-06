@@ -24,6 +24,7 @@ import java.util.stream.Stream;
 public final class BriefWriter {
     private final GtaPaths paths;
     private final String specSource;
+    private final String outputLanguage;
 
     public BriefWriter(GtaPaths paths) {
         this(paths, "gta");
@@ -31,8 +32,14 @@ public final class BriefWriter {
 
     /** @param specSource {@code spec.source}: gta, openspec or speckit (plan §3.6) */
     public BriefWriter(GtaPaths paths, String specSource) {
+        this(paths, specSource, "en");
+    }
+
+    /** @param outputLanguage {@code output.language}: the language people read questions in (plan §5.10) */
+    public BriefWriter(GtaPaths paths, String specSource, String outputLanguage) {
         this.paths = paths;
         this.specSource = specSource == null ? "gta" : specSource;
+        this.outputLanguage = outputLanguage == null ? "en" : outputLanguage;
     }
 
     /** First clause with its keyword, the rest as AND - the way the spec writes them. */
@@ -87,6 +94,19 @@ public final class BriefWriter {
                     .append(
                             "Turn anything you are not sure about, or any suspicious current behaviour, into an open question.\n\n");
         }
+        b.append("## Questions\n\n")
+                .append("Never guess: what the code or a document does not settle is an open question (plan §5.10).\n")
+                .append(
+                        "- Mark exactly one option per question `(recommended: <why>)`: the answer you would pick. It need not be")
+                .append(
+                        " `= current code`: when the code looks wrong and a document says otherwise, recommend the document.\n")
+                .append(
+                        "- Write the question so it can be answered without opening the spec: what you saw, why it matters,")
+                .append(" and what each option makes the test check.\n")
+                .append("- At most 5 per round, highest impact first.\n")
+                .append("- Write the question and option text in ")
+                .append("zh-CN".equals(outputLanguage) ? "Simplified Chinese (zh-CN)" : "English")
+                .append(", the language the person reads; keep markers (`= current code`, `→`, ids) as they are.\n\n");
         if (!lintIssues.isEmpty()) {
             b.append("## Lint issues to fix\n\n");
             lintIssues.forEach(i -> b.append("- ").append(i).append('\n'));

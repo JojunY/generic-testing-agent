@@ -173,6 +173,12 @@ public final class Spec {
         public Optional<Option> currentCodeOption() {
             return options.stream().filter(Option::isCurrentCode).findFirst();
         }
+
+        /** The option the analyst recommends (plan §5.10); {@code OK} takes it. */
+        public Optional<Option> recommendedOption() {
+            List<Option> marked = options.stream().filter(Option::isRecommended).toList();
+            return marked.size() == 1 ? Optional.of(marked.get(0)) : Optional.empty();
+        }
     }
 
     public static final class Option {
@@ -184,7 +190,22 @@ public final class Spec {
             return text.toLowerCase().contains("= current code")
                     || text.contains("= 代码现状"); // the Chinese marker is an accepted alias
         }
+
+        /** Marked {@code (recommended: <why>)}, or the Chinese alias {@code （推荐：…）}. */
+        public boolean isRecommended() {
+            return RECOMMENDED.matcher(text).find();
+        }
+
+        /** An answer a person wrote in their own words, added by gtaw (plan §5.10). */
+        public boolean isOwnAnswer() {
+            return text.endsWith(OWN_ANSWER);
+        }
     }
+
+    public static final String OWN_ANSWER = "(own answer)";
+
+    static final java.util.regex.Pattern RECOMMENDED =
+            java.util.regex.Pattern.compile("[(（]\\s*(?i:recommended|推荐|推薦)");
 
     public static final class Finding {
         public String text;

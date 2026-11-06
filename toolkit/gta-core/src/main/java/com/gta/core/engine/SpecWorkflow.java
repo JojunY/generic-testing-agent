@@ -135,6 +135,18 @@ final class SpecWorkflow {
         for (Spec.Question q : spec.openQuestions()) {
             String letter = a.picks().get(q.number);
             String source = "confirmed";
+            String how = null;
+            String own = a.ownAnswers().get(q.number);
+            if (letter == null && own != null) {
+                // a person's own words: gtaw adds them as a ticked option, the analyst turns them into THEN clauses
+                letter = ed.addOwnAnswer(q.id(), own);
+                how = "own";
+                toApply.add("Q" + q.number + " (" + q.id() + ") → the person's own answer: " + own);
+            }
+            if (letter == null && a.acceptRecommended()) {
+                letter = q.recommendedOption().map(o -> o.letter).orElse(null);
+                how = letter == null ? null : "recommended";
+            }
             if (letter == null && a.restDefault()) {
                 if ("high".equals(q.impact())) {
                     unansweredHigh.add(q.number);
@@ -150,17 +162,23 @@ final class SpecWorkflow {
                 continue;
             }
             String chosen = letter;
-            Spec.Option option = q.options.stream()
-                    .filter(o -> o.letter.equals(chosen))
-                    .findFirst()
-                    .orElseThrow(() -> new GtaException(
-                            ErrorCode.USAGE_UNPARSEABLE_ANSWER,
-                            "Question " + q.number + " has no option " + chosen,
-                            "Pick one of the listed letters"));
-            ed.tick(q.id(), letter);
+            Spec.Option option = "own".equals(how)
+                    ? null
+                    : q.options.stream()
+                            .filter(o -> o.letter.equals(chosen))
+                            .findFirst()
+                            .orElseThrow(() -> new GtaException(
+                                    ErrorCode.USAGE_UNPARSEABLE_ANSWER,
+                                    "Question " + q.number + " has no option " + chosen,
+                                    "Pick one of the listed letters"));
+            if (option != null) {
+                ed.tick(q.id(), letter);
+            }
             record = record.with(
                     q.id().substring(q.id().indexOf('/') + 1),
-                    "defaulted".equals(source) ? letter + "(default)" : letter);
+                    "defaulted".equals(source)
+                            ? letter + "(default)"
+                            : how == null ? letter : letter + "(" + how + ")");
             for (String target : q.affects()) {
                 for (Spec.Scenario s : spec.scenarios()) {
                     boolean hit = target.equals(s.id())
@@ -175,7 +193,7 @@ final class SpecWorkflow {
                         .filter(i -> target.equals(i.id()))
                         .forEach(i -> ed.setElement(i.id(), "source", "confirmed"));
             }
-            if (!option.isCurrentCode()) {
+            if (option != null && !option.isCurrentCode()) {
                 toApply.add("Q" + q.number + " (" + q.id() + ") → " + letter + ") " + option.text);
             }
         }

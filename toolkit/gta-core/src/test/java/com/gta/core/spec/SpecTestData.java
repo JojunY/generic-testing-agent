@@ -47,7 +47,7 @@ public final class SpecTestData {
             <!-- gta: id=order.create/q01 impact=high affects=order.create/s02 -->
             1. [high impact] Should an order of exactly 100.00 get the discount?
                - [ ] A) No (= current code)
-               - [ ] B) Yes → s02 THEN discount `10.00`
+               - [ ] B) Yes → s02 THEN discount `10.00` (recommended: the README says "at least 100")
 
             ## Findings
             """;

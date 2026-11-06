@@ -865,8 +865,9 @@ Next: after your reply, s03 (2 scenarios left)
 - **Next**: the next step and, when it waits, the exact reply.
 - No internal words: `observed`, `defaulted`, `documented` and `characterization` read as "read from the code",
   "taken as is", "from <document>" and "locks today's behaviour".
-- **Language**: `output.language` (`en`, the default, or `zh-CN`) applies to the status block and every prompt. Specs,
-  briefs, agents and code stay English; replies are accepted in either language.
+- **Language**: `output.language` (`en`, the default, or `zh-CN`) applies to the status block and every prompt, and the
+  analyst writes the text of its questions and options in it. The rest of the spec, briefs, agents and code stay
+  English; replies are accepted in either language.
 
 **Questions with a recommended answer.** gta never guesses. What the analyst cannot read from the code or a document
 becomes a question, and an author who finds the brief unclear stops and asks

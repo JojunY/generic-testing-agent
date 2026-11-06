@@ -49,7 +49,7 @@ final class EngineContext {
         this.registry = CapabilityRegistry.loadBundled();
         this.store = new StateStore(paths);
         this.git = new Git(paths.root());
-        this.briefs = new BriefWriter(paths, config.spec.source);
+        this.briefs = new BriefWriter(paths, config.spec.source, config.output.language);
         this.runner = runner != null ? runner : TestRunner.forBuild(paths, config);
         this.injectedRunner = runner;
         this.runs = new TestRuns(this);

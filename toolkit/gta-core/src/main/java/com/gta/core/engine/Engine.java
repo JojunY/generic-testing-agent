@@ -302,6 +302,10 @@ public final class Engine {
         } catch (GtaException notAnApproval) {
             return ctx.specs.requestChanges(st, p, text);
         }
+        if (parsed instanceof AnswerParser.Answers a && a.onlyOk()) {
+            // OK on an approval prompt approves exactly the revision the prompt showed (plan §5.10)
+            return ctx.specs.applyApproval(st, p, new AnswerParser.Approval(p.flowId, p.rev), text);
+        }
         return parsed instanceof AnswerParser.Approval
                 ? ctx.specs.applyApproval(st, p, parsed, text)
                 : ctx.specs.requestChanges(st, p, text);

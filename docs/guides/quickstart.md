@@ -90,25 +90,19 @@ Open Copilot Chat (agent mode) or OpenCode in the service and type:
 
 gta stops and waits for you at three points.
 
-**Questions.** Reply with the round code it shows:
+**Questions.** Every question shows one recommended answer, marked `← recommended`, with the reason. Reply:
 
 ```
-R1: 1B 2A rest default
+OK
 ```
 
-High-impact questions need an explicit answer. `rest default` picks the "= current code" option for the rest. Those scenarios become *characterization* tests: they lock today's behaviour and do not prove it is correct.
+to take every recommendation. To choose another option, add its number and letter (`OK, 2B`); to answer in your own words, write it on its own line (`2: only for loyalty customers`). `rest default` still picks the "= current code" option for the remaining normal-impact questions; those scenarios become *characterization* tests, which lock today's behaviour and do not prove it is correct. Taking a recommendation is a real answer: your reply is recorded word for word.
 
-**Approval.** Reply with the revision it shows:
+**Approval.** The prompt names the revision it shows. Reply `OK` to approve exactly that revision (`approve order.create@R2` works too). "don't approve …" or "approve … after q2 is fixed" is treated as a change request, never as an approval. Approval is committed with your words as the record.
 
-```
-approve order.create@R2
-```
+**Replying in Chinese.** Set `"output": { "language": "zh-CN" }` in `.gta/config.json` and gta asks its questions and shows its prompts in Chinese. Replies work in either language: `好` / `确认` for OK, `批准 order.create@R2` for approve, `其余默认` (or `其他默认`) for rest default, and the option marker `= 代码现状` for `= current code`.
 
-The reply must be exactly that line: "don't approve …" or "approve … after q2 is fixed" is treated as a change request, never as an approval. Approval is committed with your words as the record.
-
-**Replying in Chinese.** You can talk to the agent in any language. gtaw also accepts these Chinese forms of the fixed replies: `批准 order.create@R2` for approve, `其余默认` (or `其他默认`) for rest default, and the option marker `= 代码现状` for `= current code`.
-
-**Defects and escalations.** Reply with a letter (A, B, C). A confirmed defect is pinned with `@KnownDefect`:
+**Defects and escalations.** Reply `OK` for the recommended option, or another letter (A, B, C). A confirmed defect is pinned with `@KnownDefect`:
 
 - the build stays green while the defect exists;
 - the test turns red once the defect is fixed, which tells you to remove the pin.

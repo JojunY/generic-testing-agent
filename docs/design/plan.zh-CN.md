@@ -860,7 +860,7 @@ gta 要让从没用过它的开发者也能上手。人看到的所有内容都�
 - **需要你**：要做的决定；没有就写"无，继续中"。
 - **下一步**：下一步做什么；需要等人时，写明具体怎么回复。
 - 不出现内部术语：`observed`、`defaulted`、`documented`、`characterization` 分别说成"从代码读出"、"按现状接受"、"来自<文档>"、"锁定现在的行为"。
-- **语言**：`output.language`（默认 `en`，或 `zh-CN`）作用于状态块和所有提示。规格、brief、agent 和代码仍用英文；回复用哪种语言都接受。
+- **语言**：`output.language`（默认 `en`，或 `zh-CN`）作用于状态块和所有提示，analyst 也用这个语言写问题和选项的文字。规格的其余部分、brief、agent 和代码仍用英文；回复用哪种语言都接受。
 
 **带推荐答案的问题**：gta 不猜。analyst 从代码和文档中读不出的内容一律变成问题；test-author 觉得 brief 说得不清楚时，要停下来提问
 （`gtaw submit --item <id> --token <t> --question "<不清楚的地方>"`），不能自己假设。问题要让人答得省力：
