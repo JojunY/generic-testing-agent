@@ -39,7 +39,7 @@ gta_init() { # gta_init <copilot|opencode>: installs the harness and checks that
              grep -q 'answer|status' .vscode/settings.json || fail "$1: no auto-approve rules" ;;
     opencode) for f in .opencode/agents/gta-orchestrator.md .opencode/agents/gta-test-author.md \
                        .opencode/commands/gta.md opencode.json; do [ -f "$f" ] || fail "$1: no $f"; done
-              grep -Eq '"\./gtaw next\*" *: *"allow"' .opencode/agents/gta-orchestrator.md || fail "$1: the orchestrator cannot run gtaw next"
+              grep -Eq '"\./gtaw next\*" *: *"?allow' .opencode/agents/gta-orchestrator.md || fail "$1: the orchestrator cannot run gtaw next"
               grep -Eq '"\./gtaw \*" *: *"?ask' .opencode/agents/gta-orchestrator.md || fail "$1: privileged gtaw commands do not ask" ;;
   esac
   [ -f .gta/skills/gta-writing-tests/SKILL.md ] || fail "$1: no skills"
