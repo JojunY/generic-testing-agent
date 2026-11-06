@@ -44,9 +44,12 @@ public final class AnswerParser {
     /** A reply that is nothing but OK: "OK, but change 3" is a change request, not a plain OK. */
     private static final Pattern PLAIN_OK =
             Pattern.compile("^\\s*(?:ok|okay|好的|好|确认|確認|同意)[\\s,，;；。.!！]*$", Pattern.CASE_INSENSITIVE);
-    /** "2: retry twice" on a line of its own; "2: B" is a pick, not an own answer. */
+    /**
+     * "2: retry twice" at the start of a line or after a comma ("OK, 2: retry twice"), running to the end of the line;
+     * "2: B" (a letter alone) is a pick, not an own answer.
+     */
     private static final Pattern OWN_ANSWER =
-            Pattern.compile("(?m)^\\s*(\\d{1,2})\\s*[:：]\\s*(?![A-Za-z]\\s*$)(\\S.*?)\\s*$");
+            Pattern.compile("(?m)(?:^|[,，;；])\\s*(\\d{1,2})\\s*[:：]\\s*(?![A-Za-z]\\s*(?:$|[,，;；]))(\\S.*?)\\s*$");
 
     public sealed interface Parsed permits Answers, Approval, Choice {}
 
@@ -85,7 +88,9 @@ public final class AnswerParser {
         if (a.matches()) {
             return new Approval(a.group(1), a.group(2).toUpperCase());
         }
-        if (APPROVAL_MENTION.matcher(text).find() && !ROUND.matcher(text).find()) {
+        // an own answer may say "approve" ("2: a manager must approve refunds"): only the rest is an approval attempt
+        if (APPROVAL_MENTION.matcher(OWN_ANSWER.matcher(text).replaceAll("")).find()
+                && !ROUND.matcher(text).find()) {
             throw new GtaException(
                     ErrorCode.USAGE_UNPARSEABLE_ANSWER,
                     "Not an approval: " + text,

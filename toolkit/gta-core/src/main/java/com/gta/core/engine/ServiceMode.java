@@ -18,8 +18,8 @@ final class ServiceMode {
 
     private ServiceMode() {}
 
-    /** Queues every flow of the service, riskiest first, and makes the first one active; false when there is none. */
-    static boolean start(WorkState st, ServiceProfile profile) {
+    /** Queues every flow of the service, riskiest first, and makes the first one active (none: no active flow). */
+    static void start(WorkState st, ServiceProfile profile) {
         Set<String> flows = new LinkedHashSet<>();
         profile.entrypoints.stream()
                 .sorted(Comparator.comparingInt((ServiceProfile.EntryPoint e) -> -e.risk))
@@ -28,7 +28,6 @@ final class ServiceMode {
         st.parked.clear();
         st.pending = null;
         st.activeFlow = st.queue.isEmpty() ? null : st.queue.remove(0);
-        return st.activeFlow != null;
     }
 
     /**
@@ -36,7 +35,9 @@ final class ServiceMode {
      * when the decision must be asked now.
      */
     static boolean park(WorkState st) {
-        if (!MODE.equals(st.mode) || st.pending == null || st.queue.isEmpty()) {
+        // an author's question is asked now: the item keeps its scope baseline while it waits, and other flows'
+        // changes made in between would read as out of scope when it resumes
+        if (!MODE.equals(st.mode) || st.pending == null || "question".equals(st.pending.type) || st.queue.isEmpty()) {
             return false;
         }
         st.parked.add(st.pending);
@@ -57,6 +58,8 @@ final class ServiceMode {
 
     /** The flows of the parked decisions, for the status block. */
     static List<String> waitingFlows(WorkState st) {
-        return st.parked.stream().map(p -> p.flowId).distinct().toList();
+        return MODE.equals(st.mode)
+                ? st.parked.stream().map(p -> p.flowId).distinct().toList()
+                : List.of();
     }
 }

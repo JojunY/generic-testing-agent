@@ -2,9 +2,9 @@
 
 **English** | [简体中文](plan.zh-CN.md)
 
-> Status: **P0 implemented** (REST APIs; other capabilities open phase by phase, see the §15 roadmap) · Version: plan v9 · Date: 2026-11 · Code review and remediation record: [round-2-remediation.md](../reviews/round-2-remediation.md) · [round-3-plan.md](../reviews/round-3-plan.md)
+> Status: **P0 to P4 implemented**, P4 is the current phase (see the §15 roadmap) · Version: plan v11 · Date: 2026-11 · Code review and remediation record: [round-2-remediation.md](../reviews/round-2-remediation.md) · [round-3-plan.md](../reviews/round-3-plan.md)
 > Scope: a generic testing harness for Java services (mostly Spring)
-> Surfaces: **VS Code Copilot, IntelliJ IDEA Copilot** (primary), OpenCode (secondary)
+> Surfaces: **GitHub Copilot (VS Code, IntelliJ IDEA) and OpenCode**, supported equally: the same agents, command, guardrails and tests
 > Target environment: Maven; Spring Boot 4.1 mostly, a few 3.5; JUnit follows the Spring Boot parent; Java 17+; Windows developer machines; Oracle and BigQuery for data; Pub/Sub, Kafka and MQ for messaging; no containers locally; every dependency goes through the company Nexus proxy and the platform team can upload packages to Nexus; CI (alm-github) can be connected; most services have code but no specification documents. CODEOWNERS and branch protection are not enabled, and the Copilot preview policy is off
 > Namespace: every external asset uses the prefix `gta`. The revision history is in Appendix B
 
@@ -99,7 +99,6 @@
 | [Probity](https://github.com/nizos/probity) | a declarative policy engine across agents | the way hook rules are designed | depending on it directly |
 | [Specmatic](https://specmatic.io/) | OpenAPI as an executable contract | an option for the contract layer | — |
 | [EvoMaster](https://github.com/WebFuzzing/EvoMaster) | search-based generation of JVM REST tests | — | its oracle reflects actual, not expected behaviour |
-| [Keploy](https://github.com/keploy/keploy) | records traffic and replays it | characterization baseline in P5 | — |
 
 **Research evidence**: [Konstantinou et al. (2024)](https://arxiv.org/abs/2410.21136) found that LLM-generated oracles mostly reflect the **actual** behaviour of the code, not the **expected** behaviour.
 
@@ -145,7 +144,7 @@
 - No Gliffy (proprietary format, cannot be diffed, hard for LLMs to produce reliably); Mermaid throughout.
 - No dependency on the OpenSpec CLI; no EvoMaster; jqwik is not a default (§7.9).
 - v1 uses no hooks, MCP, handoffs or plugins, and does not let the platform load skills automatically (see §4.0).
-- No plugin distribution, SARIF, vector store or dashboard. Postponed: reading OpenSpec/Spec Kit specs (P2), Cucumber, record-replay, performance tests.
+- No plugin distribution, SARIF, vector store or dashboard. Postponed: reading OpenSpec/Spec Kit specs (P2), Cucumber, performance tests.
 
 ---
 
@@ -356,7 +355,7 @@ From P4 replies get shorter (§5.10): `OK` takes every recommended answer, and o
 | **Hooks** | ❌ not in v1 | VS Code hooks are a preview feature and the preview policy is off, so they cannot be relied on in VS Code. The jobs a hook would do are covered elsewhere:<br>- out-of-scope edits: the change check of §5.8 reverts them;<br>- privileged commands: not on the terminal auto-approve list, so a person must click;<br>- tampering with expected values: the oracle lock plus the gate.<br>P5 may add them as an optional enhancement for earlier interception and for capturing human input |
 | **MCP** | ❌ not in v1 | Calling gtaw from the terminal is enough. An MCP server adds process, configuration and authentication handling, configured separately in each IDE. Only if terminal approval prompts become a real pain would P5 wrap gtaw as MCP tools to use IntelliJ's per-tool auto-approval |
 | **Handoffs** | ❌ | VS Code only; human steps all happen in chat |
-| **Plugins / marketplace** | ❌ (P5) | Installation is `gtaw init`, identical in both IDEs |
+| **Plugins / marketplace** | ❌ not planned | Installation is `gtaw init`, identical in both IDEs |
 | **Anthropic's methodology** | ✅ as design basis | Adopted: workflows first, monotonic state, one context per item, eval-driven. Not adopted: mechanisms that exist only in Claude Code |
 
 #### Criteria (based on Anthropic's definitions of each primitive)
@@ -587,8 +586,6 @@ In the **profile step**, gtaw produces a deterministic list of entry points with
 | Tampering with expected values | the oracle lock plus the gate anchored on the base branch (§10.5) |
 | Reading secrets, `git push --force` | not on the auto-approve list; credential isolation in §13 |
 
-Optional enhancement for P5: in IntelliJ (hooks are GA) or in VS Code with the preview enabled, `preToolUse` can intercept earlier and `userPromptSubmitted` can capture human input, adding a `verified` channel for answers.
-
 ---
 
 ## 5. Harness mechanics
@@ -690,6 +687,7 @@ A working-state file that cannot be read is moved aside as `*.corrupt-<time>` an
      - passes: the build fails with "the defect is fixed, remove the annotation";
      - fails for another reason: the build fails.
    - An `@KnownDefect` that no person confirmed is refused (`POLICY_UNCONFIRMED_KNOWN_DEFECT`).
+   - A skipped test (`@Disabled`, an assumption that fails) verifies nothing and is refused (`POLICY_TEST_SKIPPED`).
 8. **Language adapters**: v1 supports tests written in Java only. Other languages plug in through a `LanguageAdapter` (entry-point detection, build and run, assertion fingerprint). Tests in a language without an adapter are never marked `passed`.
 
 ### 5.4 State machine
@@ -773,7 +771,7 @@ One error object:
 | 30 | environment | `ENV_` | `ENV_EMULATOR_UNAVAILABLE`, `ENV_WRAPPER_CHECKSUM_MISMATCH`, `ENV_TOOL_UNAVAILABLE` | pause with a hint |
 | 31 | transient | `TRANSIENT_` | `TRANSIENT_REGISTRY_TIMEOUT` | retried internally 3 times with exponential back-off, then paused (downloads and network only) |
 | 40 | build | `BUILD_` | `BUILD_COMPILE_ERROR` | see §5.4 |
-| 50 | policy | `POLICY_` | `POLICY_OUT_OF_SCOPE_CHANGE`, `POLICY_ORACLE_MODIFIED`, `POLICY_ORACLE_MISMATCH`, `POLICY_UNCONFIRMED_KNOWN_DEFECT` | repair (counts an attempt) |
+| 50 | policy | `POLICY_` | `POLICY_OUT_OF_SCOPE_CHANGE`, `POLICY_ORACLE_MODIFIED`, `POLICY_ORACLE_MISMATCH`, `POLICY_UNCONFIRMED_KNOWN_DEFECT`, `POLICY_TEST_SKIPPED` | repair (counts an attempt) |
 | 60 | state | `STATE_` | `STATE_ILLEGAL_TRANSITION`, `STATE_LOCKED`, `STATE_STALE_SESSION`, `STATE_CORRUPT`, `STATE_BUDGET_EXHAUSTED` | run `next` again (a used-up budget is not retryable) |
 | 70 | internal | `INTERNAL_` | `INTERNAL_ERROR` | stop and keep the evidence |
 
@@ -897,7 +895,7 @@ Usage: `/gta [service|explain|pr|incident|note|status] [notes]`. Without argumen
 
 | Mode | Flow (D = gtaw, A = agent, H = human) | Output |
 |---|---|---|
-| `service` (P4; `/gta` with nothing in progress) | D profile → overview of the flows found, by kind and risk → H picks, with a recommendation (all, riskiest first) → the flows are queued and each runs as in flow mode. A flow waiting for a person does not stop the others: gtaw parks its decision, goes on with the next flow, and asks the parked decisions, oldest first, once no queued flow can go on without the person; the status block names the flows still waiting. `gtaw next --mode service` | specs, tests and ledgers for the whole service |
+| `service` (P4; `/gta` with nothing in progress) | D profile → overview of the flows found, by kind and risk → H picks, with a recommendation (all, riskiest first) → the flows are queued and each runs as in flow mode. A flow waiting for a person does not stop the others: gtaw parks its decision (a test author's question is asked at once, since the author waits for it), goes on with the next flow, and asks the parked decisions, oldest first, once no queued flow can go on without the person; the status block names the flows still waiting. `gtaw next --mode service` | specs, tests and ledgers for the whole service |
 | `explain <flowId\|path>` | D profile → A analyst | overview diagram, sequence diagram, draft spec, questions; read-only. After answers and approval it turns into flow mode |
 | default (flow) | D → A analyst → H answers → H approves → D plan → loop (A test-author ⇄ D check → D submit → A reviewer) → D verify → D report | tests, oracle shards, report |
 | `pr` | D impact: diff → affected methods, config keys and beans (following injection) → flows, marked `stale`<br>→ A analyst: the PR description is a `documented` intent; questions only where the intent is unclear<br>→ H approves (also possible in the PR) → then as above | tests, PR comment (behaviour change summary, findings, new confirmations, unmapped changes) |
@@ -1020,7 +1018,12 @@ SIT and UAT themselves, with their own accounts. gta's part is to make sure it n
 all: every run drops cloud credentials and the developer's Spring profile and configuration variables, and
 `safety.protectedHosts` lists the SIT, UAT and production hosts no test or fixture gta writes may name (§13).
 External services are stubbed with WireMock, plus contract tests. Opt-in tests against SIT or UAT may come later
-(§15 P5); until then those hosts are refused like production.
+(§15 P5); until then those hosts are refused like production. Their design is already decided:
+- they run only in the team's deploy pipeline (`mvn verify -Dgroups=remote`); gtaw only checks locally that they
+  compile and carry `@Tag("remote")`, never connects to SIT or UAT, and its local runs and gate exclude `remote`;
+- read-only by default; a write must be marked in the spec, use data with a fixed prefix (`gta-test-`) and clean up;
+- credentials come from environment variables the configuration names; gtaw never reads or records their values;
+- production stays in `safety.protectedHosts`, always.
 
 ### 7.8 Database migrations
 
@@ -1427,7 +1430,7 @@ generic-testing-agent/
 | Prompt / commands | `.github/prompts/*.prompt.md`, `agent:` selects the agent | GA (2026-06) | `.opencode/commands/*.md` | only `/gta`, which selects the orchestrator |
 | Hooks | preview (off) | GA | plugin | **not used in v1** (§4.0, §4.5) |
 | MCP | supported | supported | supported | **not used in v1** (§4.0) |
-| Terminal auto-approve | `chat.tools.terminal.autoApprove` (workspace setting) | Settings > GitHub Copilot > Chat > Auto Approve (user level) | `permission.bash` | only `./gtaw next\|check\|submit\|answer\|status` |
+| Terminal auto-approve | `chat.tools.terminal.autoApprove` (workspace setting) | Settings > GitHub Copilot > Chat > Auto Approve (user level) | `permission.bash` | only `./gtaw next\|check\|submit\|answer\|status`; every other gtaw command asks, `note` included (it records what a person says) |
 | Request limit per turn | `chat.agent.maxRequests` | yes | `steps` | `maxItemsPerSession` = 5 |
 | Skills | `.github/skills/` | GA | `.opencode/skills/` | **not used** (`.gta/skills/` loaded by path instead) |
 | Handoffs / plugins | supported | unconfirmed | — | not used |
@@ -1502,7 +1505,7 @@ The same conversation works in Chinese: `R3: 1A 2A 其余默认` and `批准 ord
 - No containers are needed. `gtaw doctor` detects optional gcloud emulators; without them gta still runs and uses fakes for those dependencies.
 - Every error carries a hint. `docs/guides/quickstart.md` is a single page.
 
-**Prerequisites**: JDK 17+, Maven, Copilot agent mode (or OpenCode), a Mermaid preview; gcloud emulators optional.
+**Prerequisites**: JDK 17+, Maven, Copilot agent mode or OpenCode, a Mermaid preview; gcloud emulators optional.
 
 ---
 
@@ -1520,7 +1523,7 @@ When an agent writes to these paths, the change check of §5.8 restores them. Ap
 | Topic | Measures |
 |---|---|
 | Authoritative decisions | the change check of §5.8, the base-anchored gate (§10.5) and PR review. **Without branch protection the gate is only a red status check and cannot block a merge**, so making it a required check is recommended |
-| Privileged commands | `gate waive`, `relock`, `env`, `abort` and `next --takeover` are not on the terminal auto-approve list, so a person must confirm them; auto-approve covers only next/check/submit/answer/status |
+| Privileged commands | `gate waive`, `relock`, `env`, `abort` and `next --takeover` are not on the terminal auto-approve list, so a person must confirm them; auto-approve covers only next/check/submit/answer/status; `note` also asks, so an agent cannot record a note as if a person had said it |
 | Production code | no mode of v1 changes it |
 | Human confirmations | auditable (§5.5); PR review has the final word |
 | Test integrity | weakening assertions, deleting tests, adding `@Disabled` and changing expected values to actual values are forbidden; triage, the expected-value check, the oracle lock and the gate enforce this together |
@@ -1540,7 +1543,7 @@ When an agent writes to these paths, the change check of §5.8 restores them. Ap
 | GitBug-Java | 199 reproducible Java bugs from 2023 for fail-to-pass evaluation of incident mode |
 | Defects4J | smoke testing only (probably in training data, and mostly libraries) |
 | Semantic seeding | seed bugs in access control, time zones, idempotency and transaction boundaries, plus decoys where "the documentation is outdated but the code is right" |
-| Platform evals | in both IDEs: agent visibility, subagent dispatch, inline mode, terminal auto-approve |
+| Platform evals | in both IDEs and OpenCode: agent visibility, subagent dispatch, inline mode, terminal auto-approve |
 | Adversarial evals | the agent tries to forge confirmations, tamper with expected values, change out-of-scope files, call privileged subcommands and commit by itself |
 
 **Metrics** (in priority order)
@@ -1559,6 +1562,9 @@ When an agent writes to these paths, the change check of §5.8 restores them. Ap
 - Fault injection (killing the process mid-run).
 - Learning loop (P2): `defect-found` items become eval tasks; reviewer verdicts and human edits are distilled into `.gta/lessons.md`.
 - Run information goes to `.gta/work/runs/<runId>/run.json`.
+- The adversarial run `evals/e2e/run-adversarial.sh` plays a cheating author (changed or removed expected values,
+  `@Disabled`, failing assumptions, production edits, a forged confirmation, a production host, its own commit) and
+  fails unless gtaw catches every attack: metrics 3 and 4, measured on every change.
 - The scripted end-to-end run `evals/e2e/run.sh` plays correct agent outputs against the order-service fixture and checks every deterministic decision, including regression detection, the known-defect lifecycle, reviewer rejects and rebuild/repair.
 
 ---
@@ -1573,7 +1579,7 @@ When an agent writes to these paths, the change check of §5.8 restores them. Ap
 | **P2 data, security and quality** | `db-migration` (Flyway, Liquibase; implemented); `security` (Spring Security, OAuth2 resource servers, JWT: authenticated and forbidden paths, method security; implemented); `caching` (Spring Cache, Redis, Caffeine: hits, eviction, stale reads; implemented); `spring-batch` (implemented); `mutate` and the can-fail check (shared PIT integration; both implemented); learning loop (implemented); rules-before-LLM repair; `spec.source=openspec\|speckit` (implemented) | one pilot service per new capability; mutation switched to enforced after calibration on pilot repositories |
 | **P3 reactive, Gradle, other protocols, catching** | `webflux` (reactive endpoints and clients with `WebTestClient` and `StepVerifier`); Gradle builds (a second `TestRunner` and build-file reader next to Maven); `grpc-api` and `graphql-api`; `workflow` (Temporal, Camunda, Spring Statemachine); `beam-pipeline`; incident mode (`gtaw next --mode incident --target <flowId> --intent "<report>"`: the report is kept as `<flow>.incidents.md` next to the spec and cited by a `hint.intent=reproducing` scenario; implemented); catching tests and the assessor (`hint.intent=catching` scenarios in PR mode; a failing one is run on the PR's base, so `product-defect` is refused when it fails there too, then the reviewer assesses it and a human confirms; the report counts catching hits; implemented) | one pilot service per kind |
 | **P4 usability, production safety, streaming endpoints** | in this order:<br>- usability (§5.10, §9.5): the status block and `output.language` (`en`, `zh-CN`); questions with a recommended answer and `OK` replies; `--question` for authors; `/gta note`; service mode, which covers a whole service and does not stop on a waiting flow; the tag vocabulary;<br>- production safety: Spring profile and configuration removed from every run, `safety.protectedHosts` (implemented);<br>- `websocket` (WebSocket, STOMP, SSE): local tests with `gta-testing-streaming-endpoints`.<br>Tests against deployed environments (`gtaw env`, Karate, Cloud Run/GKE/Dataflow runs, BigQuery temporary datasets) are out of scope: teams test SIT and UAT themselves (§7.7) | a developer new to gta covers one pilot service through `/gta` alone; measured: replies per flow, the share answered with `OK`, time to the first verified test |
-| **P5** | opt-in SIT/UAT tests (`@Tag("remote")`, `safety.remoteHosts`, off by default; production never); optional hooks (early interception, a `verified` answer channel), MCP wrapping, plugin distribution, SARIF, record-replay, performance tests, native-image, parallel authoring, adapters for other languages | on demand |
+| **P5** | deferred until a team needs them: opt-in SIT/UAT tests (`@Tag("remote")`, `safety.remoteHosts`, off by default; production never), MCP wrapping, SARIF, performance tests, parallel authoring, adapters for other languages.<br>Not planned (decided in v11): hooks (early interception, a `verified` answer channel), plugin distribution, record-replay, native-image | on demand |
 
 ### Capability order
 
@@ -1595,7 +1601,8 @@ builds with Gradle (`./gradlew` when present). gtaw reads the Boot plugin versio
 `.gta/work/gradle/`, which selects the scenario's tag and passes gta-junit its results directory; the service's build
 script is never changed by gtaw. `build.module` names a subproject (`:a:b:test`). The Test task's JUnit XML is read like
 Surefire's (its testcases are named by display name and its messages carry the exception type, both normalised).
-Mutation testing needs the Maven test classpath, so `gtaw mutate` and the can-fail check report Gradle builds as `n/a`.
+`gtaw mutate` and the can-fail check run PIT on the test runtime classpath an init script lists, with PIT resolved
+through the service's own repositories.
 
 P4 is the current phase: its capabilities, `websocket` among them, write tests by default. A repository can opt into a
 later phase early with `"phase": "P5"` in `.gta/config.json` (never an earlier one): its
@@ -1618,14 +1625,14 @@ registry entry, an eval fixture and one pilot service.
 | 9 | Caching (Spring Cache, Redis, Caffeine) | P2 | tests written; the skill attaches to the flows of a service with caches |
 | 10 | Spring Batch | P2 | tests written; each `@Bean Job` is a flow |
 | 11 | Reactive WebFlux | P3 | tests written; a handler returning `Mono`/`Flux` is a `webflux` flow |
-| 12 | Gradle builds | P3 | supported: Groovy and Kotlin DSL builds are read, tests run through Gradle; `gtaw mutate` and the can-fail check stay Maven-only |
+| 12 | Gradle builds | P3 | supported: Groovy and Kotlin DSL builds are read, tests run through Gradle; `gtaw mutate` and the can-fail check run too |
 | 13 | GCP data (BigQuery, GCS) | P0 | a dependency with fakes; SQL against real BigQuery is out of scope |
 | 14 | gRPC | P3 | tests written; each RPC of a generated `*ImplBase` subclass is a flow |
 | 15 | Workflows and state machines (Temporal, Camunda, Spring Statemachine) | P3 | tests written; each Temporal `@WorkflowMethod` implementation, each state machine's transitions and each `*.bpmn` process is a flow |
 | 16 | GraphQL | P3 | tests written; `@QueryMapping`/`@MutationMapping` handlers are flows |
 | 17 | Beam / Dataflow pipelines | P3 | tests written; each composite `PTransform` is a flow, run on the DirectRunner with `TestPipeline` and `PAssert` |
 | 18 | System tests on deployed environments (Karate, Kubernetes) | — | out of scope: teams test SIT and UAT themselves (§7.7) |
-| 19 | WebSocket, STOMP, SSE | P4 | detected, with the `gta-testing-streaming-endpoints` skill; tests are written once its eval passes |
+| 19 | WebSocket, STOMP, SSE | P4 | tests written; STOMP handlers, `WebSocketHandler`s and event streams (`SseEmitter`, `ServerSentEvent`, `text/event-stream`) are flows |
 
 Java: designed for services on Java 17 or newer, and a few on Java 8 or 11 are supported too. Tests are written at the
 service's own language level, with `javax.*` imports for Spring Boot 2.2 to 2.7. `gta-junit` is Java 8 bytecode, so an old
@@ -1685,3 +1692,4 @@ the matrix. `gtaw doctor` warns for Java 8 to 16 and fails anything older.
 | v9 (final design) | finalised for the confirmed environment:<br>- Windows developer machines;<br>- Oracle (shared test database / H2 compatibility mode), BigQuery (fakes, SQL tested in P4);<br>- Pub/Sub emulator distributed through Nexus, EmbeddedKafka, embedded Artemis (MQ/JMS);<br>- every dependency through the Nexus proxy, tools in a Nexus raw repository;<br>- alm-github CI template in P1;<br>- no open questions left |
 | v9.1 | P0 implemented, two code reviews applied (see [round-2-remediation.md](../reviews/round-2-remediation.md)):<br>- exact approvals only, change requests, approval refused after edits;<br>- commit ledger instead of trailers, fail-closed shards and state, bounded spec loop, review tokens, counted timeouts;<br>- English documentation with Chinese copies of README and this design; diagrams rendered by `scripts/diagrams/render.py` in the style of diagram-design |
 | v10 | P0 to P3 implemented. P4 rescoped:<br>- tests against deployed environments are out of scope: teams test SIT and UAT themselves, gta never touches them and production above all (`safety.protectedHosts`, Spring profile isolation);<br>- usability for newcomers: one status block for people in `en` or `zh-CN`, questions with a recommended answer and `OK` replies, `/gta note`, service mode, one tag vocabulary (§5.10, §9.5) |
+| v11 | P4 implemented and current. P5 trimmed: hooks, plugin distribution, record-replay and native-image are dropped; the rest stays deferred until a team needs it |

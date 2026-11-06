@@ -55,6 +55,7 @@ final class PlanSync {
             PlanItem old = existing.remove(f.id);
             WorkState.ItemState s = st.items.get(f.id);
             if (old != null && s != null && old.scenarioRevision.equals(f.scenarioRevision)) {
+                old.priority = f.priority; // derived from the spec: an item planned by an earlier version catches up
                 result.add(old);
                 continue;
             }

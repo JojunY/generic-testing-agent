@@ -58,16 +58,27 @@ final class ItemWorkflow {
     }
 
     /**
-     * The next node for the items of one flow, or {@link Dispatch#sessionOver(String)} when nothing is left for this session;
-     * the engine then runs the session end. Keeping that decision out of here keeps this class independent of {@link SessionEnd}.
+     * The next node for the items of one flow, or why nothing is left for this session ({@code end}); the engine then
+     * moves to another flow or runs the session end. Keeping that decision out of here keeps this class independent of
+     * {@link SessionEnd}.
      */
-    record Dispatch(Map<String, Object> node, String sessionOverReason) {
-        static Dispatch of(Map<String, Object> node) {
-            return new Dispatch(node, null);
+    record Dispatch(Map<String, Object> node, End end, String sessionOverReason) {
+        /** Why the items of a flow have nothing left for this session. */
+        enum End {
+            /** every item of the flow is done */
+            FLOW_DONE,
+            /** the remaining items wait on dependencies that did not pass */
+            FLOW_BLOCKED,
+            /** the session's item budget is spent */
+            BUDGET
         }
 
-        static Dispatch sessionOver(String reason) {
-            return new Dispatch(null, reason);
+        static Dispatch of(Map<String, Object> node) {
+            return new Dispatch(node, null, null);
+        }
+
+        static Dispatch sessionOver(End end, String reason) {
+            return new Dispatch(null, end, reason);
         }
     }
 
@@ -113,6 +124,7 @@ final class ItemWorkflow {
         }
         if (st.itemsThisSession >= config.budgets.maxItemsPerSession) {
             return Dispatch.sessionOver(
+                    Dispatch.End.BUDGET,
                     "session budget reached (" + st.itemsThisSession + " items); run /gta again to continue");
         }
         PlanItem conflict = null;
@@ -146,10 +158,10 @@ final class ItemWorkflow {
         }
         boolean blocked =
                 items.stream().anyMatch(i -> !st.items.get(i.id).status.terminal());
-        return Dispatch.sessionOver(
-                blocked
-                        ? "remaining items are blocked by dependencies that did not pass"
-                        : "all items of " + spec.flowId() + " are done");
+        return blocked
+                ? Dispatch.sessionOver(
+                        Dispatch.End.FLOW_BLOCKED, "remaining items are blocked by dependencies that did not pass")
+                : Dispatch.sessionOver(Dispatch.End.FLOW_DONE, "all items of " + spec.flowId() + " are done");
     }
 
     private static final Pattern GTA_TAG = Pattern.compile("@Tag\\(\\s*\"gta\"\\s*\\)");
@@ -339,7 +351,7 @@ final class ItemWorkflow {
             s.questions.add(q);
             s.token = null; // the brief that asked is spent; the answer comes with a new one
             st.pending = ctx.prompts.authorQuestion(item, q.question, q.recommended);
-            st.event(false, "ev.question", item.isFoundation() ? item.id : item.ref);
+            st.event(false, "ev.question", item.label());
             store.save(st);
             return NodeResults.answerNode(st.pending);
         }
@@ -366,7 +378,7 @@ final class ItemWorkflow {
         q.answer = ok ? p.recommended : reply;
         st.pending = null;
         PlanItem item = store.planItem(p.itemId);
-        st.event(false, "ev.question.answered", item.isFoundation() ? item.id : item.ref);
+        st.event(false, "ev.question.answered", item.label());
         return result("answer recorded for " + p.itemId + "; run ./gtaw next for the author's new brief", null);
     }
 
@@ -528,6 +540,22 @@ final class ItemWorkflow {
                     ErrorCode.POLICY_UNCONFIRMED_KNOWN_DEFECT,
                     "@KnownDefect may only be added after a human confirmed the defect; remove it and let the failure be triaged");
         }
+        List<String> skipped = run.cases.stream()
+                .filter(c -> "skipped".equals(c.outcome))
+                .map(c -> c.method)
+                .toList();
+        if (failures.isEmpty() && !skipped.isEmpty()) {
+            // a skipped test verifies nothing: @Disabled or a failed assumption must not read as a pass; a real
+            // failure in the same run still goes to triage
+            return fail(
+                    st,
+                    item,
+                    s,
+                    ErrorCode.POLICY_TEST_SKIPPED,
+                    "Skipped, so nothing was verified: " + skipped
+                            + ". Remove @Disabled and assumptions that skip the test; if the environment skips it (a"
+                            + " missing variable or tool), the test cannot verify anything here: test without it");
+        }
         if (failures.isEmpty()) {
             if ("reproducing".equals(item.intent)) {
                 return fail(
@@ -630,7 +658,7 @@ final class ItemWorkflow {
             return needsHuman(st, item, s, "repair attempts exhausted (" + s.attempts + "): " + code.name());
         }
         st.move(s, ItemStatus.REPAIRING);
-        st.event(false, "ev.test.repair", item.isFoundation() ? item.id : item.ref, code.name());
+        st.event(false, "ev.test.repair", item.label(), code.name());
         Map<String, Object> more = new LinkedHashMap<>();
         more.put("code", code.name());
         more.put("attemptsLeft", config.budgets.maxAttemptsPerItem - s.attempts);
@@ -654,7 +682,7 @@ final class ItemWorkflow {
         }
         st.consecutiveFailures++;
         st.itemsThisSession++;
-        st.event(false, "ev.needs.human", item.isFoundation() ? item.id : item.ref, firstLines(reason, 1));
+        st.event(false, "ev.needs.human", item.label(), firstLines(reason, 1));
         ctx.escalations.writeEscalation(item, s, reason);
         return result("needs-human: " + item.id + " — " + reason, null);
     }
@@ -668,7 +696,7 @@ final class ItemWorkflow {
         st.sessionPassed.add(item.id);
         st.itemsThisSession++;
         st.consecutiveFailures = 0;
-        st.event(false, "ev.test.passed", item.isFoundation() ? item.id : item.ref);
+        st.event(false, "ev.test.passed", item.label());
         return result(
                 "passed: " + item.id + " (run " + runId + ", commit "
                         + (s.commit == null ? "-" : s.commit.substring(0, 7)) + ")",

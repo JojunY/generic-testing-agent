@@ -5,10 +5,7 @@ permission:
   edit:
     "*": deny
     ".gta/specs/**": allow
-  bash:
-    "*": deny
-    "./gtaw *": allow
-    ".\\gtaw.cmd *": allow
+  bash: gtaw-bash
   task: deny
 hidden: true
 ---

@@ -117,9 +117,6 @@ final class RuleRepair {
         return out;
     }
 
-    /** The intent tags (plan §9.5): every gta test method carries exactly one. */
-    static final List<String> INTENT_TAGS = List.of("characterization", "hardening", "reproducing", "catching");
-
     private static final Pattern MANAGED_TAG =
             Pattern.compile("[ \\t]*@Tag\\(\\s*\"(?:characterization|hardening|reproducing|catching|p[0-3])\"\\s*\\)");
 
@@ -182,13 +179,19 @@ final class RuleRepair {
         String indent = lines.get(at)
                 .substring(
                         0, lines.get(at).length() - lines.get(at).stripLeading().length());
+        // after the scenario tag, unless its line goes on with the declaration ("@Tag(...) void s01() {")
+        boolean declarationFollows = !lines.get(at).strip().endsWith(")");
         List<String> block = new ArrayList<>();
         for (int i = first; i <= last; i++) {
+            if (i == at && declarationFollows) {
+                block.add(indent + intentTag);
+                block.add(indent + priorityTag);
+            }
             String line = MANAGED_TAG.matcher(lines.get(i)).replaceAll("");
             if (!line.isBlank()) {
                 block.add(line);
             }
-            if (i == at) {
+            if (i == at && !declarationFollows) {
                 block.add(indent + intentTag);
                 block.add(indent + priorityTag);
             }

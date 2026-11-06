@@ -4,10 +4,7 @@ mode: subagent
 steps: 40
 permission:
   edit: allow
-  bash:
-    "*": deny
-    "./gtaw *": allow
-    ".\\gtaw.cmd *": allow
+  bash: gtaw-bash
   task: deny
 hidden: true
 ---

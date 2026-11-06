@@ -1,4 +1,4 @@
-# Helpers shared by the scripted e2e runs (run.sh, run-catalog.sh). Expects REPO, AGENT, WORK and P to be set.
+# Helpers shared by the scripted e2e runs (run.sh, run-catalog.sh, run-gradle.sh). Expects REPO, AGENT, WORK and P to be set.
 # shellcheck shell=bash
 step() { printf '\n== %s\n' "$*"; }
 fail() { echo "E2E FAILED: $*" >&2; exit 1; }
@@ -11,6 +11,40 @@ expect() { # expect <actual> <expected> <what>
 }
 MODULE="${GTA_E2E_MODULE:-}"
 P="${MODULE:+$MODULE/}"   # the module's folder prefix, empty for the single-module run
+
+# the toolkit's version: the root pom is its only source (AGENTS.md)
+GTA_VERSION=$(sed -n 's|^  <version>\(.*\)</version>|\1|p' "$REPO/pom.xml" | head -1)
+add_gta_junit() { # add_gta_junit <pom.xml>: the seed test's dependency, as the foundation brief asks for it
+  python3 - "$1" "$GTA_VERSION" <<'PY'
+import sys
+path, version = sys.argv[1], sys.argv[2]
+s = open(path).read()
+dep = """    <dependency>
+      <groupId>com.gta</groupId>
+      <artifactId>gta-junit</artifactId>
+      <version>%s</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>""" % version
+open(path, "w").write(s.replace("  </dependencies>", dep, 1))
+PY
+}
+
+gta_init() { # gta_init <copilot|opencode>: installs the harness and checks that platform's agents, command and approvals
+  java -jar "$GTA_CLI_JAR" --root . init --platform "$1" >/dev/null 2>&1 || fail "init --platform $1"
+  local f
+  case "$1" in
+    copilot) for f in .github/agents/gta-orchestrator.agent.md .github/agents/gta-test-author.agent.md \
+                      .github/prompts/gta.prompt.md .vscode/settings.json; do [ -f "$f" ] || fail "$1: no $f"; done
+             grep -q 'answer|status' .vscode/settings.json || fail "$1: no auto-approve rules" ;;
+    opencode) for f in .opencode/agents/gta-orchestrator.md .opencode/agents/gta-test-author.md \
+                       .opencode/commands/gta.md opencode.json; do [ -f "$f" ] || fail "$1: no $f"; done
+              grep -Eq '"\./gtaw next\*" *: *"?allow' .opencode/agents/gta-orchestrator.md || fail "$1: the orchestrator cannot run gtaw next"
+              grep -Eq '"\./gtaw \*" *: *"?ask' .opencode/agents/gta-orchestrator.md || fail "$1: privileged gtaw commands do not ask" ;;
+  esac
+  [ -f .gta/skills/gta-writing-tests/SKILL.md ] || fail "$1: no skills"
+  echo "ok   $1 harness installed"
+}
 
 cap_item() { # cap_item <scenarioId> [layer] -> the author node of that scenario (the domain's seed is adopted on the way)
   local out node layer=${2:-component}

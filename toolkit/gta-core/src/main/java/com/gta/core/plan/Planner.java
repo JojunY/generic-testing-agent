@@ -107,14 +107,10 @@ public final class Planner {
         return items;
     }
 
-    /** The scenario's {@code priority} (P0 core path, P1 important branch, P2 edge case) as a tag; P1 when absent. */
+    /** The scenario's priority as its tag (plan §9.5): {@code p0}, {@code p1} or {@code p2}. */
     public static String priority(Spec.Scenario s) {
-        String p = s.meta.getOr("priority", "P1").toLowerCase(java.util.Locale.ROOT);
-        return PRIORITY_TAGS.contains(p) ? p : "p1";
+        return s.priority().toLowerCase(java.util.Locale.ROOT);
     }
-
-    /** The priority tags (plan §9.5). */
-    public static final List<String> PRIORITY_TAGS = List.of("p0", "p1", "p2");
 
     /** Test class suffix of each layer (docs/guides/test-naming.md); one test class per source class and suffix. */
     public static final Map<String, String> SUFFIX = Map.of(

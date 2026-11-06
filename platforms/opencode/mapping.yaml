@@ -17,20 +17,39 @@ profiles:
     mode: primary
     permission:
       edit: deny
-      bash: { "*": deny, "./gtaw *": allow, ".\\gtaw.cmd *": allow }
+      bash: &gtaw-bash   # same as Copilot: these subcommands run, every other gtaw command asks a person
+        "*": deny
+        "./gtaw *": ask
+        ".\\gtaw.cmd *": ask
+        ".\\gtaw *": ask
+        "./gtaw next*": allow
+        "./gtaw check*": allow
+        "./gtaw submit*": allow
+        "./gtaw answer*": allow
+        "./gtaw status*": allow
+        ".\\gtaw.cmd next*": allow
+        ".\\gtaw.cmd check*": allow
+        ".\\gtaw.cmd submit*": allow
+        ".\\gtaw.cmd answer*": allow
+        ".\\gtaw.cmd status*": allow
+        ".\\gtaw next*": allow
+        ".\\gtaw check*": allow
+        ".\\gtaw submit*": allow
+        ".\\gtaw answer*": allow
+        ".\\gtaw status*": allow
       task: { "*": deny, "gta-*": allow }
   spec-writer:
     mode: subagent
     permission:
       edit: { "*": deny, ".gta/specs/**": allow }
-      bash: { "*": deny, "./gtaw *": allow, ".\\gtaw.cmd *": allow }
+      bash: *gtaw-bash
       task: deny
   test-writer:
     mode: subagent
     steps: 40
     permission:
       edit: allow
-      bash: { "*": deny, "./gtaw *": allow, ".\\gtaw.cmd *": allow }
+      bash: *gtaw-bash
       task: deny
   read-only:
     mode: subagent

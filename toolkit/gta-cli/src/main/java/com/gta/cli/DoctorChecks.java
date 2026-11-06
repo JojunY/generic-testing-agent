@@ -20,6 +20,12 @@ import java.util.Properties;
 
 /** Environment and installation checks with actionable hints (plan §11.2). */
 public final class DoctorChecks {
+    /**
+     * The gtaw subcommands both platforms run without asking (copilot settings.json, opencode.json and the OpenCode
+     * agents). Everything else asks a person: privileged commands, and `note`, which records what a person says.
+     */
+    static final String AUTO_APPROVED = "next|check|submit|answer|status";
+
     private final Path root;
     private final List<Map<String, String>> checks = new ArrayList<>();
 
@@ -205,8 +211,15 @@ public final class DoctorChecks {
                 add(
                         "ide-auto-approve",
                         "info",
-                        "VS Code: .vscode/settings.json auto-approves ./gtaw next|check|submit|answer|status",
+                        "VS Code: .vscode/settings.json auto-approves ./gtaw " + AUTO_APPROVED,
                         "IntelliJ: Settings > GitHub Copilot > Chat > Auto Approve → add rules for ./gtaw and .\\gtaw.cmd (same subcommands)");
+            } else if ("opencode".equals(m.get("platform"))) {
+                add(
+                        "ide-auto-approve",
+                        "info",
+                        "OpenCode: opencode.json allows ./gtaw " + AUTO_APPROVED
+                                + " (also .\\gtaw.cmd); other commands ask",
+                        "Keep permission.bash in opencode.json and the gta agents; privileged gtaw commands and gtaw note must keep asking");
             }
         } else {
             add("harness", "fail", "not installed", "Run ./gtaw init --platform copilot (or opencode)");

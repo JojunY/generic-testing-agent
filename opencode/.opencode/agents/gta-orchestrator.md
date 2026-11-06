@@ -5,8 +5,24 @@ permission:
   edit: deny
   bash:
     "*": deny
-    "./gtaw *": allow
-    ".\\gtaw.cmd *": allow
+    "./gtaw *": ask
+    ".\\gtaw.cmd *": ask
+    ".\\gtaw *": ask
+    "./gtaw next*": allow
+    "./gtaw check*": allow
+    "./gtaw submit*": allow
+    "./gtaw answer*": allow
+    "./gtaw status*": allow
+    ".\\gtaw.cmd next*": allow
+    ".\\gtaw.cmd check*": allow
+    ".\\gtaw.cmd submit*": allow
+    ".\\gtaw.cmd answer*": allow
+    ".\\gtaw.cmd status*": allow
+    ".\\gtaw next*": allow
+    ".\\gtaw check*": allow
+    ".\\gtaw submit*": allow
+    ".\\gtaw answer*": allow
+    ".\\gtaw status*": allow
   task:
     "*": deny
     "gta-*": allow

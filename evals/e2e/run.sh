@@ -52,7 +52,7 @@ POM
   mkdir -p .gta && printf '{ "build": { "module": "%s" } }\n' "$MODULE" > .gta/config.json
 fi
 git init -q -b main && git add -A && git commit -qm "order-service fixture"
-java -jar "$GTA_CLI_JAR" --root . init --platform copilot >/dev/null 2>&1
+gta_init copilot
 git add -A && git commit -qm "gta init"
 git checkout -q -b feature/gta-tests
 
@@ -97,18 +97,7 @@ step "foundation: seed test"
 OUT=$(gtaw next)
 expect "$(jget "$OUT" 'd["itemId"]')" "order#foundation-01" "first item"
 TOKEN=$(jget "$OUT" 'd["token"]')
-python3 - "${P}pom.xml" <<'EOF'
-import sys
-s = open(sys.argv[1]).read()
-dep = """    <dependency>
-      <groupId>com.gta</groupId>
-      <artifactId>gta-junit</artifactId>
-      <version>0.1.1-SNAPSHOT</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>"""
-open(sys.argv[1], "w").write(s.replace("  </dependencies>", dep, 1))
-EOF
+add_gta_junit "${P}pom.xml"
 cp "$AGENT/OrderApplicationIT.java.txt" ${P}src/test/java/com/example/order/OrderApplicationIT.java
 OUT=$(gtaw submit --item "order#foundation-01" --token "$TOKEN")
 jget "$OUT" 'd["result"]' | grep -q '^passed' || fail "foundation: $OUT"
@@ -329,6 +318,9 @@ cap_flow db.customer-tier customer-tier.spec.md DbCustomerTierIT.java.txt \
 cap_flow quote.request-quote request-quote.spec.md QuoteControllerIT.java.txt \
   "${P}src/test/java/com/example/order/quote/QuoteControllerIT.java" "the bulk discount starts above 10 items instead of at 10 (D17)" \
   gta-testing-streaming-endpoints
+cap_flow quote-stream.ladder ladder.spec.md QuoteStreamControllerIT.java.txt \
+  "${P}src/test/java/com/example/order/quote/QuoteStreamControllerIT.java" "the ladder stops before the last tier (D18)" \
+  gta-testing-streaming-endpoints
 
 step "P1 and P2 session end"
 for _ in $(seq 1 5); do
@@ -337,7 +329,7 @@ for _ in $(seq 1 5); do
 done
 expect "$(jget "$OUT" 'd["node"]')" done "P1 and P2 session end"
 for f in shipping.ship-paid-orders loyalty.on-order-created admin.purge-cancelled price.update-price \
-         archive-job.archive-orders db.customer-tier quote.request-quote; do
+         archive-job.archive-orders db.customer-tier quote.request-quote quote-stream.ladder; do
   STATUS=$(gtaw status)
   expect "$(jget "$STATUS" '" ".join(sorted(set(i["status"] for i in d["items"] if i["id"].startswith("'"$f"'/"))))')" \
     "defect-found passed" "$f item states"

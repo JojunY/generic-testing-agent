@@ -121,7 +121,7 @@ final class TestRuns {
      *     every gta test
      */
     RunResult runTests(boolean smoke, String tags) {
-        if (tags != null && tags.matches(".*\\bsystem\\b.*")) {
+        if (tags != null && tags.matches("(?s)(.*[\\s&|(])?system([\\s&|)].*)?")) {
             throw new GtaException(
                     ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE,
                     "There is no system layer: gta tests run locally only, deployed environments are out of scope",

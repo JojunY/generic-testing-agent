@@ -1,0 +1,75 @@
+package com.example.order.quote;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.gta.junit.KnownDefect;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+
+@Tag("component")
+@Tag("gta")
+@SpringBootTest
+@AutoConfigureMockMvc
+class QuoteStreamControllerIT {
+
+    private static final Pattern QUANTITY = Pattern.compile("\"quantity\":(\\d+)");
+
+    @Autowired
+    MockMvc mvc;
+
+    /** The quantities of the "quote" events, in order: the emitter completes, so the whole stream is read. */
+    private List<Integer> ladder() throws Exception {
+        MvcResult started = mvc.perform(get("/api/quotes/sku-1/ladder")
+                        .param("unitPrice", "9.90")
+                        .accept(MediaType.TEXT_EVENT_STREAM))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+        String body = mvc.perform(asyncDispatch(started))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return body.lines()
+                .filter(l -> l.startsWith("data:"))
+                .map(QUANTITY::matcher)
+                .filter(Matcher::find)
+                .map(m -> Integer.parseInt(m.group(1)))
+                .toList();
+    }
+
+    @Test
+    @Tag("flow:quote-stream.ladder")
+    @Tag("scenario:quote-stream.ladder/s01")
+    @DisplayName("[quote-stream.ladder/s01] the ladder starts with a single item")
+    void shouldStartTheLadderWithOneItem() throws Exception {
+        List<Integer> quantities = ladder();
+
+        assertThat(quantities).isNotEmpty();
+        assertThat(quantities.get(0)).isEqualTo(1);
+    }
+
+    @Test
+    @Tag("flow:quote-stream.ladder")
+    @Tag("scenario:quote-stream.ladder/s02")
+    @DisplayName("[quote-stream.ladder/s02] the ladder ends with twenty items")
+    void shouldEndTheLadderWithTwentyItems() throws Exception {
+        List<Integer> quantities = ladder();
+
+        assertThat(quantities).hasSize(4);
+        assertThat(quantities.get(quantities.size() - 1)).isEqualTo(20);
+    }
+}

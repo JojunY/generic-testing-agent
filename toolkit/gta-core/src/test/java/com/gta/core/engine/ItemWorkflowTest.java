@@ -65,14 +65,14 @@ class ItemWorkflowTest {
     void shouldEndTheSessionAtItsItemBudget() {
         st.itemsThisSession = 5;
 
-        assertEquals(true, dispatch().sessionOverReason().startsWith("session budget reached"));
+        assertEquals(ItemWorkflow.Dispatch.End.BUDGET, dispatch().end());
     }
 
     @Test
     void shouldEndTheSessionWhenEveryItemIsDone() {
         s.status = ItemStatus.PASSED;
 
-        assertEquals("all items of order.create are done", dispatch().sessionOverReason());
+        assertEquals(ItemWorkflow.Dispatch.End.FLOW_DONE, dispatch().end());
     }
 
     @Test

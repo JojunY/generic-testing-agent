@@ -33,12 +33,14 @@ class ServiceModeTest {
         WorkState st = new WorkState();
         st.parked.add(pending("old.flow"));
 
-        assertTrue(ServiceMode.start(st, profile));
+        ServiceMode.start(st, profile);
 
         assertEquals("order.create", st.activeFlow);
         assertEquals(List.of("order.cancel", "order.get"), st.queue);
         assertTrue(st.parked.isEmpty(), "a new service run starts without old decisions");
-        assertFalse(ServiceMode.start(new WorkState(), new ServiceProfile()), "no flows");
+        WorkState none = new WorkState();
+        ServiceMode.start(none, new ServiceProfile());
+        assertNull(none.activeFlow, "no flows");
     }
 
     @Test
@@ -56,6 +58,11 @@ class ServiceModeTest {
         assertEquals(List.of("order.create"), ServiceMode.waitingFlows(st));
         st.pending = pending("order.cancel");
         assertFalse(ServiceMode.park(st), "the last flow asks now");
+        st.queue.add("order.refund");
+        st.pending.type = "question";
+        assertFalse(ServiceMode.park(st), "an author waits for its answer: questions are asked at once");
+        st.queue.clear();
+        st.pending.type = "answer";
         st.mode = "flow";
         st.queue.add("order.get");
         assertFalse(ServiceMode.park(st), "flow mode never parks");

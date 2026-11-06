@@ -148,7 +148,7 @@ public final class CaseLedger {
                     row.content = summary(s.whens);
                     row.expect = summary(s.thens);
                     row.linkedSpec = specFileName + "#" + s.id().substring(s.id().indexOf('/') + 1);
-                    row.priority = priorityOf(s);
+                    row.priority = s.priority();
                     String locked = lockedRevisions.get(s.id());
                     if (RETIRED.equals(row.status)) {
                         return; // a human retired it: the spec change does not bring it back
@@ -230,11 +230,6 @@ public final class CaseLedger {
     }
 
     /** P0 core path, P1 important branch, P2 edge case; the analyst sets {@code priority=} per scenario, default P1. */
-    static String priorityOf(Spec.Scenario s) {
-        String p = s.meta.getOr("priority", "P1").toUpperCase(Locale.ROOT);
-        return p.matches("P[012]") ? p : "P1";
-    }
-
     /** {@code Pass 2026-11-04 a1b2c3d}: the latest result with its date and code version. */
     public static String result(boolean passed, String date, String sha7) {
         return (passed ? "Pass " : "Fail ") + date + " " + sha7;

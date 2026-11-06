@@ -38,7 +38,7 @@ java -jar gta-cli-<version>.jar --root path/to/service init --platform copilot \
 | `.github/agents/gta-*.agent.md`、`.github/prompts/gta.prompt.md` | Copilot 的 agent 和 `/gta` 命令（OpenCode：`.opencode/agents`、`.opencode/commands`） |
 | `.gta/skills/**` | 测试 skill，由 brief 按路径加载 |
 | `AGENTS.md` | 位于 `<!-- gta:begin -->` 和 `<!-- gta:end -->` 之间的 gta 块；文件其余内容保持不变。标记损坏（缺失、顺序颠倒或重复）时，`init` 拒绝写入并给出提示 |
-| `.vscode/settings.json`、`.vscode/extensions.json` / `opencode.json` | 合并写入，从不覆盖：`./gtaw next|check|submit|answer|status` 的自动批准、Mermaid 预览。带注释的文件不会被改动，`init` 会打印需要手工添加的键（`mergeManually`） |
+| `.vscode/settings.json`、`.vscode/extensions.json` / `opencode.json` | 合并写入，从不覆盖：`./gtaw next|check|submit|answer|status` 的自动批准（其他 gtaw 命令都会先问你）、Mermaid 预览。带注释的文件不会被改动，`init` 会打印需要手工添加的键（`mergeManually`） |
 | `gtaw`、`gtaw.cmd`、`.gta/wrapper/*` | wrapper：从 Nexus 下载固定版本的 jar，校验 sha256 后运行 |
 | `.gitignore` | 增加 `.gta/work/`（可重建的工作状态） |
 

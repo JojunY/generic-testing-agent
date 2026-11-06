@@ -98,4 +98,21 @@ class AnswerParserTest {
         assertTrue(a.acceptRecommended());
         assertEquals(java.util.Map.of("2", "B"), ((AnswerParser.Answers) AnswerParser.parse("2: B")).picks());
     }
+
+    @Test
+    void shouldReadAnOwnAnswerAfterACommaAndLetItSayApprove() {
+        AnswerParser.Answers inline = (AnswerParser.Answers) AnswerParser.parse("OK, 2: a manager signs off");
+        assertEquals(java.util.Map.of("2", "a manager signs off"), inline.ownAnswers());
+        assertTrue(inline.picks().isEmpty(), "not a pick of option A: " + inline.picks());
+
+        AnswerParser.Answers both = (AnswerParser.Answers) AnswerParser.parse("1: A, 2: retry twice");
+        assertEquals(java.util.Map.of("1", "A"), both.picks());
+        assertEquals(java.util.Map.of("2", "retry twice"), both.ownAnswers());
+
+        AnswerParser.Answers approve =
+                (AnswerParser.Answers) AnswerParser.parse("2: refunds over 1000 need a manager to approve");
+        assertEquals(
+                "refunds over 1000 need a manager to approve",
+                approve.ownAnswers().get("2"));
+    }
 }

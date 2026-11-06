@@ -34,6 +34,11 @@ public class PlanItem {
         return "foundation".equals(kind);
     }
 
+    /** What people read: the scenario id, or the item id of a seed test (which has no scenario). */
+    public String label() {
+        return isFoundation() ? id : ref;
+    }
+
     public String domain() {
         return flowId.substring(0, flowId.indexOf('.'));
     }
