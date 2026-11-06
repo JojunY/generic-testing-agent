@@ -30,7 +30,7 @@ A reactive Spring Boot 4.1 catalog: a WebFlux endpoint, a GraphQL query, a gRPC 
 | D14 | `RestockWorkflowImpl#restock` (workflow, Temporal) | no compensation: a failed stock update leaves the supplier order open |
 | D15 | `LowStockTransform#expand` (beam-pipeline) | off by one: a product with exactly 2 in stock is left off the low-stock report |
 
-`e2e/run-catalog.sh` opts the repository into P3 (`"phase": "P3"`) and takes the five flows from spec to a pinned defect.
+`e2e/run-catalog.sh` takes the five flows from spec to a pinned defect with no `phase` setting, since P3 is the current phase.
 
 ## Fixture: `fixtures/invoice-service`
 

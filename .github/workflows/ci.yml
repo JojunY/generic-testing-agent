@@ -40,7 +40,7 @@ jobs:
             run: evals/e2e/run.sh "$RUNNER_TEMP/gta-e2e"
           - name: multi-module
             run: GTA_E2E_MODULE=order-service evals/e2e/run.sh "$RUNNER_TEMP/gta-e2e-module"
-          - name: catalog (P3 preview)
+          - name: catalog
             run: evals/e2e/run-catalog.sh "$RUNNER_TEMP/gta-e2e-catalog"
           - name: gradle
             gradle: true
