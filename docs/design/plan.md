@@ -1597,7 +1597,8 @@ builds with Gradle (`./gradlew` when present). gtaw reads the Boot plugin versio
 `.gta/work/gradle/`, which selects the scenario's tag and passes gta-junit its results directory; the service's build
 script is never changed by gtaw. `build.module` names a subproject (`:a:b:test`). The Test task's JUnit XML is read like
 Surefire's (its testcases are named by display name and its messages carry the exception type, both normalised).
-Mutation testing needs the Maven test classpath, so `gtaw mutate` and the can-fail check report Gradle builds as `n/a`.
+`gtaw mutate` and the can-fail check run PIT on the test runtime classpath an init script lists, with PIT resolved
+through the service's own repositories.
 
 P4 is the current phase: its capabilities, `websocket` among them, write tests by default. A repository can opt into a
 later phase early with `"phase": "P5"` in `.gta/config.json` (never an earlier one): its
@@ -1620,7 +1621,7 @@ registry entry, an eval fixture and one pilot service.
 | 9 | Caching (Spring Cache, Redis, Caffeine) | P2 | tests written; the skill attaches to the flows of a service with caches |
 | 10 | Spring Batch | P2 | tests written; each `@Bean Job` is a flow |
 | 11 | Reactive WebFlux | P3 | tests written; a handler returning `Mono`/`Flux` is a `webflux` flow |
-| 12 | Gradle builds | P3 | supported: Groovy and Kotlin DSL builds are read, tests run through Gradle; `gtaw mutate` and the can-fail check stay Maven-only |
+| 12 | Gradle builds | P3 | supported: Groovy and Kotlin DSL builds are read, tests run through Gradle; `gtaw mutate` and the can-fail check run too |
 | 13 | GCP data (BigQuery, GCS) | P0 | a dependency with fakes; SQL against real BigQuery is out of scope |
 | 14 | gRPC | P3 | tests written; each RPC of a generated `*ImplBase` subclass is a flow |
 | 15 | Workflows and state machines (Temporal, Camunda, Spring Statemachine) | P3 | tests written; each Temporal `@WorkflowMethod` implementation, each state machine's transitions and each `*.bpmn` process is a flow |

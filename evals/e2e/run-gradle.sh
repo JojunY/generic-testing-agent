@@ -94,6 +94,31 @@ expect "$(jget "$STATUS" '" ".join(sorted(set(i["status"] for i in d["items"] if
   "defect-found passed" "invoice.quote item states"
 git diff --quiet || fail "the work tree is dirty"
 
+step "mutate on a Gradle build: PIT through gtaw's init script, the build script untouched"
+CTRL=src/main/java/com/example/invoice/api/InvoiceController.java
+UNIT=src/test/java/com/example/invoice/api/InvoiceControllerTest.java
+cat > "$UNIT" <<'JAVA'
+package com.example.invoice.api;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.math.BigDecimal;
+import org.junit.jupiter.api.Test;
+
+class InvoiceControllerTest {
+    @Test
+    void shouldDiscountALargeInvoice() {
+        assertThat(new InvoiceController().quote(new BigDecimal("200")).total()).isEqualByComparingTo("180.00");
+    }
+}
+JAVA
+sed -i 's/compareTo(DISCOUNT_FROM) > 0/compareTo(DISCOUNT_FROM) >= 0/' "$CTRL"
+OUT=$(gtaw mutate --changed --base HEAD)
+[ "$(jget "$OUT" 'd["killed"]')" -ge 1 ] || fail "PIT should kill a mutant of the changed line: $OUT"
+git diff --quiet -- build.gradle.kts || fail "gtaw changed the build script"
+echo "ok   PIT killed $(jget "$OUT" 'd["killed"]') of $(jget "$OUT" 'd["mutants"]') mutants on the changed line"
+git checkout -q -- "$CTRL" && rm "$UNIT"
+
 step "incident mode: a reported overcharge becomes a reproducing test"
 OUT=$(gtaw next --mode incident --target invoice.quote \
   --intent "A customer was charged 100.00 for an invoice of 100.00. Our terms say invoices of 100 or more get 10 % off.")

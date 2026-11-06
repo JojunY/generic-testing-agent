@@ -42,8 +42,30 @@ public final class MutationRunner {
     private final Git git;
     private final String javaExecutable;
 
-    /** PIT runs from the Maven test classpath; a Gradle build gets no mutation result yet (plan §15 P3). */
-    static final String GRADLE_UNSUPPORTED = "mutation testing needs a Maven build; skipped for this Gradle build";
+    /**
+     * For a Gradle build: an init script gtaw writes to .gta/work, so the service's build script never changes. It lists
+     * the test runtime classpath and copies PIT's jars, resolved through the service's own repositories.
+     */
+    static final String GRADLE_INIT_SCRIPT = """
+            // written by gtaw (plan §5.6): PIT's classpath without changing the service's build script
+            allprojects {
+                plugins.withId('java') {
+                    def pit = configurations.create('gtaPit')
+                    (project.findProperty('gta.pit') ?: '').toString().split(',').findAll { it }.each {
+                        dependencies.add('gtaPit', it)
+                    }
+                    tasks.register('gtaTestClasspath') {
+                        dependsOn 'testClasses'
+                        def out = project.findProperty('gta.out')
+                        doLast { file(out).text = sourceSets.test.runtimeClasspath.files.join(File.pathSeparator) }
+                    }
+                    tasks.register('gtaPitJars', Copy) {
+                        from pit
+                        into project.findProperty('gta.out') ?: 'build/gta-pit'
+                    }
+                }
+            }
+            """;
 
     public MutationRunner(GtaPaths paths, GtaConfig config) {
         // PIT runs on the JVM gtaw runs on (17+); the service's bytecode, even Java 8, runs there too
@@ -76,10 +98,6 @@ public final class MutationRunner {
         out.put("classes", List.copyOf(lines.keySet()));
         if (lines.isEmpty()) {
             out.put("result", "no production class changed since " + base);
-            return out;
-        }
-        if (GradleRunner.selected(paths, config)) {
-            out.put("result", GRADLE_UNSUPPORTED);
             return out;
         }
         Path work = paths.work().resolve("pit");
@@ -163,9 +181,6 @@ public final class MutationRunner {
         if (methodsByClass.isEmpty()) {
             return new CanFail(CanFail.NOT_APPLICABLE, 0, 0, "the scenario cites no method");
         }
-        if (GradleRunner.selected(paths, config)) {
-            return new CanFail(CanFail.NOT_APPLICABLE, 0, 0, GRADLE_UNSUPPORTED);
-        }
         Path work = paths.work().resolve("pit").resolve(itemId.replaceAll("[^A-Za-z0-9.-]", "_"));
         List<Mutant> mutants = run(work, methodsByClass.keySet(), List.of(testClass)).stream()
                 .filter(m ->
@@ -201,23 +216,28 @@ public final class MutationRunner {
 
     private List<Mutant> run(Path work, Set<String> classes, List<String> targetTests) {
         Path lib = work.resolve("lib");
-        Path classpathFile = work.resolve("classpath.txt");
         Path report = work.resolve("report");
         try {
             Files.createDirectories(lib);
         } catch (IOException e) {
             throw new GtaException(ErrorCode.ENV_TOOL_UNAVAILABLE, "Cannot create " + lib, "Check the disk", e);
         }
-        MavenRunner maven = new MavenRunner(paths, config);
-        List<String> prepare = maven.mavenCommand();
-        prepare.addAll(List.of("-B", "-q"));
-        prepare.addAll(MavenRunner.moduleArgs(paths.module()));
-        prepare.addAll(List.of(
-                "test-compile",
-                "dependency:build-classpath",
-                "-Dmdep.includeScope=test",
-                "-Dmdep.outputFile=" + classpathFile.toAbsolutePath()));
-        mustSucceed(prepare, "compile the service and list its test classpath");
+        boolean gradle = GradleRunner.selected(paths, config);
+        Path classpathFile = work.resolve("classpath.txt");
+        if (gradle) {
+            mustSucceed(
+                    gradleTask(work, "gtaTestClasspath", classpathFile, null),
+                    "compile the service and list its test classpath");
+        } else {
+            List<String> prepare = maven();
+            prepare.addAll(MavenRunner.moduleArgs(paths.module()));
+            prepare.addAll(List.of(
+                    "test-compile",
+                    "dependency:build-classpath",
+                    "-Dmdep.includeScope=test",
+                    "-Dmdep.outputFile=" + classpathFile.toAbsolutePath()));
+            mustSucceed(prepare, "compile the service and list its test classpath");
+        }
         String testClasspath;
         try {
             testClasspath =
@@ -231,34 +251,41 @@ public final class MutationRunner {
         }
         List<String> artifacts = new ArrayList<>(PIT_ARTIFACTS);
         launcherFor(testClasspath).ifPresent(artifacts::add);
-        // PIT and its own dependencies, resolved by Maven (the service's repositories and settings) from a tools pom
-        Path toolsPom = work.resolve("pit-tools.pom.xml");
-        try {
-            com.gta.core.util.AtomicFiles.write(toolsPom, toolsPom(artifacts));
-        } catch (RuntimeException e) {
-            throw new GtaException(ErrorCode.ENV_TOOL_UNAVAILABLE, "Cannot write " + toolsPom, "Check the disk", e);
+        // PIT and its own dependencies, resolved through the service's repositories and settings
+        if (gradle) {
+            mustSucceed(
+                    gradleTask(work, "gtaPitJars", lib, artifacts),
+                    "download PIT through the Gradle repositories of the service");
+        } else {
+            Path toolsPom = work.resolve("pit-tools.pom.xml");
+            try {
+                com.gta.core.util.AtomicFiles.write(toolsPom, toolsPom(artifacts));
+            } catch (RuntimeException e) {
+                throw new GtaException(ErrorCode.ENV_TOOL_UNAVAILABLE, "Cannot write " + toolsPom, "Check the disk", e);
+            }
+            List<String> copy = maven();
+            copy.addAll(List.of(
+                    "-f",
+                    toolsPom.toAbsolutePath().toString(),
+                    "dependency:copy-dependencies",
+                    "-DoutputDirectory=" + lib.toAbsolutePath()));
+            mustSucceed(copy, "download PIT through the Maven repositories of the service");
         }
-        List<String> copy = maven.mavenCommand();
-        copy.addAll(List.of(
-                "-B",
-                "-q",
-                "-f",
-                toolsPom.toAbsolutePath().toString(),
-                "dependency:copy-dependencies",
-                "-DoutputDirectory=" + lib.toAbsolutePath()));
-        mustSucceed(copy, "download PIT through the Maven repositories of the service");
         String classpath;
         try (Stream<Path> jars = Files.list(lib)) {
             List<String> parts = new ArrayList<>(
                     jars.map(p -> p.toAbsolutePath().toString()).sorted().toList());
-            parts.add(paths.moduleRoot()
-                    .resolve("target/classes")
-                    .toAbsolutePath()
-                    .toString());
-            parts.add(paths.moduleRoot()
-                    .resolve("target/test-classes")
-                    .toAbsolutePath()
-                    .toString());
+            if (!gradle) {
+                // Gradle's test runtime classpath already holds the compiled classes and resources
+                parts.add(paths.moduleRoot()
+                        .resolve("target/classes")
+                        .toAbsolutePath()
+                        .toString());
+                parts.add(paths.moduleRoot()
+                        .resolve("target/test-classes")
+                        .toAbsolutePath()
+                        .toString());
+            }
             parts.add(testClasspath);
             classpath = String.join(File.pathSeparator, parts);
         } catch (IOException e) {
@@ -287,6 +314,31 @@ public final class MutationRunner {
                 "2");
         mustSucceed(pit, "run PIT");
         return parse(report.resolve("mutations.xml"));
+    }
+
+    private List<String> maven() {
+        List<String> cmd = new MavenRunner(paths, config).mavenCommand();
+        cmd.addAll(List.of("-B", "-q"));
+        return cmd;
+    }
+
+    /** One task of gtaw's PIT init script, run on the service's module only. */
+    private List<String> gradleTask(Path work, String task, Path out, List<String> artifacts) {
+        Path init = work.resolve("gta-pit.gradle");
+        com.gta.core.util.AtomicFiles.write(init, GRADLE_INIT_SCRIPT);
+        List<String> cmd = new GradleRunner(paths, config).gradleCommand();
+        cmd.addAll(List.of(
+                "-q", "--console=plain", "-I", init.toAbsolutePath().toString(), "-Pgta.out=" + out.toAbsolutePath()));
+        if (artifacts != null) {
+            cmd.add("-Pgta.pit=" + String.join(",", artifacts));
+        }
+        cmd.add(gradleTaskPath(paths.module(), task));
+        return cmd;
+    }
+
+    /** {@code :task} on the root project, {@code :order-api:task} on a subproject: never the same task everywhere. */
+    static String gradleTaskPath(String module, String task) {
+        return module == null || module.isEmpty() ? ":" + task : ":" + module.replace('/', ':') + ":" + task;
     }
 
     /** A pom that only lists the tools; never the service's own pom, so nothing of the service changes. */

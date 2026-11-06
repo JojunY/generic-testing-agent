@@ -227,14 +227,52 @@ class MutationRunnerTest {
     }
 
     @Test
-    void shouldSkipMutationTestingForAGradleBuild() throws Exception {
-        Files.writeString(dir.resolve("build.gradle"), "plugins { id 'java' }");
-        MutationRunner runner =
-                new MutationRunner(new com.gta.core.config.GtaPaths(dir), new com.gta.core.config.GtaConfig());
+    void shouldJudgeAGradleBuildThroughGtawsInitScript() throws Exception {
+        org.junit.jupiter.api.Assumptions.assumeFalse(
+                com.gta.core.util.ProcessRunner.isWindows(), "the stand-ins for Gradle and java are shell scripts");
+        Path repo = dir.resolve("gradle-repo");
+        Files.createDirectories(repo);
+        Files.writeString(repo.resolve("build.gradle"), "plugins { id 'java' }");
+        com.gta.core.config.GtaConfig config = new com.gta.core.config.GtaConfig();
+        // Gradle: records its arguments, writes the test classpath or "downloads" PIT into -Pgta.out
+        config.build.gradle = script(dir, "gradle", """
+                echo "$@" >> "%s/gradle-args"
+                for a in "$@"; do
+                  case "$a" in -Pgta.out=*) out="${a#*=}" ;; esac
+                done
+                case "$*" in
+                  *gtaTestClasspath*) echo "/g/build/classes/java/main:/g/junit-platform-engine-6.0.3.jar" > "$out" ;;
+                  *gtaPitJars*) mkdir -p "$out" && touch "$out/pitest.jar" ;;
+                esac
+                """.formatted(dir)).toString();
+        Path java = script(dir, "java", """
+                echo "$@" > "%s/java-args"
+                while [ "$1" != "--reportDir" ]; do shift; done
+                mkdir -p "$2" && cat > "$2/mutations.xml" <<'XML'
+                <mutations>
+                <mutation status='KILLED'><sourceFile>L.java</sourceFile><mutatedClass>a.L</mutatedClass><mutatedMethod>m</mutatedMethod><lineNumber>3</lineNumber><mutator>x.MathMutator</mutator></mutation>
+                </mutations>
+                XML
+                """.formatted(dir));
 
-        MutationRunner.CanFail r = runner.canFail("i", Map.of("a.L", Set.of("m")), "a.LTest");
+        MutationRunner.CanFail r = new MutationRunner(new com.gta.core.config.GtaPaths(repo), config, java.toString())
+                .canFail("i", Map.of("a.L", Set.of("m")), "a.LTest");
 
-        assertEquals(MutationRunner.CanFail.NOT_APPLICABLE, r.verdict());
-        assertEquals(MutationRunner.GRADLE_UNSUPPORTED, r.detail());
+        assertEquals(MutationRunner.CanFail.KILLED, r.verdict(), r.detail());
+        String gradleArgs = Files.readString(dir.resolve("gradle-args"));
+        assertTrue(gradleArgs.contains(":gtaTestClasspath") && gradleArgs.contains(":gtaPitJars"), gradleArgs);
+        assertTrue(
+                gradleArgs.contains("-Pgta.pit=org.pitest:pitest:")
+                        && gradleArgs.contains("org.junit.platform:junit-platform-launcher:6.0.3"),
+                "the launcher at the platform's version");
+        assertTrue(Files.exists(repo.resolve(".gta/work/pit/i/gta-pit.gradle")), "the build script is never changed");
+        String javaArgs = Files.readString(dir.resolve("java-args"));
+        assertTrue(javaArgs.contains("/g/build/classes/java/main") && !javaArgs.contains("target/classes"), javaArgs);
+    }
+
+    @Test
+    void shouldRunGtawsPitTasksOnTheServiceModuleOnly() {
+        assertEquals(":gtaPitJars", MutationRunner.gradleTaskPath(null, "gtaPitJars"));
+        assertEquals(":order:api:gtaPitJars", MutationRunner.gradleTaskPath("order/api", "gtaPitJars"));
     }
 }
