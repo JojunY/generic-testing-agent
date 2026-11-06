@@ -5,6 +5,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 ## [Unreleased]
 
 ### Fixed
+- The status block read "1 defects found"; it now reads "defects found: 1".
 - Review round 2:
   - service mode no longer parks a test author's question: the waiting item kept its scope baseline, so other flows' changes in between read as out of scope when it resumed;
   - an own answer may say "approve" ("2: a manager must approve refunds"), and one written after a comma ("OK, 2: a manager signs off") is read as an own answer, not as option A;
@@ -20,6 +21,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - A THEN value of `true` or `false` could never be satisfied: the oracle scanner ignored boolean literals. `isEqualTo(true)`, `isTrue()`, `isFalse()`, `assertTrue` and `assertFalse` now assert them (found by the Spring Batch eval).
 
 ### Added
+- A one-page introduction, `docs/site/index.html` and `index.zh-CN.html`, for newcomers and for the people who decide. The four agents are cursors that live on the page and travel with it: they write the headline while gtaw stamps the second line, replay the same failing test without gta (the bug ships) and with it (the bug is caught), relay through `order.create` in an IDE with step tabs, and stand on their own cards next to gtaw, the referee with no cursor. A game lets the visitor try seven shortcuts (changed expected value, removed assertion, `@Disabled`, a skipping assumption, a production edit, a forged confirmation, a commit behind gtaw's back) and shows gtaw's real refusals. Then the guarantees, the flows, both platforms, how to start and a short FAQ. No external requests: the Geist fonts are bundled under the OFL (`docs/site/fonts/`); reduced motion shows every scene in its end state.
 - Adversarial e2e (`evals/e2e/run-adversarial.sh`, CI `e2e (adversarial)`, plan §14 metrics 3 and 4): a scripted cheating author tries eight attacks on the items of one flow, and the run fails unless gtaw refuses every one before anything is committed.
 - Mutation testing on Gradle builds: `gtaw mutate --changed` and the can-fail check run PIT on the test runtime classpath that a gtaw init script lists (`.gta/work/pit/gta-pit.gradle`); PIT is resolved through the service's own repositories, and the build script never changes. The Gradle e2e kills a mutant of a changed line.
 - Server-sent event streams are `websocket` flows (`SseEmitter`, `ServerSentEvent`, `produces = text/event-stream`), so their briefs load the streaming-endpoints skill instead of the REST one. `order-service` gains an SSE quote ladder (seeded D18) that the main e2e takes to a pinned defect, and `references/sse.md` shows the verified `MockMvc` reading of a completed stream.

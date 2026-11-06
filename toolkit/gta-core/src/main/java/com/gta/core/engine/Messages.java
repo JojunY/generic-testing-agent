@@ -13,7 +13,7 @@ final class Messages {
             Map.entry("state.continuing", "continuing"),
             Map.entry("state.done", "done for now"),
             Map.entry("state.blocked", "stopped, needs you"),
-            Map.entry("progress", "Progress: spec %s ▸ tests %d/%d passed ▸ %d defects found"),
+            Map.entry("progress", "Progress: spec %s ▸ tests %d/%d passed ▸ defects found: %d"),
             Map.entry("spec.draft", "being written"),
             Map.entry("spec.in-review", "waiting for your answers"),
             Map.entry("spec.approved", "approved"),

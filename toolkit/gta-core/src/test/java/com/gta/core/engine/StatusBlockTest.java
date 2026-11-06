@@ -67,7 +67,7 @@ class StatusBlockTest {
 
         assertTrue(text.startsWith("── gta · order.create ── waiting for you"), text);
         assertTrue(
-                text.contains("Progress: spec not written yet ▸ tests 1/3 passed ▸ 1 defects found"),
+                text.contains("Progress: spec not written yet ▸ tests 1/3 passed ▸ defects found: 1"),
                 "the foundation is not a test: " + text);
         assertTrue(
                 text.contains("What happened\n  1. order.create/s02: test failed: expected: <409> but was: <201>"),

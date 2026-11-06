@@ -46,7 +46,7 @@ Coverage is not the goal. Tests should check what the service is *supposed* to d
 
 ## Quick start
 
-See [docs/guides/quickstart.md](docs/guides/quickstart.md). In short:
+For a one-page introduction, open [docs/site/index.html](docs/site/index.html) in a browser. To install, see [docs/guides/quickstart.md](docs/guides/quickstart.md). In short:
 
 ```bash
 mvn -B install                      # in this repo: builds and tests the toolkit
@@ -56,7 +56,7 @@ cd <service> && ./gtaw doctor       # Windows: .\gtaw.cmd doctor
 
 Then open the service in VS Code, IntelliJ or OpenCode and type `/gta`.
 
-## Supported now (P0)
+## Supported now
 
 - **Supported:** Maven and Gradle services on Spring Boot 4.1 and 3.5 (2.2 to 2.7 too), Java 17+ (a few on Java 8 or 11 too), on Windows, macOS and Linux. gtaw itself needs JDK 17+.
 - **Writes tests for:** REST APIs (with security rules and caches), message listeners (Kafka, Pub/Sub, JMS/MQ, RabbitMQ, SQS), scheduled jobs (`@Scheduled`, Quartz), Spring Batch jobs, Flyway/Liquibase migrations, WebFlux endpoints, gRPC services, GraphQL handlers, workflows (Temporal, Spring Statemachine, BPMN) and Beam transforms. WebSocket, STOMP and SSE endpoints (P4). gta only runs tests locally: it never tests deployed environments (SIT, UAT, production), every run drops your shell's Spring profile and cloud credentials, and the agents' rules say tests use local dependencies only (plan §7.7, §13).
@@ -77,7 +77,7 @@ toolkit/     Java sources: gta-core, gta-cli, gta-junit, gta-harness-gen (Maven 
 wrapper/     files installed into services: gtaw, gtaw.cmd, gtaw-download.ps1 (pinned jar from Nexus, sha256-verified)
 scripts/     maintainer scripts: generate.sh (platform folders), diagrams/render.py (docs/diagrams)
 evals/       order-service fixture with seeded defects and a scripted end-to-end run
-docs/        guides/ (quickstart, CI integration, test naming, diagram style, adding a capability), design/ (the design), reviews/ (review records), diagrams/
+docs/        site/ (the one-page introduction), guides/ (quickstart, CI integration, test naming, diagram style, adding a capability), design/ (the design), reviews/ (review records), diagrams/
 ```
 
 ## Development
