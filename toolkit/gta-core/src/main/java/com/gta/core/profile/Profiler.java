@@ -230,6 +230,32 @@ public final class Profiler {
                         e.trigger = "gRPC " + implBase.replace("ImplBase", "") + "." + m.getNameAsString();
                         e.risk = 6;
                     }
+                    if (controller
+                            && (m.getAnnotationByName("MessageMapping").isPresent()
+                                    || m.getAnnotationByName("SubscribeMapping").isPresent())) {
+                        // a STOMP handler: tested with a STOMP client against the random port (websocket)
+                        String mapping = m.getAnnotationByName("MessageMapping").isPresent()
+                                ? "MessageMapping"
+                                : "SubscribeMapping";
+                        String prefix = c.getAnnotationByName("MessageMapping")
+                                .map(Profiler::pathsOf)
+                                .filter(p -> !p.isEmpty())
+                                .map(p -> p.get(0))
+                                .orElse("");
+                        List<String> destinations =
+                                pathsOf(m.getAnnotationByName(mapping).get());
+                        e = base(c, fqcn, m, "websocket", "stomp");
+                        e.trigger = "STOMP " + (mapping.equals("SubscribeMapping") ? "subscribe " : "send ")
+                                + (destinations.isEmpty() ? prefix : prefix + destinations.get(0));
+                        e.risk = mapping.equals("MessageMapping") ? 6 : 3;
+                    }
+                    if (isWebSocketHandler(c)
+                            && List.of("handleTextMessage", "handleMessage", "handleBinaryMessage")
+                                    .contains(m.getNameAsString())) {
+                        e = base(c, fqcn, m, "websocket", "websocket");
+                        e.trigger = "WebSocket " + c.getNameAsString();
+                        e.risk = 6;
+                    }
                     for (String mapping : GRAPHQL) {
                         if (m.getAnnotationByName(mapping).isPresent()) {
                             e = base(c, fqcn, m, "graphql-api", "graphql");
@@ -425,6 +451,16 @@ public final class Profiler {
     /** A gRPC service: extends the generated {@code XxxGrpc.XxxImplBase}. */
     static boolean isGrpcService(ClassOrInterfaceDeclaration c) {
         return c.getExtendedTypes().stream().anyMatch(t -> t.getNameAsString().endsWith("ImplBase"));
+    }
+
+    /** A raw WebSocket handler: extends TextWebSocketHandler, BinaryWebSocketHandler or implements WebSocketHandler. */
+    static boolean isWebSocketHandler(ClassOrInterfaceDeclaration c) {
+        return c.getExtendedTypes().stream()
+                        .anyMatch(t -> List.of(
+                                        "TextWebSocketHandler", "BinaryWebSocketHandler", "AbstractWebSocketHandler")
+                                .contains(t.getNameAsString()))
+                || c.getImplementedTypes().stream()
+                        .anyMatch(t -> t.getNameAsString().equals("WebSocketHandler"));
     }
 
     /** A Quartz job: extends QuartzJobBean or implements org.quartz.Job. */

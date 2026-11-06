@@ -6,3 +6,4 @@
 - Prices: a price change is visible on the next read.
 - Archive: only SHIPPED orders are archived; CANCELLED orders stay for the refund team.
 - Tiers: a customer with at least 100 points is GOLD.
+- Quotes: an order of 10 or more items gets 10 % off.
