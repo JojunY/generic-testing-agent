@@ -458,6 +458,20 @@ final class ItemWorkflow {
                     "No test ran for " + item.testClass
                             + (item.isFoundation() ? "" : " with @Tag(\"scenario:" + item.ref + "\")"));
         }
+        List<String> skipped = run.cases.stream()
+                .filter(c -> "skipped".equals(c.outcome))
+                .map(c -> c.method)
+                .toList();
+        if (!skipped.isEmpty()) {
+            // a skipped test verifies nothing: @Disabled or a failed assumption must not read as a pass
+            return fail(
+                    st,
+                    item,
+                    s,
+                    ErrorCode.POLICY_TEST_SKIPPED,
+                    "Skipped, so nothing was verified: " + skipped
+                            + ". Remove @Disabled and assumptions that skip the test; a failing test goes to triage");
+        }
         AssertionScanner.ScenarioOracle oracle = ctx.runs.scanOracle(item);
         if (!item.isFoundation()) {
             if (s.lock == null && TestRuns.reached(run)) {

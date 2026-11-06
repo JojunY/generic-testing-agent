@@ -117,9 +117,6 @@ final class RuleRepair {
         return out;
     }
 
-    /** The intent tags (plan §9.5): every gta test method carries exactly one. */
-    static final List<String> INTENT_TAGS = List.of("characterization", "hardening", "reproducing", "catching");
-
     private static final Pattern MANAGED_TAG =
             Pattern.compile("[ \\t]*@Tag\\(\\s*\"(?:characterization|hardening|reproducing|catching|p[0-3])\"\\s*\\)");
 

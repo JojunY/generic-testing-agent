@@ -5,11 +5,13 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 ## [Unreleased]
 
 ### Fixed
+- A skipped test (`@Disabled`, a failed assumption) was not a failure, so it went to review as if it had passed: an author could disable the test to get it through. It is now refused (`POLICY_TEST_SKIPPED`) and goes back to the author.
 - `OK, but change s02` on an approval prompt approved the spec, and on a decision took the recommended option: only a bare `OK` takes a recommendation now, anything more is a change request (approval) or is refused (decision).
 - Gradle's JUnit XML names testcases by display name and puts the exception type in front of the message; the report parser now maps such cases to gta-junit's results and fingerprints the bare message, so `@KnownDefect(failure=...)` matches.
 - A THEN value of `true` or `false` could never be satisfied: the oracle scanner ignored boolean literals. `isEqualTo(true)`, `isTrue()`, `isFalse()`, `assertTrue` and `assertFalse` now assert them (found by the Spring Batch eval).
 
 ### Added
+- Adversarial e2e (`evals/e2e/run-adversarial.sh`, CI `e2e (adversarial)`, plan §14 metrics 3 and 4): a scripted cheating author tries eight attacks on one item, and the run fails unless gtaw refuses every one before anything is committed.
 - Mutation testing on Gradle builds: `gtaw mutate --changed` and the can-fail check run PIT on the test runtime classpath that a gtaw init script lists (`.gta/work/pit/gta-pit.gradle`); PIT is resolved through the service's own repositories, and the build script never changes. The Gradle e2e kills a mutant of a changed line.
 - Server-sent event streams are `websocket` flows (`SseEmitter`, `ServerSentEvent`, `produces = text/event-stream`), so their briefs load the streaming-endpoints skill instead of the REST one. `order-service` gains an SSE quote ladder (seeded D18) that the main e2e takes to a pinned defect, and `references/sse.md` shows the verified `MockMvc` reading of a completed stream.
 - `websocket` eval (P4 preview): `@MessageMapping`/`@SubscribeMapping` handlers of a `@Controller` and `WebSocketHandler` implementations are `websocket` flows (the trigger names the STOMP destination). `order-service` gains a STOMP quote endpoint (seeded D17) and the main e2e, opted into P4, takes it to a pinned defect. The `gta-testing-streaming-endpoints` example is now the verified Boot 4 test: `JacksonJsonMessageConverter`, a real `StompFrameHandler`, and a resend loop, because the simple broker sends no RECEIPT for a SUBSCRIBE.

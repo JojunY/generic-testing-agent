@@ -685,6 +685,7 @@ always:
      - 测试通过了：构建失败，提示"缺陷已修复，请移除注解"；
      - 以其他原因失败：构建失败。
    - 没有经过人确认就加上的 `@KnownDefect` 会被拒绝（`POLICY_UNCONFIRMED_KNOWN_DEFECT`）。
+   - 被跳过的测试（`@Disabled`、失败的 assumption）什么也没验证，会被拒绝（`POLICY_TEST_SKIPPED`）。
 8. **语言适配**：v1 只支持 Java 编写的测试。其他语言通过 `LanguageAdapter` 接入（入口识别、构建运行、断言指纹）。没有适配器的语言，测试永远不会被标为 `passed`。
 
 ### 5.4 状态机
@@ -768,7 +769,7 @@ always:
 | 30 | environment | `ENV_` | `ENV_EMULATOR_UNAVAILABLE`、`ENV_WRAPPER_CHECKSUM_MISMATCH`、`ENV_TOOL_UNAVAILABLE` | 暂停，给出 hint |
 | 31 | transient | `TRANSIENT_` | `TRANSIENT_REGISTRY_TIMEOUT` | 内部按指数退避重试 3 次后暂停（只用于下载和网络） |
 | 40 | build | `BUILD_` | `BUILD_COMPILE_ERROR` | 见 §5.4 |
-| 50 | policy | `POLICY_` | `POLICY_OUT_OF_SCOPE_CHANGE`、`POLICY_ORACLE_MODIFIED`、`POLICY_ORACLE_MISMATCH`、`POLICY_UNCONFIRMED_KNOWN_DEFECT` | 修复（计入 attempts） |
+| 50 | policy | `POLICY_` | `POLICY_OUT_OF_SCOPE_CHANGE`、`POLICY_ORACLE_MODIFIED`、`POLICY_ORACLE_MISMATCH`、`POLICY_UNCONFIRMED_KNOWN_DEFECT`、`POLICY_TEST_SKIPPED` | 修复（计入 attempts） |
 | 60 | state | `STATE_` | `STATE_ILLEGAL_TRANSITION`、`STATE_LOCKED`、`STATE_STALE_SESSION`、`STATE_CORRUPT`、`STATE_BUDGET_EXHAUSTED` | 重新执行 `next`（预算用完不可重试） |
 | 70 | internal | `INTERNAL_` | `INTERNAL_ERROR` | 中止，保留现场 |
 
@@ -1534,6 +1535,8 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 - 做故障注入（运行中途杀进程）。
 - 学习回路（P2）：`defect-found` 的条目转成 eval task；reviewer 的结论和人工修改沉淀到 `.gta/lessons.md`。
 - 运行期信息写入 `.gta/work/runs/<runId>/run.json`。
+- 对抗测试 `evals/e2e/run-adversarial.sh` 扮演作弊的测试作者（改掉或删掉期望值、`@Disabled`、必然失败的 assumption、改生产代码、
+  伪造确认、写入生产主机、自己 commit），只要有一项没被 gtaw 拦下就失败：每次改动都量测指标 3 和 4。
 - 脚本化端到端测试 `evals/e2e/run.sh` 用正确的 agent 产出驱动 order-service 样例，检查每个确定性决策，包括回归检测、已知缺陷生命周期、reviewer 拒绝和重建修复。
 
 ---

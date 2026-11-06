@@ -42,6 +42,8 @@ jobs:
             run: GTA_E2E_MODULE=order-service evals/e2e/run.sh "$RUNNER_TEMP/gta-e2e-module"
           - name: catalog
             run: evals/e2e/run-catalog.sh "$RUNNER_TEMP/gta-e2e-catalog"
+          - name: adversarial
+            run: evals/e2e/run-adversarial.sh "$RUNNER_TEMP/gta-e2e-adversarial"
           - name: gradle
             gradle: true
             run: evals/e2e/run-gradle.sh "$RUNNER_TEMP/gta-e2e-gradle"

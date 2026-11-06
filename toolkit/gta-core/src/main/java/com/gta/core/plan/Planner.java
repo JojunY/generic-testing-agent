@@ -114,7 +114,7 @@ public final class Planner {
     }
 
     /** The priority tags (plan §9.5). */
-    public static final List<String> PRIORITY_TAGS = List.of("p0", "p1", "p2");
+    private static final List<String> PRIORITY_TAGS = List.of("p0", "p1", "p2");
 
     /** Test class suffix of each layer (docs/guides/test-naming.md); one test class per source class and suffix. */
     public static final Map<String, String> SUFFIX = Map.of(

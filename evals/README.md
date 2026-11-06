@@ -87,3 +87,12 @@ The same fixture is used to choose models per `modelTier`. Run `/gta order.creat
 - **Effort:** number of checks per item.
 
 Record the chosen models in `platforms/<platform>/mapping.yaml`.
+
+## Adversarial run
+
+`e2e/run-adversarial.sh` plays an author that cheats on `order.create-order/s01` of `order-service`: it changes or
+removes an expected value, disables the test or skips it with an assumption, edits production code, forges a
+confirmation in the spec, names a production host and commits by itself. Each attack must be refused before anything
+of s01 is committed, and the run fails unless every one is caught (plan §14, metrics 3 and 4). CI runs it as
+`e2e (adversarial)`.
+

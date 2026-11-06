@@ -182,6 +182,17 @@ class EngineTest {
     }
 
     @Test
+    void shouldRefuseASkippedTestInsteadOfPassingIt() {
+        store.save(state(ItemStatus.AUTHORING));
+        runner.then(outcome("skipped"));
+
+        Map<String, Object> out = engine().submitItem(ITEM, TOKEN);
+
+        assertEquals(ErrorCode.POLICY_TEST_SKIPPED.name(), out.get("code"), out.toString());
+        assertEquals(ItemStatus.REPAIRING, item().status, "a disabled test is not a pass");
+    }
+
+    @Test
     void shouldRefuseATestThatNamesAProtectedHostBeforeAnyRun() throws Exception {
         Files.createDirectories(paths.gta());
         Files.writeString(paths.config(), "{ \"safety\": { \"protectedHosts\": [\"orders-prod.acme.com\"] } }");

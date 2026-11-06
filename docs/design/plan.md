@@ -687,6 +687,7 @@ A working-state file that cannot be read is moved aside as `*.corrupt-<time>` an
      - passes: the build fails with "the defect is fixed, remove the annotation";
      - fails for another reason: the build fails.
    - An `@KnownDefect` that no person confirmed is refused (`POLICY_UNCONFIRMED_KNOWN_DEFECT`).
+   - A skipped test (`@Disabled`, an assumption that fails) verifies nothing and is refused (`POLICY_TEST_SKIPPED`).
 8. **Language adapters**: v1 supports tests written in Java only. Other languages plug in through a `LanguageAdapter` (entry-point detection, build and run, assertion fingerprint). Tests in a language without an adapter are never marked `passed`.
 
 ### 5.4 State machine
@@ -770,7 +771,7 @@ One error object:
 | 30 | environment | `ENV_` | `ENV_EMULATOR_UNAVAILABLE`, `ENV_WRAPPER_CHECKSUM_MISMATCH`, `ENV_TOOL_UNAVAILABLE` | pause with a hint |
 | 31 | transient | `TRANSIENT_` | `TRANSIENT_REGISTRY_TIMEOUT` | retried internally 3 times with exponential back-off, then paused (downloads and network only) |
 | 40 | build | `BUILD_` | `BUILD_COMPILE_ERROR` | see §5.4 |
-| 50 | policy | `POLICY_` | `POLICY_OUT_OF_SCOPE_CHANGE`, `POLICY_ORACLE_MODIFIED`, `POLICY_ORACLE_MISMATCH`, `POLICY_UNCONFIRMED_KNOWN_DEFECT` | repair (counts an attempt) |
+| 50 | policy | `POLICY_` | `POLICY_OUT_OF_SCOPE_CHANGE`, `POLICY_ORACLE_MODIFIED`, `POLICY_ORACLE_MISMATCH`, `POLICY_UNCONFIRMED_KNOWN_DEFECT`, `POLICY_TEST_SKIPPED` | repair (counts an attempt) |
 | 60 | state | `STATE_` | `STATE_ILLEGAL_TRANSITION`, `STATE_LOCKED`, `STATE_STALE_SESSION`, `STATE_CORRUPT`, `STATE_BUDGET_EXHAUSTED` | run `next` again (a used-up budget is not retryable) |
 | 70 | internal | `INTERNAL_` | `INTERNAL_ERROR` | stop and keep the evidence |
 
@@ -1561,6 +1562,9 @@ When an agent writes to these paths, the change check of §5.8 restores them. Ap
 - Fault injection (killing the process mid-run).
 - Learning loop (P2): `defect-found` items become eval tasks; reviewer verdicts and human edits are distilled into `.gta/lessons.md`.
 - Run information goes to `.gta/work/runs/<runId>/run.json`.
+- The adversarial run `evals/e2e/run-adversarial.sh` plays a cheating author (changed or removed expected values,
+  `@Disabled`, failing assumptions, production edits, a forged confirmation, a production host, its own commit) and
+  fails unless gtaw catches every attack: metrics 3 and 4, measured on every change.
 - The scripted end-to-end run `evals/e2e/run.sh` plays correct agent outputs against the order-service fixture and checks every deterministic decision, including regression detection, the known-defect lifecycle, reviewer rejects and rebuild/repair.
 
 ---
