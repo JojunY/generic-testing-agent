@@ -86,13 +86,14 @@ Open Copilot Chat (agent mode) or OpenCode in the service and type:
 | `/gta order.create` | spec → questions → approval → tests for that flow |
 | `/gta pr <PR description>` | re-check and test the flows your branch changes, with the PR description as the intended behaviour |
 | `/gta incident order.create <report>` | turn a bug report into a test that fails on today's code, then confirm the defect |
+| `/gta note <text>` | tell gta something it cannot read from the code (a business rule, a known quirk); kept in `.gta/notes.md` |
 | `/gta status` | flows, items and what is waiting for you |
 
 Whenever gta stops for you or finishes, it shows one status block with five parts, always in this order: the state and
 progress, what happened, what was checked, what needs you, and what comes next. If "Needs you" says nothing, gta is
 still working.
 
-gta stops and waits for you at three points.
+gta stops and waits for you at these points.
 
 **Questions.** Every question shows one recommended answer, marked `← recommended`, with the reason. Reply:
 
@@ -110,6 +111,10 @@ to take every recommendation. To choose another option, add its number and lette
 
 - the build stays green while the defect exists;
 - the test turns red once the defect is fixed, which tells you to remove the pin.
+
+**The test author's questions.** When the spec and the code do not settle how to write a test (which clock, which fixture), the test author asks instead of guessing, usually with a recommended answer. Reply `OK` to take it, or answer in your own words; the author continues with your answer.
+
+Only a bare `OK` takes a recommendation. `OK, but …` asks for a change on an approval and counts as your own answer to an author's question.
 
 If your terminal mangles Chinese characters, gta says so. Use the ASCII forms above, or put the reply in a UTF-8 file and run `./gtaw answer --file reply.txt`.
 

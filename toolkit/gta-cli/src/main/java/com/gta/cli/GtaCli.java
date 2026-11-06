@@ -47,6 +47,7 @@ import picocli.CommandLine.Parameters;
             GtaCli.Check.class,
             GtaCli.Submit.class,
             GtaCli.Answer.class,
+            GtaCli.Note.class,
             GtaCli.Status.class,
             GtaCli.Abort.class,
             GtaCli.Run.class,
@@ -315,9 +316,18 @@ public final class GtaCli implements Callable<Integer> {
         @Option(names = "--reason")
         String reason = "";
 
+        @Option(names = "--question", description = "With --item: ask a person instead of guessing (plan §5.10)")
+        String question;
+
+        @Option(names = "--recommend", description = "With --question: the answer you would pick")
+        String recommend;
+
         @Override
         public Integer call() {
             Engine e = engine(parent);
+            if (item != null && question != null) {
+                return print(parent, e.submitQuestion(item, require(token, "--token"), question, recommend));
+            }
             if (item != null) {
                 return print(parent, e.submitItem(item, require(token, "--token")));
             }
@@ -363,6 +373,26 @@ public final class GtaCli implements Callable<Integer> {
                         "Run ./gtaw answer \"<reply>\" or ./gtaw answer --file <path>");
             }
             return print(parent, engine(parent).answer(reply));
+        }
+    }
+
+    @Command(name = "note", description = "Tell gta something about the service; it is kept in .gta/notes.md.")
+    static final class Note implements Callable<Integer> {
+        @CommandLine.ParentCommand
+        GtaCli parent;
+
+        @Parameters(arity = "0..*", description = "The note, verbatim")
+        List<String> words;
+
+        @Option(names = "--file", description = "Read the note from a UTF-8 file")
+        Path file;
+
+        @Override
+        public Integer call() throws IOException {
+            String text = file != null
+                    ? Files.readString(file, StandardCharsets.UTF_8)
+                    : words == null ? "" : String.join(" ", words);
+            return print(parent, engine(parent).note(text));
         }
     }
 

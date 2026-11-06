@@ -79,13 +79,16 @@ public class WorkState {
 
     /** A decision waiting for a human (plan §5.5). */
     public static class Pending {
-        public String type; // answer | approve | defect | escalation
+        public String type; // answer | approve | defect | escalation | naming-conflict | question
         public String flowId;
         public String itemId;
         public String round;
         public String rev;
         public String prompt; // the exact block the orchestrator must show verbatim
-        /** Decisions: the recommended option letter, taken by a plain {@code OK} (plan §5.10). */
+        /**
+         * What a plain {@code OK} takes (plan §5.10): the recommended option letter of a decision, or the recommended
+         * answer to a test author's question.
+         */
         public String recommended;
     }
 
@@ -109,6 +112,15 @@ public class WorkState {
         public boolean sharesDeveloperFile;
         /** Catching tests: how the failing test does on the PR's base ({@code passes}, {@code fails}, {@code unknown}). */
         public String onBase;
+        /** Questions the test author asked a person instead of guessing, and their answers (plan §5.10). */
+        public List<AuthorQuestion> questions = new ArrayList<>();
+    }
+
+    /** One {@code gtaw submit --question}; {@code answer} stays null until the person replies. */
+    public static class AuthorQuestion {
+        public String question;
+        public String recommended;
+        public String answer;
     }
 
     public static class LastError {

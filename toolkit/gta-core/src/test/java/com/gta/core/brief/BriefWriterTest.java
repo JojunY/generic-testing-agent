@@ -105,6 +105,30 @@ class BriefWriterTest {
         assertTrue(analyze.contains("--token s1:0010"), analyze);
     }
 
+    @Test
+    void shouldGiveTheAnalystTheNotesPeopleLeftAsADocumentedSource() throws Exception {
+        GtaPaths paths = new GtaPaths(root);
+        Files.createDirectories(paths.gta());
+        Files.writeString(
+                paths.notes(), "# Notes for gta\n\n## 2026-11-06 · Dana\n\nRefunds over 1000 need a manager\n");
+
+        String analyze = Files.readString(new BriefWriter(paths)
+                .analyze(11, "s1:0011", "order.create", null, "rest-api", List.of(), List.of(), List.of(), true));
+
+        assertTrue(
+                analyze.contains("## Notes from people") && analyze.contains("Refunds over 1000 need a manager"),
+                analyze);
+        assertTrue(analyze.contains("source=documented doc=.gta/notes.md"), analyze);
+    }
+
+    @Test
+    void shouldLeaveTheNotesOutWhenThereAreNone() throws Exception {
+        String analyze = Files.readString(new BriefWriter(new GtaPaths(root))
+                .analyze(12, "s1:0012", "order.create", null, "rest-api", List.of(), List.of(), List.of(), true));
+
+        org.junit.jupiter.api.Assertions.assertFalse(analyze.contains("## Notes from people"), analyze);
+    }
+
     @org.junit.jupiter.api.Test
     void shouldAskForTestsAtTheServiceJavaLevel() {
         org.junit.jupiter.api.Assertions.assertTrue(BriefWriter.javaLine(21).startsWith("Java 21 "));

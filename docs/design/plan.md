@@ -871,7 +871,10 @@ Next: after your reply, s03 (2 scenarios left)
 
 **Questions with a recommended answer.** gta never guesses. What the analyst cannot read from the code or a document
 becomes a question, and an author who finds the brief unclear stops and asks
-(`gtaw submit --item <id> --token <t> --question "<what is unclear>"`) instead of assuming. Questions are cheap to answer:
+(`gtaw submit --item <id> --token <t> --question "<what is unclear>" --recommend "<its best answer>"`) instead of
+assuming. The author's question spends the brief's token and keeps the item with its author; the person answers in their
+own words or with `OK`, and the next brief lists the answer. At most 3 per item, and never about a locked oracle value.
+Questions are cheap to answer:
 - Every question, of every kind (spec questions, defect confirmation, escalation, naming conflict), has exactly one
   option marked recommended, with a one-line reason; the linter refuses a spec question without one. The
   recommendation is the analyst's best judgement, not necessarily today's behaviour: when the code looks wrong and a
@@ -881,7 +884,8 @@ becomes a question, and an author who finds the brief unclear stops and asks
 - At most 5 per round, highest impact first.
 - Replies: `OK` takes every recommendation; `2B` changes one; `2: <text>` answers in one's own words (the analyst
   turns it into a revision); they combine (`OK, 2B`). Taking a recommendation is an explicit answer: the original
-  words are recorded, so the PR comment shows `OK` as "accepted the recommendations".
+  words are recorded, so the PR comment shows `OK` as "accepted the recommendations". On an approval, a decision or an
+  author's question only a bare `OK` takes the recommendation: `OK, but …` is a change request or an answer.
 
 **Notes: what the agent cannot know.** `/gta note <text>` (`gtaw note "<text>"`) appends the text, with date and author,
 to `.gta/notes.md`, committed by gtaw. Analyst briefs list the notes, and a scenario cites one as

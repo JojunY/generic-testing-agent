@@ -20,16 +20,18 @@ You implement one test that checks what the approved spec says. The expected val
 2. Write or fix the test in the file named by the brief: method `should<Outcome>When<Condition>()`, the tags and `@DisplayName` from the brief, inputs that really exercise the WHEN, assertions that contain every expected value of the oracle.
 3. Run `./gtaw check --item <id> --token <token>` (free, repeatable) and fix compile errors, setup problems and missing expected values.
 4. When the check is clean, run `./gtaw submit --item <id> --token <token>` once.
+   If the spec, the code and the brief's answers do not settle how to write the test (which clock, which existing fixture, what an input looks like), do not guess: run `./gtaw submit --item <id> --token <token> --question "<one concrete question>" --recommend "<the answer you would pick>"` and stop. The brief comes back with the person's answer.
 5. If the brief says a defect was confirmed, add the `@KnownDefect` annotation exactly as written in the brief and submit; change nothing else.
 
 ## Output contract
 
-Reply with exactly the one-line `result` printed by `gtaw submit`.
+Reply with exactly the one-line `result` printed by `gtaw submit`, or `asked: <your question>` after `--question`.
 
 ## Rules
 
 - Change only the files listed under "Files you may change". Never touch `src/main/**`; production code is never changed.
 - After the test first reached the code under test, its assertions on the oracle values are locked: you may add assertions, never change or remove those.
+- Never ask what the oracle already says: an expected value in the brief is settled. Ask about how to test, at most three times per item.
 - If an assertion fails, do not change the expected value, the input or the fixture to make it pass — submit and let the reviewer triage.
 - Never use `Thread.sleep` (use Awaitility), `@Disabled`, assumptions that skip the test, or the actual value as the expected value.
 - No containers: use the embedded dependencies described in the skills.

@@ -18,6 +18,7 @@ import com.gta.core.profile.ServiceProfile;
 import com.gta.core.run.FailureClassifier;
 import com.gta.core.run.RunResult;
 import com.gta.core.run.TestOutcome;
+import com.gta.core.spec.AnswerParser;
 import com.gta.core.spec.Spec;
 import com.gta.core.spec.SpecParser;
 import com.gta.core.state.ItemStatus;
@@ -307,6 +308,66 @@ final class ItemWorkflow {
             store.save(st);
             return out;
         }
+    }
+
+    /**
+     * {@code gtaw submit --question} (plan §5.10): the test author asks a person instead of guessing. The brief's token
+     * is spent, the question waits as an answer node, and the answer goes into the author's next brief.
+     */
+    public Map<String, Object> submitQuestion(String itemId, String token, String question, String recommended) {
+        if (question == null || question.isBlank()) {
+            throw new GtaException(
+                    ErrorCode.USAGE_INVALID_ARGUMENT,
+                    "--question is empty",
+                    "Ask one concrete question: ./gtaw submit --item " + itemId
+                            + " --token <t> --question \"<q>\" --recommend \"<your best guess>\"");
+        }
+        try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
+            WorkState st = store.load();
+            WorkState.ItemState s = requireToken(st, itemId, token, ItemStatus.AUTHORING, ItemStatus.REPAIRING);
+            if (s.questions.size() >= BriefWriter.QUESTIONS_PER_ITEM) {
+                throw new GtaException(
+                        ErrorCode.STATE_BUDGET_EXHAUSTED,
+                        itemId + " already asked " + s.questions.size() + " questions",
+                        "Decide from the spec and the answers in your brief; if the spec cannot be tested as written,"
+                                + " submit the test and let it fail so the reviewer sees it");
+            }
+            PlanItem item = store.planItem(itemId);
+            WorkState.AuthorQuestion q = new WorkState.AuthorQuestion();
+            q.question = question.strip();
+            q.recommended = recommended == null || recommended.isBlank() ? null : recommended.strip();
+            s.questions.add(q);
+            s.token = null; // the brief that asked is spent; the answer comes with a new one
+            st.pending = ctx.prompts.authorQuestion(item, q.question, q.recommended);
+            st.event(false, "ev.question", item.isFoundation() ? item.id : item.ref);
+            store.save(st);
+            return NodeResults.answerNode(st.pending);
+        }
+    }
+
+    /** The person's reply to a test author's question: a plain OK takes the recommendation, anything else is the answer. */
+    Map<String, Object> answerQuestion(WorkState st, WorkState.Pending p, String text) {
+        WorkState.ItemState s = st.item(p.itemId);
+        WorkState.AuthorQuestion q = s.questions.isEmpty() ? null : s.questions.get(s.questions.size() - 1);
+        String reply = text == null ? "" : text.strip();
+        if (q == null || reply.isEmpty()) {
+            throw new GtaException(
+                    ErrorCode.USAGE_UNPARSEABLE_ANSWER,
+                    "Empty answer",
+                    p.recommended == null
+                            ? "Reply with your answer"
+                            : "Reply OK to take the recommendation, or with your own answer");
+        }
+        boolean ok = AnswerParser.isPlainOk(reply);
+        if (ok && p.recommended == null) {
+            throw new GtaException(
+                    ErrorCode.USAGE_UNPARSEABLE_ANSWER, "There is no recommendation to take", "Reply with your answer");
+        }
+        q.answer = ok ? p.recommended : reply;
+        st.pending = null;
+        PlanItem item = store.planItem(p.itemId);
+        st.event(false, "ev.question.answered", item.isFoundation() ? item.id : item.ref);
+        return result("answer recorded for " + p.itemId + "; run ./gtaw next for the author's new brief", null);
     }
 
     Map<String, Object> submitInternal(WorkState st, PlanItem item, WorkState.ItemState s, boolean rebuilt) {

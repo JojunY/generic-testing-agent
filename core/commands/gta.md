@@ -10,6 +10,7 @@ Run the gta loop for this repository. Arguments from the user: {{args}}
 - `<flowId>` — spec, questions, approval, then tests for that flow
 - `pr [PR description]` — the flows this branch changes: re-check their specs against the diff and the description, then test them
 - `incident <flowId> <report>` — turn a reported incident into a reproducing test that fails on today's code; the fix stays with the developers
+- `note <text>` — tell gta something about the service (a rule, a known quirk); gta keeps it in `.gta/notes.md` and its specs cite it
 - `status` — show flows, items and what is waiting for the human
 - nothing — continue the current work, or list the riskiest flows to choose from
 

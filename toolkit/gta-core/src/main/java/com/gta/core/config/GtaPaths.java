@@ -131,6 +131,11 @@ public record GtaPaths(Path root, String module) {
         return gta().resolve("escalations");
     }
 
+    /** What people told gta about the service ({@code /gta note}); tracked, so analysts can cite it as documented. */
+    public Path notes() {
+        return gta().resolve("notes.md");
+    }
+
     /** The incident reports of a flow (incident mode), tracked next to its spec so scenarios can cite them. */
     public Path incidents(String flowId) {
         Path spec = spec(flowId);
