@@ -88,6 +88,9 @@ java -jar gta-cli-<version>.jar --root path/to/service init --platform copilot \
 | `/gta incident order.create <报告>` | 把缺陷报告变成一个在当前代码上失败的测试，然后由你确认缺陷 |
 | `/gta status` | 流程、事项，以及等待你处理的内容 |
 
+gta 每次停下来等你或完成工作时，都会显示一个状态区块，固定五部分，顺序不变：状态和进度、刚才发生了什么、已确认、需要你、下一步。
+"需要你"那一栏写着"无"时，gta 还在继续工作。
+
 gta 会在三处停下来等你。
 
 **提问。** 每个问题都会给出一个推荐答案，标为 `← 推荐`，并附理由。回复：

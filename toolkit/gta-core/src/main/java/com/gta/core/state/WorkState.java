@@ -33,6 +33,34 @@ public class WorkState {
     public String prIntent;
     /** Incident mode: the reported incident the active flow reproduces. */
     public String incident;
+    /** What happened and what was checked, newest last, for the status block (plan §5.10). */
+    public List<Event> events = new ArrayList<>();
+    /** How many of {@link #events} people have already been shown. */
+    public int eventsShown;
+
+    /** One line of the status block: a message key of the catalogue and its arguments. */
+    public static class Event {
+        public String key;
+        public List<String> args = new ArrayList<>();
+        /** A check (who verified what) rather than something that happened. */
+        public boolean check;
+    }
+
+    private static final int MAX_EVENTS = 50;
+
+    /** Records that something happened ({@code check} false) or was verified ({@code check} true). */
+    public void event(boolean check, String key, String... args) {
+        Event e = new Event();
+        e.key = key;
+        e.args = new ArrayList<>(List.of(args));
+        e.check = check;
+        events.add(e);
+        if (events.size() > MAX_EVENTS) {
+            int drop = events.size() - MAX_EVENTS;
+            events.subList(0, drop).clear();
+            eventsShown = Math.max(0, eventsShown - drop);
+        }
+    }
 
     /** Analyst work on one flow's spec. */
     public static class SpecWork {
