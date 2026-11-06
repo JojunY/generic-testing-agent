@@ -39,6 +39,10 @@
    - 权威裁决来自两处：gtaw 对每个节点的改动检查，以及以 base 为基准的门禁。门禁在本地运行，CI 可选。
    - 人工确认附带原话和来源渠道，并列在 PR 评论里，由正常的 PR review 把关（§5.5）。
 9. **上手**：tech lead 在每个仓库执行一次 `./gtaw init`；开发者只需要一个命令 `/gta`（§12）。
+10. **新手也能用（P4）**
+    - 在没有进行中工作的服务上执行 `/gta`，会覆盖整个服务，风险最高的 flow 先做；某个 flow 在等人时，不会挡住其他 flow。
+    - 人看到的所有内容都是一个固定格式的状态块（状态、刚才发生了什么、已确认、需要你、下一步），可选英文或中文。
+    - 每个问题都带推荐答案，很多时候回一个 `OK` 就够了；agent 不知道的信息，人用 `/gta note` 补充一次即可（§5.10）。
 
 ---
 
@@ -54,7 +58,7 @@
 
 | 信号 | 定义 | 计算方式 |
 |---|---|---|
-| Scenario 验证率（按来源分开统计） | 已批准 scenario 中有 verified 测试的比例；`confirmed`/`documented` 与 `observed`/`defaulted` 分开统计 | 规格 ↔ JUnit/Karate tag |
+| Scenario 验证率（按来源分开统计） | 已批准 scenario 中有 verified 测试的比例；`confirmed`/`documented` 与 `observed`/`defaulted` 分开统计 | 规格 ↔ JUnit tag |
 | Spec findings | 不同来源之间的不一致，分为 `behavior-suspect`（代码可疑）和 `doc-drift`（文档过时） | analyst 发现，人工确认 |
 | 测试强度（变更代码） | 被覆盖的 mutant 中有多少被杀死（killed / covered） | `gtaw mutate`（PIT，只统计 diff 涉及的行） |
 | 能失败证据（P2） | unit/slice 测试至少杀死 1 个针对其实现方法的 mutant | `gtaw verify` |
@@ -129,6 +133,8 @@
 | P13 | **原语按需选用**：每个 agent/skill/prompt/instruction/hook/MCP 都要有明确的职责，否则不引入 |
 | P11 | **CI 不依赖 LLM** |
 | P12 | **Eval 驱动** |
+| P14 | **不猜，问得省力**：不确定的事一律变成问题，每个问题都带推荐答案 |
+| P15 | **对人只有一种输出**：人看到的都是 gtaw 的状态块，使用他们的语言 |
 
 ### 2.5 v1 明确不做的事
 
@@ -324,6 +330,8 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
    - 批准按 Requirement 记录内容哈希。之后哪个 Requirement 的内容变了，只有它会退回 `in-review`。
 5. **权威审批**：由团队正常的 PR review 把关。gtaw 生成的 PR 评论会单独列出本次新增的所有 `confirmed`、批准、`relock` 和豁免，包括原话和渠道，**任何伪造都在 reviewer 眼前**。问题也可以通过 PR 异步交给产品负责人回答。以后如果启用 CODEOWNERS，规格的审批可以收紧为必须由 CODEOWNERS 批准，不需要改动设计。
 
+从 P4 起回复更简短（§5.10）：`OK` 表示接受所有推荐答案；在批准提示上回复 `OK`，只批准该提示展示的那个修订号。上面的写法继续有效。
+
 ### 3.6 与 OpenSpec / Spec Kit 共存（P2；除 delta 格式摘要外已实现）
 
 - 配置项 `spec.source`（P2 加入；v1 会把它当作未知字段拒绝）可以设为 `gta`、`openspec` 或 `speckit`。
@@ -370,7 +378,7 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
 | test-author | **agent** | 每个条目使用一个新的上下文；可以写测试 |
 | reviewer | **agent** | 必须独立于 test-author（P3）；只读。建议使用与 test-author 不同的模型家族，以减少两者犯同样错误的概率 |
 | planner | ~~agent~~ → **gtaw** | 计划生成是规则映射，属于 workflow |
-| system-tester | ~~agent~~ → **test-author + skill** | 与 test-author 只差知识。云操作的权限差异由"`gtaw env` 必须由人批准"解决；Copilot 本来也无法按 agent 限制 shell |
+| system-tester | ~~agent~~ → **test-author + skill** | 与 test-author 只差知识；部署环境上的测试不在范围内（§15），所以不需要系统测试 agent |
 | 按服务类型划分的 api/job/event/pipeline tester | ~~agent~~ → **skills** | 只差知识，上下文和权限都一样 |
 | 分流 | **gtaw**（确定性部分）+ **reviewer**（判断部分） | — |
 | explain / pr / incident | **`gtaw next` 的模式参数** | agent 相同，只是确定性流程不同 |
@@ -525,11 +533,14 @@ capabilities:
     layers: [unit, component, system]
     diagrams: [flowchart]
     skills: [gta-testing-beam-pipelines, gta-using-embedded-dependencies]
-  - id: deployed-runtime
+  - id: websocket
     since: P4
-    detect: { files: ["**/service.yaml", "**/helm/**/Chart.yaml", "**/k8s/**/*.yaml", "**/*.tf"] }
-    layers: [system]
-    skills: [gta-testing-deployed-systems]
+    detect:
+      buildDeps: [spring-boot-starter-websocket]
+      annotations: ["@MessageMapping", "@SubscribeMapping", "@EnableWebSocket", "@EnableWebSocketMessageBroker"]
+    layers: [unit, component]
+    diagrams: [sequence]
+    skills: [gta-testing-streaming-endpoints]
   - id: security              # never produces flows; adds the security skill to the flows of a secured service
     since: P2
     dispatch: false
@@ -556,7 +567,7 @@ capabilities:
 
 always:
   skills: [gta-designing-test-oracles, gta-writing-tests]
-# 所有条目都派给 gta-test-author；system 层条目（P4）额外加载 gta-testing-deployed-systems
+# 所有条目都派给 gta-test-author
 ```
 
 **profile 阶段**，gtaw 会生成确定性的入口清单：controller、`@Scheduled`、listener、job、pipeline，并附上 `ref`。
@@ -677,7 +688,6 @@ P5 的可选增强：在 IntelliJ（hooks 已 GA）或开启 preview 后的 VS C
      - 测试通过了：构建失败，提示"缺陷已修复，请移除注解"；
      - 以其他原因失败：构建失败。
    - 没有经过人确认就加上的 `@KnownDefect` 会被拒绝（`POLICY_UNCONFIRMED_KNOWN_DEFECT`）。
-   - Karate 在 P4 用 `@known-defect` tag 实现同样的规则。
 8. **语言适配**：v1 只支持 Java 编写的测试。其他语言通过 `LanguageAdapter` 接入（入口识别、构建运行、断言指纹）。没有适配器的语言，测试永远不会被标为 `passed`。
 
 ### 5.4 状态机
@@ -736,6 +746,8 @@ P5 的可选增强：在 IntelliJ（hooks 已 GA）或开启 preview 后的 VS C
 - 每一条 `confirmed`、批准和缺陷确认，都在规格或升级记录中留下原话、轮次和渠道（`chat` / `editor`），并由 gtaw 提交。
 - PR 评论会列出本次新增的所有确认项。
 - 最终以 PR review 为准。
+
+从 P4 起，上表的每一类都以状态块的形式呈现给人，并带推荐答案（§5.10）。
 
 **非交互模式**：CI 只执行确定性命令。
 
@@ -814,12 +826,63 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 
 ---
 
+### 5.10 与人沟通（P4）
+
+gta 要让从没用过它的开发者也能上手。人看到的所有内容都遵循同一个格式，每个需要人做的决定都带推荐答案。
+
+**状态块**：凡是要给人看的节点，gtaw 都会生成状态块（节点 JSON 中的 `display`）。orchestrator 原样展示，自己最多补一行；agent
+不自行给人写状态。状态块固定五部分，顺序不变：
+
+```
+── gta · order.create ── 等你回答（1 个决定）
+进度：规格已批准 ▸ 测试 3/5 通过 ▸ 1 个疑似缺陷
+
+刚才发生了什么
+  1. s02 的测试失败：期望 409，实际 201
+  2. reviewer 判定为产品缺陷：没有检查库存
+
+已确认
+  ✓ gtaw 重跑 2 次，结果一致（不是不稳定）
+  ✓ 期望值来自 docs/business-rules.md
+
+需要你
+  1. 这是缺陷吗？
+     A) 是：记为已知缺陷，构建保持绿灯   ← 推荐（文档写明必须拒绝）
+     B) 不是：规格写错了，按现在的行为测试
+  回复 OK 接受推荐，或回复 B。
+
+下一步：你回复后继续 s03（还剩 2 个场景）
+```
+
+- **状态**（第一行）：哪个 flow、到了哪一步、在等谁；**进度**：规格 → 测试通过数/总数 → 缺陷数。
+- **刚才发生了什么**：最多 5 条，带编号。
+- **已确认**：谁验证了什么（gtaw、reviewer 或人），只写 gtaw 记录过的事实。
+- **需要你**：要做的决定；没有就写"无，继续中"。
+- **下一步**：下一步做什么；需要等人时，写明具体怎么回复。
+- 不出现内部术语：`observed`、`defaulted`、`documented`、`characterization` 分别说成"从代码读出"、"按现状接受"、"来自<文档>"、"锁定现在的行为"。
+- **语言**：`output.language`（默认 `en`，或 `zh-CN`）作用于状态块和所有提示。规格、brief、agent 和代码仍用英文；回复用哪种语言都接受。
+
+**带推荐答案的问题**：gta 不猜。analyst 从代码和文档中读不出的内容一律变成问题；test-author 觉得 brief 说得不清楚时，要停下来提问
+（`gtaw submit --item <id> --token <t> --question "<不清楚的地方>"`），不能自己假设。问题要让人答得省力：
+- 每个问题（规格问题、缺陷确认、升级、命名冲突，各种类型都一样）都恰好有一个标为推荐的选项，并附一句理由；规格问题缺少推荐时，
+  linter 会拒绝。推荐是 analyst 的最佳判断，不一定是现在的行为：代码看起来有错、而文档写的不一样时，推荐文档描述的行为。
+  `= 代码现状` 仍然会标出来。
+- 每个问题自带上下文（为什么问、每个选项会产生什么测试），不用打开规格也能回答。
+- 每轮最多 5 个问题，影响最大的排在前面。
+- 回复方式：`OK` 接受所有推荐；`2B` 只改第 2 题；`2: <文字>` 用自己的话回答（analyst 据此生成新修订）；可以组合（`OK, 2B`）。
+  接受推荐也是明确的回答：原话会被记录，PR 评论里会显示为"接受了推荐答案"。
+
+**补充说明：agent 不知道的信息**：`/gta note <文字>`（`gtaw note "<文字>"`）把这段文字连同日期和作者追加到 `.gta/notes.md`，
+由 gtaw 提交。analyst 的 brief 会列出这些说明，场景可以用 `source=documented doc=.gta/notes.md quote="…"` 引用。人只需要用自己的话
+补充一次，所有 flow 都能用上。
+
 ## 6. 运行模式
 
-用法：`/gta [explain|pr|incident|status] [补充说明]`。不带参数时，有进行中的工作就继续；没有就列出风险最高的几个 flow 供选择。
+用法：`/gta [explain|pr|incident|note|status] [补充说明]`。不带参数时，有进行中的工作就继续；没有就进入 service 模式。
 
 | 模式 | 流程（D = gtaw，A = agent，H = 人） | 产出 |
 |---|---|---|
+| `service`（P4；没有进行中的工作时执行 `/gta`） | D profile → 按类型和风险列出找到的 flow → H 选择（带推荐：全部，风险高的先做）→ flow 排进队列，每个按 flow 模式执行。某个 flow 在等人时不会挡住其他 flow：gtaw 先做下一个，收到回答后再回来 | 整个服务的规格、测试和用例台账 |
 | `explain <flowId\|path>` | D profile → A analyst | 全景图、时序图、规格草稿、问题；只读。回答并批准后自动转为 flow 模式 |
 | 默认（flow） | D → A analyst → H 回答 → H 批准 → D 计划 → 循环（A test-author ⇄ D check → D submit → A reviewer）→ D verify → D 报告 | 测试、oracle 分片、报告 |
 | `pr` | D impact：diff → 受影响的方法、配置项、bean（沿着注入关系追踪）→ flow，标为 `stale`<br>→ A analyst：把 PR 描述作为 `documented` 意图，只在意图不清时提问<br>→ H 批准（也可以在 PR 中进行）→ 后续同上 | 测试、PR 评论（行为变更摘要、findings、新增确认项、未映射的改动） |
@@ -847,15 +910,15 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 
 | 依赖 | 首选（无容器） | 备选 | 保真度 |
 |---|---|---|---|
-| **Oracle** | **共享测试库**：在 `config.environments.oracle` 中配置测试库的 JDBC URL，凭证从环境变量读取。每次运行创建独立的 schema `GTA_<shortRunId>`，运行结束后删除，由 `gtaw env gc` 兜底清理 | H2 的 `MODE=Oracle` 兼容模式；Oracle 专有的 SQL（PL/SQL、`MERGE`、序列、分页写法）放在 repository 层，集中到共享测试库或 system 层测试 | 共享库为 high；H2 为 low |
-| **BigQuery** | 数据访问层用接口隔离，测试用 fake；SQL 本身放到 system 层（P4，使用临时 dataset）测试 | — | low（SQL 部分要等 P4） |
+| **Oracle** | **共享测试库**：在 `config.environments.oracle` 中配置测试库的 JDBC URL，凭证从环境变量读取。每次运行创建独立的 schema `GTA_<shortRunId>`，运行结束后删除 | H2 的 `MODE=Oracle` 兼容模式；Oracle 专有的 SQL（PL/SQL、`MERGE`、序列、分页写法）放在 repository 层，集中到共享测试库测试 | 共享库为 high；H2 为 low |
+| **BigQuery** | 数据访问层用接口隔离，测试用 fake；SQL 本身不会在真实 BigQuery 上运行：gta 的测试只在本地运行 | — | low（SQL 只做审阅，不运行） |
 | **Pub/Sub** | 官方 Pub/Sub 模拟器（Java 程序）：平台团队把它上传到 Nexus 的 raw 仓库，gtaw 下载、校验 sha256 后用本机 JDK 启动 | 进程内 fake | 模拟器为 medium；fake 为 low |
 | **Kafka** | `spring-kafka-test` 的 `@EmbeddedKafka`（KRaft），每次运行使用独立的临时目录（Windows 上可以避免文件锁冲突） | — | high |
-| **MQ**（JMS） | 嵌入式 ActiveMQ Artemis 作为 JMS broker，测试 JMS 语义：事务、重投、DLQ、选择器 | 进程内 fake（不使用 JMS API 时） | JMS 语义为 medium；厂商特有的功能（例如 IBM MQ 的 channel 和队列管理器配置）留到 system 层 |
+| **MQ**（JMS） | 嵌入式 ActiveMQ Artemis 作为 JMS broker，测试 JMS 语义：事务、重投、DLQ、选择器 | 进程内 fake（不使用 JMS API 时） | JMS 语义为 medium；厂商特有的功能（例如 IBM MQ 的 channel 和队列管理器配置）不在 gta 测试范围内 |
 | **GCS** | `google-cloud-nio` 的 `LocalStorageHelper`（内存实现） | — | medium |
 | **下游 HTTP**（包括非 GCP 服务） | WireMock（进程内） | — | high |
 
-- 每个测试都在报告中记录 `fidelity`。如果某个 p0/p1 scenario 只有 low 保真度的测试，门禁记为 concerns，并建议补一个共享测试库的测试或 system 层测试。
+- 每个测试都在报告中记录 `fidelity`。如果某个 p0/p1 scenario 只有 low 保真度的测试，门禁记为 concerns，并建议补一个共享测试库的测试。
 - 连接信息统一通过 `@DynamicPropertySource` 注入。
 - **Windows**：
   - 开发者使用 `gtaw.cmd`；
@@ -874,13 +937,12 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | slice | `@WebMvcTest` + `MockMvcTester` / `@WebFluxTest`；`@JsonTest` | 参数校验、ProblemDetail、序列化；**权限矩阵**（角色 × 操作 × 所有权，包括越权和跨租户的负例） |
 | component | `@SpringBootTest(RANDOM_PORT)` + 嵌入式依赖（§7.0）+ WireMock + REST Assured | 真实依赖；下游超时、5xx、重试、熔断。**不要用测试管理的 `@Transactional`**，它会掩盖 AFTER_COMMIT、outbox、flush 约束和懒加载问题 |
 | contract | Pact（多语言消费者）或 Spring Cloud Contract（纯 Spring）；oasdiff；Schemathesis | 覆盖每个 operation × status code |
-| system | Karate（P4） | 业务链路、鉴权、幂等；至少 1 个跨租户测试 |
+| system | 不在范围内（§15） | 部署环境（SIT、UAT）由团队自己测试，gta 从不测试 |
 
 - **Boot 4 的变化**：
   - 移除了 `@MockBean`，改用 `@MockitoBean`；
   - `@SpringBootTest` 需要显式加 `@AutoConfigureMockMvc` 或 `@AutoConfigureTestRestTemplate`；
   - test slice 按技术拆成了独立模块。
-- **Karate**：按 JUnit 版本选择 Karate 的 JUnit 模块，Boot 4.1 用 `karate-junit6`。从 2.1 起，mock 默认关闭 Java interop。
 
 ### 7.2 Scheduler
 
@@ -923,7 +985,7 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 
 - Kafka 用 `@EmbeddedKafka`，Pub/Sub 用官方模拟器，MQ 用嵌入式 Artemis（JMS）；只用 Awaitility 等待，**禁止 `Thread.sleep`**。
 - 必测场景：重复投递、乱序、毒消息进 DLQ、重试退避、重启后的 ack/offset。
-- Pub/Sub emulator 支持 dead-letter、过滤和有序投递，**不支持** IAM、protobuf schema、SMT，也不会投递到 BigQuery 订阅。这些情况放到 system 层测。
+- Pub/Sub emulator 支持 dead-letter、过滤和有序投递，**不支持** IAM、protobuf schema、SMT，也不会投递到 BigQuery 订阅。这些情况不在 gta 测试范围内。
 - MQ（JMS）额外要测：本地事务回滚后消息重投、超过重投次数后进入 backout/DLQ 队列、消息选择器、持久化与非持久化消息。
 - schema 兼容性检查；AsyncAPI 用 Microcks；验证 outbox。
 
@@ -936,13 +998,12 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | Temporal / Camunda | 官方 test environment |
 | 通用方法 | 按规格中的状态图，覆盖所有边、错误分支和补偿路径 |
 
-### 7.7 部署态（P4）
+### 7.7 部署态（不在范围内）
 
-- **Cloud Run tag**：只能通过 tag URL 访问；Pub/Sub push、Eventarc、Scheduler 仍然打到主 revision，而且共用同一个数据库。要测这些场景，需要单独部署 `gta-<shortRunId>-<purpose>` 服务，或者创建临时订阅。
-- **Cloud Run Jobs**：任务会重试，并按 `CLOUD_RUN_TASK_INDEX` 分片，需要测幂等。
-- **GKE**：每次运行建一个独立的 namespace。
-- **外部服务**：WireMock 从 sandbox 录制 stub，并检测漂移，再加上契约测试。
-- **资源命名与清理**：资源名带上 runId；运行结束后清理，再由 `gtaw env gc` 兜底；禁止使用生产 PII。
+gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 Windows 启动服务，用自己的账号自行测试 SIT 和 UAT。gta 的职责是确保自己
+绝不触碰这些环境，尤其是生产环境：每次运行都会去掉云凭证以及开发者的 Spring profile 和配置变量；`safety.protectedHosts` 列出
+SIT、UAT 和生产环境的主机，gta 写的任何测试或 fixture 都不得出现这些主机（§13）。外部服务用 WireMock stub，再加上契约测试。以后可能加入使用者选择开启的 SIT/UAT 测试（§15 P5）；在那之前，这些主机和生产环境一样
+被拒绝。
 
 ### 7.8 数据库迁移
 
@@ -964,7 +1025,7 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | 编排 | component + system | 状态机路径测试 | 执行历史 + 终态 |
 | 数据库迁移 | component | Flyway / Liquibase + Oracle 共享测试库 | N-1 兼容 + 数据保持 |
 | 不变量 | unit | `@ParameterizedTest` + Instancio 生成输入 + 记录 seed | 不变量成立 |
-| 跨服务链路 | system（P4） | Karate | 业务终态 |
+| 跨服务链路 | 不在范围内（SIT/UAT，由团队测试） | — | — |
 
 **jqwik 不作为默认**：从 1.10 起，jqwik 对 coding agent 的使用附加了限制性声明（见 [release notes](https://jqwik.net/release-notes.html)）。仓库已经在用 jqwik 时，锁定在 1.10 之前的版本；gtaw 只解析 Surefire XML。
 
@@ -1001,7 +1062,7 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | `gta-testing-event-flows` | test-author | `awaitility.md`、`pubsub-emulator-limits.md`、`kafka.md`、`jms.md`、`modulith-scenario.md` |
 | `gta-testing-workflows` | test-author | `gcp-workflows.md`、`state-machines.md` |
 | `gta-testing-db-migrations` | test-author | `flyway.md`、`liquibase.md`、`oracle-ddl.md`、`n-minus-1.md` |
-| `gta-testing-deployed-systems`（P4） | test-author | `karate.md`、`cloud-run.md`、`gke.md`、`cost-control.md` |
+| `gta-testing-streaming-endpoints`（P4） | test-author | `sse.md` |
 | `gta-reviewing-test-quality` | reviewer | `oracle-review.md`、`triage.md`、`catching-assessment.md`、`mutation.md` |
 
 ---
@@ -1020,7 +1081,7 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | CLI 子命令和参数 | kebab-case | `gtaw verify --new` |
 | 时间 | UTC，ISO 8601 | `2026-11-03T12:00:00Z` |
 | 路径分隔符 | 一律用 `/` | — |
-| 文档语言 | 英文；README 和本设计另有 `*.zh-CN.md` 中文版。用户可以用任何语言与 agent 对话 | — |
+| 文档语言 | 英文；README 和本设计另有 `*.zh-CN.md` 中文版。gta 给人的消息按 `output.language`（`en` 或 `zh-CN`，§5.10）输出；用户可以用任何语言与 agent 对话 | — |
 
 ### 9.2 Harness 资产命名
 
@@ -1050,13 +1111,12 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | 对象 | 规则 |
 |---|---|
 | 规格 / oracle 分片 | `.gta/specs/<domain>/<flow-name>.spec.md` / `.oracles.json`；服务全景为 `.gta/specs/service-overview.md`。monorepo 中每个服务模块各有一个 `.gta/` |
-| 测试类 | `<源类名><后缀>`，与源类同包，每个源类每种后缀只有一个：`Test` 单元、`SliceTest` Spring slice、`IT` 组件、`ContractIT` 契约、`Karate` 系统（在 `src/test/karate/java`）、`E2ETest` 端到端（在 `src/test/e2e/java`）。源类是 flow 的入口（`api/OrderController` → `api/OrderControllerIT`），同一源类的多个 flow 共用一个测试类。种子测试为 `<@SpringBootApplication 类>IT`。完整规则、辅助代码后缀与例外见 [test-naming.md](../guides/test-naming.md) |
-| 测试选择 | 显式配置，不依赖插件默认值：gtaw 按后缀表传 `-Dtest`；服务自己的 Surefire 跑 `*Test`，Failsafe 跑 `*IT`；`Karate` 与 `E2ETest` 只在各自的 profile 中运行 |
+| 测试类 | `<源类名><后缀>`，与源类同包，每个源类每种后缀只有一个：`Test` 单元、`SliceTest` Spring slice、`IT` 组件、`ContractIT` 契约、`E2ETest` 端到端（在 `src/test/e2e/java`）。源类是 flow 的入口（`api/OrderController` → `api/OrderControllerIT`），同一源类的多个 flow 共用一个测试类。种子测试为 `<@SpringBootApplication 类>IT`。完整规则、辅助代码后缀与例外见 [test-naming.md](../guides/test-naming.md) |
+| 测试选择 | 显式配置，不依赖插件默认值：gtaw 按后缀表传 `-Dtest`；服务自己的 Surefire 跑 `*Test`，Failsafe 跑 `*IT`；`E2ETest` 只在自己的 profile 中运行 |
 | 命名冲突 | gta 要写的测试类已存在且不是 gta 测试时，gtaw 询问开发者（共用文件、跳过或重新检查），从不自行决定 |
 | 测试方法 | `should<Outcome>When<Condition>()`，加 `@DisplayName("[<scenarioId>] …")` |
-| JUnit tag | 类上：层级 + `gta`；方法上：`flow:<flowId>` + `scenario:<scenarioId>`；characterization 测试另加 `characterization` |
+| JUnit tag | 统一的一套词汇，从规格推导（§9.5） |
 | 已知缺陷 | `@KnownDefect(id = "<findingId>", failure = "<指纹>")` |
-| Karate（P4） | runner 为 `src/test/karate/java/<包>/<源类名>Karate.java`，feature 在 `src/test/karate/resources/<包>/<源类名>Karate/<flow-name>.feature`；tag `@gta @system @flow=<flowId> @scenario=<scenarioId>`，由 `gtaw run --layer system` 执行 |
 | Fixtures / Golden | `src/test/resources/<包路径>/<测试类名>/<sNN>.<角色>.json`；golden 输出为同目录下的 `<sNN>.approved.json` |
 | 测试用例台账 | 与规格同目录的 `.gta/specs/<domain>/<flow-name>.cases.md`，总览为 `.gta/specs/INDEX.md`（§10.6） |
 | session 报告 | `.gta/reports/<yyyy-MM-dd>-<sessionId>.md`（纳入版本控制）；`.gta/work/` 只放临时文件 |
@@ -1076,6 +1136,25 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | 云资源 | `gta-<shortRunId>-<purpose>`，按资源类型做转换（例如 BigQuery 用 `gta_<shortRunId>_<purpose>`，Oracle schema 用大写的 `GTA_<shortRunId>`，连字符换成下划线）；label 为 `gta-run-id`、`gta-ttl-hours` | `gta-1103120000-k3f9-orders` |
 
 ---
+
+### 9.5 Tag：统一的一套词汇（P4）
+
+不管在 gtaw 里还是普通的 Maven 构建里，选择 gta 测试都只靠 tag。tag 来自规格和计划，不由 agent 决定：gtaw 的规则修复会在运行前补上
+或改正它们。
+
+| Tag | 位置 | 来源 | 用途 |
+|---|---|---|---|
+| `gta` 和层级（`unit`、`slice`、`component`、`contract`） | 类 | 计划条目 | 门禁运行所有 `gta` 测试；按层级选择 |
+| `flow:<flowId>`、`scenario:<scenarioId>` | 方法 | 规格 | gtaw 运行单个场景；可追溯 |
+| 意图：`characterization`、`hardening`、`reproducing`、`catching` 中恰好一个 | 方法 | 场景的来源和 `hint.intent` | `-Dgroups=hardening` 运行已确认行为的测试 |
+| 优先级：`p0`、`p1`、`p2` | 方法 | 场景的 `priority` | 打包或部署时用 `mvn verify -Dgroups=p0` 运行必须通过的测试，不需要安装 gta |
+| `known-defect` | 方法，自动 | `@KnownDefect` 自带（元注解） | 修复后用 `-Dgroups=known-defect` 找出哪些标注该删除 |
+
+- 所有地方使用同一种表达式语法，即 JUnit tag 表达式：`gtaw run --tags "p0 & component"` 取代 `--layer`（保留为别名）；`gtaw impact`
+  把回归范围输出成可直接使用的 `-Dgroups` 表达式。
+- 刻意不做成 tag 的：能力（flow 的规格里已有）、保真度和耗时（报告里已有，耗时 tag 会频繁变动）、负责人（CODEOWNERS），以及任何会
+  跳过或隔离测试的标记（§5.3）。
+- 预留：`remote`，用于使用者选择开启的 SIT/UAT 测试（§15 P5）。
 
 ## 10. 文件契约与 Schema
 
@@ -1168,6 +1247,8 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
   "phase": null,
   "build": { "tool": "maven", "basePackage": "auto", "maven": "auto", "javaHomeEnv": null, "module": "" },
   "dispatch": "subagent",
+  "output": { "language": "en" },
+  "safety": { "protectedHosts": [] },
   "spec": { "maxQuestionsPerRound": 5, "maxClarifyRounds": 2, "maxSubmitAttempts": 3, "source": "gta" },
   "environments": { "oracle": { "testUrl": null, "userEnv": "GTA_ORACLE_USER", "passwordEnv": "GTA_ORACLE_PASSWORD" } },
   "distribution": { "toolsUrl": "https://nexus.example.com/repository/gta-tools/" },
@@ -1263,11 +1344,12 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | `gtaw doctor` | 人 | 检查 JDK、可用的模拟器（gcloud emulators、bigquery-emulator）、Maven 和 parent 版本、受管文件、IDE 设置（IntelliJ 给出自动批准的配置步骤） |
 | `gtaw next [--mode explain\|flow\|pr\|incident] [--target <flowId\|path>] [--base <ref>] [--intent <PR 描述\|incident 报告>]` · `gtaw next --takeover` | orchestrator · `--takeover` **仅限人** | 在内部执行确定性步骤，返回下一个节点 |
 | `gtaw check --item <id> --token <t>` | test-author | 编译并运行一次；不计入修复次数 |
-| `gtaw submit --item <id> --token <t>` · `--spec <flowId> --token <t>` · `--review <id> --token <t> --verdict <v> --reason "<text>"` | 对应的 agent / orchestrator | 正式提交条目、规格或评审结论 |
+| `gtaw submit --item <id> --token <t> [--question "<text>"]` · `--spec <flowId> --token <t>` · `--review <id> --token <t> --verdict <v> --reason "<text>"` | 对应的 agent / orchestrator | 正式提交条目、规格或评审结论 |
 | `gtaw answer "<原话>"` · `gtaw answer --file <UTF-8 文件>` | orchestrator | 记录用户的回答或批准（§3.5） |
 | `gtaw status` | 任何人 | 每个 flow 的阶段、待回答的问题、待处理事项 |
 | `gtaw abort [--flow <flowId>]` | **仅限人** | 丢弃工作状态（保留 `.gta/work/recover/`） |
-| `gtaw run --smoke \| --layer <layer>` | gtaw 内部 / CI | 运行指定测试 |
+| `gtaw run --smoke \| --tags <expression>` | gtaw 内部 / CI / 人 | 运行指定测试（§9.5）；`--layer <layer>` 等同于 `--tags <layer>` |
+| `gtaw note "<text>"`（P4） | 人，通过 `/gta note` | 把 agent 不知道的信息补充到 `.gta/notes.md`（§5.10） |
 | `gtaw verify [--new]` | gtaw 内部 / CI | 稳定性、期望值复核；从 P2 起加上能失败检查 |
 | `gtaw mutate --changed [--base]`（已实现） | CI / 人 | 对变更的类跑 PIT，结果按 diff 行过滤，只使用 unit 和 slice 测试；仅供参考（退出码 0）。PIT 通过命令行入口、使用服务的测试 classpath 运行，服务的 pom 无需添加插件 |
 | `gtaw gate --base <ref> --reports <dir>` · `gtaw gate waive <GATE_CODE> …` | CI / 人 | 门禁；登记豁免（**仅限人**） |
@@ -1275,7 +1357,6 @@ OpenCode 中给子 agent 设置 `steps` 上限，`doom_loop` 设为 `ask`。
 | `gtaw report [--kind md\|pr-comment]` | gtaw 内部 / CI | 追踪矩阵、孤儿检查、新增确认项 |
 | `gtaw cases [--rebuild]` · `gtaw cases confirm-retired <ids>\|--all` | 人 / gtaw | 台账总览或重建；删除已退役用例的测试须由人批量确认（§10.6） |
 | `gtaw impact [--base <ref>]` | 人 / CI | 代码有改动的用例 → Needs Review；输出回归范围（加全部 P0） |
-| `gtaw env up\|down\|gc`（P4） | **仅限人** / system 条目 | 临时环境 |
 
 ### 11.3 本仓库结构
 
@@ -1349,7 +1430,7 @@ generic-testing-agent/
   - registry 中已生效（`since` ≤ 当前阶段）的条目引用的 skill 和 agent 都存在；
   - schema 合法；
   - `copilot/`、`opencode/` 与 `core/` 同步；
-  - 除 `*.zh-CN.md` 和可接受的中文回复别名外，文档都使用英文。
+  - 除 `*.zh-CN.md`、可接受的中文回复别名和 `output.language` 的 zh-CN 消息外，文档都使用英文。
 - **版本**：SemVer，以 `pom.xml` 为唯一来源；wrapper 配置记录锁定的版本，`managed-files.json` 记录各受管文件的校验和。
 - **升级**：`gtaw upgrade`。本地改过的受管文件只报告冲突，不覆盖；新版本不再分发、且未被改动的文件会被删除。schema 迁移推迟到出现 v2 schema 时再做。
 
@@ -1414,7 +1495,7 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 | 测试完整性 | 禁止削弱断言、删除测试、加 `@Disabled`、把期望值改成实际值；由分流、期望值复核、oracle lock 和门禁共同强制执行 |
 | 供应链 | wrapper 校验 sha256，未锁定的 jar 拒绝运行；`doctor` 校验各受管文件的校验和 |
 | 提交 | gtaw 记录自己提交的 SHA；从不信任提交信息里的 trailer |
-| 云与凭证 | 非 system 层的运行：<br>- 把 `CLOUDSDK_CONFIG` 指向空的临时目录（运行后删除），并 unset `GOOGLE_APPLICATION_CREDENTIALS` 和 `KUBECONFIG`；<br>- 设置 `NO_GCE_CHECK=true`，把 `GCE_METADATA_HOST` 指向不可达的地址，以防 ADC 和 Workload Identity 回落到真实凭证；<br>- 结果中的密钥做脱敏。<br>`gtaw env`（P4）只能用于 system 条目，并且需要 P4 加入的显式开启配置 |
+| 云与凭证 | 每次运行：<br>- 把 `CLOUDSDK_CONFIG` 指向空的临时目录（运行后删除），并 unset `GOOGLE_APPLICATION_CREDENTIALS` 和 `KUBECONFIG`；<br>- 设置 `NO_GCE_CHECK=true`，把 `GCE_METADATA_HOST` 指向不可达的地址，以防 ADC 和 Workload Identity 回落到真实凭证；<br>- 去掉开发者的 Spring profile 和配置（`SPRING_PROFILES_ACTIVE`、`SPRING_CONFIG_*`、`SPRING_APPLICATION_JSON`，以及 `JAVA_TOOL_OPTIONS` 中的 `-Dspring.profiles…`/`-Dspring.config…`），所以设成 SIT、UAT 或生产环境的 shell 不会让测试选中那些配置；<br>- `safety.protectedHosts`：条目拥有的测试文件或 fixture 中出现受保护主机时，提交即被拒绝（`POLICY_PROTECTED_HOST`），Oracle 的 `testUrl` 指向受保护主机时配置无效；<br>- 结果中的密钥做脱敏。<br>没有 system 层：部署环境不在范围内（§7.7） |
 | Prompt 注入 | 仓库内容、测试输出、外部响应一律当作数据，不当作指令 |
 | 审计 | git 中的规格（原话、渠道、修订号）、oracle 分片、升级记录、带 trailer 的 commit、PR 审批；CI artifact |
 
@@ -1460,8 +1541,8 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 | **P1 接入：多模块、事件、定时任务、PR 模式** | 多模块 Maven 服务（一次一个模块，Maven 以 `-pl <module> -am` 运行；已实现）；`messaging`（Kafka、Pub/Sub、JMS/MQ、RabbitMQ、SQS；已实现）；`scheduler`（`@Scheduled`、ShedLock、Quartz；已实现）；PR 模式：impact（方法、配置、bean 图；已实现）、alm-github CI 模板 `gta-gate.yml`（`gtaw init --ci`；已实现）、`gtaw next --mode pr`（受影响的流程标为 stale，并在一个会话内依次处理，PR 描述作为 documented 意图；已实现）、PR 评论、analyzing-change-impact；OpenCode 端到端 | 每个新能力各有 1 个试点服务跑通，另有 1 个多模块服务跑通；在真实 PR 上产出行为变更摘要，门禁上线（mutation 为 advisory） |
 | **P2 数据、安全与质量** | `db-migration`（Flyway、Liquibase；已实现）；`security`（Spring Security、OAuth2 resource server、JWT：已认证与被拒绝的路径、方法级安全；已实现）；`caching`（Spring Cache、Redis、Caffeine：命中、失效、读到旧值；已实现）；`spring-batch`（已实现）；`mutate` 和能失败检查（共用 PIT 集成；均已实现）；学习回路（已实现）；先规则后 LLM 的修复；`spec.source=openspec\|speckit`（已实现） | 每个新能力各有 1 个试点服务；mutation 在试点仓库校准后切换为 enforced |
 | **P3 响应式、Gradle、其他协议、catching** | `webflux`（用 `WebTestClient` 和 `StepVerifier` 测响应式端点和客户端）；Gradle 构建（在 Maven 之外增加第二个 `TestRunner` 和构建文件读取）；`grpc-api` 和 `graphql-api`；`workflow`（Temporal、Camunda、Spring Statemachine）；`beam-pipeline`；incident 模式（`gtaw next --mode incident --target <flowId> --intent "<报告>"`：报告以 `<flow>.incidents.md` 保存在规格旁边，并由一个 `hint.intent=reproducing` 场景引用；已实现）；catching 测试与 assessor（PR 模式下的 `hint.intent=catching` 场景；失败时 gtaw 在 PR 的 base 上再运行一次，若在 base 上也失败就拒绝 `product-defect`，再由 reviewer 评估、由人确认；报告统计 catching 命中数；已实现） | 每类各试点 1 个服务 |
-| **P4 部署态与流式端点** | `gta-testing-deployed-systems` skill、`gtaw env`、Karate、云隔离；BigQuery SQL 在临时数据集上测试；`websocket`（WebSocket、STOMP、SSE） | 夜间 regression |
-| **P5** | 可选的 hooks（早期拦截、`verified` 回答渠道）、MCP 包装、插件分发、SARIF、record-replay、性能测试、native-image、并行编写、其他语言的适配器 | 按需 |
+| **P4 易用性、生产环境防护、流式端点** | 按以下顺序：<br>- 易用性（§5.10、§9.5）：状态块和 `output.language`（`en`、`zh-CN`）；带推荐答案的问题和 `OK` 回复；test-author 的 `--question`；`/gta note`；覆盖整个服务、不因某个 flow 等人而停下的 service 模式；统一的 tag 词汇；<br>- 生产环境防护：每次运行去掉 Spring profile 和配置，`safety.protectedHosts`（已实现）；<br>- `websocket`（WebSocket、STOMP、SSE）：用 `gta-testing-streaming-endpoints` 在本地测试。<br>部署环境上的测试（`gtaw env`、Karate、Cloud Run/GKE/Dataflow 运行、BigQuery 临时数据集）不在范围内：团队自行测试 SIT 和 UAT（§7.7） | 一位没用过 gta 的开发者只靠 `/gta` 覆盖 1 个试点服务；衡量：每个 flow 的回复次数、用 `OK` 回答的比例、到第一个通过验证的测试所需的时间 |
+| **P5** | 使用者选择开启的 SIT/UAT 测试（`@Tag("remote")`、`safety.remoteHosts`，默认关闭；生产环境永远禁止）；可选的 hooks（早期拦截、`verified` 回答渠道）、MCP 包装、插件分发、SARIF、record-replay、性能测试、native-image、并行编写、其他语言的适配器 | 按需 |
 
 ### 能力顺序
 
@@ -1489,13 +1570,13 @@ P3 是当前阶段，它的能力默认就会写测试。仓库可以在 `.gta/c
 | 10 | Spring Batch | P2 | 自动写测试；每个 `@Bean Job` 是一个流程 |
 | 11 | 响应式 WebFlux | P3 | 自动写测试；返回 `Mono`/`Flux` 的 handler 是 `webflux` 流程 |
 | 12 | Gradle 构建 | P3 | 已支持：读取 Groovy 和 Kotlin DSL 构建，测试经 Gradle 运行；`gtaw mutate` 和 can-fail 检查仍只支持 Maven |
-| 13 | GCP 数据（BigQuery、GCS） | P0 / P4 | 作为依赖使用 fake；SQL 从 P4 起在 system 层测试 |
+| 13 | GCP 数据（BigQuery、GCS） | P0 | 作为依赖使用 fake；在真实 BigQuery 上运行 SQL 不在范围内 |
 | 14 | gRPC | P3 | 自动写测试；继承生成的 `*ImplBase` 的每个 RPC 是一个流程 |
 | 15 | 工作流与状态机（Temporal、Camunda、Spring Statemachine） | P3 | 自动写测试；每个 Temporal `@WorkflowMethod` 实现、每个状态机的 transitions、每个 `*.bpmn` 流程都是一个流程 |
 | 16 | GraphQL | P3 | 自动写测试；`@QueryMapping`/`@MutationMapping` handler 是流程 |
 | 17 | Beam / Dataflow 管道 | P3 | 自动写测试；每个组合 `PTransform` 都是一个流程，用 `TestPipeline` 和 `PAssert` 在 DirectRunner 上运行 |
-| 18 | 部署环境上的系统测试（Karate、Kubernetes） | P4 | 只有 skill |
-| 19 | WebSocket、STOMP、SSE | P4 | *新增* |
+| 18 | 部署环境上的系统测试（Karate、Kubernetes） | — | 不在范围内：团队自行测试 SIT 和 UAT（§7.7） |
+| 19 | WebSocket、STOMP、SSE | P4 | 能识别，有 `gta-testing-streaming-endpoints` skill；eval 通过后开始写测试 |
 
 Java：以 Java 17 及以上的服务为主进行设计，少数 Java 8 或 11 的服务也支持。测试按服务自身的语言版本编写，Spring Boot 2.2 到 2.7 使用 `javax.*` 导入。`gta-junit` 编译为 Java 8 字节码，旧服务也能加载；gtaw 本身运行在 JDK 17+ 上。旧服务的构建需要自己的 JDK 时，用 `build.javaHomeEnv` 指定存放该 JDK 路径的环境变量，Maven 会以该 `JAVA_HOME` 运行。CI 在 JDK 17、21、25 上构建 gta，每个新的 LTS 都会加入矩阵。`gtaw doctor` 对 Java 8 到 16 给出警告，更旧的报失败。
 
@@ -1515,11 +1596,11 @@ Java：以 Java 17 及以上的服务为主进行设计，少数 Java 8 或 11 �
 
 - 开发机为 Windows；数据存储为 Oracle 和 BigQuery；消息为 Pub/Sub、Kafka、MQ。
 - 所有依赖都经过 Nexus 代理，可以向 Nexus 上传包；CI（alm-github）可以接入。
-- 文档使用英文，README 和本设计另有中文版；用户可以用中文与 agent 对话。
+- 文档使用英文，README 和本设计另有中文版；gta 给人的消息按 `output.language`（`en` 或 `zh-CN`）输出；用户可以用中文与 agent 对话。
 - Java 包名和 Maven groupId 暂时保持 `com.gta`，以后再迁到公司域名下。
 
 **没有待确认的问题了，本版为最终设计。** 有两个假设，会在 P0a 中验证：
-- MQ 通过 JMS API 访问（例如 IBM MQ 的 JMS 客户端）。如果是原生 API，改用进程内 fake，并把厂商特有的行为留到 system 层。
+- MQ 通过 JMS API 访问（例如 IBM MQ 的 JMS 客户端）。如果是原生 API，改用进程内 fake，厂商特有的行为不在 gta 测试范围内。
 - 团队可以提供一个 Oracle 共享测试库，供 component 测试使用。在提供之前，Oracle 相关测试降级为 H2 兼容模式（保真度 low），并在报告中标出。
 
 ---
@@ -1551,3 +1632,4 @@ Java：以 Java 17 及以上的服务为主进行设计，少数 Java 8 或 11 �
 | v8 | 按 Anthropic 的原语定义重新审计：<br>- 新增 agent / skill / workflow 的判定准则；<br>- 删去 system-tester（改为 test-author + skill），最终只有 4 个 agent；<br>- 不使用容器：新增 §7.0 依赖保真度策略；<br>- 门禁在本地运行，CI 可选；characterization 测试也受门禁保护；<br>- 根目录提供 `copilot/` 和 `opencode/` 两个文件夹；<br>- 增加模型映射；<br>- 针对只有代码、没有文档的现实做了调整 |
 | v9（最终版） | 按确认的环境定稿：<br>- Windows 开发机；<br>- Oracle（共享测试库 / H2 兼容模式）、BigQuery（fake，SQL 部分在 P4 测）；<br>- Pub/Sub 模拟器从 Nexus 分发、EmbeddedKafka、嵌入式 Artemis（MQ/JMS）；<br>- 所有依赖经 Nexus 代理，工具放在 Nexus 的 raw 仓库；<br>- P1 接入 alm-github CI 模板；<br>- 待确认问题清零 |
 | v9.1 | P0 已实现，完成两轮代码审查（见 [round-2-remediation.md](../reviews/round-2-remediation.md)）：<br>- 只有精确的批准才算批准，其他回复作为修改意见，展示后被改动的规格不予批准；<br>- 用提交账本代替 trailer，分片和状态失败即关闭，规格循环有上限，review 带 token，超时计入次数；<br>- 文档统一为英文，README 和本设计另有中文版；示意图由 `scripts/diagrams/render.py` 按 diagram-design 风格生成 |
+| v10 | P0 到 P3 已实现。P4 重新划定范围：<br>- 部署环境上的测试不在范围内：团队自行测试 SIT 和 UAT，gta 绝不触碰这些环境，尤其是生产环境（`safety.protectedHosts`、Spring profile 隔离）；<br>- 新手易用性：给人的统一状态块（`en` 或 `zh-CN`）、带推荐答案的问题和 `OK` 回复、`/gta note`、service 模式、统一的 tag 词汇（§5.10、§9.5） |

@@ -261,4 +261,15 @@ class DoctorChecksTest {
         assertTrue(check(root, "spring-boot").get("detail").contains("3.5.4"));
         assertEquals("ok", status(root, "gta-junit"));
     }
+
+    @Test
+    void shouldAskForTheProtectedHosts(@TempDir Path root) throws Exception {
+        assertEquals("warn", status(root, "protected-hosts"), "without them gtaw cannot refuse a test on prod");
+
+        Files.createDirectories(root.resolve(".gta"));
+        Files.writeString(
+                root.resolve(".gta/config.json"), "{ \"safety\": { \"protectedHosts\": [\"orders-prod.acme.com\"] } }");
+
+        assertEquals("ok", status(root, "protected-hosts"));
+    }
 }

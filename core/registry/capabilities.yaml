@@ -80,11 +80,14 @@ capabilities:
     layers: [unit, component, system]
     diagrams: [flowchart]
     skills: [gta-testing-beam-pipelines, gta-using-embedded-dependencies]
-  - id: deployed-runtime
+  - id: websocket
     since: P4
-    detect: { files: ["**/service.yaml", "**/helm/**/Chart.yaml", "**/k8s/**/*.yaml", "**/*.tf"] }
-    layers: [system]
-    skills: [gta-testing-deployed-systems]
+    detect:
+      buildDeps: [spring-boot-starter-websocket]
+      annotations: ["@MessageMapping", "@SubscribeMapping", "@EnableWebSocket", "@EnableWebSocketMessageBroker"]
+    layers: [unit, component]
+    diagrams: [sequence]
+    skills: [gta-testing-streaming-endpoints]
   - id: security              # never produces flows; adds the security skill to the flows of a secured service
     since: P2
     dispatch: false

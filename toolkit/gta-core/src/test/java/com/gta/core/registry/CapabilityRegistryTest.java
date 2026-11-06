@@ -31,7 +31,7 @@ class CapabilityRegistryTest {
                 "beam-pipeline")) {
             assertTrue(registry.capability(id).activeIn(CapabilityRegistry.CURRENT_PHASE), id);
         }
-        assertFalse(registry.capability("deployed-runtime").activeIn(CapabilityRegistry.CURRENT_PHASE), "P4");
+        assertFalse(registry.capability("websocket").activeIn(CapabilityRegistry.CURRENT_PHASE), "P4");
     }
 
     @Test
@@ -67,6 +67,6 @@ class CapabilityRegistryTest {
         assertEquals("P4", CapabilityRegistry.effectivePhase("P4"), "a pilot service previews P4");
         assertEquals(CapabilityRegistry.CURRENT_PHASE, CapabilityRegistry.effectivePhase("P0"), "never below current");
         assertThrows(com.gta.core.error.GtaException.class, () -> CapabilityRegistry.effectivePhase("phase4"));
-        assertTrue(registry.capability("deployed-runtime").activeIn(CapabilityRegistry.effectivePhase("P4")));
+        assertTrue(registry.capability("websocket").activeIn(CapabilityRegistry.effectivePhase("P4")));
     }
 }

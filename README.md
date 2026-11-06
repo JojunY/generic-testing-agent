@@ -59,7 +59,7 @@ Then open the service in VS Code, IntelliJ or OpenCode and type `/gta`.
 ## Supported now (P0)
 
 - **Supported:** Maven and Gradle services on Spring Boot 4.1 and 3.5 (2.2 to 2.7 too), Java 17+ (a few on Java 8 or 11 too), on Windows, macOS and Linux. gtaw itself needs JDK 17+.
-- **Writes tests for:** REST APIs (with security rules and caches), message listeners (Kafka, Pub/Sub, JMS/MQ, RabbitMQ, SQS), scheduled jobs (`@Scheduled`, Quartz), Spring Batch jobs, Flyway/Liquibase migrations, WebFlux endpoints, gRPC services, GraphQL handlers, workflows (Temporal, Spring Statemachine, BPMN) and Beam transforms. System tests on deployed environments are detected and can be explained and specified now; their test authoring switches on in P4 (see `core/registry/capabilities.yaml` and plan §15).
+- **Writes tests for:** REST APIs (with security rules and caches), message listeners (Kafka, Pub/Sub, JMS/MQ, RabbitMQ, SQS), scheduled jobs (`@Scheduled`, Quartz), Spring Batch jobs, Flyway/Liquibase migrations, WebFlux endpoints, gRPC services, GraphQL handlers, workflows (Temporal, Spring Statemachine, BPMN) and Beam transforms. WebSocket, STOMP and SSE endpoints are detected and specified now, and get tests once their eval passes (P4). gta only runs tests locally: it never tests deployed environments (SIT, UAT, production), and `safety.protectedHosts` makes sure no test it writes names one (plan §7.7, §15).
 - **No containers needed:**
   - Oracle runs against a shared test schema or H2 in Oracle mode;
   - BigQuery and GCS use fakes;

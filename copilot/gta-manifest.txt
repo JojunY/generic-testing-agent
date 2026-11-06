@@ -38,11 +38,6 @@
 .gta/skills/gta-testing-db-migrations/references/liquibase.md
 .gta/skills/gta-testing-db-migrations/references/n-minus-1.md
 .gta/skills/gta-testing-db-migrations/references/oracle-ddl.md
-.gta/skills/gta-testing-deployed-systems/SKILL.md
-.gta/skills/gta-testing-deployed-systems/references/cloud-run.md
-.gta/skills/gta-testing-deployed-systems/references/cost-control.md
-.gta/skills/gta-testing-deployed-systems/references/gke.md
-.gta/skills/gta-testing-deployed-systems/references/karate.md
 .gta/skills/gta-testing-event-flows/SKILL.md
 .gta/skills/gta-testing-event-flows/references/awaitility.md
 .gta/skills/gta-testing-event-flows/references/jms.md
@@ -66,6 +61,8 @@
 .gta/skills/gta-testing-spring-batch-jobs/references/restart.md
 .gta/skills/gta-testing-spring-security/SKILL.md
 .gta/skills/gta-testing-spring-security/references/test-identities.md
+.gta/skills/gta-testing-streaming-endpoints/SKILL.md
+.gta/skills/gta-testing-streaming-endpoints/references/sse.md
 .gta/skills/gta-testing-workflows/SKILL.md
 .gta/skills/gta-testing-workflows/references/gcp-workflows.md
 .gta/skills/gta-testing-workflows/references/state-machines.md

@@ -120,8 +120,8 @@ final class TestRuns {
         if ("system".equals(layer)) {
             throw new GtaException(
                     ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE,
-                    "The system layer arrives in P4",
-                    "Run component tests instead");
+                    "There is no system layer: gta tests run locally only, deployed environments are out of scope",
+                    "Run the component tests; test SIT and UAT yourself");
         }
         String tag = smoke ? null : layer != null ? layer : "gta";
         String testClass = null;

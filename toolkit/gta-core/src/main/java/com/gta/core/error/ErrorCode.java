@@ -61,6 +61,7 @@ public enum ErrorCode {
     POLICY_SPEC_INVALID(Category.POLICY),
     POLICY_GTA_OWNED_FIELD(Category.POLICY),
     POLICY_UNCONFIRMED_KNOWN_DEFECT(Category.POLICY),
+    POLICY_PROTECTED_HOST(Category.POLICY),
     // state (60)
     STATE_ILLEGAL_TRANSITION(Category.STATE),
     STATE_LOCKED(Category.STATE),
