@@ -300,6 +300,49 @@ class ProfilerTest {
     }
 
     @Test
+    void shouldTurnStompHandlersAndWebSocketHandlersIntoWebsocketFlows() throws Exception {
+        source("com/acme/order/ws/PriceController.java", """
+                package com.acme.order.ws;
+                @Controller
+                @MessageMapping("/prices")
+                public class PriceController {
+                    @MessageMapping("/update")
+                    @SendTo("/topic/prices")
+                    public PriceUpdate update(PriceUpdate update) { return update; }
+                    @SubscribeMapping("/latest")
+                    public PriceUpdate latest() { return null; }
+                    public void helper() {}
+                }
+                """);
+        source("com/acme/order/ws/EchoHandler.java", """
+                package com.acme.order.ws;
+                public class EchoHandler extends TextWebSocketHandler {
+                    @Override
+                    protected void handleTextMessage(WebSocketSession session, TextMessage message) {}
+                    private void log() {}
+                }
+                """);
+
+        Map<String, ServiceProfile.EntryPoint> flows =
+                byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"));
+
+        ServiceProfile.EntryPoint update = flows.get("price.update");
+        assertEquals("websocket", update.capability, flows.keySet().toString());
+        assertEquals("STOMP send /prices/update", update.trigger, "the class prefix comes first");
+        assertEquals(6, update.risk);
+        assertEquals("STOMP subscribe /prices/latest", flows.get("price.latest").trigger);
+        assertEquals(3, flows.get("price.latest").risk, "a subscription only reads");
+        assertTrue(!flows.containsKey("price.helper"), "a method without a mapping is no flow");
+        assertEquals(
+                "websocket",
+                flows.values().stream()
+                        .filter(e -> "WebSocket EchoHandler".equals(e.trigger))
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError(flows.keySet().toString()))
+                        .capability);
+    }
+
+    @Test
     void shouldTurnEachRpcOfAGrpcServiceIntoAFlow() throws Exception {
         source("com/acme/order/grpc/StockGrpcService.java", """
                 package com.acme.order.grpc;

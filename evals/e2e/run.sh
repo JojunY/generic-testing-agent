@@ -326,6 +326,19 @@ cap_flow archive-job.archive-orders archive-orders.spec.md ArchiveJobConfigIT.ja
 cap_flow db.customer-tier customer-tier.spec.md DbCustomerTierIT.java.txt \
   "${P}src/test/java/com/example/order/DbCustomerTierIT.java" "V2 uses > instead of >= (D9)"
 
+step "websocket (P4 preview): the repository opts into P4"
+python3 - <<'PY'
+import json, os
+path = ".gta/config.json"
+c = json.load(open(path)) if os.path.exists(path) else {}
+c["phase"] = "P4"
+json.dump(c, open(path, "w"), indent=2)
+PY
+git add .gta/config.json && git commit -qm "gta: preview P4"
+cap_flow quote.request-quote request-quote.spec.md QuoteControllerIT.java.txt \
+  "${P}src/test/java/com/example/order/quote/QuoteControllerIT.java" "the bulk discount starts above 10 items instead of at 10 (D17)" \
+  gta-testing-streaming-endpoints
+
 step "P1 and P2 session end"
 for _ in $(seq 1 5); do
   OUT=$(gtaw next)
@@ -333,7 +346,7 @@ for _ in $(seq 1 5); do
 done
 expect "$(jget "$OUT" 'd["node"]')" done "P1 and P2 session end"
 for f in shipping.ship-paid-orders loyalty.on-order-created admin.purge-cancelled price.update-price \
-         archive-job.archive-orders db.customer-tier; do
+         archive-job.archive-orders db.customer-tier quote.request-quote; do
   STATUS=$(gtaw status)
   expect "$(jget "$STATUS" '" ".join(sorted(set(i["status"] for i in d["items"] if i["id"].startswith("'"$f"'/"))))')" \
     "defect-found passed" "$f item states"

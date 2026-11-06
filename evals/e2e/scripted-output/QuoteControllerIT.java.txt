@@ -1,0 +1,88 @@
+package com.example.order.quote;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.gta.junit.KnownDefect;
+import java.lang.reflect.Type;
+import java.math.BigDecimal;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.messaging.converter.JacksonJsonMessageConverter;
+import org.springframework.messaging.simp.stomp.StompFrameHandler;
+import org.springframework.messaging.simp.stomp.StompHeaders;
+import org.springframework.messaging.simp.stomp.StompSession;
+import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
+import org.springframework.web.socket.client.standard.StandardWebSocketClient;
+import org.springframework.web.socket.messaging.WebSocketStompClient;
+
+@Tag("component")
+@Tag("gta")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+class QuoteControllerIT {
+
+    @LocalServerPort
+    int port;
+
+    /**
+     * Subscribes to /topic/quotes, sends the request and returns the first quote. The simple broker sends no RECEIPT
+     * for a SUBSCRIBE, so the request (idempotent) is sent again until the subscription sees an answer.
+     */
+    private Quote quote(QuoteRequest request) throws Exception {
+        WebSocketStompClient stomp = new WebSocketStompClient(new StandardWebSocketClient());
+        stomp.setMessageConverter(new JacksonJsonMessageConverter());
+        BlockingQueue<Quote> received = new LinkedBlockingQueue<>();
+        StompSession session = stomp.connectAsync("ws://localhost:" + port + "/ws", new StompSessionHandlerAdapter() {})
+                .get(5, TimeUnit.SECONDS);
+        try {
+            session.subscribe("/topic/quotes", new StompFrameHandler() {
+                @Override
+                public Type getPayloadType(StompHeaders headers) {
+                    return Quote.class;
+                }
+
+                @Override
+                public void handleFrame(StompHeaders headers, Object payload) {
+                    received.add((Quote) payload);
+                }
+            });
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            Quote quote = null;
+            while (quote == null && System.nanoTime() < deadline) {
+                session.send("/app/quote", request);
+                quote = received.poll(250, TimeUnit.MILLISECONDS);
+            }
+            return quote;
+        } finally {
+            session.disconnect();
+            stomp.stop();
+        }
+    }
+
+    @Test
+    @Tag("flow:quote.request-quote")
+    @Tag("scenario:quote.request-quote/s01")
+    @DisplayName("[quote.request-quote/s01] a small order is quoted at full price")
+    void shouldQuoteTheFullPriceWhenFewerThanTenItems() throws Exception {
+        Quote quote = quote(new QuoteRequest("sku-1", 2, new BigDecimal("9.90")));
+
+        assertThat(quote).isNotNull();
+        assertThat(quote.total()).isEqualByComparingTo("19.80");
+    }
+
+    @Test
+    @Tag("flow:quote.request-quote")
+    @Tag("scenario:quote.request-quote/s02")
+    @DisplayName("[quote.request-quote/s02] ten items get the bulk discount")
+    void shouldGiveTheBulkDiscountWhenTenItems() throws Exception {
+        Quote quote = quote(new QuoteRequest("sku-1", 10, new BigDecimal("5.00")));
+
+        assertThat(quote).isNotNull();
+        assertThat(quote.total()).isEqualByComparingTo("45.00");
+    }
+}
