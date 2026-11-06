@@ -55,7 +55,7 @@ public final class MutationRunner {
                         dependencies.add('gtaPit', it)
                     }
                     tasks.register('gtaTestClasspath') {
-                        dependsOn 'testClasses'
+                        dependsOn sourceSets.test.runtimeClasspath   // sibling projects' jars too
                         def out = project.findProperty('gta.out')
                         doLast { file(out).text = sourceSets.test.runtimeClasspath.files.join(File.pathSeparator) }
                     }
@@ -328,17 +328,18 @@ public final class MutationRunner {
         com.gta.core.util.AtomicFiles.write(init, GRADLE_INIT_SCRIPT);
         List<String> cmd = new GradleRunner(paths, config).gradleCommand();
         cmd.addAll(List.of(
-                "-q", "--console=plain", "-I", init.toAbsolutePath().toString(), "-Pgta.out=" + out.toAbsolutePath()));
+                "-q",
+                "--console=plain",
+                "--no-configuration-cache", // the init script's tasks read the project when they run
+                "-I",
+                init.toAbsolutePath().toString(),
+                "-Pgta.out=" + out.toAbsolutePath()));
         if (artifacts != null) {
             cmd.add("-Pgta.pit=" + String.join(",", artifacts));
         }
-        cmd.add(gradleTaskPath(paths.module(), task));
+        // on the service's project only (":task" on the root), never the same task in every project
+        cmd.add(GradleRunner.projectPath(paths.module()) + ":" + task);
         return cmd;
-    }
-
-    /** {@code :task} on the root project, {@code :order-api:task} on a subproject: never the same task everywhere. */
-    static String gradleTaskPath(String module, String task) {
-        return module == null || module.isEmpty() ? ":" + task : ":" + module.replace('/', ':') + ":" + task;
     }
 
     /** A pom that only lists the tools; never the service's own pom, so nothing of the service changes. */
@@ -378,14 +379,21 @@ public final class MutationRunner {
     }
 
     private void mustSucceed(List<String> command, String what) {
-        ProcessRunner.Result r = ProcessRunner.run(
-                paths.root(), Duration.ofMinutes(config.budgets.nodeTimeoutMinutes), Map.of(), command);
+        // PIT runs the service's tests: the same isolation as every other test run (plan §13)
+        ProcessRunner.Result r;
+        try (IsolatedEnv isolated = IsolatedEnv.create()) {
+            r = ProcessRunner.run(
+                    paths.root(),
+                    Duration.ofMinutes(config.budgets.nodeTimeoutMinutes),
+                    new MavenRunner(paths, config).buildEnv(isolated, List.of()),
+                    command);
+        }
         if (!r.ok()) {
             String out = r.output();
             throw new GtaException(
                     ErrorCode.ENV_TOOL_UNAVAILABLE,
                     "Could not " + what + ": " + out.substring(Math.max(0, out.length() - 1500)),
-                    "Fix the build first (./gtaw run), then run gtaw mutate again");
+                    "Fix the build first (./gtaw run), then run gtaw mutate again; in a Gradle multi-project build, set build.module to the service's project");
         }
     }
 

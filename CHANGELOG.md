@@ -5,6 +5,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 ## [Unreleased]
 
 ### Fixed
+- OpenCode's gta agents allowed every `./gtaw` command, so `gate waive`, `relock` or `abort` ran without a person confirming them (Copilot asks). The agents now allow the same subcommands as Copilot's auto-approve list and ask for every other gtaw command, `note` included, so an agent cannot record a note as if a person had said it.
 - A skipped test (`@Disabled`, a failed assumption) was not a failure, so it went to review as if it had passed: an author could disable the test to get it through. It is now refused (`POLICY_TEST_SKIPPED`) and goes back to the author.
 - `OK, but change s02` on an approval prompt approved the spec, and on a decision took the recommended option: only a bare `OK` takes a recommendation now, anything more is a change request (approval) or is refused (decision).
 - Gradle's JUnit XML names testcases by display name and puts the exception type in front of the message; the report parser now maps such cases to gta-junit's results and fingerprints the bare message, so `@KnownDefect(failure=...)` matches.
@@ -45,7 +46,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - Services on Java 8 and 11: `gta-junit` is Java 8 bytecode, briefs name the service's level and `javax.*` for Spring Boot 2, `build.javaHomeEnv` runs Maven with the JDK an old build needs, and `gtaw doctor` warns (instead of failing) for Java 8 to 16.
 
 ### Changed
-- Copilot and OpenCode are supported equally (plan v11): the plan no longer calls OpenCode secondary; OpenCode also allows `.\gtaw <command>` (PowerShell), both platforms auto-approve `gtaw note`, `gtaw doctor` explains OpenCode's approvals as it does Copilot's, and the e2e installs both (main and multi-module: Copilot; catalog and Gradle: OpenCode) and checks each platform's agents, command and approvals.
+- Copilot and OpenCode are supported equally (plan v11): the plan no longer calls OpenCode secondary; OpenCode also allows `.\gtaw <command>` (PowerShell), `gtaw doctor` explains OpenCode's approvals as it does Copilot's, and the e2e installs both (main and multi-module: Copilot; catalog and Gradle: OpenCode) and checks each platform's agents, command and approvals.
 - P5 trimmed (plan §15, v11): hooks, plugin distribution, record-replay and native-image are dropped; opt-in SIT/UAT tests (design recorded in §7.7), MCP wrapping, SARIF, performance tests, parallel authoring and other languages stay deferred until a team needs them.
 - P4 is the current phase: `websocket` flows write tests by default, without `"phase": "P4"`; the main e2e runs `quote.request-quote` without a `phase` setting.
 - Scope: gta does not test deployed environments (SIT, UAT, production), now or later, because teams test SIT and UAT themselves. The `deployed-runtime` capability, the `gta-testing-deployed-systems` skill, `gtaw env`, the Karate system layer and BigQuery temporary datasets are removed from the roadmap (plan §7.7, §15). `gtaw run --layer system` says so.

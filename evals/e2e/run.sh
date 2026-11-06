@@ -97,18 +97,7 @@ step "foundation: seed test"
 OUT=$(gtaw next)
 expect "$(jget "$OUT" 'd["itemId"]')" "order#foundation-01" "first item"
 TOKEN=$(jget "$OUT" 'd["token"]')
-python3 - "${P}pom.xml" <<'EOF'
-import sys
-s = open(sys.argv[1]).read()
-dep = """    <dependency>
-      <groupId>com.gta</groupId>
-      <artifactId>gta-junit</artifactId>
-      <version>0.1.1-SNAPSHOT</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>"""
-open(sys.argv[1], "w").write(s.replace("  </dependencies>", dep, 1))
-EOF
+add_gta_junit "${P}pom.xml"
 cp "$AGENT/OrderApplicationIT.java.txt" ${P}src/test/java/com/example/order/OrderApplicationIT.java
 OUT=$(gtaw submit --item "order#foundation-01" --token "$TOKEN")
 jget "$OUT" 'd["result"]' | grep -q '^passed' || fail "foundation: $OUT"

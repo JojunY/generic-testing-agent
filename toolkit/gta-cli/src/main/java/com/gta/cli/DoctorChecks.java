@@ -20,8 +20,11 @@ import java.util.Properties;
 
 /** Environment and installation checks with actionable hints (plan §11.2). */
 public final class DoctorChecks {
-    /** The gtaw subcommands both platforms run without asking (copilot settings.json, opencode.json). */
-    static final String AUTO_APPROVED = "next|check|submit|answer|note|status";
+    /**
+     * The gtaw subcommands both platforms run without asking (copilot settings.json, opencode.json and the OpenCode
+     * agents). Everything else asks a person: privileged commands, and `note`, which records what a person says.
+     */
+    static final String AUTO_APPROVED = "next|check|submit|answer|status";
 
     private final Path root;
     private final List<Map<String, String>> checks = new ArrayList<>();
@@ -216,7 +219,7 @@ public final class DoctorChecks {
                         "info",
                         "OpenCode: opencode.json allows ./gtaw " + AUTO_APPROVED
                                 + " (also .\\gtaw.cmd); other commands ask",
-                        "Keep permission.bash in opencode.json; privileged gtaw commands must keep asking");
+                        "Keep permission.bash in opencode.json and the gta agents; privileged gtaw commands and gtaw note must keep asking");
             }
         } else {
             add("harness", "fail", "not installed", "Run ./gtaw init --platform copilot (or opencode)");

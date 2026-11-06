@@ -205,7 +205,7 @@ class DoctorChecksTest {
             Map<String, String> approve = check(root, "ide-auto-approve");
 
             assertEquals("info", approve.get("status"), platform);
-            assertTrue(approve.get("detail").contains("next|check|submit|answer|note|status"), approve.toString());
+            assertTrue(approve.get("detail").contains("next|check|submit|answer|status"), approve.toString());
         }
     }
 

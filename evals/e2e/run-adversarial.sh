@@ -46,18 +46,7 @@ gtaw next >/dev/null
 gtaw answer OK >/dev/null
 OUT=$(gtaw next)
 expect "$(jget "$OUT" 'd["itemId"]')" "order#foundation-01" "seed item"
-python3 - pom.xml <<'EOF'
-import sys
-s = open(sys.argv[1]).read()
-dep = """    <dependency>
-      <groupId>com.gta</groupId>
-      <artifactId>gta-junit</artifactId>
-      <version>0.1.1-SNAPSHOT</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>"""
-open(sys.argv[1], "w").write(s.replace("  </dependencies>", dep, 1))
-EOF
+add_gta_junit pom.xml
 cp "$AGENT/OrderApplicationIT.java.txt" src/test/java/com/example/order/OrderApplicationIT.java
 OUT=$(gtaw submit --item "order#foundation-01" --token "$(jget "$OUT" 'd["token"]')")
 jget "$OUT" 'd["result"]' | grep -q '^passed' || fail "seed: $OUT"

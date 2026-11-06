@@ -210,10 +210,14 @@ public final class Profiler {
                                 // a server-sent event stream is tested with a streaming client; a handler returning
                                 // Mono/Flux is a reactive (WebFlux) endpoint: both are tested differently
                                 String returns = m.getType().asString();
-                                boolean stream = returns.startsWith("SseEmitter")
+                                String mapping = a.toString();
+                                boolean stream = returns.contains("SseEmitter")
+                                        || returns.contains("ResponseBodyEmitter")
                                         || returns.contains("ServerSentEvent")
-                                        || a.toString().contains("TEXT_EVENT_STREAM")
-                                        || a.toString().contains("text/event-stream");
+                                        // produces only an event stream; one of several media types is not a stream
+                                        || ((mapping.contains("TEXT_EVENT_STREAM")
+                                                        || mapping.contains("text/event-stream"))
+                                                && !mapping.matches("(?s).*produces\\s*=\\s*\\{.*"));
                                 boolean reactive = returns.startsWith("Mono") || returns.startsWith("Flux");
                                 e = base(c, fqcn, m, stream ? "websocket" : reactive ? "webflux" : "rest-api", "http");
                                 e.httpMethod = verb;

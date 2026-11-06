@@ -44,18 +44,7 @@ expect "$(jget "$OUT" 'd["itemId"]')" "product#foundation-01" "first item"
 grep -q "gta-testing-reactive-apis/SKILL.md" "$(jget "$OUT" 'd["brief"]')" || fail "the foundation brief should load the reactive skill"
 echo "ok   briefs load gta-testing-reactive-apis"
 TOKEN=$(jget "$OUT" 'd["token"]')
-python3 - pom.xml <<'PY'
-import sys
-s = open(sys.argv[1]).read()
-dep = """    <dependency>
-      <groupId>com.gta</groupId>
-      <artifactId>gta-junit</artifactId>
-      <version>0.1.1-SNAPSHOT</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>"""
-open(sys.argv[1], "w").write(s.replace("  </dependencies>", dep, 1))
-PY
+add_gta_junit pom.xml
 cp "$AGENT/CatalogApplicationIT.java.txt" src/test/java/com/example/catalog/CatalogApplicationIT.java
 OUT=$(gtaw submit --item "product#foundation-01" --token "$TOKEN")
 jget "$OUT" 'd["result"]' | grep -q '^passed' || fail "foundation: $OUT"

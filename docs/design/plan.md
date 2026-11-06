@@ -1430,7 +1430,7 @@ generic-testing-agent/
 | Prompt / commands | `.github/prompts/*.prompt.md`, `agent:` selects the agent | GA (2026-06) | `.opencode/commands/*.md` | only `/gta`, which selects the orchestrator |
 | Hooks | preview (off) | GA | plugin | **not used in v1** (§4.0, §4.5) |
 | MCP | supported | supported | supported | **not used in v1** (§4.0) |
-| Terminal auto-approve | `chat.tools.terminal.autoApprove` (workspace setting) | Settings > GitHub Copilot > Chat > Auto Approve (user level) | `permission.bash` | only `./gtaw next\|check\|submit\|answer\|note\|status` |
+| Terminal auto-approve | `chat.tools.terminal.autoApprove` (workspace setting) | Settings > GitHub Copilot > Chat > Auto Approve (user level) | `permission.bash` | only `./gtaw next\|check\|submit\|answer\|status`; every other gtaw command asks, `note` included (it records what a person says) |
 | Request limit per turn | `chat.agent.maxRequests` | yes | `steps` | `maxItemsPerSession` = 5 |
 | Skills | `.github/skills/` | GA | `.opencode/skills/` | **not used** (`.gta/skills/` loaded by path instead) |
 | Handoffs / plugins | supported | unconfirmed | — | not used |
@@ -1523,7 +1523,7 @@ When an agent writes to these paths, the change check of §5.8 restores them. Ap
 | Topic | Measures |
 |---|---|
 | Authoritative decisions | the change check of §5.8, the base-anchored gate (§10.5) and PR review. **Without branch protection the gate is only a red status check and cannot block a merge**, so making it a required check is recommended |
-| Privileged commands | `gate waive`, `relock`, `env`, `abort` and `next --takeover` are not on the terminal auto-approve list, so a person must confirm them; auto-approve covers only next/check/submit/answer/note/status |
+| Privileged commands | `gate waive`, `relock`, `env`, `abort` and `next --takeover` are not on the terminal auto-approve list, so a person must confirm them; auto-approve covers only next/check/submit/answer/status; `note` also asks, so an agent cannot record a note as if a person had said it |
 | Production code | no mode of v1 changes it |
 | Human confirmations | auditable (§5.5); PR review has the final word |
 | Test integrity | weakening assertions, deleting tests, adding `@Disabled` and changing expected values to actual values are forbidden; triage, the expected-value check, the oracle lock and the gate enforce this together |

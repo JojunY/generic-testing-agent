@@ -1405,7 +1405,7 @@ generic-testing-agent/
 | Prompt / commands | `.github/prompts/*.prompt.md`，用 `agent:` 指定 agent | GA（2026-06） | `.opencode/commands/*.md` | 只有 `/gta`，自动选中 orchestrator |
 | Hooks | Preview（不开启） | GA | plugin | **v1 不使用**（§4.0、§4.5） |
 | MCP | 支持 | 支持 | 支持 | **v1 不使用**（§4.0） |
-| 终端自动批准 | `chat.tools.terminal.autoApprove`（工作区设置） | Settings > GitHub Copilot > Chat > Auto Approve（用户级） | `permission.bash` | 只批准 `./gtaw next\|check\|submit\|answer\|note\|status` |
+| 终端自动批准 | `chat.tools.terminal.autoApprove`（工作区设置） | Settings > GitHub Copilot > Chat > Auto Approve（用户级） | `permission.bash` | 只批准 `./gtaw next\|check\|submit\|answer\|status`；其他 gtaw 命令都要确认，包括 `note`（它记录的是人说的话） |
 | 单轮请求上限 | `chat.agent.maxRequests` | 有 | `steps` | `maxItemsPerSession` = 5 |
 | Skills | `.github/skills/` | GA | `.opencode/skills/` | **不使用**（改用 `.gta/skills/` 按路径加载） |
 | Handoffs / Plugins | 支持 | 未确认 | — | 不使用 |
@@ -1496,7 +1496,7 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 | 主题 | 措施 |
 |---|---|
 | 权威裁决 | §5.8 的改动检查，加上以 base 为基准的门禁（§10.5），以及 PR review。**没有分支保护时，gate 只是一个红色的 status check，不能强制阻断合入**，所以建议以后至少把 gate 设为 required check |
-| 特权命令 | `gate waive`、`relock`、`env`、`abort`、`next --takeover` 不在终端自动批准列表中，需要人点击确认；自动批准只覆盖 next/check/submit/answer/note/status |
+| 特权命令 | `gate waive`、`relock`、`env`、`abort`、`next --takeover` 不在终端自动批准列表中，需要人点击确认；自动批准只覆盖 next/check/submit/answer/status；`note` 也要确认，agent 不能冒充人写入说明 |
 | 生产代码 | v1 的任何模式都不修改 |
 | 人工确认 | 可审计（§5.5）；以 PR review 为准 |
 | 测试完整性 | 禁止削弱断言、删除测试、加 `@Disabled`、把期望值改成实际值；由分流、期望值复核、oracle lock 和门禁共同强制执行 |

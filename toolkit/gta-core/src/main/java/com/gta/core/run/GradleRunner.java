@@ -90,7 +90,12 @@ public final class GradleRunner extends MavenRunner {
 
     /** {@code test}, or {@code :order-api:test} for a subproject. */
     public static String testTask(String module) {
-        return module == null || module.isEmpty() ? "test" : ":" + module.replace('/', ':') + ":test";
+        return module == null || module.isEmpty() ? "test" : projectPath(module) + ":test";
+    }
+
+    /** The Gradle path of the service's project: {@code ""} for the root, {@code :order:api} for {@code order/api}. */
+    static String projectPath(String module) {
+        return module == null || module.isEmpty() ? "" : ":" + module.replace('/', ':');
     }
 
     @Override

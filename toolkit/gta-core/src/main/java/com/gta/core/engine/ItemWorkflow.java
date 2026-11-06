@@ -458,20 +458,6 @@ final class ItemWorkflow {
                     "No test ran for " + item.testClass
                             + (item.isFoundation() ? "" : " with @Tag(\"scenario:" + item.ref + "\")"));
         }
-        List<String> skipped = run.cases.stream()
-                .filter(c -> "skipped".equals(c.outcome))
-                .map(c -> c.method)
-                .toList();
-        if (!skipped.isEmpty()) {
-            // a skipped test verifies nothing: @Disabled or a failed assumption must not read as a pass
-            return fail(
-                    st,
-                    item,
-                    s,
-                    ErrorCode.POLICY_TEST_SKIPPED,
-                    "Skipped, so nothing was verified: " + skipped
-                            + ". Remove @Disabled and assumptions that skip the test; a failing test goes to triage");
-        }
         AssertionScanner.ScenarioOracle oracle = ctx.runs.scanOracle(item);
         if (!item.isFoundation()) {
             if (s.lock == null && TestRuns.reached(run)) {
@@ -541,6 +527,22 @@ final class ItemWorkflow {
                     s,
                     ErrorCode.POLICY_UNCONFIRMED_KNOWN_DEFECT,
                     "@KnownDefect may only be added after a human confirmed the defect; remove it and let the failure be triaged");
+        }
+        List<String> skipped = run.cases.stream()
+                .filter(c -> "skipped".equals(c.outcome))
+                .map(c -> c.method)
+                .toList();
+        if (failures.isEmpty() && !skipped.isEmpty()) {
+            // a skipped test verifies nothing: @Disabled or a failed assumption must not read as a pass; a real
+            // failure in the same run still goes to triage
+            return fail(
+                    st,
+                    item,
+                    s,
+                    ErrorCode.POLICY_TEST_SKIPPED,
+                    "Skipped, so nothing was verified: " + skipped
+                            + ". Remove @Disabled and assumptions that skip the test; if the environment skips it (a"
+                            + " missing variable or tool), the test cannot verify anything here: test without it");
         }
         if (failures.isEmpty()) {
             if ("reproducing".equals(item.intent)) {

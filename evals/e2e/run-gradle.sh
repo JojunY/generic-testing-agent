@@ -48,7 +48,7 @@ step "foundation: seed test, gta-junit added to build.gradle.kts"
 OUT=$(gtaw next)
 expect "$(jget "$OUT" 'd["itemId"]')" "invoice#foundation-01" "first item"
 TOKEN=$(jget "$OUT" 'd["token"]')
-sed -i 's|^    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")|&\n    testImplementation("com.gta:gta-junit:0.1.1-SNAPSHOT")|' build.gradle.kts
+sed -i "s|^    testImplementation(\"org.springframework.boot:spring-boot-starter-webmvc-test\")|&\n    testImplementation(\"com.gta:gta-junit:$GTA_VERSION\")|" build.gradle.kts
 grep -q gta-junit build.gradle.kts || fail "gta-junit not added"
 cp "$AGENT/InvoiceApplicationIT.java.txt" src/test/java/com/example/invoice/InvoiceApplicationIT.java
 OUT=$(gtaw submit --item "invoice#foundation-01" --token "$TOKEN")

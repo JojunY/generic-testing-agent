@@ -260,7 +260,10 @@ class MutationRunnerTest {
 
         assertEquals(MutationRunner.CanFail.KILLED, r.verdict(), r.detail());
         String gradleArgs = Files.readString(dir.resolve("gradle-args"));
-        assertTrue(gradleArgs.contains(":gtaTestClasspath") && gradleArgs.contains(":gtaPitJars"), gradleArgs);
+        assertTrue(
+                gradleArgs.contains(" :gtaTestClasspath") && gradleArgs.contains(" :gtaPitJars"),
+                "the root project only: " + gradleArgs);
+        assertTrue(gradleArgs.contains("--no-configuration-cache"), gradleArgs);
         assertTrue(
                 gradleArgs.contains("-Pgta.pit=org.pitest:pitest:")
                         && gradleArgs.contains("org.junit.platform:junit-platform-launcher:6.0.3"),
@@ -268,11 +271,5 @@ class MutationRunnerTest {
         assertTrue(Files.exists(repo.resolve(".gta/work/pit/i/gta-pit.gradle")), "the build script is never changed");
         String javaArgs = Files.readString(dir.resolve("java-args"));
         assertTrue(javaArgs.contains("/g/build/classes/java/main") && !javaArgs.contains("target/classes"), javaArgs);
-    }
-
-    @Test
-    void shouldRunGtawsPitTasksOnTheServiceModuleOnly() {
-        assertEquals(":gtaPitJars", MutationRunner.gradleTaskPath(null, "gtaPitJars"));
-        assertEquals(":order:api:gtaPitJars", MutationRunner.gradleTaskPath("order/api", "gtaPitJars"));
     }
 }

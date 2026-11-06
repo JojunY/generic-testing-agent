@@ -73,26 +73,14 @@ public class MavenRunner implements TestRunner {
         List<String> cmd = testCommand(options, gtaResults);
 
         IsolatedEnv isolated = IsolatedEnv.create();
-        Map<String, String> env = isolated.variables();
         List<String> toolOptions = new ArrayList<>();
-        String inherited = System.getenv("JAVA_TOOL_OPTIONS");
-        if (inherited != null
-                && !IsolatedEnv.withoutSpringEnvironment(inherited).isEmpty()) {
-            toolOptions.add(IsolatedEnv.withoutSpringEnvironment(inherited));
-        }
         if (options.stabilityVariant()) {
             toolOptions.add(stabilityVariantOptions(config.qualityGates));
         }
         if (options.randomOrder()) {
             toolOptions.add("-Djunit.jupiter.testmethod.order.default=org.junit.jupiter.api.MethodOrderer$Random");
         }
-        if (!toolOptions.isEmpty()) {
-            env.put("JAVA_TOOL_OPTIONS", String.join(" ", toolOptions));
-        }
-        String javaHome = javaHome(config.build.javaHomeEnv, System::getenv);
-        if (javaHome != null) {
-            env.put("JAVA_HOME", javaHome);
-        }
+        Map<String, String> env = buildEnv(isolated, toolOptions);
 
         long start = System.currentTimeMillis();
         ProcessRunner.Result proc;
@@ -211,6 +199,29 @@ public class MavenRunner implements TestRunner {
                     "Cannot clear " + dir + ": " + e.getMessage(),
                     "Close programs that hold files in it (IDE, antivirus scan), then run the command again");
         }
+    }
+
+    /**
+     * The environment every build command of gtaw runs with (plan §13): no cloud credentials, no Spring profile or
+     * configuration of the developer's shell, and the JDK {@code build.javaHomeEnv} names.
+     */
+    Map<String, String> buildEnv(IsolatedEnv isolated, List<String> extraToolOptions) {
+        Map<String, String> env = isolated.variables();
+        List<String> toolOptions = new ArrayList<>();
+        String inherited = System.getenv("JAVA_TOOL_OPTIONS");
+        if (inherited != null
+                && !IsolatedEnv.withoutSpringEnvironment(inherited).isEmpty()) {
+            toolOptions.add(IsolatedEnv.withoutSpringEnvironment(inherited));
+        }
+        toolOptions.addAll(extraToolOptions);
+        if (!toolOptions.isEmpty()) {
+            env.put("JAVA_TOOL_OPTIONS", String.join(" ", toolOptions));
+        }
+        String javaHome = javaHome(config.build.javaHomeEnv, System::getenv);
+        if (javaHome != null) {
+            env.put("JAVA_HOME", javaHome);
+        }
+        return env;
     }
 
     /**
