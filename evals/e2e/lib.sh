@@ -21,7 +21,7 @@ gta_init() { # gta_init <copilot|opencode>: installs the harness and checks that
              grep -q 'answer|note|status' .vscode/settings.json || fail "$1: gtaw note is not auto-approved" ;;
     opencode) for f in .opencode/agents/gta-orchestrator.md .opencode/agents/gta-test-author.md \
                        .opencode/commands/gta.md opencode.json; do [ -f "$f" ] || fail "$1: no $f"; done
-              grep -q '"./gtaw note\*": "allow"' opencode.json || fail "$1: gtaw note is not allowed" ;;
+              grep -Eq '"\./gtaw note\*" *: *"allow"' opencode.json || fail "$1: gtaw note is not allowed" ;;
   esac
   [ -f .gta/skills/gta-writing-tests/SKILL.md ] || fail "$1: no skills"
   echo "ok   $1 harness installed"
