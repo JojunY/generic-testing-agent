@@ -328,12 +328,13 @@ cap_flow db.customer-tier customer-tier.spec.md DbCustomerTierIT.java.txt \
 
 step "websocket (P4 preview): the repository opts into P4"
 python3 - <<'PY'
-import json
-c = json.load(open(".gta/config.json"))
+import json, os
+path = ".gta/config.json"
+c = json.load(open(path)) if os.path.exists(path) else {}
 c["phase"] = "P4"
-json.dump(c, open(".gta/config.json", "w"), indent=2)
+json.dump(c, open(path, "w"), indent=2)
 PY
-git commit -qam "gta: preview P4"
+git add .gta/config.json && git commit -qm "gta: preview P4"
 cap_flow quote.request-quote request-quote.spec.md QuoteControllerIT.java.txt \
   "${P}src/test/java/com/example/order/quote/QuoteControllerIT.java" "the bulk discount starts above 10 items instead of at 10 (D17)" \
   gta-testing-streaming-endpoints
