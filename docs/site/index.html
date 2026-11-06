@@ -1,128 +1,217 @@
 <!doctype html>
-<html lang="en" class="no-js">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>gta — tests that find bugs</title>
   <meta name="description" content="gta reads a Spring service, asks what the code cannot tell, locks the expected values and catches what is wrong. Inside GitHub Copilot or OpenCode.">
-  <meta name="theme-color" content="#faf9f5">
+  <meta name="theme-color" content="#08090a">
+  <meta name="color-scheme" content="dark">
+  <link rel="alternate" hreflang="zh-CN" href="index.zh-CN.html">
   <link rel="stylesheet" href="site.css">
+  <noscript><style>.reveal, .load { opacity: 1; transform: none; animation: none; }</style></noscript>
 </head>
 <body>
 
 <nav class="nav">
-  <a class="wordmark" href="#top">gta<i>.</i></a>
-  <div class="nav-links">
-    <a class="hide-sm" href="#how">How it works</a>
-    <a class="hide-sm" href="#trust">Why trust it</a>
-    <a class="hide-sm" href="#start">Get started</a>
-    <a class="lang" href="index.zh-CN.html" hreflang="zh-CN">简体中文</a>
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="gta home">
+      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x=".75" y=".75" width="20.5" height="20.5" rx="6" fill="none" stroke="#fff" stroke-opacity=".28"/><path d="M6.5 11.4l3 3 6-6.8" fill="none" stroke="#8b9cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      gta
+    </a>
+    <div class="links">
+      <a class="hide-sm" href="#how">How it works</a>
+      <a class="hide-sm" href="#trust">Why trust it</a>
+      <a class="hide-sm" href="#start">Get started</a>
+      <a class="lang" href="index.zh-CN.html" hreflang="zh-CN" lang="zh-CN">简体中文</a>
+    </div>
   </div>
 </nav>
 
 <header class="hero" id="top">
-  <canvas id="swarm" data-defect="s03 · expected 10.00, got 0.00" aria-hidden="true"></canvas>
-  <div class="hero-copy">
-    <h1>Tests that find bugs, <em>not just coverage.</em></h1>
-    <p>gta reads your Spring service, asks you what the code cannot tell, locks what you expect, and catches what is wrong. Inside GitHub Copilot or OpenCode.</p>
-    <div class="cta">
-      <a class="btn solid" href="#start">Get started</a>
-      <a class="btn" href="#how">Type <span class="kbd">/gta</span> and see</a>
+  <canvas id="field" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <div class="badge load"><b>Spring Boot 2.2 – 4</b> GitHub Copilot · OpenCode</div>
+    <h1 class="load d1">Tests that find bugs, not just coverage.</h1>
+    <p class="sub load d2">gta reads your Spring service, asks you what the code cannot tell, locks what you expect, and catches what is wrong.</p>
+    <div class="cta load d3">
+      <a class="btn primary" href="#start">Get started <span class="arrow">→</span></a>
+      <a class="btn" href="#how">How it works</a>
     </div>
   </div>
-  <div class="scroll-hint" aria-hidden="true"></div>
+
+  <div class="product load d4">
+    <div class="ide" data-ide role="img" aria-label="An IDE where gta's four agents work on order.create: the analyst writes the spec and asks a question, you reply OK, the test author writes a test, it fails with expected 10.00, got 0.00, the reviewer calls it a product defect, and after your OK gta pins it and commits.">
+      <div class="ide-bar"><i></i><i></i><i></i><span>order-service</span></div>
+      <div class="ide-grid">
+        <div class="pane chat"><div class="pane-h">Chat · /gta</div><div class="chat-log"></div><div class="chat-input">Message gta…</div></div>
+        <div class="pane editor"><div class="tabs"></div><pre class="code"></pre></div>
+        <div class="pane term"><div class="pane-h">Terminal</div><pre class="term-log"></pre></div>
+      </div>
+    </div>
+  </div>
+<script type="application/json" id="demo-script">
+{
+  "placeholder": "Message gta…",
+  "agents": {
+    "orchestrator": { "name": "gta-orchestrator", "color": "#8b9cff" },
+    "analyst": { "name": "gta-analyst", "color": "#7fd1c2" },
+    "author": { "name": "gta-test-author", "color": "#e3c48f" },
+    "reviewer": { "name": "gta-reviewer", "color": "#c9a8ff" }
+  },
+  "steps": [
+    { "you": "/gta order.create" },
+    { "by": "orchestrator", "say": "order.create: 5 scenarios. The analyst writes the spec." },
+    { "by": "analyst", "file": "create-order.spec.md", "code": [
+      [["h", "### s03 · discount at the threshold"]],
+      [["c", "\u003c!-- source: OrderService.java:42 -->"]],
+      "GIVEN a cart with subtotal 100.00",
+      "WHEN  the order is created" ] },
+    { "by": "analyst", "say": "The code cannot tell: is a subtotal of exactly 100.00 discounted?\nA) Yes, 10 % from 100.00 <span class=\"rec\">← recommended</span>\nB) No, only above 100.00", "wait": 1400 },
+    { "you": "OK" },
+    { "by": "analyst", "file": "create-order.spec.md", "code": [
+      "THEN  discount 10.00, total 90.00",
+      [["c", "\u003c!-- confirmed by you -->"]] ] },
+    { "by": "author", "file": "OrderControllerIT.java", "code": [
+      [["k", "@Test"]],
+      [["k", "void "], ["", "discountsAtTheThreshold() {"]],
+      [["", "  post("], ["s", "\"/orders\""], ["", ", cart("], ["s", "\"100.00\""], ["", "))"]],
+      [["", "    .andExpect(jsonPath("], ["s", "\"$.discount\""], ["", ").value(10.00));"]],
+      "}" ] },
+    { "by": "author", "cmd": "gtaw submit --item order.create/s03", "out": [
+      ["bad", "✗ s03 failed: expected 10.00, got 0.00"],
+      ["dim", "s03: gtaw re-ran it twice with the same result (not flaky)"] ] },
+    { "by": "reviewer", "say": "<span class=\"bad\">Product defect.</span> OrderService.java:42 uses &gt; where the spec says &gt;=.", "wait": 1200 },
+    { "by": "orchestrator", "say": "Needs you · s03 looks like a product defect\nA) Pin it with @KnownDefect <span class=\"rec\">← recommended</span>\nB) The spec is wrong: back to review", "wait": 1400 },
+    { "you": "OK" },
+    { "by": "orchestrator", "cmd": "gtaw answer OK", "out": [
+      ["ok", "✓ s03 pinned with @KnownDefect · committed"],
+      ["dim", "defects found: 1 · src/main unchanged"] ] },
+    { "by": "orchestrator", "say": "<span class=\"good\">Done.</span> The tests are committed and the defect is reported. Nothing in src/main changed." }
+  ]
+}
+</script>
 </header>
+
+<div class="with">
+  <div class="wrap reveal">
+    <span>Works with</span><b>GitHub Copilot</b><b>OpenCode</b><b>VS Code</b><b>IntelliJ IDEA</b><b>Maven</b><b>Gradle</b><b>Java 8+</b>
+  </div>
+</div>
 
 <main>
   <section id="how">
     <div class="wrap">
       <div class="eyebrow reveal">How it works</div>
-      <h2 class="reveal">One command. Agents do the work, a deterministic tool decides.</h2>
+      <h2 class="title reveal">One command. Agents do the work, a deterministic tool decides.</h2>
       <p class="lede reveal">The agents read code and write tests. <code>gtaw</code>, a plain command-line tool, decides everything an AI could get wrong: whether a test passed, what it must assert, what gets committed.</p>
-      <div class="steps">
-        <div class="step reveal"><div class="n">01</div><h3>Read</h3><p>gta maps every flow of the service and writes what it does as a behaviour spec, citing the code for each claim.</p></div>
-        <div class="step reveal"><div class="n">02</div><h3>Ask</h3><p>What the code cannot tell becomes a question with a recommended answer. Most of the time you reply <b>OK</b>.</p></div>
-        <div class="step reveal"><div class="n">03</div><h3>Lock</h3><p>The expected values come from the spec you approved. gtaw locks them: nobody bends a test to make it pass.</p></div>
-        <div class="step reveal"><div class="n">04</div><h3>Catch</h3><p>A test that fails for a real reason is pinned as a known defect and reported, never “fixed” to green.</p></div>
-      </div>
-
-      <div class="demo">
-        <ul class="reveal">
-          <li><b>One block, always the same five parts.</b> What happened, what was checked, what needs you, what comes next.</li>
-          <li><b>Every question has a recommendation.</b> gta never guesses; it asks, and tells you which answer it would pick and why.</li>
-          <li><b>Your words are the record.</b> Answers and approvals go into the spec and the commit, so a reviewer sees who decided what.</li>
-        </ul>
-        <div class="term reveal" data-terminal>
-          <div class="term-bar"><i></i><i></i><i></i><span>order-service — Copilot Chat</span></div>
-          <pre class="term-body"><span class="l you" data-type data-wait="200">/gta order.create</span><span class="l dim" data-wait="500">  … spec approved, 5 tests written, s03 failed twice</span><span class="l" data-wait="500"> </span><span class="l hd">── gta · order.create ── waiting for you</span><span class="l">Progress: spec approved ▸ tests 3/5 passed ▸ defects found: 1</span><span class="l"> </span><span class="l hd">What happened</span><span class="l">  1. order.create/s03: test failed: expected 10.00, got 0.00</span><span class="l">  2. order.create/s03: the reviewer says a product defect: the threshold uses &gt; instead of &gt;=</span><span class="l"> </span><span class="l hd">Checked</span><span class="l ok">  ✓ order.create/s03: gtaw re-ran it twice with the same result</span><span class="l"> </span><span class="l hd">Needs you</span><span class="l">  ── order.create/s03 looks like a product defect ──</span><span class="l">  A) Yes, a defect: pin it with @KnownDefect<span class="rec">  ← recommended</span></span><span class="l">  B) No, the spec is wrong: back to review</span><span class="l dim">  Reply OK to take the recommendation, or the letter of another option.</span><span class="l"> </span><span class="l you" data-type data-wait="900">OK</span><span class="l ok" data-wait="600">✓ order.create/s03: confirmed defect pinned with @KnownDefect · committed</span></pre>
-        </div>
+      <div class="steps reveal">
+        <div class="step"><div class="n">01</div>
+          <div class="glyph"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#8a8f98" stroke-width="1.5" stroke-linecap="round"><rect x="8" y="5" width="24" height="30" rx="3"/><path d="M13 13h14M13 19h14M13 25h9"/></svg></div>
+          <h3>Read</h3><p>gta maps every flow of the service and writes what it does as a behaviour spec, citing the code for each claim.</p></div>
+        <div class="step"><div class="n">02</div>
+          <div class="glyph"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#8a8f98" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a3 3 0 013-3h22a3 3 0 013 3v15a3 3 0 01-3 3H17l-7 6v-6H9a3 3 0 01-3-3z"/><path d="M17 13.5a3 3 0 115 2.2c-1 .7-2 1.3-2 2.6" stroke="#8b9cff"/><circle cx="20" cy="22" r=".6" fill="#8b9cff" stroke="#8b9cff"/></svg></div>
+          <h3>Ask</h3><p>What the code cannot tell becomes a question with a recommended answer. Most of the time you reply <b>OK</b>.</p></div>
+        <div class="step"><div class="n">03</div>
+          <div class="glyph"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#8a8f98" stroke-width="1.5" stroke-linecap="round"><rect x="9" y="17" width="22" height="17" rx="3"/><path d="M14 17v-5a6 6 0 0112 0v5"/><path d="M20 23v5" stroke="#8b9cff"/></svg></div>
+          <h3>Lock</h3><p>The expected values come from the spec you approved. gtaw locks them: nobody bends a test to make it pass.</p></div>
+        <div class="step"><div class="n">04</div>
+          <div class="glyph"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#8a8f98" stroke-width="1.5" stroke-linecap="round"><circle cx="20" cy="20" r="12"/><path d="M20 4v6M20 30v6M4 20h6M30 20h6"/><circle cx="20" cy="20" r="2.5" fill="#f2564b" stroke="none"/></svg></div>
+          <h3>Catch</h3><p>A test that fails for a real reason is pinned as a known defect and reported, never “fixed” to green.</p></div>
       </div>
     </div>
   </section>
 
-  <section id="trust" class="paper">
+  <section id="trust" class="rule">
     <div class="wrap">
       <div class="eyebrow reveal">Why you can trust it</div>
-      <h2 class="reveal">An AI writes the tests. It does not get to grade them.</h2>
-      <div class="trust">
-        <div class="stat reveal">
-          <div class="big"><span data-count="8">8</span>/8</div>
-          <p>cheating attempts caught in the adversarial run, on every change: changed expected values, disabled tests, edits to production code, forged confirmations, commits behind gta’s back.</p>
+      <h2 class="title reveal">An AI writes the tests. It does not get to grade them.</h2>
+      <div class="bento">
+        <div class="card tall reveal">
+          <div>
+            <div class="stat">8<span>/8</span></div>
+            <p>cheating attempts caught in the adversarial run, repeated on every change. Nothing reached a commit.</p>
+          </div>
+          <ul class="attacks">
+            <li>expected value changed ×2</li>
+            <li>assertion removed</li>
+            <li>@Disabled</li>
+            <li>assumption that always fails</li>
+            <li>production code edited</li>
+            <li>confirmation forged in the spec</li>
+            <li>commit behind gtaw’s back</li>
+          </ul>
         </div>
-        <div class="facts">
-          <div class="fact reveal"><h3>Expected values are locked</h3><p>Once a test reaches the code, its expected values cannot change without a person relocking them.</p></div>
-          <div class="fact reveal"><h3>Out-of-scope edits are reverted</h3><p>An agent may touch only the files of its item. Production code never changes.</p></div>
-          <div class="fact reveal"><h3>A skipped test is not a pass</h3><p><code>@Disabled</code> or a failing assumption sends the test back, it never counts as green.</p></div>
-          <div class="fact reveal"><h3>It asks instead of guessing</h3><p>Questions come with a recommended answer and a reason; a test author who is unsure asks too.</p></div>
-          <div class="fact reveal"><h3>Local only</h3><p>Every run drops your shell’s Spring profile and cloud credentials. SIT, UAT and production stay untouched.</p></div>
-          <div class="fact reveal"><h3>Tests that can fail</h3><p>Mutation testing checks that a test fails when the code is wrong, so a test that passes whatever happens goes back.</p></div>
-        </div>
+        <div class="card reveal"><h3>Expected values are locked</h3><p>Once a test reaches the code, its expected values cannot change without a person relocking them.</p></div>
+        <div class="card reveal"><h3>Out-of-scope edits are reverted</h3><p>An agent may touch only the files of its item. Production code never changes.</p></div>
+        <div class="card reveal"><h3>A skipped test is not a pass</h3><p><code>@Disabled</code> or a failing assumption sends the test back. It never counts as green.</p></div>
+        <div class="card reveal"><h3>It asks instead of guessing</h3><p>Every question comes with a recommended answer and a reason. A test author who is unsure asks too.</p></div>
+        <div class="card reveal"><h3>Local only</h3><p>Every run drops your shell’s Spring profile and cloud credentials. SIT, UAT and production stay untouched.</p></div>
+        <div class="card reveal"><h3>Tests that can fail</h3><p>Mutation testing checks that a test fails when the code is wrong. A test that passes whatever happens goes back.</p></div>
       </div>
     </div>
   </section>
 
-  <section id="what">
+  <section id="what" class="rule">
     <div class="wrap">
       <div class="eyebrow reveal">What it tests</div>
-      <h2 class="reveal">The flows a Spring service is made of.</h2>
-      <div class="chips reveal">
-        <span class="chip">REST APIs</span><span class="chip">Kafka · Pub/Sub · JMS · RabbitMQ · SQS</span><span class="chip">Scheduled jobs</span>
-        <span class="chip">Spring Batch</span><span class="chip">Flyway · Liquibase</span><span class="chip">Security rules</span><span class="chip">Caches</span>
-        <span class="chip">WebFlux</span><span class="chip">gRPC</span><span class="chip">GraphQL</span><span class="chip">Temporal · Camunda · Statemachine</span>
-        <span class="chip">Beam pipelines</span><span class="chip">WebSocket · STOMP · SSE</span><span class="chip">Maven &amp; Gradle<small>multi-module</small></span>
-        <span class="chip">Spring Boot 2.2 – 4<small>Java 8+</small></span>
+      <h2 class="title reveal">The flows a Spring service is made of.</h2>
+      <div class="caps reveal">
+        <div class="cap">REST APIs<small>Spring MVC · WebFlux</small></div>
+        <div class="cap">Messaging<small>Kafka · Pub/Sub · JMS · RabbitMQ · SQS</small></div>
+        <div class="cap">Scheduled jobs<small>@Scheduled · ShedLock</small></div>
+        <div class="cap">Spring Batch<small>jobs and steps</small></div>
+        <div class="cap">Database migrations<small>Flyway · Liquibase</small></div>
+        <div class="cap">Security rules<small>@PreAuthorize · @Secured</small></div>
+        <div class="cap">Caches<small>@Cacheable · @CacheEvict</small></div>
+        <div class="cap">gRPC and GraphQL<small>services and resolvers</small></div>
+        <div class="cap">Workflows<small>Temporal · Camunda · Statemachine</small></div>
+        <div class="cap">Beam pipelines<small>PTransforms checked with PAssert</small></div>
+        <div class="cap">Realtime<small>WebSocket · STOMP · SSE</small></div>
+        <div class="cap">Builds<small>Maven and Gradle, multi-module</small></div>
       </div>
     </div>
   </section>
 
-  <section class="paper">
+  <section class="rule">
     <div class="wrap">
       <div class="eyebrow reveal">Where it runs</div>
-      <h2 class="reveal">Two platforms, the same gta.</h2>
-      <div class="platforms">
-        <div class="platform reveal"><h3>GitHub Copilot</h3><p>VS Code and IntelliJ IDEA. Agents in <code>.github/agents</code>, the command in <code>.github/prompts</code>.</p></div>
-        <div class="platform reveal"><h3>OpenCode</h3><p>The same four agents, command and guardrails, in <code>.opencode/</code>. Privileged commands ask a person on both.</p></div>
+      <h2 class="title reveal">Two platforms, the same gta.</h2>
+      <div class="bento two">
+        <div class="card reveal"><h3>GitHub Copilot</h3><p>VS Code and IntelliJ IDEA. The agents in <code>.github/agents</code>, the command in <code>.github/prompts</code>.</p></div>
+        <div class="card reveal"><h3>OpenCode</h3><p>The same four agents, command and guardrails, in <code>.opencode/</code>. Privileged commands ask a person on both.</p></div>
       </div>
     </div>
   </section>
 
-  <section id="start">
+  <section id="start" class="rule">
     <div class="wrap">
       <div class="eyebrow reveal">Get started</div>
-      <h2 class="reveal">Five minutes to install. Then one command.</h2>
-      <div class="start">
-        <div class="reveal"><h3>Install into the service</h3><pre>java -jar gta-cli.jar --root my-service \
-  init --platform copilot   # or opencode</pre><p>Writes the agents, the <code>/gta</code> command and <code>.gta/</code>. Commit it.</p></div>
-        <div class="reveal"><h3>Open the chat</h3><pre>/gta</pre><p>gta lists the service’s flows, riskiest first. Reply <b>OK</b> to cover all of them.</p></div>
-        <div class="reveal"><h3>Answer, approve, merge</h3><pre>OK</pre><p>Questions, the spec and defects come to you with a recommendation. The tests come back committed.</p></div>
+      <h2 class="title reveal">Five minutes to install. Then one command.</h2>
+      <div class="start reveal">
+        <div class="start-row"><span class="n">01</span><div><code>java -jar gta-cli.jar --root my-service init --platform copilot</code><p>Writes the agents, the <code>/gta</code> command and <code>.gta/</code> into the service. Use <code>--platform opencode</code> for OpenCode. Commit it.</p></div>
+          <button class="copy" type="button" data-copy="java -jar gta-cli.jar --root my-service init --platform copilot" data-done="Copied">Copy</button></div>
+        <div class="start-row"><span class="n">02</span><div><code>/gta</code><p>In the chat. gta lists the service’s flows, riskiest first. Reply <b>OK</b> to cover all of them.</p></div>
+          <button class="copy" type="button" data-copy="/gta" data-done="Copied">Copy</button></div>
+        <div class="start-row"><span class="n">03</span><div><code>OK</code><p>Questions, the spec and defects come to you with a recommendation. The tests come back committed.</p></div></div>
       </div>
-      <p class="lede reveal"><a href="../guides/quickstart.md">Read the quickstart</a> · <a href="../design/plan.md">the design</a></p>
+      <p class="after reveal"><a href="../guides/quickstart.md">Read the quickstart</a> · <a href="../design/plan.md">Read the design</a></p>
+    </div>
+  </section>
+
+  <section class="final rule">
+    <div class="wrap">
+      <h2 class="title reveal">Agents write. gtaw decides.</h2>
+      <div class="cta reveal">
+        <a class="btn primary" href="#start">Get started <span class="arrow">→</span></a>
+        <a class="btn" href="../guides/quickstart.md">Quickstart</a>
+      </div>
     </div>
   </section>
 </main>
 
 <footer>
-  <div class="wrap"><span>gta — generic testing agent</span><span>Agents write. gtaw decides.</span></div>
+  <div class="wrap"><span>gta — generic testing agent</span><a href="index.zh-CN.html" hreflang="zh-CN" lang="zh-CN">简体中文</a></div>
 </footer>
 
 <script src="site.js"></script>

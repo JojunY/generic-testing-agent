@@ -1,252 +1,221 @@
-// gta introduction page: the swarm opening, the terminal demo and scroll reveals. Plain JavaScript, no dependencies.
-(function () {
-  "use strict";
-  document.documentElement.classList.remove("no-js");
-  var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+/* gta introduction: a faint dot field behind the hero, the IDE demo where four agents relay, and small page interactions.
+   No dependencies. Everything is optional: without JavaScript the page reads the same, only still. */
+(() => {
+  'use strict';
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const watch = (el, fn, margin = '0px') => {
+    if (!('IntersectionObserver' in window)) return fn(true);
+    new IntersectionObserver(([e]) => fn(e.isIntersecting), { rootMargin: margin }).observe(el);
+  };
 
-  // ------------------------------------------------------------------ the swarm
-  // A crowd of agents (cursors) rushes in from every edge, settles into the word "gta", and one of them stays out
-  // of line in terracotta: the defect gta caught.
-  var canvas = document.getElementById("swarm");
-  if (canvas && canvas.getContext) swarm(canvas);
+  /* nav border once the page scrolls */
+  const nav = $('.nav');
+  const onScroll = () => nav && nav.classList.toggle('scrolled', scrollY > 8);
+  addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
 
-  function swarm(canvas) {
-    var ctx = canvas.getContext("2d");
-    var INK = "#141413", IVORY = "#faf9f5", CLAY = "#d97757";
-    var label = canvas.getAttribute("data-defect") || "";
-    var W = 0, H = 0, dpr = 1, particles = [], defect = null, t0 = 0, last = 0, running = true, visible = true;
-    var mouse = { x: -1e4, y: -1e4 }, shock = null, IMPACT = 2.15, REVEAL = 2.7, word = null;
+  /* sections fade in once */
+  const reveals = $$('.reveal');
+  if (reduce || !('IntersectionObserver' in window)) reveals.forEach((el) => el.classList.add('in'));
+  else {
+    const io = new IntersectionObserver((es) => es.forEach((e) => {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    }), { rootMargin: '0px 0px -8% 0px' });
+    reveals.forEach((el) => io.observe(el));
+  }
 
-    // a mouse pointer, tip at (0, 0)
-    var ARROW = new Path2D("M0 0 L0 15 L3.6 11.4 L6.4 17.6 L8.8 16.6 L6 10.6 L11 10.6 Z");
+  /* a soft light that follows the pointer on cards */
+  $$('.card').forEach((c) => c.addEventListener('pointermove', (e) => {
+    const r = c.getBoundingClientRect();
+    c.style.setProperty('--x', `${e.clientX - r.left}px`);
+    c.style.setProperty('--y', `${e.clientY - r.top}px`);
+  }));
 
-    function layout() {
-      var r = canvas.getBoundingClientRect();
-      W = r.width; H = r.height; dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-      var targets = sampleWord();
-      var max = W < 700 ? 420 : 1000;
-      shuffle(targets);
-      targets = targets.slice(0, max);
-      var old = particles;
-      particles = targets.map(function (p, i) {
-        var q = old[i] || spawn(i);
-        q.tx = p.x; q.ty = p.y;
-        return q;
-      });
-      // the defect: one agent the formation does not take, just right of the word
-      defect = particles[particles.length - 1];
-      if (defect && word) {
-        // beside the word on a wide screen, under it on a narrow one, where its label has room
-        defect.tx = word.narrow ? word.left + 6 : Math.min(W - 40, word.right + word.size * 0.12);
-        defect.ty = word.narrow ? word.bottom + 18 : word.top + word.size * 0.18;
-        defect.isDefect = true;
-      }
-      // smaller cursors on a small screen, so the letters stay readable
-      particles.forEach(function (p) { p.s = (p.base || (p.base = p.s)) * (W < 700 ? 0.62 : 1); });
-      if (reduced) particles.forEach(function (p) { p.x = p.tx; p.y = p.ty; p.vx = p.vy = 0; p.delay = 0; p.rot = 0; });
-    }
+  /* copy buttons */
+  $$('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
+    const label = b.textContent;
+    try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = b.dataset.done || '✓'; }
+    catch (_) { b.textContent = '—'; }
+    setTimeout(() => { b.textContent = label; }, 1600);
+  }));
 
-    function sampleWord() {
-      var off = document.createElement("canvas");
-      off.width = Math.max(1, Math.round(W)); off.height = Math.max(1, Math.round(H));
-      var o = off.getContext("2d");
-      var narrow = W < 700;
-      var size = narrow ? Math.min(W * 0.66, H * 0.3) : Math.min(W * 0.4, H * 0.5);
-      var font = "600 " + size + "px " + getComputedStyle(document.body).getPropertyValue("--serif");
-      o.font = font; o.textAlign = "center"; o.textBaseline = "alphabetic";
-      var cx = W / 2, base = (narrow ? H * 0.3 : H * 0.36) + size * 0.36;
-      o.fillText("gta", cx, base);
-      var m = o.measureText("gta");
-      word = { left: cx - m.width / 2, right: cx + m.width / 2, top: base - size * 0.72, bottom: base + size * 0.22, size: size, narrow: narrow };
-      var data = o.getImageData(0, 0, off.width, off.height).data, pts = [];
-      var step = Math.max(3, Math.round(size / 46));
-      for (var y = 0; y < off.height; y += step) {
-        for (var x = 0; x < off.width; x += step) {
-          if (data[(y * off.width + x) * 4 + 3] > 128) pts.push({ x: x, y: y });
-        }
-      }
-      return pts;
-    }
-
-    function spawn(i) {
-      // from a random point just outside the edges, released over the first half second
-      var side = i % 4, u = Math.random();
-      var x = side === 0 ? -20 : side === 1 ? W + 20 : u * W;
-      var y = side === 2 ? -20 : side === 3 ? H + 20 : u * H;
-      if (side < 2) y = Math.random() * H; else x = Math.random() * W;
-      return {
-        x: x, y: y, vx: 0, vy: 0, rot: Math.random() * 6.28,
-        delay: Math.random() * 0.55, k: 0.018 + Math.random() * 0.03, swirl: (Math.random() < 0.5 ? -1 : 1) * (0.6 + Math.random()),
-        s: 0.62 + Math.random() * 0.32, ph: Math.random() * 6.28
-      };
-    }
-
-    function shuffle(a) {
-      for (var i = a.length - 1; i > 0; i--) { var j = (Math.random() * (i + 1)) | 0, t = a[i]; a[i] = a[j]; a[j] = t; }
-    }
-
-    function step(now) {
-      if (!running) return;
-      var t = (now - t0) / 1000, dt = Math.min(0.05, (now - last) / 1000 || 0.016);
-      last = now;
-      if (visible) { update(t, dt); draw(t); }
-      requestAnimationFrame(step);
-    }
-
-    function update(t, dt) {
-      if (!shock && t >= IMPACT) shock = { t: t };
-      var f = dt * 60;
-      for (var i = 0; i < particles.length; i++) {
-        var p = particles[i];
-        if (t < p.delay) continue;
-        var dx = p.tx - p.x, dy = p.ty - p.y;
-        // the swarm swirls on the way in, then the swirl dies down and the formation holds
-        var swirl = Math.max(0, 1 - t / 1.8) * p.swirl * 0.9;
-        var ax = dx * p.k - dy * p.k * swirl, ay = dy * p.k + dx * p.k * swirl;
-        var mx = p.x - mouse.x, my = p.y - mouse.y, md = mx * mx + my * my;
-        if (md < 9000) { var push = (9000 - md) / 9000 * 2.2; var d = Math.sqrt(md) || 1; ax += mx / d * push; ay += my / d * push; }
-        p.vx = (p.vx + ax * f) * Math.pow(0.86, f);
-        p.vy = (p.vy + ay * f) * Math.pow(0.86, f);
-        p.x += p.vx * f; p.y += p.vy * f;
-        var speed = Math.abs(p.vx) + Math.abs(p.vy);
-        var want = speed > 0.6 ? Math.atan2(p.vy, p.vx) + Math.PI / 2 + 0.33 : 0;
-        p.rot += angleDiff(want, p.rot) * Math.min(1, 0.18 * f);
-      }
-    }
-
-    function angleDiff(a, b) { var d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; }
-
-    function draw(t) {
+  /* hero: a dot grid, brighter near the pointer and under a slow diagonal sweep; one red dot is the defect */
+  const canvas = $('#field');
+  const ctx = canvas && canvas.getContext('2d');
+  if (ctx) {
+    const GAP = 26;
+    let w = 0, h = 0, dots = [], red = [0, 0], live = true, raf = 0;
+    const mouse = { x: -1e4, y: -1e4 };
+    const size = () => {
+      const dpr = Math.min(devicePixelRatio || 1, 2);
+      w = canvas.clientWidth; h = canvas.clientHeight;
+      canvas.width = w * dpr; canvas.height = h * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.fillStyle = IVORY; ctx.fillRect(0, 0, W, H);
-      // the snap: the formation tightens a little at the moment of impact
-      var snap = shock ? 1 + 0.035 * Math.exp(-(t - shock.t) * 7) * Math.sin((t - shock.t) * 18) : 1;
-      ctx.save();
-      ctx.translate(W / 2, H * 0.4); ctx.scale(snap, snap); ctx.translate(-W / 2, -H * 0.4);
-      ctx.lineWidth = 1.1; ctx.strokeStyle = IVORY; ctx.lineJoin = "round";
-      for (var i = 0; i < particles.length; i++) {
-        var p = particles[i];
-        if (t < p.delay || p.isDefect) continue;
-        var breathe = reduced ? 0 : Math.sin(t * 1.3 + p.ph) * 0.5;
-        cursor(p.x + breathe, p.y, p.rot, p.s, INK);
-      }
-      ctx.restore();
-      if (shock && !reduced) {
-        var a = t - shock.t;
-        if (a < 1.1) {
-          ctx.beginPath();
-          ctx.arc(W / 2, H * 0.4, a * Math.max(W, H) * 0.9, 0, Math.PI * 2);
-          ctx.strokeStyle = "rgba(217,119,87," + (0.55 * (1 - a / 1.1)) + ")";
-          ctx.lineWidth = 2 + 10 * (1 - a / 1.1);
-          ctx.stroke();
-        }
-      }
-      if (defect && t >= defect.delay) {
-        var on = reduced || t >= REVEAL;
-        cursor(defect.x, defect.y, defect.rot, defect.s * (on ? 1.5 : 1), on ? CLAY : INK);
-        if (on) {
-          var k = reduced ? 1 : Math.min(1, (t - REVEAL) / 0.6);
-          var pulse = reduced ? 0 : (t * 0.9) % 1;
-          ctx.beginPath();
-          ctx.arc(defect.x + 4, defect.y + 7, 14 + pulse * 26, 0, Math.PI * 2);
-          ctx.strokeStyle = "rgba(217,119,87," + (0.5 * (1 - pulse) * k) + ")";
-          ctx.lineWidth = 1.5; ctx.stroke();
-          if (label) {
-            ctx.globalAlpha = k;
-            ctx.font = "12px " + getComputedStyle(document.body).getPropertyValue("--mono");
-            ctx.fillStyle = "#b85c3d"; ctx.textAlign = "left";
-            var lx = defect.x + 22, ly = defect.y + 30;
-            if (lx + ctx.measureText(label).width > W - 12) { ctx.textAlign = "right"; lx = defect.x - 10; }
-            ctx.fillText(label, lx, ly);
-            ctx.globalAlpha = 1;
-          }
-        }
-      }
-    }
-
-    function cursor(x, y, rot, s, color) {
-      ctx.save();
-      ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
-      ctx.fillStyle = color; ctx.stroke(ARROW); ctx.fill(ARROW);
-      ctx.restore();
-    }
-
-    canvas.addEventListener("pointermove", function (e) { var r = canvas.getBoundingClientRect(); mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; });
-    canvas.addEventListener("pointerleave", function () { mouse.x = mouse.y = -1e4; });
-    var resizeTimer;
-    window.addEventListener("resize", function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(function () { layout(); if (reduced) draw(99); }, 120); });
-    if ("IntersectionObserver" in window) {
-      new IntersectionObserver(function (es) { visible = es[0].isIntersecting; }).observe(canvas);
-    }
-
-    var start = function () {
-      layout();
-      if (reduced) { draw(99); return; }
-      t0 = last = performance.now();
-      requestAnimationFrame(step);
+      dots = [];
+      const ox = (w % GAP) / 2, oy = (h % GAP) / 2;
+      for (let y = oy; y < h; y += GAP) for (let x = ox; x < w; x += GAP) dots.push(x, y);
+      red = [ox + Math.round((w * 0.8 - ox) / GAP) * GAP, oy + Math.round((h * 0.14 - oy) / GAP) * GAP];
     };
-    // the word is drawn in the page's serif: wait for fonts so the formation does not jump
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+    const draw = (t) => {
+      ctx.clearRect(0, 0, w, h);
+      const sweep = ((t / 11000) % 1) * (w + h) * 1.3 - h * 0.3;
+      for (let i = 0; i < dots.length; i += 2) {
+        const x = dots[i], y = dots[i + 1];
+        const dm = Math.hypot(x - mouse.x, y - mouse.y);
+        const m = dm < 170 ? 1 - dm / 170 : 0;
+        const ds = Math.abs(x + y * 0.7 - sweep);
+        const s = ds < 160 ? 1 - ds / 160 : 0;
+        const a = 0.08 + 0.09 * s * s + 0.5 * m * m;
+        ctx.fillStyle = m > 0.08 ? `rgba(139,156,255,${a})` : `rgba(255,255,255,${a})`;
+        ctx.fillRect(x - 0.75, y - 0.75, 1.5, 1.5);
+      }
+      const p = (t / 2600) % 1;
+      ctx.fillStyle = `rgba(242,86,75,${0.55 + 0.3 * Math.sin(t / 420)})`;
+      ctx.beginPath(); ctx.arc(red[0], red[1], 2, 0, 7); ctx.fill();
+      if (!reduce) {
+        ctx.strokeStyle = `rgba(242,86,75,${0.35 * (1 - p)})`;
+        ctx.beginPath(); ctx.arc(red[0], red[1], 2 + p * 18, 0, 7); ctx.stroke();
+      }
+    };
+    const loop = (t) => { draw(t); raf = live ? requestAnimationFrame(loop) : 0; };
+    const start = () => { if (!raf && live && !reduce) raf = requestAnimationFrame(loop); };
+    size();
+    draw(0);
+    addEventListener('resize', () => { size(); draw(performance.now()); });
+    const hero = canvas.parentElement;
+    hero.addEventListener('pointermove', (e) => {
+      const r = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top;
+    });
+    hero.addEventListener('pointerleave', () => { mouse.x = mouse.y = -1e4; });
+    let seen = true;
+    watch(hero, (v) => { seen = v; live = seen && !document.hidden; start(); });
+    document.addEventListener('visibilitychange', () => { live = seen && !document.hidden; start(); });
   }
 
-  // ------------------------------------------------------------------ the terminal demo
-  var term = document.querySelector("[data-terminal]");
-  if (term) {
-    var lines = Array.prototype.slice.call(term.querySelectorAll(".l"));
-    var played = false;
-    var play = function () {
-      if (played) return;
-      played = true;
-      if (reduced) { lines.forEach(function (l) { l.classList.add("on"); }); return; }
-      var t = 0;
-      lines.forEach(function (l) {
-        t += Number(l.getAttribute("data-wait") || 90);
-        setTimeout(function () {
-          l.classList.add("on");
-          if (l.hasAttribute("data-type")) type(l);
-        }, t);
-        if (l.hasAttribute("data-type")) t += l.textContent.length * 38;
-      });
-    };
-    var type = function (el) {
-      var text = el.textContent, i = 0;
-      el.textContent = "";
-      var caret = document.createElement("span"); caret.className = "caret";
-      var tick = function () {
-        el.textContent = text.slice(0, ++i);
-        el.appendChild(caret);
-        if (i < text.length) setTimeout(tick, 38); else setTimeout(function () { caret.remove(); }, 300);
-      };
-      tick();
-    };
-    if ("IntersectionObserver" in window) {
-      new IntersectionObserver(function (es, ob) { if (es[0].isIntersecting) { play(); ob.disconnect(); } }, { threshold: 0.35 }).observe(term);
-    } else play();
-  }
-
-  // ------------------------------------------------------------------ reveals and the counter
-  var items = document.querySelectorAll(".reveal");
-  if ("IntersectionObserver" in window && !reduced) {
-    var ob = new IntersectionObserver(function (es) {
-      es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); ob.unobserve(e.target); } });
-    }, { threshold: 0.15 });
-    items.forEach(function (el) { ob.observe(el); });
-  } else items.forEach(function (el) { el.classList.add("in"); });
-
-  document.querySelectorAll("[data-count]").forEach(function (el) {
-    var n = Number(el.getAttribute("data-count"));
-    if (reduced || !("IntersectionObserver" in window)) { el.textContent = n; return; }
-    el.textContent = "0";
-    new IntersectionObserver(function (es, o) {
-      if (!es[0].isIntersecting) return;
-      o.disconnect();
-      var s = performance.now();
-      (function f(now) {
-        var k = Math.min(1, (now - s) / 900);
-        el.textContent = Math.round(n * (1 - Math.pow(1 - k, 3)));
-        if (k < 1) requestAnimationFrame(f);
-      })(s);
-    }, { threshold: 0.5 }).observe(el);
+  /* the IDE: the steps in #demo-script, played by four agent cursors while the IDE is on screen */
+  const ide = $('[data-ide]');
+  const script = $('#demo-script');
+  if (!ide || !script) return;
+  const data = JSON.parse(script.textContent);
+  const log = $('.chat-log', ide), input = $('.chat-input', ide), tabs = $('.tabs', ide), code = $('.code', ide), term = $('.term-log', ide);
+  const files = {};
+  let live = false, seen = false;
+  const sleep = (ms) => new Promise((done) => {
+    if (reduce) return done();
+    const go = () => (live ? done() : setTimeout(go, 250));
+    setTimeout(go, ms);
   });
+  watch(ide, (v) => { seen = v; live = seen && !document.hidden; }, '-10% 0px');
+  document.addEventListener('visibilitychange', () => { live = seen && !document.hidden; });
+
+  const cursors = {};
+  Object.entries(data.agents).forEach(([id, a]) => {
+    const el = document.createElement('div');
+    el.className = 'agent';
+    el.innerHTML = `<svg width="14" height="18" viewBox="0 0 14 18" aria-hidden="true"><path d="M1.5 1.5l11 8.4-5 .9-2.4 5.7z" fill="${a.color}" stroke="#0b0c0e" stroke-width="1.2" stroke-linejoin="round"/></svg><span style="background:${a.color}">${a.name}</span>`;
+    ide.appendChild(el);
+    cursors[id] = el;
+  });
+  const point = (cursor, el) => { // to the end of el, inside the IDE; only the agent at work shows
+    if (reduce || !cursor) return;
+    const r = ide.getBoundingClientRect(), t = el.getBoundingClientRect();
+    const x = Math.min(t.left - r.left + Math.min(t.width * 0.7, 240), r.width - 150);
+    const y = Math.min(t.bottom - r.top - 6, r.height - 30); // the label hangs below the line, not over it
+    Object.values(cursors).forEach((c) => { c.style.opacity = c === cursor ? 1 : 0; });
+    cursor.style.transform = `translate(${Math.max(8, x)}px, ${Math.max(8, y)}px)`;
+  };
+  const line = (segments, cls) => {
+    const el = document.createElement('span');
+    el.className = `ln${cls ? ` ${cls}` : ''}`;
+    (typeof segments === 'string' ? [['', segments]] : segments).forEach(([c, text]) => {
+      const s = document.createElement('span');
+      if (c) s.className = c;
+      s.textContent = text;
+      el.appendChild(s);
+    });
+    return el;
+  };
+  const idle = () => { input.textContent = data.placeholder; input.style.color = ''; };
+  const trim = (box, keep) => { // drop old lines and keep the newest in view
+    while (box.children.length > keep) box.firstChild.remove();
+    box.scrollTop = box.scrollHeight;
+  };
+
+  const steps = {
+    async you(s) {
+      input.innerHTML = '<span></span><i class="caret"></i>';
+      input.style.color = 'var(--text)';
+      const typed = input.firstChild;
+      for (const ch of s.you) { typed.textContent += ch; await sleep(55); }
+      await sleep(350);
+      const m = document.createElement('div');
+      m.className = 'msg you';
+      m.textContent = s.you;
+      log.appendChild(m); trim(log, 8);
+      idle();
+    },
+    async say(s) {
+      const a = data.agents[s.by];
+      const m = document.createElement('div');
+      m.className = 'msg';
+      m.innerHTML = `<span class="who" style="color:${a.color}">${a.name}</span>${s.say}`;
+      log.appendChild(m); trim(log, 8);
+      point(cursors[s.by], m);
+    },
+    async file(s) {
+      if (!files[s.file]) {
+        const t = document.createElement('span');
+        t.className = 'tab'; t.textContent = s.file;
+        tabs.appendChild(t); files[s.file] = { tab: t, lines: [] };
+      }
+      Object.values(files).forEach((f) => f.tab.classList.toggle('on', f === files[s.file]));
+      code.textContent = '';
+      files[s.file].lines.forEach((l) => code.appendChild(line(l)));
+      point(cursors[s.by], code);
+      await sleep(500);
+      for (const l of s.code) {
+        files[s.file].lines.push(l);
+        const el = line(l);
+        code.appendChild(el);
+        code.scrollTop = code.scrollHeight;
+        point(cursors[s.by], el);
+        await sleep(170);
+      }
+    },
+    async cmd(s) {
+      const el = line('', 'cmd');
+      term.appendChild(el); trim(term, 14);
+      point(cursors[s.by], el);
+      await sleep(400);
+      for (const ch of s.cmd) { el.firstChild.textContent += ch; await sleep(18); }
+      for (const [cls, text] of s.out || []) {
+        await sleep(420);
+        term.appendChild(line(text, cls)); trim(term, 14);
+      }
+    },
+  };
+  const play = async (s) => {
+    if (s.you) await steps.you(s);
+    else if (s.say) await steps.say(s);
+    else if (s.file) await steps.file(s);
+    else if (s.cmd) await steps.cmd(s);
+    await sleep(s.wait || 900);
+  };
+  const reset = () => {
+    log.textContent = ''; tabs.textContent = ''; code.textContent = ''; term.textContent = '';
+    Object.keys(files).forEach((k) => delete files[k]);
+    Object.values(cursors).forEach((c) => { c.style.opacity = 0; c.style.transform = `translate(${ide.clientWidth / 2}px, ${ide.clientHeight / 2}px)`; });
+    idle();
+  };
+  (async () => {
+    do {
+      reset();
+      await sleep(600);
+      for (const s of data.steps) await play(s);
+      await sleep(5000);
+    } while (!reduce);
+  })();
 })();
