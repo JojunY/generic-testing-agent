@@ -29,6 +29,7 @@ import com.gta.core.state.WorkState;
 import com.gta.core.util.Git;
 import com.gta.core.util.Ids;
 import com.gta.core.util.Json;
+import com.gta.core.util.ProcessRunner;
 import com.gta.core.util.WorkLock;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -316,6 +317,7 @@ public final class Engine {
             Map<String, Object> out = switch (p.type) {
                 case "answer" -> ctx.specs.applyAnswers(st, p, AnswerParser.parse(text), text);
                 case "approve" -> approvalOrChangeRequest(st, p, text);
+                case "question" -> ctx.items.answerQuestion(st, p, text);
                 case "defect", "escalation", "naming-conflict" ->
                     ctx.triage.applyDecision(st, p, AnswerParser.parse(text), text);
                 default ->
@@ -329,15 +331,15 @@ public final class Engine {
 
     /** Only an exact "approve flow@rev" approves; any other reply is the human asking for changes. */
     private Map<String, Object> approvalOrChangeRequest(WorkState st, WorkState.Pending p, String text) {
+        if (AnswerParser.isPlainOk(text)) {
+            // OK on an approval prompt approves exactly the revision the prompt showed (plan §5.10)
+            return ctx.specs.applyApproval(st, p, new AnswerParser.Approval(p.flowId, p.rev), text);
+        }
         AnswerParser.Parsed parsed;
         try {
             parsed = AnswerParser.parse(text);
         } catch (GtaException notAnApproval) {
             return ctx.specs.requestChanges(st, p, text);
-        }
-        if (parsed instanceof AnswerParser.Answers a && a.onlyOk()) {
-            // OK on an approval prompt approves exactly the revision the prompt showed (plan §5.10)
-            return ctx.specs.applyApproval(st, p, new AnswerParser.Approval(p.flowId, p.rev), text);
         }
         return parsed instanceof AnswerParser.Approval
                 ? ctx.specs.applyApproval(st, p, parsed, text)
@@ -541,6 +543,47 @@ public final class Engine {
 
     public Map<String, Object> submitItem(String itemId, String token) {
         return ctx.items.submitItem(itemId, token);
+    }
+
+    /**
+     * {@code gtaw note} ({@code /gta note}, plan §5.10): a person tells gta something about the service. The note is
+     * appended to {@code .gta/notes.md} and committed by gtaw; analysts cite it as {@code source=documented}.
+     */
+    public Map<String, Object> note(String text) {
+        if (text == null || text.isBlank()) {
+            throw new GtaException(
+                    ErrorCode.USAGE_INVALID_ARGUMENT,
+                    "The note is empty",
+                    "Run ./gtaw note \"<what gta should know, e.g. 'refunds over 1000 need a manager'>\"");
+        }
+        git.requireRepo();
+        try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
+            Path notes = paths.notes();
+            String previous;
+            try {
+                previous = Files.exists(notes)
+                        ? Files.readString(notes, java.nio.charset.StandardCharsets.UTF_8)
+                        : "# Notes for gta\n\nWhat people told gta about this service. Specs cite them as documented.\n";
+            } catch (java.io.IOException e) {
+                throw new java.io.UncheckedIOException(e);
+            }
+            ProcessRunner.Result who = ProcessRunner.run(paths.root(), ProcessRunner.cmd("git", "config", "user.name"));
+            String author = who.ok() && !who.output().isBlank() ? who.output().strip() : "unknown";
+            String entry = "\n## " + java.time.LocalDate.now(java.time.ZoneOffset.UTC) + " · " + author + "\n\n"
+                    + text.strip() + "\n";
+            com.gta.core.util.AtomicFiles.write(notes, previous.stripTrailing() + "\n" + entry);
+            String rel = paths.rel(notes);
+            Optional<String> sha = ctx.commit(List.of(rel), "gta: note from " + author);
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("result", "note added to " + rel);
+            sha.ifPresent(c -> out.put("commit", c));
+            return out;
+        }
+    }
+
+    /** {@code gtaw submit --question}: the test author asks a person instead of guessing (plan §5.10). */
+    public Map<String, Object> submitQuestion(String itemId, String token, String question, String recommended) {
+        return ctx.items.submitQuestion(itemId, token, question, recommended);
     }
 
     public Map<String, Object> submitReview(String itemId, String token, String verdict, String reason) {

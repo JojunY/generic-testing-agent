@@ -56,9 +56,16 @@ java -jar "$GTA_CLI_JAR" --root . init --platform copilot >/dev/null 2>&1
 git add -A && git commit -qm "gta init"
 git checkout -q -b feature/gta-tests
 
+step "a person tells gta what the code cannot say (/gta note)"
+gtaw note "Orders are never deleted, only cancelled" >/dev/null
+git log -1 --format=%s | grep -q "^gta: note from" || fail "gtaw did not commit the note"
+grep -q "never deleted, only cancelled" .gta/notes.md || fail "note not kept in .gta/notes.md"
+echo "ok   note kept and committed"
+
 step "analyze: spec R1 with one high-impact question"
 OUT=$(gtaw next --mode flow --target order.create-order)
 expect "$(jget "$OUT" 'd["node"]')" analyze "first node"
+grep -q "never deleted, only cancelled" "$(jget "$OUT" 'd["brief"]')" || fail "the analyst brief lacks the notes"
 TOKEN=$(jget "$OUT" 'd["token"]')
 mkdir -p .gta/specs/order && cp "$AGENT/create-order.spec.md" .gta/specs/order/create-order.spec.md
 OUT=$(gtaw submit --spec order.create-order --token "$TOKEN")
@@ -143,8 +150,18 @@ TOKEN=$(author s01)
 gtaw submit --item "$ITEM" --token "$TOKEN" >/dev/null
 review_accept s01
 
-step "s02"
+step "s02: the author asks instead of guessing, the person takes the recommendation"
 ITEM="order.create-order/s02#component-01"; TOKEN=$(author s02)
+OUT=$(gtaw submit --item "$ITEM" --token "$TOKEN" --question "Reuse the seed test's MockMvc setup?" --recommend "yes, same class")
+expect "$(jget "$OUT" 'd["type"]')" question "author question"
+OUT=$(gtaw next)
+jget "$OUT" 'd["display"]' | grep -q "recommended: yes, same class" || fail "the question reaches the person with its recommendation: $OUT"
+gtaw answer "OK" >/dev/null
+OUT=$(gtaw next)
+expect "$(jget "$OUT" 'd["itemId"]')" "$ITEM" "author again after the answer"
+grep -q "A: yes, same class" "$(jget "$OUT" 'd["brief"]')" || fail "the new brief lacks the answer"
+TOKEN=$(jget "$OUT" 'd["token"]')
+echo "ok   the answer goes into the author's new brief"
 add_method "$AGENT/s02.method.java.txt"
 gtaw submit --item "$ITEM" --token "$TOKEN" >/dev/null
 review_accept s02

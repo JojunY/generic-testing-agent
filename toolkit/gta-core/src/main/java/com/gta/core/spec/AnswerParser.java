@@ -41,6 +41,9 @@ public final class AnswerParser {
      */
     private static final Pattern OK =
             Pattern.compile("^\\s*(?:ok|okay|好的|好|确认|確認|同意)(?=$|[\\s,，;；。.!！])", Pattern.CASE_INSENSITIVE);
+    /** A reply that is nothing but OK: "OK, but change 3" is a change request, not a plain OK. */
+    private static final Pattern PLAIN_OK =
+            Pattern.compile("^\\s*(?:ok|okay|好的|好|确认|確認|同意)[\\s,，;；。.!！]*$", Pattern.CASE_INSENSITIVE);
     /** "2: retry twice" on a line of its own; "2: B" is a pick, not an own answer. */
     private static final Pattern OWN_ANSWER =
             Pattern.compile("(?m)^\\s*(\\d{1,2})\\s*[:：]\\s*(?![A-Za-z]\\s*$)(\\S.*?)\\s*$");
@@ -61,11 +64,6 @@ public final class AnswerParser {
         public Answers(String round, Map<String, String> picks, boolean restDefault) {
             this(round, picks, restDefault, false, Map.of());
         }
-
-        /** A bare {@code OK}: nothing but "take the recommendations". */
-        public boolean onlyOk() {
-            return acceptRecommended && picks.isEmpty() && ownAnswers.isEmpty() && !restDefault;
-        }
     }
 
     public record Approval(String flowId, String rev) implements Parsed {}
@@ -73,6 +71,14 @@ public final class AnswerParser {
     public record Choice(String letter) implements Parsed {}
 
     private AnswerParser() {}
+
+    /**
+     * The reply is a bare {@code OK} and nothing else: it approves the shown revision, takes a decision's recommended
+     * option or a test author's recommended answer (plan §5.10). Any other words make it a change request or an answer.
+     */
+    public static boolean isPlainOk(String text) {
+        return text != null && PLAIN_OK.matcher(text).matches();
+    }
 
     public static Parsed parse(String text) {
         Matcher a = APPROVAL.matcher(text);

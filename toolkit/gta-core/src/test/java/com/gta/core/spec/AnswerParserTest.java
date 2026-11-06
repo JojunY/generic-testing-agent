@@ -1,6 +1,7 @@
 package com.gta.core.spec;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -60,15 +61,26 @@ class AnswerParserTest {
     }
 
     @Test
+    void shouldCountOnlyABareOkAsPlainOk() {
+        for (String ok : java.util.List.of("OK", " ok. ", "Okay!", "好的", "确认。", "同意")) {
+            assertTrue(AnswerParser.isPlainOk(ok), ok);
+        }
+        for (String more : java.util.List.of("OK, but change scenario 3", "ok 2B", "not ok", "不同意", "", "use 10")) {
+            assertFalse(AnswerParser.isPlainOk(more), more + " says more than OK");
+        }
+        assertFalse(AnswerParser.isPlainOk(null));
+    }
+
+    @Test
     void shouldReadOkAsTakingTheRecommendationsOnlyAtTheStart() {
         AnswerParser.Answers ok = (AnswerParser.Answers) AnswerParser.parse("OK");
-        assertTrue(ok.onlyOk());
+        assertTrue(ok.acceptRecommended());
 
         AnswerParser.Answers mixed = (AnswerParser.Answers) AnswerParser.parse("R2: ok, 2B");
         assertTrue(mixed.acceptRecommended());
         assertEquals(java.util.Map.of("2", "B"), mixed.picks());
         assertEquals("R2", mixed.round());
-        assertTrue(((AnswerParser.Answers) AnswerParser.parse("好的")).onlyOk());
+        assertTrue(((AnswerParser.Answers) AnswerParser.parse("好的")).acceptRecommended());
 
         for (String notOk : java.util.List.of("not ok", "不同意", "不好")) {
             assertThrows(

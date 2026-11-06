@@ -326,6 +326,47 @@ class EngineTest {
                 store.load().specWork.get("order.create").answersToApply.get(0).contains("s02 还要改"));
     }
 
+    @Test
+    void shouldApproveOnABareOkButReadOkWithMoreAsAChangeRequest() {
+        specInReview();
+
+        Map<String, Object> out = engine().answer("OK, but s02 must also check the currency");
+
+        assertTrue(String.valueOf(out.get("result")).startsWith("not approved"), out.toString());
+        assertEquals("in-review", SpecParser.parse(paths.spec("order.create")).status());
+    }
+
+    @Test
+    void shouldRouteTheAnswerToATestAuthorsQuestion() {
+        store.save(state(ItemStatus.AUTHORING));
+        engine().submitQuestion(ITEM, TOKEN, "Per line or per order?", "per order");
+
+        engine().answer("per line");
+
+        assertEquals("per line", item().questions.get(0).answer);
+        assertEquals(null, store.load().pending);
+    }
+
+    @Test
+    void shouldKeepAndCommitWhatAPersonTellsGta() throws Exception {
+        Map<String, Object> out = engine().note("Refunds over 1000 need a manager");
+        engine().note("Orders are never deleted, only cancelled");
+
+        String notes = Files.readString(paths.notes());
+        assertTrue(notes.startsWith("# Notes for gta"), notes);
+        assertTrue(notes.indexOf("Refunds over 1000") < notes.indexOf("never deleted"), "newest last: " + notes);
+        assertTrue(out.containsKey("commit"), out.toString());
+        assertTrue(
+                OrderServiceTestData.git(root, "log", "-1", "--format=%s")
+                        .output()
+                        .startsWith("gta: note from"),
+                "gtaw commits the note");
+        assertEquals(
+                com.gta.core.error.ErrorCode.USAGE_INVALID_ARGUMENT,
+                org.junit.jupiter.api.Assertions.assertThrows(GtaException.class, () -> engine().note(" "))
+                        .code());
+    }
+
     // ------------------------------------------------------------------ sessions
 
     @Test

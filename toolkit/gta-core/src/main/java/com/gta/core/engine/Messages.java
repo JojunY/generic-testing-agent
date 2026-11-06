@@ -94,7 +94,13 @@ final class Messages {
             Map.entry("naming.b", "B) Skip this test for now (the item is cancelled)"),
             Map.entry("naming.c", "C) I renamed or moved my file: check again"),
             Map.entry("naming.why", "gta only adds tests tagged gta and never changes yours"),
-            Map.entry("current.code", "= current code"));
+            Map.entry("current.code", "= current code"),
+            Map.entry("question.title", "── %s: the test author asks ──"),
+            Map.entry("question.recommended", "← recommended: %s"),
+            Map.entry("question.reply", "Reply with your answer."),
+            Map.entry("question.reply.ok", "Reply OK to take the recommendation, or with your own answer."),
+            Map.entry("ev.question", "%s: the test author asked you a question"),
+            Map.entry("ev.question.answered", "%s: your answer goes to the test author"));
 
     private static final Map<String, String> ZH_CN = Map.ofEntries(
             Map.entry("state.waiting", "等你处理"),
@@ -174,7 +180,13 @@ final class Messages {
             Map.entry("naming.b", "B) 先跳过这个测试（取消该条目）"),
             Map.entry("naming.c", "C) 我已经改名或移走了我的文件：重新检查"),
             Map.entry("naming.why", "gta 只添加带 gta tag 的测试，不会改你的测试"),
-            Map.entry("current.code", "= 代码现状"));
+            Map.entry("current.code", "= 代码现状"),
+            Map.entry("question.title", "── %s：测试作者提问 ──"),
+            Map.entry("question.recommended", "← 推荐：%s"),
+            Map.entry("question.reply", "请回复你的答案。"),
+            Map.entry("question.reply.ok", "回复 OK 接受推荐，或直接写你的答案。"),
+            Map.entry("ev.question", "%s：测试作者向你提了一个问题"),
+            Map.entry("ev.question.answered", "%s：你的回答已转给测试作者"));
 
     private final Map<String, String> table;
 

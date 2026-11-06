@@ -123,4 +123,82 @@ class ItemWorkflowTest {
         org.junit.jupiter.api.Assertions.assertTrue(
                 ItemWorkflow.catchingDetails(st, s).contains("could not run it on `origin/main`"));
     }
+
+    @Test
+    void shouldAskThePersonAndBriefTheAuthorAgainWithTheAnswer() throws Exception {
+        s.status = ItemStatus.AUTHORING;
+        s.token = "t";
+        new StateStore(paths).save(st);
+
+        Map<String, Object> asked =
+                items().submitQuestion(s.id, "t", "Is the total rounded per line or per order?", "per order");
+
+        assertEquals("answer", asked.get("node"));
+        String prompt = String.valueOf(asked.get("prompt"));
+        org.junit.jupiter.api.Assertions.assertTrue(prompt.contains("rounded per line or per order"), prompt);
+        org.junit.jupiter.api.Assertions.assertTrue(prompt.contains("recommended: per order"), prompt);
+        WorkState saved = new StateStore(paths).load();
+        assertEquals("question", saved.pending.type);
+        assertEquals(ItemStatus.AUTHORING, saved.item(s.id).status, "asking keeps the item with its author");
+        assertEquals(
+                ErrorCode.STATE_STALE_SESSION,
+                assertThrows(GtaException.class, () -> items().submitItem(s.id, "t"))
+                        .code(),
+                "the brief that asked is spent");
+
+        items().answerQuestion(saved, saved.pending, "OK");
+
+        assertEquals(null, saved.pending);
+        assertEquals("per order", saved.item(s.id).questions.get(0).answer, "OK takes the recommendation");
+        st = saved;
+        Map<String, Object> node = dispatch().node();
+        assertEquals("author", node.get("node"));
+        String brief = java.nio.file.Files.readString(root.resolve(String.valueOf(node.get("brief"))));
+        org.junit.jupiter.api.Assertions.assertTrue(brief.contains("## Answers from the person"), brief);
+        org.junit.jupiter.api.Assertions.assertTrue(brief.contains("A: per order") && brief.contains("2 left"), brief);
+    }
+
+    @Test
+    void shouldTakeAnOwnAnswerVerbatimAndRefuseAnOkWithoutARecommendation() {
+        s.status = ItemStatus.REPAIRING;
+        s.token = "t";
+        new StateStore(paths).save(st);
+        items().submitQuestion(s.id, "t", "Which clock does the test use?", " ");
+        WorkState saved = new StateStore(paths).load();
+
+        assertEquals(
+                ErrorCode.USAGE_UNPARSEABLE_ANSWER,
+                assertThrows(GtaException.class, () -> items().answerQuestion(saved, saved.pending, "OK"))
+                        .code(),
+                "nothing to take");
+        assertEquals(
+                ErrorCode.USAGE_UNPARSEABLE_ANSWER,
+                assertThrows(GtaException.class, () -> items().answerQuestion(saved, saved.pending, "  "))
+                        .code());
+
+        items().answerQuestion(saved, saved.pending, "OK, but use a fixed Clock at 2024-01-01");
+
+        assertEquals(
+                "OK, but use a fixed Clock at 2024-01-01",
+                saved.item(s.id).questions.get(0).answer);
+    }
+
+    @Test
+    void shouldRefuseAnEmptyQuestionAndMoreThanThreePerItem() {
+        s.status = ItemStatus.AUTHORING;
+        s.token = "t";
+        for (int i = 0; i < 3; i++) {
+            s.questions.add(new WorkState.AuthorQuestion());
+        }
+        new StateStore(paths).save(st);
+
+        assertEquals(
+                ErrorCode.USAGE_INVALID_ARGUMENT,
+                assertThrows(GtaException.class, () -> items().submitQuestion(s.id, "t", " ", null))
+                        .code());
+        assertEquals(
+                ErrorCode.STATE_BUDGET_EXHAUSTED,
+                assertThrows(GtaException.class, () -> items().submitQuestion(s.id, "t", "One more?", null))
+                        .code());
+    }
 }

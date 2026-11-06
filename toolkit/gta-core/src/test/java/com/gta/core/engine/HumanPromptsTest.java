@@ -81,6 +81,22 @@ class HumanPromptsTest {
     }
 
     @Test
+    void shouldShowAnAuthorsQuestionWithItsRecommendationWhenThereIsOne() {
+        HumanPrompts prompts = new EngineContext(root).prompts;
+
+        WorkState.Pending withRecommendation = prompts.authorQuestion(item(), "Per line or per order?", "per order");
+        WorkState.Pending without = prompts.authorQuestion(item(), "Which clock?", null);
+
+        assertEquals("question", withRecommendation.type);
+        assertEquals("per order", withRecommendation.recommended);
+        assertTrue(withRecommendation.prompt.contains("← recommended: per order"), withRecommendation.prompt);
+        assertTrue(
+                withRecommendation.prompt.contains("Reply OK to take the recommendation"), withRecommendation.prompt);
+        assertTrue(without.prompt.contains("Reply with your answer."), without.prompt);
+        assertTrue(!without.prompt.contains("recommended"), without.prompt);
+    }
+
+    @Test
     void shouldSpeakChineseWhenTheRepositoryAsksForIt() throws Exception {
         java.nio.file.Files.createDirectories(root.resolve(".gta"));
         java.nio.file.Files.writeString(

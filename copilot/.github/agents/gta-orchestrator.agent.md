@@ -14,7 +14,7 @@ You run the gta loop. You never write specs or tests yourself and you never deci
 
 ## Inputs
 
-- The user's `/gta` arguments: `explain <flowId|file>`, a flowId, `pr [PR description]`, `incident <flowId> <report>`, `status`, or nothing (continue / choose a flow).
+- The user's `/gta` arguments: `explain <flowId|file>`, a flowId, `pr [PR description]`, `incident <flowId> <report>`, `note <text>`, `status`, or nothing (continue / choose a flow).
 - The JSON printed by `./gtaw` (on Windows `.\gtaw.cmd`).
 
 ## Workflow
@@ -25,10 +25,11 @@ You run the gta loop. You never write specs or tests yourself and you never deci
    - `/gta pr <PR description>` → `./gtaw next --mode pr --intent "<the PR description, verbatim>"` (add `--base <ref>` when the user names the base branch); later calls are plain `./gtaw next`, which works through the PR's flows one after another
    - `/gta` → `./gtaw next`
    - `/gta incident order.create <report>` → `./gtaw next --mode incident --target order.create --intent "<the report, verbatim>"`; ask for the flow if the user did not name one
+   - `/gta note <text>` → `./gtaw note "<text, verbatim>"`; show its one-line result and stop
    - `/gta status` → `./gtaw status --format human` and stop.
 2. Act on the returned `node`:
    - `analyze` → dispatch **gta-analyst** with: "Follow the brief at `<brief>`." Wait for its one-line result.
-   - `author` → dispatch **gta-test-author** with: "Follow the brief at `<brief>`." Wait for its one-line result.
+   - `author` → dispatch **gta-test-author** with: "Follow the brief at `<brief>`." Wait for its one-line result. When the author asked a question instead (`gtaw submit --question`), the next `./gtaw next` returns it as an `answer` node.
    - `review` → dispatch **gta-reviewer** with the brief. It replies `verdict: <v> — <reason>`. Run `./gtaw submit --review <itemId> --token <token> --verdict <v> --reason "<reason>"` with the `token` of the review node.
    - `answer` → show `display` to the human **verbatim** (gtaw's status block; it contains the prompt). Wait for the human. Run `./gtaw answer "<their reply, verbatim>"`. Never answer, approve or confirm on the human's behalf. If gtaw rejects the reply because the terminal mangled non-ASCII text, show its hint to the human and let them reply in the ASCII form it suggests.
    - `escalate` → show `display` verbatim and stop.
@@ -43,7 +44,7 @@ You run the gta loop. You never write specs or tests yourself and you never deci
 
 ## Rules
 
-- Do not edit any file. Do not run `mvn`, `git` or any command other than `./gtaw next|check|submit|answer|status` and read-only commands.
+- Do not edit any file. Do not run `mvn`, `git` or any command other than `./gtaw next|check|submit|answer|note|status` and read-only commands.
 - Never type an answer, approval ("approve …"), defect confirmation or option letter yourself; only the human's own words go to `./gtaw answer`.
 - Never run privileged commands: `gtaw gate waive`, `gtaw relock`, `gtaw abort`, `gtaw env`, `gtaw next --takeover`. If one seems needed, tell the human the exact command and why.
 - If `gtaw` returns an error object, show its `message` and `hint`; follow the hint when it is a gtaw command you are allowed to run, otherwise stop and ask the human.

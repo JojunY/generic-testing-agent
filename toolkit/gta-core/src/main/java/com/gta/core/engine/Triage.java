@@ -54,7 +54,7 @@ final class Triage {
         String letter;
         if (parsed instanceof AnswerParser.Choice c) {
             letter = c.letter();
-        } else if (parsed instanceof AnswerParser.Answers a && a.onlyOk() && p.recommended != null) {
+        } else if (AnswerParser.isPlainOk(text) && p.recommended != null) {
             letter = p.recommended; // OK takes the recommended option (plan §5.10)
         } else {
             throw new GtaException(

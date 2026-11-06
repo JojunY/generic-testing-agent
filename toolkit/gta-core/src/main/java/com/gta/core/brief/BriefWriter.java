@@ -9,6 +9,7 @@ import com.gta.core.state.WorkState;
 import com.gta.core.util.AtomicFiles;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,6 +26,8 @@ public final class BriefWriter {
     private final GtaPaths paths;
     private final String specSource;
     private final String outputLanguage;
+    /** At most this many {@code submit --question} per item (plan §5.10); past it the author decides from the spec. */
+    public static final int QUESTIONS_PER_ITEM = 3;
 
     public BriefWriter(GtaPaths paths) {
         this(paths, "gta");
@@ -107,6 +110,7 @@ public final class BriefWriter {
                 .append("- Write the question and option text in ")
                 .append("zh-CN".equals(outputLanguage) ? "Simplified Chinese (zh-CN)" : "English")
                 .append(", the language the person reads; keep markers (`= current code`, `→`, ids) as they are.\n\n");
+        appendNotes(b);
         if (!lintIssues.isEmpty()) {
             b.append("## Lint issues to fix\n\n");
             lintIssues.forEach(i -> b.append("- ").append(i).append('\n'));
@@ -148,6 +152,33 @@ public final class BriefWriter {
                 .append(
                         "` and reply with its one-line result. If it reports lint issues, fix them and submit again.\n");
         return write(seq, b.toString());
+    }
+
+    /** At most this much of {@code .gta/notes.md} goes into a brief: the newest notes, which are at the end. */
+    static final int NOTES_IN_BRIEF = 6000;
+
+    /** What people told gta ({@code /gta note}): a documented source the analyst may cite (plan §5.10). */
+    private void appendNotes(StringBuilder b) {
+        Path notes = paths.notes();
+        if (!Files.isRegularFile(notes)) {
+            return;
+        }
+        String text;
+        try {
+            text = Files.readString(notes, StandardCharsets.UTF_8).strip();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        if (text.length() > NOTES_IN_BRIEF) {
+            text = "…\n" + text.substring(text.length() - NOTES_IN_BRIEF);
+        }
+        b.append("## Notes from people\n\nPeople told gta the notes below. Where one settles a behaviour of this flow,")
+                .append(" cite it as `source=documented doc=")
+                .append(paths.rel(notes))
+                .append(
+                        " quote=\"<words of the note>\"` instead of asking; ignore notes about other flows.\n\n````markdown\n")
+                .append(text)
+                .append("\n````\n\n");
     }
 
     public Path author(int seq, WorkState.ItemState state, PlanItem item, Spec spec, ServiceProfile profile) {
@@ -298,6 +329,18 @@ public final class BriefWriter {
             }
             b.append('\n');
         }
+        List<WorkState.AuthorQuestion> answered =
+                state.questions.stream().filter(q -> q.answer != null).toList();
+        if (!answered.isEmpty()) {
+            b.append("## Answers from the person\n\nYou asked; a person answered. Follow the answers; the locked oracle"
+                    + " still wins over them.\n\n");
+            answered.forEach(q -> b.append("- Q: ")
+                    .append(q.question.replace("\n", " "))
+                    .append("\n  A: ")
+                    .append(q.answer.replace("\n", " "))
+                    .append('\n'));
+            b.append('\n');
+        }
         b.append("## Commands\n\n- `./gtaw check --item ")
                 .append(item.id)
                 .append(" --token ")
@@ -307,7 +350,20 @@ public final class BriefWriter {
                 .append(item.id)
                 .append(" --token ")
                 .append(state.token)
-                .append("` — final submission (counts as an attempt)\n\n");
+                .append("` — final submission (counts as an attempt)\n");
+        int left = QUESTIONS_PER_ITEM - state.questions.size();
+        if (left > 0) {
+            b.append("- `./gtaw submit --item ")
+                    .append(item.id)
+                    .append(" --token ")
+                    .append(state.token)
+                    .append(" --question \"<question>\" --recommend \"<your best answer>\"` — when the spec, the code")
+                    .append(" and the answers above do not settle how to write the test, ask instead of guessing; ")
+                    .append("gtaw shows it to the person and briefs you again with the answer (")
+                    .append(left)
+                    .append(" left; does not count as an attempt)\n");
+        }
+        b.append('\n');
         b.append(
                 "## Return\n\nReply with the one-line result printed by `submit`. Do not run `mvn` or `git` yourself.\n");
         return write(seq, b.toString());

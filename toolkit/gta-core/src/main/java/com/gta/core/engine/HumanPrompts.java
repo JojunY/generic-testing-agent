@@ -148,4 +148,18 @@ final class HumanPrompts {
                 + m.t("decision.reply");
         return p;
     }
+
+    /** A test author's question (plan §5.10): the person answers in their own words, or OK takes the recommendation. */
+    WorkState.Pending authorQuestion(PlanItem item, String question, String recommended) {
+        WorkState.Pending p = new WorkState.Pending();
+        p.type = "question";
+        p.itemId = item.id;
+        p.flowId = item.flowId;
+        p.recommended = recommended;
+        p.prompt = m.t("question.title", item.id) + "\n"
+                + question.strip() + "\n"
+                + (recommended == null ? "" : "  " + m.t("question.recommended", recommended.strip()) + "\n")
+                + m.t(recommended == null ? "question.reply" : "question.reply.ok");
+        return p;
+    }
 }
