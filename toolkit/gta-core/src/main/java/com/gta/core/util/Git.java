@@ -232,6 +232,20 @@ public final class Git {
         return Optional.of(head());
     }
 
+    /** A detached checkout of {@code ref} at {@code dir}, sharing this repository's objects. */
+    public void addWorktree(Path dir, String ref) {
+        ProcessRunner.Result r = git("worktree", "add", "--detach", "--force", dir.toString(), ref);
+        if (!r.ok()) {
+            throw failed("worktree add", r);
+        }
+    }
+
+    /** Removes a worktree made by {@link #addWorktree}; never fails, a leftover is pruned by the next call. */
+    public void removeWorktree(Path dir) {
+        git("worktree", "remove", "--force", dir.toString());
+        git("worktree", "prune");
+    }
+
     private ProcessRunner.Result git(String... args) {
         List<String> cmd = ProcessRunner.cmd("git");
         cmd.addAll(List.of(args));

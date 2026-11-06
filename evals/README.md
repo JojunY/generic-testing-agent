@@ -40,9 +40,12 @@ A Spring Boot 4.1 MVC service built with Gradle (Kotlin DSL, no pom.xml), with o
 | Id | Where | Defect |
 |---|---|---|
 | D13 | `InvoiceController#quote` (rest-api) | `>` instead of `>=`: an invoice of exactly 100 gets no discount |
+| D16 | `InvoiceController#lateFee`, added on the branch by the PR step | `>=` instead of `>`: an invoice paid on its due day is charged a late fee |
 
 `e2e/run-gradle.sh` checks that doctor and the profile read `build.gradle.kts`, adds gta-junit to the build script in the
-foundation item, and takes the flow from spec to a pinned defect with every test run through Gradle. It needs Gradle
+foundation item, and takes the flow from spec to a pinned defect with every test run through Gradle. It then reproduces a
+reported incident, and runs PR mode on a branch that changes the discount and adds a late fee: the catching scenario of
+the new endpoint catches D16, a human confirms it, and the report counts one catching hit. It needs Gradle
 8.14 or newer on PATH and gta-junit in the local Maven repository (`mvn install`).
 
 ## Scripted end-to-end run: `e2e/run.sh`

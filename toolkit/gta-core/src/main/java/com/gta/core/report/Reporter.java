@@ -166,6 +166,23 @@ public final class Reporter {
             defects.forEach(d -> b.append("- ").append(d).append('\n'));
             b.append('\n');
         }
+        List<PlanItem> catching =
+                plan.stream().filter(i -> "catching".equals(i.intent)).toList();
+        if (!catching.isEmpty()) {
+            List<String> hits = catching.stream()
+                    .filter(i -> state.items.containsKey(i.id)
+                            && state.items.get(i.id).status.id().equals("defect-found"))
+                    .map(i -> i.id)
+                    .toList();
+            b.append("### Catching tests\n\n")
+                    .append("Catching hits: ")
+                    .append(hits.size())
+                    .append(" of ")
+                    .append(catching.size())
+                    .append(" catching tests failed and were confirmed as defects by a human.\n");
+            hits.forEach(h -> b.append("- `").append(h).append("`\n"));
+            b.append('\n');
+        }
         if (!state.pendingReview.isEmpty()) {
             b.append("### Spec corrections to re-confirm (observed values corrected from actual behaviour)\n\n");
             state.pendingReview.forEach(p -> b.append("- ").append(p).append('\n'));

@@ -1,0 +1,22 @@
+
+    @Test
+    @Tag("flow:invoice.late-fee")
+    @Tag("scenario:invoice.late-fee/s01")
+    @Tag("characterization")
+    @DisplayName("[invoice.late-fee/s01] a late invoice pays the fee")
+    void shouldChargeTheLateFeeAfterTheDueDay() throws Exception {
+        mvc.perform(get("/api/invoices/late-fee").param("daysLate", "3"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fee").value(5.00));
+    }
+
+    @Test
+    @Tag("flow:invoice.late-fee")
+    @Tag("scenario:invoice.late-fee/s02")
+    @DisplayName("[invoice.late-fee/s02] an invoice paid on its due day has no fee")
+    void shouldChargeNoFeeOnTheDueDay() throws Exception {
+        mvc.perform(get("/api/invoices/late-fee").param("daysLate", "0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fee").value(0.00));
+    }
+}

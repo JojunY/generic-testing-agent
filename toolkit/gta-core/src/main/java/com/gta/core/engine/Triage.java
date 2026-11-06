@@ -122,7 +122,21 @@ final class Triage {
     }
 
     Map<String, Object> applyTriage(WorkState st, PlanItem item, WorkState.ItemState s, String verdict, String reason) {
-        boolean humanBacked = "confirmed".equals(item.oracle.source) || "documented".equals(item.oracle.source);
+        boolean catching = "catching".equals(item.intent);
+        if (catching && "product-defect".equals(verdict) && "fails".equals(s.onBase)) {
+            throw new GtaException(
+                    ErrorCode.USAGE_INVALID_ARGUMENT,
+                    item.id + " fails on the base too, so the change did not cause it: it is not a catch",
+                    "Use test-defect, spec-gap or environment; report a pre-existing defect with /gta incident");
+        }
+        if (catching && "spec-error".equals(verdict)) {
+            // a failing catching test may be the catch: a human decides, never the auto-correction
+            s.verdict = verdict;
+            return ctx.items.needsHuman(st, item, s, "spec-error on a catching test (is the change wrong?): " + reason);
+        }
+        // a catch candidate goes to a human whatever the oracle source: the human is the one who confirms (plan §6)
+        boolean humanBacked =
+                catching || "confirmed".equals(item.oracle.source) || "documented".equals(item.oracle.source);
         s.verdict = verdict;
         switch (verdict) {
             case "test-defect", "flaky" -> {

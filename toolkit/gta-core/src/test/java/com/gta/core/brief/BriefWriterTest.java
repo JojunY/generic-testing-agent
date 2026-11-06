@@ -169,4 +169,16 @@ class BriefWriterTest {
         assertTrue(text.contains("must fail on the current code"), text);
         assertTrue(text.contains("do not add `@KnownDefect`"), "a human confirms the defect before any pin: " + text);
     }
+
+    @Test
+    void shouldLetTheAssessorReportACatchWhateverTheOracleSource() throws Exception {
+        PlanItem catching = item();
+        catching.intent = "catching";
+        catching.oracle.source = "observed";
+
+        String text = Files.readString(new BriefWriter(new GtaPaths(root))
+                .review(10, state(), catching, spec(), "triage", "The test failed."));
+
+        assertTrue(text.contains("`product-defect` — a catch"), text);
+    }
 }

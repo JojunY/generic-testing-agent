@@ -91,4 +91,26 @@ class ReporterTest {
                         "| order.create | Create an order | order.create/s01 valid order | observed | — | approved |"),
                 md);
     }
+
+    @Test
+    void shouldCountCatchingHits() {
+        PlanItem caught = new PlanItem();
+        caught.id = "order.create/s01#component-01";
+        caught.intent = "catching";
+        PlanItem passed = new PlanItem();
+        passed.id = "order.create/s02#component-01";
+        passed.intent = "catching";
+        WorkState st = new WorkState();
+        for (PlanItem i : List.of(caught, passed)) {
+            WorkState.ItemState s = new WorkState.ItemState();
+            s.id = i.id;
+            s.status = i == caught ? ItemStatus.DEFECT_FOUND : ItemStatus.PASSED;
+            st.items.put(i.id, s);
+        }
+
+        String md = new Reporter(paths).markdown(st, List.of(caught, passed), null, true);
+
+        assertTrue(md.contains("Catching hits: 1 of 2"), md);
+        assertTrue(md.contains("- `order.create/s01#component-01`"), md);
+    }
 }

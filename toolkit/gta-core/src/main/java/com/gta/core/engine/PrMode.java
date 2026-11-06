@@ -72,6 +72,7 @@ final class PrMode {
             }
         }
         st.prQueue = new ArrayList<>(flows);
+        st.prBase = base;
         st.prIntent = intent == null || intent.isBlank() ? null : intent.strip();
         st.activeFlow = st.prQueue.isEmpty() ? null : st.prQueue.remove(0);
         st.pending = null;

@@ -7,6 +7,11 @@ on:
 permissions:
   contents: read
 
+# a newer push to the same PR replaces the run in progress; runs on main are never cancelled, every merge is checked
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,22 +28,36 @@ jobs:
       - name: Diagrams are up to date
         if: matrix.java == '21'
         run: python3 scripts/diagrams/render.py --check
-      - name: Scripted end-to-end run
-        if: matrix.java == '21'
-        run: evals/e2e/run.sh "$RUNNER_TEMP/gta-e2e"
-      - name: Scripted end-to-end run, catalog with WebFlux, GraphQL, gRPC and Temporal (P3 preview)
-        if: matrix.java == '21'
-        run: evals/e2e/run-catalog.sh "$RUNNER_TEMP/gta-e2e-catalog"
+
+  # the scripted e2e runs are independent of each other, so each gets its own runner (same scripts, same coverage)
+  e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: main
+            run: evals/e2e/run.sh "$RUNNER_TEMP/gta-e2e"
+          - name: multi-module
+            run: GTA_E2E_MODULE=order-service evals/e2e/run.sh "$RUNNER_TEMP/gta-e2e-module"
+          - name: catalog (P3 preview)
+            run: evals/e2e/run-catalog.sh "$RUNNER_TEMP/gta-e2e-catalog"
+          - name: gradle
+            gradle: true
+            run: evals/e2e/run-gradle.sh "$RUNNER_TEMP/gta-e2e-gradle"
+    name: e2e (${{ matrix.name }})
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with: { distribution: temurin, java-version: "21", cache: maven }
+      - name: Build and install the toolkit (the build job runs the unit tests and checks)
+        run: ./mvnw -B install -DskipTests
       - name: Gradle for the Gradle e2e
-        if: matrix.java == '21'
+        if: matrix.gradle
         uses: gradle/actions/setup-gradle@v5
         with: { gradle-version: "8.14.3" }
-      - name: Scripted end-to-end run, Gradle build
-        if: matrix.java == '21'
-        run: evals/e2e/run-gradle.sh "$RUNNER_TEMP/gta-e2e-gradle"
-      - name: Scripted end-to-end run, service as a module of a multi-module repository
-        if: matrix.java == '21'
-        run: GTA_E2E_MODULE=order-service evals/e2e/run.sh "$RUNNER_TEMP/gta-e2e-module"
+      - name: Scripted end-to-end run
+        run: ${{ matrix.run }}
 
   windows:
     runs-on: windows-latest

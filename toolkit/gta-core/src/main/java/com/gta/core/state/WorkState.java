@@ -27,6 +27,8 @@ public class WorkState {
     public Map<String, SpecWork> specWork = new LinkedHashMap<>();
     /** PR mode (plan §6): the affected flows still to work on, after the active one. */
     public List<String> prQueue = new ArrayList<>();
+    /** PR mode: the base the branch is compared with; catching tests are also run on it. */
+    public String prBase;
     /** PR mode: the PR description, a documented intent for the analyst. */
     public String prIntent;
     /** Incident mode: the reported incident the active flow reproduces. */
@@ -75,6 +77,8 @@ public class WorkState {
         public String intentOverride;
         /** A human allowed gta to add its tests to a developer's existing test class of the same name (plan §9.3). */
         public boolean sharesDeveloperFile;
+        /** Catching tests: how the failing test does on the PR's base ({@code passes}, {@code fails}, {@code unknown}). */
+        public String onBase;
     }
 
     public static class LastError {

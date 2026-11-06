@@ -21,6 +21,8 @@ final class EngineContext {
     final Git git;
     final BriefWriter briefs;
     final TestRunner runner;
+    /** The runner tests of gta passed in, also used for runs in other checkouts; null = the build tool's. */
+    private final TestRunner injectedRunner;
 
     final SessionManager sessions;
     final HumanPrompts prompts;
@@ -49,6 +51,7 @@ final class EngineContext {
         this.git = new Git(paths.root());
         this.briefs = new BriefWriter(paths, config.spec.source);
         this.runner = runner != null ? runner : TestRunner.forBuild(paths, config);
+        this.injectedRunner = runner;
         this.runs = new TestRuns(this);
         this.sessions = new SessionManager(this);
         this.prompts = new HumanPrompts(this);
@@ -61,6 +64,11 @@ final class EngineContext {
         this.cases = new CaseLedgers(this);
         this.pr = new PrMode(this);
         this.sessionEnd = new SessionEnd(this);
+    }
+
+    /** The runner for another checkout of this repository (a base revision for catching tests). */
+    TestRunner runnerFor(GtaPaths checkout) {
+        return injectedRunner != null ? injectedRunner : TestRunner.forBuild(checkout, config);
     }
 
     /** The only way gtaw commits: the SHA goes into the ledger the scope check trusts. */
