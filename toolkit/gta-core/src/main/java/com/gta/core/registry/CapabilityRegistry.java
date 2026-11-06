@@ -48,7 +48,7 @@ public class CapabilityRegistry {
     }
 
     /** The phase this build of gta implements. Capabilities with a later `since` are explain-only. */
-    public static final String CURRENT_PHASE = "P3";
+    public static final String CURRENT_PHASE = "P4";
 
     /**
      * The phase a repository runs in: {@code CURRENT_PHASE}, or a later one it opted into with {@code phase} in

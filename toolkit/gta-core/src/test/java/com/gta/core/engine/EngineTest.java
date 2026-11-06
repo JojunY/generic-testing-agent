@@ -453,7 +453,7 @@ class EngineTest {
     }
 
     @Test
-    void shouldWriteTestsForTheCapabilitiesOfP1ToP3() throws Exception {
+    void shouldWriteTestsForTheCapabilitiesOfP1ToP4() throws Exception {
         for (String capability : List.of(
                 "scheduler",
                 "messaging",
@@ -463,7 +463,8 @@ class EngineTest {
                 "grpc-api",
                 "graphql-api",
                 "workflow",
-                "beam-pipeline")) {
+                "beam-pipeline",
+                "websocket")) {
             Map<String, Object> out = nextOnApproved(capability);
 
             assertFalse(String.valueOf(out).contains("explain-only"), capability + ": " + out);
@@ -474,7 +475,12 @@ class EngineTest {
 
     @Test
     void shouldKeepLaterCapabilitiesExplainOnly() throws Exception {
-        Map<String, Object> out = nextOnApproved("websocket");
+        nextOnApproved("websocket");
+        engine().abort(null);
+        EngineContext ctx = new EngineContext(root, runner);
+        ctx.registry.capability("websocket").since = "P5"; // a capability of a phase that is not on yet
+
+        Map<String, Object> out = new Engine(ctx).next(null, "order.create", null, false);
 
         assertTrue(String.valueOf(out).contains("explain-only"), out.toString());
     }

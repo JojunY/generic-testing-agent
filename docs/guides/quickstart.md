@@ -169,7 +169,7 @@ mvn verify -Dgroups=known-defect        # after a fix: which pins to remove
 
 - `dispatch: "inline"`: use this if your Copilot build cannot run subagents; the orchestrator then does each node itself.
 - Oracle credentials are read from the named environment variables and never stored.
-- `phase`: `"P4"` to use the next roadmap phase's capabilities (deployed systems) before they are on by default; for pilot services. P3 (WebFlux, gRPC, GraphQL, workflows, Beam) is on by default.
+- `phase`: a later roadmap phase (`"P5"`) to use its capabilities before they are on by default; for pilot services. Everything up to P4 (WebFlux, gRPC, GraphQL, workflows, Beam, WebSocket/STOMP/SSE) is on by default.
 - `spec.source`: `openspec` or `speckit` when the repository keeps its own specs (`openspec/specs/`, `specs/`). The analyst cites them as documented sources and never edits them.
 - `build.module`: in a multi-module repository, the module that holds the service, such as `"order-api"`. `.gta/` stays at
   the repository root; tests are written into that module and Maven runs with `-pl <module> -am`. `gtaw doctor` fails
