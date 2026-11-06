@@ -78,6 +78,8 @@ OUT=$(gtaw submit --spec order.create-order --token "$TOKEN")
 expect "$(jget "$OUT" 'd["rev"]')" R2 "revised spec"
 OUT=$(gtaw next)
 expect "$(jget "$OUT" 'd["type"]')" approve "approval prompt"
+jget "$OUT" 'd["display"]' | grep -q "Needs you" || fail "the approval reaches the human as a status block"
+echo "ok   the approval is shown in the status block"
 
 step "human approves (ASCII form)"
 gtaw answer "approve order.create-order@R2" >/dev/null

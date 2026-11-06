@@ -128,6 +128,7 @@ final class Triage {
     }
 
     Map<String, Object> applyTriage(WorkState st, PlanItem item, WorkState.ItemState s, String verdict, String reason) {
+        st.event(false, "ev.triage", item.ref, verdict, reason);
         boolean catching = "catching".equals(item.intent);
         if (catching && "product-defect".equals(verdict) && "fails".equals(s.onBase)) {
             throw new GtaException(

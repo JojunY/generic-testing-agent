@@ -46,7 +46,8 @@ final class NodeResults {
         extra.put("prompt", p.prompt);
         extra.put(
                 "instruction",
-                "Show the prompt to the human verbatim, then pass their reply verbatim to ./gtaw answer \"<reply>\"");
+                "Show display (the status block, which contains the prompt) to the human verbatim, then pass their reply"
+                        + " verbatim to ./gtaw answer \"<reply>\"");
         return node("answer", extra);
     }
 

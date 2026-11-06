@@ -443,6 +443,7 @@ final class ItemWorkflow {
                     "Confirmed product defect, pinned with @KnownDefect (fingerprint "
                             + (s.lastError == null ? "-" : s.lastError.defectFingerprint) + ").");
             // not counted against the session budget: the item was already counted when it reached the human
+            st.event(false, "ev.defect.pinned", item.ref);
             return result(
                     "defect-found: " + item.id + " pinned with @KnownDefect (build stays green)",
                     Map.of("runId", runId));
@@ -507,6 +508,8 @@ final class ItemWorkflow {
             s.reason = "defect: reproducing test fails for the reported reason";
             return needsHuman(st, item, s, s.reason);
         }
+        st.event(false, "ev.test.failed", item.ref, firstLines(message, 1));
+        st.event(true, consistent == 2 ? "chk.reruns" : "chk.flaky", item.ref);
         st.move(s, ItemStatus.TRIAGING);
         return result(
                 code.name() + " (" + (consistent == 2 ? "reproducible" : "flaky: " + consistent + "/2 re-runs failed")
@@ -522,6 +525,7 @@ final class ItemWorkflow {
             Map<String, Object> out;
             if (s.status == ItemStatus.REVIEWING) {
                 if ("accept".equals(verdict)) {
+                    st.event(true, "chk.reviewer", item.ref);
                     out = markPassed(st, item, s, s.evidenceRunId);
                 } else if ("reject".equals(verdict)) {
                     com.gta.core.state.Lessons.record(
@@ -563,6 +567,7 @@ final class ItemWorkflow {
             return needsHuman(st, item, s, "repair attempts exhausted (" + s.attempts + "): " + code.name());
         }
         st.move(s, ItemStatus.REPAIRING);
+        st.event(false, "ev.test.repair", item.isFoundation() ? item.id : item.ref, code.name());
         Map<String, Object> more = new LinkedHashMap<>();
         more.put("code", code.name());
         more.put("attemptsLeft", config.budgets.maxAttemptsPerItem - s.attempts);
@@ -586,6 +591,7 @@ final class ItemWorkflow {
         }
         st.consecutiveFailures++;
         st.itemsThisSession++;
+        st.event(false, "ev.needs.human", item.isFoundation() ? item.id : item.ref, firstLines(reason, 1));
         ctx.escalations.writeEscalation(item, s, reason);
         return result("needs-human: " + item.id + " — " + reason, null);
     }
@@ -599,6 +605,7 @@ final class ItemWorkflow {
         st.sessionPassed.add(item.id);
         st.itemsThisSession++;
         st.consecutiveFailures = 0;
+        st.event(false, "ev.test.passed", item.isFoundation() ? item.id : item.ref);
         return result(
                 "passed: " + item.id + " (run " + runId + ", commit "
                         + (s.commit == null ? "-" : s.commit.substring(0, 7)) + ")",

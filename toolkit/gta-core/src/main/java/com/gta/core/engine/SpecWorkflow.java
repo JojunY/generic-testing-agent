@@ -201,6 +201,7 @@ final class SpecWorkflow {
         ed.appendRecord(record);
         writeSpec(specPath, ed.text());
         st.newConfirmations.add(p.flowId + " " + p.round + ": \"" + text + "\"");
+        st.event(false, "ev.answers", p.flowId, p.round);
         Spec after = SpecParser.parse(specPath);
         if (!after.openQuestions().isEmpty()) {
             p.prompt = ctx.prompts.renderQuestions(after, p.round);
@@ -279,6 +280,7 @@ final class SpecWorkflow {
         files.addAll(ctx.cases.afterApproval(p.flowId)); // the ledger is committed with the approval it follows
         ctx.commit(files, "docs(spec): " + p.flowId + " " + p.rev + " approved\n\nGta-Approval: " + text);
         st.newConfirmations.add(p.flowId + "@" + p.rev + " approved: \"" + text + "\"");
+        st.event(false, "ev.spec.approved", p.flowId, p.rev);
         st.pending = null;
         return result(p.flowId + "@" + p.rev + " approved and committed; run ./gtaw next to start writing tests", null);
     }
@@ -397,6 +399,7 @@ final class SpecWorkflow {
             sw.attempts = 0;
             sw.token = null;
             st.pending = null;
+            st.event(false, "ev.spec.written", flowId, rev);
             store.save(st);
             Spec done = SpecParser.parse(specPath);
             for (String id : SpecLinter.missingPriority(done)) {

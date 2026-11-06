@@ -234,7 +234,13 @@ class SpecWorkflowTest {
                                 "and total `90.00`")
                         .replace("(= current code)", "(= current code) (recommended: keep today's behaviour)"));
         engine().submitSpec(FLOW, token);
-        engine().next(null, null, null, false);
+        Map<String, Object> round = engine().next(null, null, null, false);
+        String display = String.valueOf(round.get("display"));
+        assertTrue(display.contains("waiting for you"), display);
+        assertTrue(display.contains(FLOW + ": spec R1 written"), "what happened: " + display);
+        assertTrue(
+                display.contains("Needs you\n  ── " + FLOW + " · R1"),
+                "the question round is the part that needs you: " + display);
 
         engine().answer("OK");
 

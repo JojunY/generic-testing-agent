@@ -106,9 +106,42 @@ public final class Engine {
             if (!recovered.isEmpty()) {
                 out.put("recovered", recovered);
             }
+            addDisplay(st, out);
             store.save(st);
             return out;
         }
+    }
+
+    /**
+     * The status block for every node that reaches a person (plan §5.10): the orchestrator shows {@code display}
+     * verbatim. Agent nodes get none: the person reads the block when gta stops for them or is done.
+     */
+    @SuppressWarnings("unchecked")
+    private void addDisplay(WorkState st, Map<String, Object> out) {
+        String node = String.valueOf(out.get("node"));
+        Messages m = ctx.status.messages();
+        String display;
+        switch (node) {
+            case "answer" ->
+                display = ctx.status.render(st, "state.waiting", String.valueOf(out.get("prompt")), m.t("next.reply"));
+            case "escalate" ->
+                display = ctx.status.render(st, "state.blocked", String.valueOf(out.get("message")), m.t("next.reply"));
+            case "done" -> {
+                if (out.get("candidates") instanceof List<?> c && !c.isEmpty()) {
+                    List<Map<String, Object>> candidates = (List<Map<String, Object>>) c;
+                    out.put("recommendedFlow", StatusBlock.recommendedFlow(candidates));
+                    display = ctx.status.render(st, "state.waiting", ctx.status.pick(candidates), m.t("next.pick"));
+                } else if (out.get("report") != null) {
+                    display = ctx.status.render(st, "state.done", null, m.t("next.report", out.get("report")));
+                } else {
+                    display = ctx.status.render(st, "state.done", null, String.valueOf(out.get("message")));
+                }
+            }
+            default -> {
+                return;
+            }
+        }
+        out.put("display", display);
     }
 
     /**

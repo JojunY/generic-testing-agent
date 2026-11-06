@@ -88,6 +88,10 @@ Open Copilot Chat (agent mode) or OpenCode in the service and type:
 | `/gta incident order.create <report>` | turn a bug report into a test that fails on today's code, then confirm the defect |
 | `/gta status` | flows, items and what is waiting for you |
 
+Whenever gta stops for you or finishes, it shows one status block with five parts, always in this order: the state and
+progress, what happened, what was checked, what needs you, and what comes next. If "Needs you" says nothing, gta is
+still working.
+
 gta stops and waits for you at three points.
 
 **Questions.** Every question shows one recommended answer, marked `← recommended`, with the reason. Reply:

@@ -34,6 +34,7 @@ final class EngineContext {
     final PlanSync planSync;
     final CaseLedgers cases;
     final PrMode pr;
+    final StatusBlock status;
     final SessionEnd sessionEnd;
     final TestRuns runs;
 
@@ -63,6 +64,7 @@ final class EngineContext {
         this.planSync = new PlanSync(this);
         this.cases = new CaseLedgers(this);
         this.pr = new PrMode(this);
+        this.status = new StatusBlock(this);
         this.sessionEnd = new SessionEnd(this);
     }
 

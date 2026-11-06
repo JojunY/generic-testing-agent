@@ -86,6 +86,8 @@ final class SessionEnd {
         }
         ctx.commit(files.stream().distinct().toList(), "docs(gta): session report " + st.session.id);
         st.sessionEnded = true;
+        st.event(true, "chk.gate", gate.decision);
+        st.event(false, "ev.session.ended", gate.decision);
         more.put("gate", gate.decision);
         more.put("report", paths.rel(reportFile));
         more.put("prComment", paths.rel(dir.resolve("pr-comment.md")));

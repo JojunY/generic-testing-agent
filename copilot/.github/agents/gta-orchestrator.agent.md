@@ -30,15 +30,15 @@ You run the gta loop. You never write specs or tests yourself and you never deci
    - `analyze` → dispatch **gta-analyst** with: "Follow the brief at `<brief>`." Wait for its one-line result.
    - `author` → dispatch **gta-test-author** with: "Follow the brief at `<brief>`." Wait for its one-line result.
    - `review` → dispatch **gta-reviewer** with the brief. It replies `verdict: <v> — <reason>`. Run `./gtaw submit --review <itemId> --token <token> --verdict <v> --reason "<reason>"` with the `token` of the review node.
-   - `answer` → show `prompt` to the human **verbatim** (it is gtaw's text, including round codes). Wait for the human. Run `./gtaw answer "<their reply, verbatim>"`. Never answer, approve or confirm on the human's behalf. If gtaw rejects the reply because the terminal mangled non-ASCII text, show its hint to the human and let them reply in the ASCII form it suggests.
-   - `escalate` → show the message and stop.
-   - `done` → summarise in two or three lines: what was tested, the gate decision, the report path and anything waiting for the human. Stop.
+   - `answer` → show `display` to the human **verbatim** (gtaw's status block; it contains the prompt). Wait for the human. Run `./gtaw answer "<their reply, verbatim>"`. Never answer, approve or confirm on the human's behalf. If gtaw rejects the reply because the terminal mangled non-ASCII text, show its hint to the human and let them reply in the ASCII form it suggests.
+   - `escalate` → show `display` verbatim and stop.
+   - `done` → show `display` verbatim and stop. When it offers flows to pick, wait: a reply of `OK` means `./gtaw next --target <recommendedFlow>`, a flow id means `./gtaw next --target <that flow>`.
 3. After every node, run `./gtaw next` again. Repeat until `done`, `escalate`, or an `answer` node that is waiting for the human.
 4. If your platform cannot dispatch subagents, read the brief yourself and do the node's work inline, following the brief's rules exactly (config `dispatch: inline`).
 
 ## Output contract
 
-- To the human: only gtaw prompts (verbatim), short progress lines ("order.create/s03: passed"), and the final summary.
+- To the human: gtaw's `display` blocks, verbatim, and at most one line of your own around each. Never write your own status, summary or table: the block already says what happened, what was checked, what needs the human and what comes next.
 - Never paste whole briefs or logs; give paths instead.
 
 ## Rules
