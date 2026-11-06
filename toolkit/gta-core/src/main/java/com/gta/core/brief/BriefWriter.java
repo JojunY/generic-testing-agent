@@ -265,10 +265,11 @@ public final class BriefWriter {
                     .append(item.flowId)
                     .append("\")`, `@Tag(\"scenario:")
                     .append(item.ref)
-                    .append("\")`, `@Tag(\"gta\")`");
-            if ("characterization".equals(item.intent)) {
-                b.append(", `@Tag(\"characterization\")`");
-            }
+                    .append("\")`, `@Tag(\"gta\")`, `@Tag(\"")
+                    .append(item.intent)
+                    .append("\")`, `@Tag(\"")
+                    .append(item.priority)
+                    .append("\")` (gtaw corrects the intent and priority tags before each run)");
             b.append('\n');
         } else {
             b.append("- Tags: `@Tag(\"component\")`, `@Tag(\"gta\")`\n");

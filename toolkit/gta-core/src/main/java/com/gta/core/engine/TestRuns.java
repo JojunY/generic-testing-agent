@@ -116,14 +116,18 @@ final class TestRuns {
     }
 
     /** {@code gtaw run}: the seed tests (smoke) or every gta test, optionally one layer. */
-    RunResult runTests(boolean smoke, String layer) {
-        if ("system".equals(layer)) {
+    /**
+     * @param tags a JUnit tag expression over the gta vocabulary (plan §9.5), e.g. {@code p0 & component}; null runs
+     *     every gta test
+     */
+    RunResult runTests(boolean smoke, String tags) {
+        if (tags != null && tags.matches(".*\\bsystem\\b.*")) {
             throw new GtaException(
                     ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE,
                     "There is no system layer: gta tests run locally only, deployed environments are out of scope",
                     "Run the component tests; test SIT and UAT yourself");
         }
-        String tag = smoke ? null : layer != null ? layer : "gta";
+        String tag = smoke ? null : tags == null || tags.isBlank() ? "gta" : "gta & (" + tags.strip() + ")";
         String testClass = null;
         if (smoke) {
             // the seed tests of the plan: one per application (docs/guides/test-naming.md)

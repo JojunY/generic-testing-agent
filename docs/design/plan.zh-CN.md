@@ -1150,11 +1150,13 @@ SIT、UAT 和生产环境的主机，gta 写的任何测试或 fixture 都不得
 | `gta` 和层级（`unit`、`slice`、`component`、`contract`） | 类 | 计划条目 | 门禁运行所有 `gta` 测试；按层级选择 |
 | `flow:<flowId>`、`scenario:<scenarioId>` | 方法 | 规格 | gtaw 运行单个场景；可追溯 |
 | 意图：`characterization`、`hardening`、`reproducing`、`catching` 中恰好一个 | 方法 | 场景的来源和 `hint.intent` | `-Dgroups=hardening` 运行已确认行为的测试 |
-| 优先级：`p0`、`p1`、`p2` | 方法 | 场景的 `priority` | 打包或部署时用 `mvn verify -Dgroups=p0` 运行必须通过的测试，不需要安装 gta |
+| 优先级：`p0`、`p1`、`p2` | 方法 | 场景的 `priority`（未写时为 P1） | 打包或部署时用 `mvn verify -Dgroups=p0` 运行必须通过的测试，不需要安装 gta |
 | `known-defect` | 方法，自动 | `@KnownDefect` 自带（元注解） | 修复后用 `-Dgroups=known-defect` 找出哪些标注该删除 |
 
 - 所有地方使用同一种表达式语法，即 JUnit tag 表达式：`gtaw run --tags "p0 & component"` 取代 `--layer`（保留为别名）；`gtaw impact`
-  把回归范围输出成可直接使用的 `-Dgroups` 表达式。
+  把回归范围输出成可直接使用的 `-Dgroups` 表达式（`groups`）。
+- 每次运行前，gtaw 会设置条目方法上的意图和优先级 tag；P4 之前写的测试在下次运行时补上，而 `impact` 按场景列出，因此它的表达式
+  同样能选中这些测试。
 - 刻意不做成 tag 的：能力（flow 的规格里已有）、保真度和耗时（报告里已有，耗时 tag 会频繁变动）、负责人（CODEOWNERS），以及任何会
   跳过或隔离测试的标记（§5.3）。
 - 预留：`remote`，用于使用者选择开启的 SIT/UAT 测试（§15 P5）。

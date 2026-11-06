@@ -677,8 +677,8 @@ public final class Engine {
         return ctx.sessionEnd.report(format);
     }
 
-    /** {@code gtaw run}: the seed tests (smoke) or every gta test, optionally one layer. */
-    public RunResult runTests(boolean smoke, String layer) {
-        return ctx.runs.runTests(smoke, layer);
+    /** {@code gtaw run}: the seed tests (smoke) or the gta tests a tag expression selects (plan §9.5). */
+    public RunResult runTests(boolean smoke, String tags) {
+        return ctx.runs.runTests(smoke, tags);
     }
 }

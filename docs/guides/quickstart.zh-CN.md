@@ -135,6 +135,18 @@ OK
 
 代码变更后，`./gtaw impact --base origin/main` 会标出代码已变化的用例，并打印回归范围（这些用例加上全部 P0）。以下情况都算变化：spec 引用的类变了；该类注入的类（直接或更深层）变了；spec 引用的配置项取值变了。`reasons` 会说明原因。退役的用例会保留其测试，直到你运行 `./gtaw cases confirm-retired <ids>`（或 `--all`）。`./gtaw cases --rebuild` 为已有已批准 spec 的服务创建台账。测试命名遵循 [test-naming.md](test-naming.md)。
 
+**按 tag 选择测试。** 每个 gta 测试都带有来自规格的 tag：`gta`、层级、`flow:<id>`、`scenario:<id>`、意图（`characterization`、
+`hardening`、`reproducing`、`catching`）和优先级（`p0`、`p1`、`p2`）；已标注的缺陷还带有 `known-defect`。这些 tag 由 gtaw 设置，
+不装 gta 也能用：
+
+```
+./gtaw run --tags "p0 & component"     # 通过 gtaw
+mvn verify -Dgroups=p0                  # 必须通过的测试，例如打包前
+mvn verify -Dgroups=known-defect        # 修复后：找出该删除的标注
+```
+
+`./gtaw impact` 会把回归范围输出为 `groups`，可直接用于 `-Dgroups="…"`。
+
 ## 配置（可选）
 
 `.gta/config.json` 覆盖默认值，只使用你设置的键。

@@ -5,6 +5,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
@@ -14,12 +15,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
  *   <li>passes → the test FAILS with "defect fixed, remove @KnownDefect";</li>
  *   <li>fails for another reason → the test FAILS.</li>
  * </ul>
- * Only gtaw adds this annotation, after a human confirmed the defect.
+ * Only gtaw adds this annotation, after a human confirmed the defect. It carries the {@code known-defect} tag, so
+ * {@code -Dgroups=known-defect} runs exactly the pinned defects (plan §9.5).
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
 @ExtendWith(KnownDefectExtension.class)
+@Tag("known-defect")
 public @interface KnownDefect {
     /** The finding or scenario id, e.g. {@code order.create/f02}. */
     String id();
