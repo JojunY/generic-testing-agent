@@ -123,8 +123,8 @@ html:not(.js) #loader { display: none; }
   background: var(--hero); min-height: 100lvh;
   transition: background .8s var(--ease);
 }
-.hero[data-scene="lock"] { background: #d9c7b6; }
-.hero[data-scene="refuse"] { background: #cfc8c4; }
+.hero[data-scene="lock"] { background: #e7cbb4; }
+.hero[data-scene="refuse"] { background: #e4c4bc; }
 .hero-veil {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background: linear-gradient(to bottom, rgba(255,255,255,.42), transparent 28%, transparent 62%, rgba(255,255,255,.4));
@@ -150,8 +150,9 @@ html:not(.js) #loader { display: none; }
 @media (min-width: 1024px) { .hero h1 { font-size: 3.75rem; } }
 .line { display: block; overflow: hidden; }
 .line > span { display: block; }
-.js:not(.ready) .hero .line > span { transform: translateY(110%); }
-.js.ready .hero .line > span { transform: none; transition: transform .9s cubic-bezier(.215,.61,.355,1); }
+.js .hero .line > span { transform: translateY(110%); transition: transform 1.05s cubic-bezier(.215,.61,.355,1); }
+.js.ready .hero .line > span { transform: none; }
+html:not(.js) .hero .line > span { transform: none; }
 .hero .line:nth-child(2) > span { transition-delay: .12s; }
 .hero .line:nth-child(3) > span { transition-delay: .24s; color: var(--accent-to); }
 .facts { display: flex; flex-wrap: wrap; gap: .5rem .75rem; font-size: .875rem; font-weight: 500; color: var(--faint); }
@@ -166,6 +167,11 @@ html:not(.js) #loader { display: none; }
 .product {
   position: relative; z-index: 1; width: min(24rem, 100%); margin: .5rem auto 0;
   perspective: 1100px; pointer-events: none;
+  animation: float-y 7s ease-in-out infinite;
+}
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-16px); }
 }
 @media (min-width: 1024px) {
   .hero-grid { grid-template-columns: .92fr 1.08fr; }
@@ -178,7 +184,8 @@ html:not(.js) #loader { display: none; }
 }
 .sheet {
   inset: 10% 2% auto 4%; height: 78%; background: rgba(255,255,255,.45);
-  transform: translateZ(-42px) rotate(-6deg); box-shadow: 0 18px 40px rgba(10,10,10,.08);
+  transform: translate3d(calc(var(--px, 0) * -28px), calc(var(--py, 0) * -18px), -42px) rotate(-6deg);
+  box-shadow: 0 18px 40px rgba(10,10,10,.08);
 }
 .sheet b { display: block; height: .45rem; margin: 1.1rem 1.2rem 0; border-radius: 99px; background: rgba(17,17,17,.08); }
 .sheet b:nth-child(2) { width: 72%; }
@@ -186,7 +193,12 @@ html:not(.js) #loader { display: none; }
 .slip {
   inset: 0 4% auto 0; background: rgba(255,255,255,.92); color: var(--ink);
   padding: 1.15rem 1.2rem 1.2rem; box-shadow: 0 24px 50px rgba(10,10,10,.16);
-  transform: translateZ(8px); min-height: 16.5rem;
+  transform: translate3d(calc(var(--px, 0) * 14px), calc(var(--py, 0) * 10px), 8px); min-height: 16.5rem;
+}
+.slip.swap { animation: slip-in .6s var(--ease); }
+@keyframes slip-in {
+  from { opacity: .4; transform: translate3d(0, 22px, 18px); }
+  to { opacity: 1; transform: translate3d(calc(var(--px, 0) * 14px), calc(var(--py, 0) * 10px), 8px); }
 }
 .slip header { display: flex; justify-content: space-between; gap: .5rem; font: 500 .68rem/1.3 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
 .slip .sv { margin-top: .7rem; font-size: 4.4rem; font-weight: 600; letter-spacing: -.05em; line-height: .9; }
@@ -196,11 +208,14 @@ html:not(.js) #loader { display: none; }
   right: 8%; top: 46%; width: 4.6rem; height: 4.6rem; display: grid; place-items: center;
   border: 2px solid var(--accent); color: var(--accent); border-radius: 50%;
   font: 700 .62rem/1.1 var(--mono); letter-spacing: .04em; text-align: center;
-  background: rgba(255,255,255,.92); transform: translateZ(36px) rotate(-12deg);
+  background: rgba(255,255,255,.92);
+  transform: translate3d(calc(var(--px, 0) * 22px), calc(var(--py, 0) * 14px), 36px) rotate(-12deg);
 }
 .token {
   left: .8rem; bottom: .6rem; background: var(--ink); color: #fff; padding: .55rem .75rem;
-  font: 500 .72rem/1.3 var(--mono); transform: translateZ(48px); border-radius: .8rem;
+  font: 500 .72rem/1.3 var(--mono);
+  transform: translate3d(calc(var(--px, 0) * 26px), calc(var(--py, 0) * 18px), 48px);
+  border-radius: .8rem;
 }
 .hero[data-scene="edit"] .sv { color: var(--faint); text-decoration: line-through; text-decoration-thickness: .08em; }
 .hero[data-scene="edit"] .seal { opacity: 0; }
@@ -472,11 +487,11 @@ footer .shell { position: relative; z-index: 1; padding-block: 4rem 2rem; }
   position: absolute; right: .8rem; top: .8rem; width: 2.25rem; height: 2.25rem; border-radius: 99px;
   background: var(--surface); color: var(--faint);
 }
-.rise { opacity: 0; transform: translateY(18px); }
-.rise.in { opacity: 1; transform: none; transition: opacity .8s var(--ease), transform .8s var(--ease); }
+.rise { opacity: 0; transform: translateY(22px); transition: opacity .8s var(--ease), transform .8s var(--ease); }
+.rise.in { opacity: 1; transform: none; }
 html:not(.js) .rise { opacity: 1; transform: none; }
 
-@media (hover: hover) and (pointer: fine) {
+@media (any-hover: hover) and (any-pointer: fine) {
   .pill:hover { transform: scale(1.03); }
   .agent:hover { transform: translateY(-6px); }
   .agent:hover .go { transform: rotate(40deg); }

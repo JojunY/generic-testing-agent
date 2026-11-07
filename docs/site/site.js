@@ -2,7 +2,6 @@
    The workbench and the seven shortcuts replay strings from #copy.
    They are scripted. They do not call a model and they do not run gtaw. */
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const coarse = matchMedia('(pointer: coarse)').matches;
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
@@ -171,40 +170,60 @@ const hero = $('.hero');
 const scenes = ['lock', 'edit', 'refuse'];
 let scene = 0;
 const live = $('#scene-live');
-function showScene(i) {
+function showScene(i, animate) {
   if (!hero) return;
   scene = (i + scenes.length) % scenes.length;
   hero.dataset.scene = scenes[scene];
   $$('.dots i', hero).forEach((dot, k) => dot.classList.toggle('on', k === scene));
   const title = $(`.ttl.only-${scenes[scene]}`, hero);
   if (live && title) live.textContent = title.textContent.trim();
+  const slip = $('.slip', hero);
+  if (animate && !reduce && slip) {
+    slip.classList.remove('swap');
+    void slip.offsetWidth;
+    slip.classList.add('swap');
+  }
 }
-$$('[data-prev]').forEach((b) => b.addEventListener('click', () => showScene(scene - 1)));
-$$('[data-next]').forEach((b) => b.addEventListener('click', () => showScene(scene + 1)));
-showScene(0);
+$$('[data-prev]').forEach((b) => b.addEventListener('click', () => showScene(scene - 1, true)));
+$$('[data-next]').forEach((b) => b.addEventListener('click', () => showScene(scene + 1, true)));
+showScene(0, false);
 
 const rig = $('.rig');
-if (hero && rig && !reduce && !coarse) {
-  let tx = 0, ty = 0, cx = 0, cy = 0, running = false;
+if (hero && rig && !reduce) {
+  let tx = 0, ty = 0, px = 0, py = 0, cx = 0, cy = 0, vx = 0, vy = 0, running = false;
   const tick = () => {
-    cx += (tx - cx) * 0.08;
-    cy += (ty - cy) * 0.08;
+    cx += (tx - cx) * 0.14;
+    cy += (ty - cy) * 0.14;
+    vx += (px - vx) * 0.14;
+    vy += (py - vy) * 0.14;
     rig.style.transform = `rotateX(${cx.toFixed(2)}deg) rotateY(${cy.toFixed(2)}deg)`;
-    if (Math.abs(tx - cx) > 0.05 || Math.abs(ty - cy) > 0.05) requestAnimationFrame(tick);
+    hero.style.setProperty('--px', vx.toFixed(3));
+    hero.style.setProperty('--py', vy.toFixed(3));
+    if (Math.abs(tx - cx) > 0.04 || Math.abs(ty - cy) > 0.04 || Math.abs(px - vx) > 0.004 || Math.abs(py - vy) > 0.004) requestAnimationFrame(tick);
     else running = false;
   };
   const start = () => { if (!running) { running = true; requestAnimationFrame(tick); } };
+  const aim = (clientX, clientY) => {
+    const r = hero.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) return;
+    const nx = (clientX - r.left) / r.width - 0.5;
+    const ny = (clientY - r.top) / r.height - 0.5;
+    px = Math.max(-0.5, Math.min(0.5, nx));
+    py = Math.max(-0.5, Math.min(0.5, ny));
+    ty = Math.max(-18, Math.min(18, px * 36));
+    tx = Math.max(-12, Math.min(12, py * -24));
+    start();
+  };
   hero.addEventListener('pointermove', (e) => {
-    if (e.pointerType !== 'mouse' || document.hidden) return;
+    if (e.pointerType === 'touch' || document.hidden) return;
     const r = hero.getBoundingClientRect();
     if (r.bottom < 0 || r.top > innerHeight) return;
-    const px = (e.clientX - r.left) / r.width - 0.5;
-    const py = (e.clientY - r.top) / r.height - 0.5;
-    ty = Math.max(-8, Math.min(8, px * 12));
-    tx = Math.max(-6, Math.min(6, py * -8));
-    start();
+    aim(e.clientX, e.clientY);
   });
-  hero.addEventListener('pointerleave', () => { tx = 0; ty = 0; start(); });
+  hero.addEventListener('pointerleave', (e) => {
+    if (e.pointerType === 'touch') return;
+    tx = 0; ty = 0; px = 0; py = 0; start();
+  });
 }
 
 const rises = $$('.rise');
