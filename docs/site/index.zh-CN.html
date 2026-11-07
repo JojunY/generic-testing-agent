@@ -1,459 +1,388 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>gta — 测试可以交给 agent 写。通过与否，只有 gtaw 能判。</title>
-  <meta name="description" content="gta 是面向 Java / Spring 服务的测试 harness：先确认行为规格，再写测试。四个 agent 在 GitHub Copilot 或 OpenCode 里起草规格和测试。gtaw 是一个确定性程序，锁定你确认过的期望值，并且是唯一可以判定测试通过的一方。">
-  <meta name="theme-color" content="#efe6d6">
-  <meta name="color-scheme" content="light">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect fill='%239d2c1e' width='16' height='16'/%3E%3C/svg%3E">
-  <link rel="alternate" hreflang="en" href="index.html">
+  <meta name="description" content="gta 是跑在 GitHub Copilot 或 OpenCode 里的规格优先测试 harness，面向 Java 和 Spring。agent 起草。只有 gtaw 这个确定性程序能判定测试通过。本页是编排好的演示。">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23b15f2c' d='M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="site.css">
-  <script>document.documentElement.classList.add('js')</script>
+  <link rel="alternate" hreflang="en" href="index.html">
+  <script>
+    document.documentElement.classList.add('js');
+    setTimeout(function () {
+      var root = document.documentElement;
+      if (root.classList.contains('ready')) return;
+      var loader = document.getElementById('loader');
+      if (loader) loader.remove();
+      root.classList.add('ready');
+      root.classList.remove('lock');
+    }, 4200);
+  </script>
 </head>
 <body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="top">
-  <div class="bar">
-    <a class="brand" href="#top" lang="en">gta<span class="dot" aria-hidden="true"></span></a>
-    <nav class="links" aria-label="本页">
-      <a href="#problem">问题</a>
-      <a href="#how">循环</a>
-      <a href="#cheat">拦截</a>
-      <a href="#start">安装</a>
-      <a class="lang" href="index.html" hreflang="en" lang="en">English</a>
-    </nav>
-  </div>
-</header>
-<main id="main">
-  <header class="hero" id="top">
-    <div class="wrap hero-grid">
-      <div class="hero-copy">
-        <p class="eyebrow">通用测试 agent · Java / Spring</p>
-        <h1 aria-label="测试可以交给 agent 写。通过与否，只有 gtaw 能判。"><span class="ai">测试可以交给 agent 写。</span><span class="det">通过与否，只有 gtaw 能判。</span></h1>
-        <p class="sub">gta 是面向 Java / Spring 服务的测试 harness：先确认行为规格，再写测试。它运行在 GitHub Copilot 或 OpenCode 里。四个 agent 起草规格和测试。gtaw 是一个确定性的 Java 程序，它锁定你确认过的期望值、运行每一次测试，并且是唯一可以判定测试通过的一方。</p>
-        <div class="cta">
-          <a class="btn primary" href="#how">看一遍循环</a>
-          <a class="btn" href="#cheat">试着作弊</a>
-          <a class="btn" href="#start">安装</a>
-        </div>
-        <p class="sim">本页是编排好的演示。这些标记不是正在运行的 agent。这里不会调用模型，也不会运行 gtaw。</p>
-        <ul class="facts">
-          <li>Spring Boot 2.2–4.1</li>
-          <li>服务可以是 Java 8 及以上</li>
-          <li>gtaw 需要 JDK 17+</li>
-          <li>Maven 与 Gradle</li>
-          <li>Windows、macOS、Linux</li>
-        </ul>
-        <ul class="dock" aria-label="四个 agent">
-          <li style="--c:var(--orchestrator)"><i></i>gta-orchestrator</li>
-          <li style="--c:var(--analyst)"><i></i>gta-analyst</li>
-          <li style="--c:var(--author)"><i></i>gta-test-author</li>
-          <li style="--c:var(--reviewer)"><i></i>gta-reviewer</li>
-        </ul>
+  <a class="skip" href="#home">跳到正文</a>
+  <div id="loader" role="status" aria-live="polite">
+    <div class="mid">
+      <p class="brand"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</p>
+      <p class="tag">测试可以交给 agent 写。通过与否，只有 gtaw 能判。</p>
+      <div class="track">
+        <div class="bar" aria-hidden="true"><div class="fill"></div></div>
+        <p class="meta"><span>载入</span><span class="count">000</span></p>
       </div>
-      <aside class="slip" aria-label="order.create 场景 s03 的模拟期望值单据">
-        <header><span>order.create · s03</span><span>模拟单据</span></header>
-        <p class="line">GIVEN 购物车小计 100.00</p>
-        <p class="line">WHEN 创建订单</p>
-        <p class="then">THEN 折扣</p>
-        <p class="expect">10.00</p>
-        <p class="src">source=confirmed · 你回复了 OK</p>
-        <p class="lockline"><span class="sealstamp">锁定</span><span>gtaw 在测试运行之前锁定 10.00。</span></p>
-        <p class="refused"><s>0.00</s> &nbsp; POLICY_ORACLE_MODIFIED</p>
-      </aside>
+    </div>
+  </div>
+
+  <header class="header">
+    <div class="shell">
+      <a class="brand" href="#home"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</a>
+      <nav class="nav" aria-label="本页">
+        <button type="button" data-go="home">首页</button>
+        <button type="button" data-go="loop">循环</button>
+        <button type="button" data-go="agents">Agent</button>
+        <button type="button" data-go="refusals">拦截</button>
+        <button type="button" data-go="proof">边界</button>
+        <button type="button" data-open="install">安装</button>
+      </nav>
+      <div class="header-right">
+        <p class="clock"><span>本地时间</span><b data-time>9:41am</b><span class="dot" aria-hidden="true">·</span><b data-date>12 March, 2025</b></p>
+        <a class="lang" href="index.html" hreflang="en" lang="en">EN</a>
+        <button class="chip" type="button" data-menu aria-controls="menu">菜单</button>
+      </div>
     </div>
   </header>
 
-  <section id="problem">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">01</span>
-        <div>
-          <p class="kicker">常见的失败</p>
-          <h2>让 agent 把失败的测试改成通过，它真的会去做。</h2>
-          <p class="lede">通常是改测试本身。构建变绿，缺陷照样上线，没有人知道。gta 不把这一步交给 agent。</p>
+  <main>
+    <section class="hero" id="home" data-scene="lock">
+      <div class="hero-veil" aria-hidden="true"></div>
+      <p class="watermark" aria-hidden="true">GTA</p>
+      <div class="shell hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow"><i></i> 面向 Java 与 Spring 的规格优先测试</p>
+          <h1>
+            <span class="line"><span>测试可以</span></span>
+            <span class="line"><span>交给 agent 写。</span></span>
+            <span class="line"><span>只有 gtaw 能判。</span></span>
+          </h1>
+          <p class="facts"><span><i></i> 四个 agent。一个裁判。</span><span>本页不调用模型，也不运行 gtaw。</span></p>
+          <div class="cta">
+            <button class="pill dark" type="button" data-open="install">安装 <span class="badge" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
+            <button class="pill outline" type="button" data-go="loop">看一遍循环</button>
+          </div>
+        </div>
+        <div class="hero-side">
+        <div class="product" aria-hidden="true">
+          <div class="rig">
+            <div class="sheet"><b></b><b></b><b></b></div>
+            <article class="slip">
+              <header><span>order.create / s03</span><span class="only only-lock">已锁定</span><span class="only only-edit">未锁定</span><span class="only only-refuse">已拒绝</span></header>
+              <p class="sv"><span class="only only-lock">10.00</span><span class="only only-edit">0.00</span><span class="only only-refuse">10.00</span></p>
+              <p class="sn only only-lock">gtaw 在测试运行之前锁定期望值。</p>
+              <p class="sn only only-edit">没有这把锁，草稿会写成代码返回的 0.00。</p>
+              <p class="sn only only-refuse">期望值仍是 10.00。改掉它并不能通过。</p>
+              <p class="sp only only-refuse">POLICY_ORACLE_MODIFIED</p>
+            </article>
+            <div class="seal"><span class="only only-lock">锁定</span><span class="only only-refuse">拦住</span></div>
+            <p class="token"><span class="only only-lock">gtaw · 裁判</span><span class="only only-edit">没有裁判</span><span class="only only-refuse">gtaw · 已拒绝</span></p>
+            <div class="floor"></div>
+          </div>
+        </div>
+          <div class="card">
+            <div class="card-row">
+              <div class="tile" aria-hidden="true">
+                <svg class="mark" viewBox="0 0 24 24"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg>
+              </div>
+              <div class="panel">
+                <p>
+                  <span class="cap only only-lock">锁定</span>
+                  <span class="ttl only only-lock">gtaw 在测试运行之前锁定 10.00。</span>
+                  <span class="cap only only-edit">改写</span>
+                  <span class="ttl only only-edit">没有锁，草稿会写成 0.00。</span>
+                  <span class="cap only only-refuse">拒绝</span>
+                  <span class="ttl only only-refuse">改掉 10.00 会被拒绝，不能通过。</span>
+                </p>
+              </div>
+            </div>
+            <div class="card-nav">
+              <div class="dots" aria-hidden="true"><i class="on"></i><i></i><i></i></div>
+              <div class="arrows">
+                <button type="button" data-prev aria-label="上一个场景"><svg viewBox="0 0 16 16"><path d="M13 8H3M7 4 3 8l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                <button type="button" data-next aria-label="下一个场景"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              </div>
+            </div>
+          </div>
+          <div class="covers">
+            <p>运行于</p>
+            <ul>
+              <li>Copilot</li><li>OpenCode</li><li>Maven</li><li>Gradle</li>
+              <li>Kafka</li><li>gRPC</li><li>Batch</li><li>Boot</li>
+            </ul>
+          </div>
         </div>
       </div>
-      <div class="versus reveal">
-        <div class="vs without">
-          <div class="vs-h"><b>没有 gta</b><span>OrderControllerIT.java</span></div>
-<pre><span class="k">@Test</span>
-<span class="k">void</span> discountsAtTheThreshold() {
-  post(<span class="s">"/orders"</span>, cart(<span class="s">"100.00"</span>))
-    .andExpect(jsonPath(<span class="s">"$.discount"</span>)
-      .value(<span class="val">10.00</span>));
-}</pre>
-          <ul class="out">
-            <li class="bad on">✗ expected 10.00, got 0.00</li>
-            <li class="dim">agent 改掉了期望值</li>
-            <li class="ok">✓ 1 个测试通过 · 构建是绿的</li>
+      <div class="shell status">
+        <span>Spring Boot 2.2–4.1</span>
+        <span>服务 Java 8+ · gtaw 需要 JDK 17+</span>
+        <span>编排好的页面</span>
+      </div>
+      <p class="sr-only" id="scene-live" aria-live="polite">gtaw 在测试运行之前锁定 10.00。</p>
+    </section>
+
+    <section class="about" id="about">
+      <div class="shell about-grid">
+        <h2 class="rise">gta 读一条流程，写出可以审阅的行为规格，问人，再按批准后的期望值去测试。<em>覆盖率不是目标。只有 gtaw 能判定测试通过。</em></h2>
+        <div>
+          <div class="about-foot rise">
+            <div>
+              <p class="cap">阅读</p>
+              <div class="soc">
+                <a class="hot" href="../guides/quickstart.zh-CN.md">快</a>
+                <a href="../design/plan.zh-CN.md">设</a>
+                <a href="../../README.zh-CN.md">读</a>
+              </div>
+            </div>
+            <p class="local">GitHub Copilot 和 OpenCode 由同一份 core 生成。两边都不是缩减版。运行留在你自己的机器上。</p>
+          </div>
+          <ul class="flows rise">
+            <li>REST</li><li>Kafka</li><li>Pub/Sub</li><li>JMS / MQ</li><li>RabbitMQ</li><li>SQS</li>
+            <li>@Scheduled</li><li>Spring Batch</li><li>Flyway</li><li>WebFlux</li><li>gRPC</li><li>GraphQL</li>
+            <li>Temporal</li><li>BPMN</li><li>Beam</li><li>WebSocket</li>
           </ul>
-          <div class="verdict"><i></i>缺陷上线了。<span>没有人知道。</span></div>
-        </div>
-        <div class="vs with">
-          <div class="vs-h"><b>有 gta</b><span>OrderControllerIT.java</span></div>
-<pre><span class="k">@Test</span>
-<span class="k">void</span> discountsAtTheThreshold() {
-  post(<span class="s">"/orders"</span>, cart(<span class="s">"100.00"</span>))
-    .andExpect(jsonPath(<span class="s">"$.discount"</span>)
-      .value(<span class="val">10.00</span>));<svg class="lock" width="13" height="14" viewBox="0 0 13 14" aria-label="已锁定"><rect x="1" y="6" width="11" height="7.5" rx="1.5" fill="#9d2c1e"/><path d="M3.5 6V4.2a3 3 0 016 0V6" fill="none" stroke="#9d2c1e" stroke-width="1.6"/></svg>
-}</pre>
-          <ul class="out">
-            <li class="bad on">✗ expected 10.00, got 0.00</li>
-            <li class="bad">✗ gtaw：POLICY_ORACLE_MODIFIED，修改被拒绝</li>
-            <li class="dim">重跑两次，结果相同，不是不稳定</li>
-            <li class="ok">→ 作为缺陷报告，并用 @KnownDefect 标注</li>
-          </ul>
-          <div class="verdict"><i></i>缺陷被抓住了。<span>接下来怎么处理，由人决定。</span></div>
         </div>
       </div>
-      <button class="replay" type="button" data-replay>再看一遍</button>
-      <p class="cite">期望值来自人确认过的规格，不来自代码今天的返回值。2024 年一项关于 LLM 生成 oracle 的研究发现，它们大多只是复述代码的实际行为（<a href="https://arxiv.org/abs/2410.21136">Konstantinou 等，arXiv:2410.21136</a>）。这是这套设计的原因之一，不是在 gta 上测出来的成绩。</p>
-    </div>
-  </section>
+    </section>
 
-  <section id="how">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">02</span>
-        <div>
-          <p class="kicker">循环</p>
-          <h2>一条命令。四个 agent。一个裁判。</h2>
-          <p class="lede">输入 <code>/gta</code> 之后，orchestrator 向 gtaw 要下一个节点，再交给一个 agent。agent 读代码、写东西。gtaw 运行每一次测试，并做出 agent 可能判错的每一个决定。下面是 <code>order.create</code> 的编排回放，用的是 gtaw 真实消息的结构。</p>
-        </div>
-      </div>
-      <div class="stages reveal">
-        <button class="stage on" type="button" aria-pressed="true" style="--k:var(--analyst)"><span class="n">01</span><h3><i></i>读</h3><p>analyst 写出行为规格，每一条判断都注明代码出处。</p><span class="meter"><b></b></span></button>
-        <button class="stage" type="button" aria-pressed="false" style="--k:var(--analyst)"><span class="n">02</span><h3><i></i>问</h3><p>代码定不下来的地方变成一个问题，附上一个推荐答案。你回复 OK。</p><span class="meter"><b></b></span></button>
-        <button class="stage" type="button" aria-pressed="false" style="--k:var(--seal)"><span class="n">03</span><h3><i></i>锁</h3><p>你的回答成为期望值。gtaw 在测试运行之前把它锁定。</p><span class="meter"><b></b></span></button>
-        <button class="stage" type="button" aria-pressed="false" style="--k:var(--reviewer)"><span class="n">04</span><h3><i></i>抓住</h3><p>真正的失败被报告为缺陷，而不是被改到变绿。</p><span class="meter"><b></b></span></button>
-      </div>
-      <div class="ide reveal" data-ide aria-describedby="ide-note">
-        <div class="ide-bar">
-          <span class="file">order-service · 编排回放</span>
-          <div class="hud">
-            <span class="avatars" aria-hidden="true"><span style="--c:var(--orchestrator)">O</span><span style="--c:var(--analyst)">A</span><span style="--c:var(--author)">T</span><span style="--c:var(--reviewer)">R</span></span>
-            <span class="count">0/16</span>
-            <button type="button" data-restart>重放</button>
-          </div>
-        </div>
-        <div class="ide-grid">
-          <div class="pane chat"><div class="pane-h">聊天 · /gta</div><div class="chat-log"></div><div class="chat-input">给 gta 发消息…</div></div>
-          <div class="pane editor"><div class="tabs"></div><pre class="code"></pre></div>
-          <div class="pane term"><div class="pane-h">终端 · gtaw</div><pre class="term-log"></pre></div>
-        </div>
-      </div>
-      <p class="note" id="ide-note">编排回放。四个名字是 gta-orchestrator、gta-analyst、gta-test-author 和 gta-reviewer。gtaw 没有标记，因为它不猜测。</p>
-      <p class="nojs">回放需要 JavaScript。上面四步就是整个循环：读、问、锁、抓住。</p>
-    </div>
-  </section>
-
-  <section id="team">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">—</span>
-        <div>
-          <p class="kicker">角色</p>
-          <h2>四个 agent 各做一件事。记分的是一个程序。</h2>
-          <p class="lede">权限就是围栏。写测试的 agent 不能宣布测试通过，也不能改生产代码。</p>
-        </div>
-      </div>
-      <div class="team-grid">
-        <article class="member reveal" data-agent="orchestrator" style="--c:var(--orchestrator)">
-          <div class="role">你对话的那一个</div>
-          <h3>gta-orchestrator</h3>
-          <p>接收 <code>/gta</code>，向 gtaw 要下一个节点，再交给 analyst、author 或 reviewer。把 gtaw 的状态区块原样给你，英文或中文。它自己不写规格、不写测试，也绝不替你回答。</p>
-          <div class="may">可以运行 gtaw 的 next、check、submit、answer、note、status。不能改文件、不能运行 git、不能判定测试通过。</div>
-        </article>
-        <article class="member reveal" data-agent="analyst" style="--c:var(--analyst)">
-          <div class="role">读代码</div>
-          <h3>gta-analyst</h3>
-          <p>把一个 flow 写成行为规格：EARS 需求、场景、一张图，以及每一处不确定的问题。它描述，不判定今天的行为就是对的。</p>
-          <div class="may">只能写 brief 指定的那份规格。不能自己写 source=confirmed。这个标记属于你，由 gtaw 记录。</div>
-        </article>
-        <article class="member reveal" data-agent="author" style="--c:var(--author)">
-          <div class="role">写一个测试</div>
-          <h3>gta-test-author</h3>
-          <p>为一个已批准的场景写测试。期望值来自规格。规格和代码都定不了怎么写时，它问你，而不是猜。</p>
-          <div class="may">只能改 brief 点名的测试文件。不能碰 src/main，不能削弱已锁定的断言，也不能把测试跳过。</div>
-        </article>
-        <article class="member reveal" data-agent="reviewer" style="--c:var(--reviewer)">
-          <div class="role">判断，但不改文件</div>
-          <h3>gta-reviewer</h3>
-          <p>对照已批准的场景读测试。失败时给出一个判定：产品缺陷、测试缺陷、规格错误，或 brief 允许的其他原因。它不会建议把期望值改成代码实际返回的值。</p>
-          <div class="may">只读。回一行：判定，以及理由。</div>
-        </article>
-      </div>
-      <div class="referee reveal">
-        <div>
-          <div class="role">裁判 · 不是 agent</div>
-          <h3>gtaw</h3>
-          <p>一个确定性的 Java 程序。同样的输入，同样的决定。它在这页上没有标记，因为它不猜测，也不调用模型。</p>
-        </div>
-        <ul>
-          <li><b>运行</b><span>每一次测试，并重跑失败以排除不稳定</span></li>
-          <li><b>锁定</b><span>来自已批准规格的期望值</span></li>
-          <li><b>还原</b><span>agent 被允许修改的文件之外的改动</span></li>
-          <li><b>提交</b><span>走它自己的记录，所以旁路提交会被看见</span></li>
-          <li><b>判定</b><span>什么算通过。只有 gtaw 能这么说。</span></li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <section id="cheat">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">03</span>
-        <div>
-          <p class="kicker">七条捷径</p>
-          <h2>试着作弊。gtaw 不会让你得逞。</h2>
-          <p class="lede">你是测试作者。测试失败了：代码返回 0.00，已确认的规格写的是 10.00。选一条捷径。author 会去做，gtaw 用它真正会返回的拒绝来回答。这块板是编排的。同样的攻击会在 <a href="../../evals/e2e/run-adversarial.sh">evals/e2e/run-adversarial.sh</a> 里对 gtaw 真的执行一遍。</p>
-        </div>
-      </div>
-      <div class="arena">
-        <div class="reveal">
-          <p class="score"><b data-score>0<span>/7</span></b><span class="score-l">条捷径被拦下</span></p>
-          <div class="attacks">
-            <button class="attack" type="button"><span class="n">01</span><span><span class="t">改掉期望值</span><span class="why">.value(10.00) → .value(0.00)</span></span><span class="st">试试</span></button>
-            <button class="attack" type="button"><span class="n">02</span><span><span class="t">删掉断言</span><span class="why">没有断言，就不会失败</span></span><span class="st">试试</span></button>
-            <button class="attack" type="button"><span class="n">03</span><span><span class="t">加上 @Disabled</span><span class="why">跳过的测试不是红的</span></span><span class="st">试试</span></button>
-            <button class="attack" type="button"><span class="n">04</span><span><span class="t">用假设跳过</span><span class="why">assumeTrue(false)</span></span><span class="st">试试</span></button>
-            <button class="attack" type="button"><span class="n">05</span><span><span class="t">悄悄改掉生产代码</span><span class="why">OrderService 里的 &gt; 变成 &gt;&zwnj;=</span></span><span class="st">试试</span></button>
-            <button class="attack" type="button"><span class="n">06</span><span><span class="t">在规格里伪造确认</span><span class="why">observed → confirmed</span></span><span class="st">试试</span></button>
-            <button class="attack" type="button"><span class="n">07</span><span><span class="t">自己提交</span><span class="why">绕过 gtaw 直接 git commit</span></span><span class="st">试试</span></button>
-          </div>
-        </div>
-        <div class="reveal">
-          <div class="editor">
-            <div class="tabs"></div>
-            <pre class="code"></pre>
-            <pre class="term-log" aria-live="polite"></pre>
-          </div>
-          <div class="won">7 条全部被拦下，没有一条进入提交。这些攻击，再加上一条——同一事项的第三次尝试会停下来等人——会在 gta 的每次改动时于 CI 中重跑：<code>evals/e2e/run-adversarial.sh</code>。<button class="replay" type="button" data-again>再试一次</button></div>
-          <p class="nojs">这块板需要 JavaScript。这七种修改对应的拒绝是 POLICY_ORACLE_MODIFIED、POLICY_ORACLE_MISMATCH、POLICY_TEST_SKIPPED 和 POLICY_OUT_OF_SCOPE_CHANGE。上面的脚本会真的跑它们。</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="bounds">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">04</span>
-        <div>
-          <p class="kicker">边界</p>
-          <h2>它会做什么，不会做什么。</h2>
-          <p class="lede">下面是程序的性质，不是对一个我们没见过的部署环境作的承诺。</p>
-        </div>
-      </div>
-      <dl class="ledger reveal">
-        <div>
-          <dt>运行留在本机</dt>
-          <dd>测试在你的机器上跑。每次运行都会去掉云凭证，以及 shell 里的 Spring profile 和配置变量，所以一次 gta 运行不会加载 SIT、UAT 或生产配置。已部署的环境不在范围内。agent 的规则也只允许本地依赖。</dd>
-        </div>
-        <div>
-          <dt>不需要容器</dt>
-          <dd>Kafka 和 JMS 内嵌运行。BigQuery 和 GCS 用替身。Oracle 用 Oracle 模式的 H2，或一套共享的测试 schema。Pub/Sub 用内存替身，或从 Nexus 下载的模拟器。</dd>
-        </div>
-        <div>
-          <dt>测试必须能够失败</dt>
-          <dd>对单元测试和 slice 测试，gtaw 可以用 PIT 变异规格引用的方法；测试仍然通过就会被退回。PIT 跑不起来时只作报告，不据此判这个测试失败。质量门禁里的 mutation 默认是 advisory。</dd>
-        </div>
-        <div>
-          <dt>它问，不猜</dt>
-          <dd>每个问题都带一个推荐答案和理由。单独一个 <code>OK</code> 才接受推荐。<code>OK, but …</code> 不算。</dd>
-        </div>
-        <div>
-          <dt>你的原话就是记录</dt>
-          <dd>回答和批准按你写的原话保存，并带上修订号。以后的人能看到是谁确认了什么。</dd>
-        </div>
-        <div>
-          <dt>中文或英文</dt>
-          <dd>把 <code>output.language</code> 设为 <code>zh-CN</code>，问题和状态区块就用中文。<code>OK</code>、<code>好</code>、<code>确认</code> 都算 OK。</dd>
-        </div>
-      </dl>
-    </div>
-  </section>
-
-  <section id="flows">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">05</span>
-        <div>
-          <p class="kicker">测什么</p>
-          <h2>组成 Spring 服务的那些 flow。</h2>
-          <p class="lede"><code>/gta</code> 会把它们找出来，从风险最高的开始。一个 flow 在等你回复时，不会挡住其他 flow。</p>
-        </div>
-      </div>
-      <ul class="flows reveal">
-        <li><h3>REST API</h3><p>含安全规则和缓存</p></li>
-        <li><h3>消息</h3><p>Kafka · Pub/Sub · JMS/MQ · RabbitMQ · SQS</p></li>
-        <li><h3>定时任务</h3><p>@Scheduled · Quartz</p></li>
-        <li><h3>Spring Batch</h3><p>job 与 step</p></li>
-        <li><h3>数据库迁移</h3><p>Flyway · Liquibase</p></li>
-        <li><h3>WebFlux</h3><p>响应式接口</p></li>
-        <li><h3>gRPC</h3><p>服务</p></li>
-        <li><h3>GraphQL</h3><p>handler</p></li>
-        <li><h3>工作流</h3><p>Temporal · Statemachine · BPMN</p></li>
-        <li><h3>Beam</h3><p>transform，用 PAssert 检查</p></li>
-        <li><h3>实时通信</h3><p>WebSocket · STOMP · SSE</p></li>
-        <li><h3>构建</h3><p>Maven · Gradle · 多模块</p></li>
+    <section class="band" aria-label="交接">
+      <ul class="shell">
+        <li class="light">agent</li>
+        <li class="accent">来写</li>
+        <li class="ghost" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h16M14 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></li>
+        <li class="dark">gtaw</li>
       </ul>
-    </div>
-  </section>
+    </section>
 
-  <section id="commands">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">06</span>
-        <div>
-          <p class="kicker">你输入什么</p>
-          <h2>八种入口。回来的是同一块状态。</h2>
-          <p class="lede">gta 停下来等你时，那一块是 gtaw 写的：状态、发生了什么、检查了什么、需要你做什么、下一步是什么。orchestrator 不会再写一份自己的摘要。</p>
+    <section class="work" id="agents">
+      <div class="shell">
+        <p class="center"><span class="kpill">角色</span></p>
+        <h2 class="display center rise">四个 agent。各做一件事。</h2>
+        <p class="lede center rise" style="margin-inline:auto">gtaw 不是第五个 agent。它是裁判：一个确定性的 Java 程序。同样的输入得到同样的判定，它不调用模型。</p>
+        <div class="cards">
+          <article class="agent rise">
+            <div class="meta"><span>01 · 你说话的对象</span><span class="go" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>
+            <h3>gta-orchestrator</h3>
+            <p>接收 /gta，向 gtaw 要下一个节点，再交给 analyst、author 或 reviewer。它展示 gtaw 的状态块。它不写规格，也不写测试，更不会替你回答。</p>
+            <div class="tags"><span>next、check、submit、answer、note、status</span><span>不能改文件</span><span>不能 git，不能 mvn</span></div>
+          </article>
+          <article class="agent rise">
+            <div class="meta"><span>02 · 读代码</span><span class="go" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>
+            <h3>gta-analyst</h3>
+            <p>把一条流程写成行为规格：需求、场景、一张图，以及代码说不清的问题。它描述。它不判定今天的行为就是对的。</p>
+            <div class="tags"><span>写指定的规格</span><span>不能写 source=confirmed</span></div>
+          </article>
+          <article class="agent rise">
+            <div class="meta"><span>03 · 写一条测试</span><span class="go" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>
+            <h3>gta-test-author</h3>
+            <p>为一条已批准的场景写测试。期望值来自锁定的规格。规格和代码都定不下来怎么写时，author 会问，而不是猜。</p>
+            <div class="tags"><span>只能改 brief 里的测试文件</span><span>不能动 src/main</span><span>不能 @Disabled</span></div>
+          </article>
+          <article class="agent rise">
+            <div class="meta"><span>04 · 判断，但不改</span><span class="go" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>
+            <h3>gta-reviewer</h3>
+            <p>对照已批准的场景读测试，返回一个判定。它从不会建议把期望值改成代码实际返回的值。</p>
+            <div class="tags"><span>只读</span><span>一个判定</span></div>
+          </article>
         </div>
       </div>
-      <table class="cmds reveal">
-        <thead><tr><th scope="col">你输入</th><th scope="col">会发生什么</th></tr></thead>
-        <tbody>
-          <tr><td><code>/gta</code></td><td>继续，或列出 flow。回复 <code>OK</code> 会从风险最高的开始，把它们都做一遍。</td></tr>
-          <tr><td><code>/gta order.create</code></td><td>规格、问题、你的批准，然后是这个 flow 的测试。</td></tr>
-          <tr><td><code>/gta explain order.create</code></td><td>只写规格和问题，不写测试。</td></tr>
-          <tr><td><code>/gta service</code></td><td>服务里的每一个 flow。一个在等你时，不会挡住其他的。</td></tr>
-          <tr><td><code>/gta pr …</code></td><td>这条分支改到的 flow。PR 描述被当作意图。</td></tr>
-          <tr><td><code>/gta incident order.create …</code></td><td>一份缺陷报告变成一个在今天的代码上失败的测试。再由你确认缺陷。</td></tr>
-          <tr><td><code>/gta note …</code></td><td>代码里看不出来的事。记在 <code>.gta/notes.md</code>。</td></tr>
-          <tr><td><code>/gta status</code></td><td>flow、事项，以及正在等你的东西。</td></tr>
-        </tbody>
-      </table>
-      <p class="reply">单独一个 <code>OK</code> 接受推荐。<code>OK, 2B</code> 改掉其中一个选项。<code>好</code> 和 <code>确认</code> 就是 OK。<code>批准 order.create@R2</code> 批准那一版。<code>其余默认</code> 对其余普通问题保留代码今天的行为。那些场景会变成特征测试：它们锁定代码现在做什么，并不证明这样做是对的。</p>
-    </div>
-  </section>
+    </section>
 
-  <section id="platforms">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">07</span>
-        <div>
-          <p class="kicker">在哪里用</p>
-          <h2>两个平台。从同一份源头生成。</h2>
-          <p class="lede"><code>copilot/</code> 和 <code>opencode/</code> 由 <code>core/</code> 与 <code>platforms/</code> 生成。没有哪一边是缩水版。</p>
+    <section class="loop" id="loop">
+      <div class="shell block">
+        <p><span class="kpill">循环</span></p>
+        <h2 class="display rise">读。问。锁。抓住。</h2>
+        <p class="lede rise">这是 <code>order.create</code> 的编排回放。用词和 gta 一致。这块板不调用模型，也不运行 gtaw。可以跳到某一段，也可以让它自己播。</p>
+        <div class="rows" role="group" aria-label="阶段">
+          <button class="stage" type="button" aria-pressed="false"><span class="n">01</span><span class="body"><h3>读</h3><p>analyst 根据代码写出规格。</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
+          <button class="stage" type="button" aria-pressed="false"><span class="n">02</span><span class="body"><h3>问</h3><p>一个 OK 接受推荐。然后你批准规格。</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
+          <button class="stage" type="button" aria-pressed="false"><span class="n">03</span><span class="body"><h3>锁</h3><p>gtaw 锁定 10.00，运行测试，失败会再跑。</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
+          <button class="stage" type="button" aria-pressed="false"><span class="n">04</span><span class="body"><h3>抓住</h3><p>reviewer 指出产品缺陷。你确认这枚钉子。</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
+        </div>
+        <div class="ide" data-ide>
+          <div class="ide-bar">
+            <span>order.create</span>
+            <div class="hud">
+              <div class="avatars" aria-hidden="true"><span style="--c:#234e78">o</span><span style="--c:#1b5e4a">a</span><span style="--c:#8a5a12">t</span><span style="--c:#7a3048">r</span></div>
+              <span class="count">0/16</span>
+              <button type="button" data-restart>重放</button>
+            </div>
+          </div>
+          <div class="ide-grid">
+            <div class="pane chat"><div class="pane-h">聊天 · /gta</div><div class="chat-log" aria-live="polite"></div><div class="chat-input">给 gta 发消息…</div></div>
+            <div class="pane editor"><div class="tabs"></div><pre class="code"></pre></div>
+            <div class="pane term"><div class="pane-h">终端 · gtaw</div><pre class="term-log" aria-live="polite"></pre></div>
+          </div>
+        </div>
+        <p class="note">编排回放。gta-orchestrator、gta-analyst、gta-test-author、gta-reviewer。gtaw 没有头像，因为它不猜测。<code>好</code> 和 <code>确认</code> 都算 OK。<code>批准 order.create@R2</code> 批准该修订。<code>其余默认</code> 保留今天的行为，这些场景会变成特征测试。</p>
+        <p class="nojs">回放需要 JavaScript。上面四段就是整个循环：读、问、锁、抓住。</p>
+      </div>
+    </section>
+
+    <section class="refusals" id="refusals">
+      <div class="shell block">
+        <p><span class="kpill">七条捷径</span></p>
+        <h2 class="display rise">试着作弊。gtaw 不会让你得逞。</h2>
+        <p class="lede rise">你是测试作者。测试失败了：代码返回 0.00，已确认的规格写的是 10.00。选一条捷径。author 会去做，gtaw 用它真正会返回的拒绝来回答。这块板是编排的。同样的攻击会在 <a href="../../evals/e2e/run-adversarial.sh">evals/e2e/run-adversarial.sh</a> 里对 gtaw 真的执行一遍。</p>
+        <div class="arena">
+          <div>
+            <p class="score"><b data-score>0<span>/7</span></b><span class="score-l">条捷径被拦下</span></p>
+            <div class="attacks">
+              <button class="attack" type="button"><span class="n">01</span><span class="body"><span class="t">改掉期望值</span><span class="why">.value(10.00) → .value(0.00)</span></span><span class="st">试试</span></button>
+              <button class="attack" type="button"><span class="n">02</span><span class="body"><span class="t">删掉断言</span><span class="why">没有断言，就不会失败</span></span><span class="st">试试</span></button>
+              <button class="attack" type="button"><span class="n">03</span><span class="body"><span class="t">加上 @Disabled</span><span class="why">跳过的测试不是红的</span></span><span class="st">试试</span></button>
+              <button class="attack" type="button"><span class="n">04</span><span class="body"><span class="t">用假设跳过</span><span class="why">assumeTrue(false)</span></span><span class="st">试试</span></button>
+              <button class="attack" type="button"><span class="n">05</span><span class="body"><span class="t">悄悄改掉生产代码</span><span class="why">OrderService 里的 &gt; 变成 &gt;&zwnj;=</span></span><span class="st">试试</span></button>
+              <button class="attack" type="button"><span class="n">06</span><span class="body"><span class="t">在规格里伪造确认</span><span class="why">observed → confirmed</span></span><span class="st">试试</span></button>
+              <button class="attack" type="button"><span class="n">07</span><span class="body"><span class="t">自己提交</span><span class="why">绕过 gtaw 直接 git commit</span></span><span class="st">试试</span></button>
+            </div>
+          </div>
+          <div>
+            <div class="editor">
+              <div class="tabs"></div>
+              <pre class="code"></pre>
+              <pre class="term-log" aria-live="polite"></pre>
+            </div>
+            <div class="won">7 条全部被拦下，没有一条进入提交。这些攻击，再加上一条——同一事项的第三次尝试会停下来等人——会在 gta 的每次改动时于 CI 中重跑：<code>evals/e2e/run-adversarial.sh</code>。<button class="replay" type="button" data-again>再试一次</button></div>
+            <p class="nojs">这块板需要 JavaScript。这七种修改对应的拒绝是 POLICY_ORACLE_MODIFIED、POLICY_ORACLE_MISMATCH、POLICY_TEST_SKIPPED 和 POLICY_OUT_OF_SCOPE_CHANGE。上面的脚本会真的跑它们。</p>
+          </div>
         </div>
       </div>
-      <div class="platforms reveal">
-        <article class="platform">
-          <h3>GitHub Copilot</h3>
-          <p>用在 VS Code 和 IntelliJ IDEA。agent 在 <code>.github/agents</code>，命令在 <code>.github/prompts</code>。</p>
-          <ul>
-            <li>同样的 4 个 agent 和 /gta</li>
-            <li>同样的规则和同一个 gtaw</li>
-            <li>特权命令都要人确认</li>
-          </ul>
-        </article>
-        <article class="platform">
-          <h3>OpenCode</h3>
-          <p>用在终端里。agent、命令和权限都在 <code>.opencode/</code>。</p>
-          <ul>
-            <li>同样的 4 个 agent 和 /gta</li>
-            <li>同样的规则和同一个 gtaw</li>
-            <li>特权命令都要人确认</li>
-          </ul>
-        </article>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section id="start">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">08</span>
-        <div>
-          <p class="kicker">安装</p>
-          <h2>构建一次。之后的命令是 /gta。</h2>
-          <p class="lede">在本仓库里，jar 就是你刚刚构建出来的那一个。已发布的 jar 还需要 <code>--distribution-url</code> 和 <code>--distribution-sha256</code>。gtaw 不会下载一个没有锁定校验的 jar。完整说明在<a href="../guides/quickstart.zh-CN.md">快速上手</a>。</p>
+    <section class="proof" id="proof">
+      <div class="shell">
+        <div class="board">
+          <p class="eyebrow light"><i></i> 仓库里实际有的</p>
+          <h2>这些数字描述 harness，不是客户名单。</h2>
+          <div class="stats">
+            <p><b data-count="4">4</b><span>具名 agent，各做一件事</span></p>
+            <p><b data-count="7">7</b><span>本页可以试的捷径</span></p>
+            <p><b data-count="1">1</b><span>被允许判定通过的程序</span></p>
+            <p><b data-count="20">20</b><span>core/skills 里的技能</span></p>
+          </div>
+          <p class="fine">同一事项的第三次尝试会停下来等人。那一条在 CI 里跑，不在上面这七条里。单元和 slice 的变异测试默认是建议性的，除非项目自己打开；PIT 跑不了就记一笔，不记在这条事项上。本页是编排好的演示。</p>
+        </div>
+        <div class="rows" style="margin-top:1.5rem">
+          <article class="bound"><h3>运行留在本地</h3><p>测试在这台机器上跑。每次运行都会去掉云凭证，以及 shell 里的 Spring profile 和配置变量。SIT、UAT 和生产环境都不在范围内。agent 的规则只允许本地依赖。Kafka 和 JMS 以内嵌方式运行。BigQuery 和 GCS 用替身。Oracle 用 H2 的 Oracle 模式或共享测试库。Pub/Sub 用内存替身或模拟器。</p></article>
+          <article class="bound"><h3>它会问。它不猜。</h3><p>一个 OK 接受推荐。OK, 2B 改掉其中一个选项。好和确认都算 OK。批准 order.create@R2 批准该修订。其余默认保留其余问题今天的行为；这些场景会变成特征测试。它们锁定代码现在的做法，并不证明这样做是对的。</p></article>
+          <article class="bound"><h3>已知缺陷保持可见</h3><p>因为代码写错而失败的测试可以用 @KnownDefect 标住。缺陷还在时，构建保持绿灯。代码修好之后，测试会变红，直到去掉这枚钉子。覆盖率只作参考。</p></article>
+          <article class="bound"><h3>版本</h3><p>Spring Boot 2.2 到 4.1。服务可以是 Java 8 及以上。Maven 或 Gradle，单模块或多模块，Windows、macOS 和 Linux 都可以。gtaw 本身需要 JDK 17 或更新。不需要另外的模型密钥：agent 用 Copilot 或 OpenCode 已经提供的模型。gtaw 不调用模型，也不需要 Docker。</p></article>
         </div>
       </div>
-      <ol class="steps reveal">
-        <li>
-          <div class="body">
-            <code class="cmd">mvn -B install</code>
-            <p>在本仓库中执行。构建 gtaw 并运行它的测试。</p>
-          </div>
-          <button class="copy" type="button" data-copy="mvn -B install" data-done="已复制">复制</button>
-        </li>
-        <li>
-          <div class="body">
-            <code class="cmd">java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot</code>
-            <p>每个服务做一次，通常由负责构建的人来做。OpenCode 用 <code>--platform opencode</code>，然后提交 <code>init</code> 写下的文件。从 Nexus 来的 jar 要按快速上手补上 URL 和 sha256。本地开发时，用 <code>GTA_CLI_JAR</code> 指向你构建出的 jar。</p>
-          </div>
-          <button class="copy" type="button" data-copy="java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot" data-done="已复制">复制</button>
-        </li>
-        <li>
-          <div class="body">
-            <code class="cmd">cd my-service && ./gtaw doctor</code>
-            <p>检查 JDK、构建和 harness。Windows 上用 <code>.\gtaw.cmd doctor</code>。</p>
-          </div>
-          <button class="copy" type="button" data-copy="cd my-service && ./gtaw doctor" data-done="已复制">复制</button>
-        </li>
-        <li>
-          <div class="body">
-            <code class="cmd">/gta</code>
-            <p>在服务里的 Copilot 聊天或 OpenCode 中输入。回复 <code>OK</code> 接受推荐，再批准它给你看的那一版规格。</p>
-          </div>
-          <button class="copy" type="button" data-copy="/gta" data-done="已复制">复制</button>
-        </li>
-      </ol>
-      <p class="after"><a href="../guides/quickstart.zh-CN.md">阅读快速上手</a> · <a href="../design/plan.zh-CN.md">阅读设计文档</a></p>
-    </div>
-  </section>
+    </section>
 
-  <section id="faq">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">09</span>
+    <section class="install" id="install">
+      <div class="shell block">
+        <p><span class="kpill">安装</span></p>
+        <h2 class="display rise">构建一次。之后的命令是 /gta。</h2>
+        <p class="lede rise">在本仓库里，jar 就是你刚刚构建出来的那一个。已发布的 jar 还需要 <code>--distribution-url</code> 和 <code>--distribution-sha256</code>。gtaw 不会下载一个没有锁定校验的 jar。完整说明在<a href="../guides/quickstart.zh-CN.md">快速上手</a>和<a href="../design/plan.zh-CN.md">设计文档</a>。</p>
+        <ol class="steps">
+          <li>
+            <div>
+              <code>mvn -B install</code>
+              <p>在本仓库中执行。构建 gtaw 并运行它的测试。</p>
+              <button class="copy" type="button" data-copy="mvn -B install" data-done="已复制">复制</button>
+            </div>
+          </li>
+          <li>
+            <div>
+              <code>java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot</code>
+              <p>每个服务做一次，通常由负责构建的人来做。OpenCode 用 <code>--platform opencode</code>，然后提交 <code>init</code> 写下的文件。从 Nexus 来的 jar 要按快速上手补上 URL 和 sha256。本地开发时，用 <code>GTA_CLI_JAR</code> 指向你构建出的 jar。</p>
+              <button class="copy" type="button" data-copy="java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot" data-done="已复制">复制</button>
+            </div>
+          </li>
+          <li>
+            <div>
+              <code>cd my-service && ./gtaw doctor</code>
+              <p>检查 JDK、构建和 harness。Windows 上用 <code>.\gtaw.cmd doctor</code>。</p>
+              <button class="copy" type="button" data-copy="cd my-service && ./gtaw doctor" data-done="已复制">复制</button>
+            </div>
+          </li>
+          <li>
+            <div>
+              <code>/gta</code>
+              <p>在服务里的 Copilot 聊天或 OpenCode 中输入。回复 <code>OK</code> 接受推荐，再批准它给你看的那一版规格。</p>
+              <button class="copy" type="button" data-copy="/gta" data-done="已复制">复制</button>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell">
+      <div class="foot-cta">
+        <h2>打开服务。输入 /gta。</h2>
+        <a class="pill light" href="../guides/quickstart.zh-CN.md">阅读快速上手 <span class="badge" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></a>
+      </div>
+      <div class="cols">
         <div>
-          <p class="kicker">问题</p>
-          <h2>第一次接触？从这里开始。</h2>
+          <a class="brand" href="#home"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</a>
+          <p>agent 起草规格和测试。gtaw 判定。这两件事，本页都不会替你做。</p>
+        </div>
+        <div>
+          <h3>本页</h3>
+          <button type="button" data-go="loop">循环</button>
+          <button type="button" data-go="agents">Agent</button>
+          <button type="button" data-go="refusals">拦截</button>
+          <button type="button" data-go="proof">边界</button>
+          <button type="button" data-open="install">安装</button>
+        </div>
+        <div>
+          <h3>阅读</h3>
+          <a href="../guides/quickstart.zh-CN.md">快速上手</a>
+          <a href="../design/plan.zh-CN.md">设计</a>
+          <a href="../../README.zh-CN.md">README</a>
+          <a href="../../evals/e2e/run-adversarial.sh">对抗脚本</a>
+          <a href="index.html" hreflang="en" lang="en">English</a>
         </div>
       </div>
-      <div class="faq reveal">
-        <details class="q"><summary>它会碰到生产环境吗？</summary><p>它不测试已部署的环境。每次运行都会去掉云凭证，以及 shell 里的 Spring profile 和配置变量，agent 的规则也只允许本地依赖。SIT、UAT 和生产环境都不在范围内。</p></details>
-        <details class="q"><summary>需要 Docker，或者另外的模型密钥吗？</summary><p>gtaw 不需要。依赖以内嵌、替身，或（对 Pub/Sub）模拟器的方式运行。agent 使用你的 Copilot 或 OpenCode 已经提供的模型。gtaw 本身不调用模型。</p></details>
-        <details class="q"><summary>它拿不准的时候怎么办？</summary><p>它会问。问题里有它推荐的答案和理由，所以经常一个 <code>OK</code> 就够。代码里看不出来的事，可以用 <code>/gta note</code> 记一次。</p></details>
-        <details class="q"><summary>什么是已知缺陷？</summary><p>因为代码写错而失败的测试，用 <code>@KnownDefect</code> 标住。构建保持绿灯，缺陷仍然可见。代码修好之后，这个测试会一直失败，直到去掉标记。</p></details>
-        <details class="q"><summary>目标是覆盖率吗？</summary><p>不是。覆盖率只作参考。gta 检查的是：每个批准的场景有没有测试，单元或 slice 测试能不能失败，以及新测试是否稳定。</p></details>
-        <details class="q"><summary>支持哪些 Java 和 Spring 版本？</summary><p>Spring Boot 2.2 到 4.1。服务可以是 Java 8 及以上。Maven 或 Gradle，单模块或多模块，Windows、macOS 和 Linux 都可以。gtaw 本身需要 JDK 17 或更新。</p></details>
-      </div>
+      <p class="legal"><span>编排好的演示。不是现场会话，也不是对一个没见过的部署作的承诺。</span><span>gta 0.1.1-SNAPSHOT</span></p>
     </div>
-  </section>
+    <p class="foot-wm" aria-hidden="true">GTA</p>
+  </footer>
 
-  <section class="final">
-    <div class="wrap">
-      <p class="kicker">开始</p>
-      <h2 class="title reveal">打开服务。<br>输入 <span class="mono">/gta</span>。</h2>
-      <p class="lede reveal">agent 起草。gtaw 判定。这两件事，本页都不会替你做。</p>
-      <div class="cta reveal">
-        <a class="btn primary" href="../guides/quickstart.zh-CN.md">阅读快速上手</a>
-        <a class="btn" href="../design/plan.zh-CN.md">阅读设计文档</a>
-      </div>
+  <div class="menu" id="menu" aria-hidden="true">
+    <div class="shell menu-top">
+      <span class="brand"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</span>
+      <button class="close" type="button" data-close-menu>关闭</button>
     </div>
-  </section>
-</main>
-<footer>
-  <div class="wrap">
-    <span>gta — generic testing agent。agent 写，gtaw 判定。</span>
-    <nav aria-label="更多">
-      <a href="../guides/quickstart.zh-CN.md">快速上手</a>
-      <a href="../design/plan.zh-CN.md">设计</a>
-      <a href="../../README.zh-CN.md">README</a>
-      <a href="index.html" hreflang="en" lang="en">English</a>
+    <nav class="shell" aria-label="菜单">
+      <button type="button" data-go="home"><i>01</i> 首页</button>
+      <button type="button" data-go="loop"><i>02</i> 循环</button>
+      <button type="button" data-go="agents"><i>03</i> Agent</button>
+      <button type="button" data-go="refusals"><i>04</i> 拦截</button>
+      <button type="button" data-go="proof"><i>05</i> 边界</button>
+      <button type="button" data-open="install"><i>06</i> 安装</button>
     </nav>
+    <div class="shell menu-bot"><span>编排好的演示</span><a href="index.html" hreflang="en" lang="en">English</a></div>
   </div>
-</footer>
-<script type="application/json" id="copy">
-{
+
+  <div class="modal" id="install-dialog" role="dialog" aria-modal="true" aria-labelledby="install-title" aria-hidden="true">
+    <div class="dialog">
+      <button class="x" type="button" data-close-modal aria-label="关闭">×</button>
+      <p class="cap">安装</p>
+      <h2 id="install-title">构建一次。然后是 /gta。</h2>
+      <p class="lede">这个对话框什么都不发送。命令只复制到剪贴板。已发布的 jar 还需要 <code>--distribution-url</code> 和 <code>--distribution-sha256</code>。</p>
+      <ol class="steps">
+        <li><div><code>mvn -B install</code><p>在本仓库中执行。构建 gtaw 并运行它的测试。</p><button class="copy" type="button" data-copy="mvn -B install" data-done="已复制">复制</button></div></li>
+        <li><div><code>java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot</code><p>每个服务做一次。OpenCode 用 <code>--platform opencode</code>。<code>GTA_CLI_JAR</code> 指向你构建出的 jar。</p><button class="copy" type="button" data-copy="java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot" data-done="已复制">复制</button></div></li>
+        <li><div><code>cd my-service && ./gtaw doctor</code><p>Windows 上用 <code>.\gtaw.cmd doctor</code>。</p><button class="copy" type="button" data-copy="cd my-service && ./gtaw doctor" data-done="已复制">复制</button></div></li>
+        <li><div><code>/gta</code><p>回复 OK 接受推荐，再批准规格。</p><button class="copy" type="button" data-copy="/gta" data-done="已复制">复制</button></div></li>
+      </ol>
+    </div>
+  </div>
+  <script type="application/json" id="copy">{
   "agents": {
     "orchestrator": {
       "name": "gta-orchestrator",
@@ -1017,8 +946,7 @@
       }
     ]
   }
-}
-</script>
-<script src="site.js"></script>
+}</script>
+<script type="module" src="site.js"></script>
 </body>
 </html>

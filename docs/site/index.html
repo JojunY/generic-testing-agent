@@ -1,459 +1,388 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>gta — Agents may write the test. Only gtaw may say it passed.</title>
-  <meta name="description" content="gta is a spec-first testing harness for Java and Spring services. Four agents draft the spec and the tests inside GitHub Copilot or OpenCode. gtaw, a deterministic program, locks what you confirmed and is the only one that may say a test passed.">
-  <meta name="theme-color" content="#efe6d6">
-  <meta name="color-scheme" content="light">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect fill='%239d2c1e' width='16' height='16'/%3E%3C/svg%3E">
-  <link rel="alternate" hreflang="zh-CN" href="index.zh-CN.html">
+  <title>gta — Agents write. Only gtaw may say it passed.</title>
+  <meta name="description" content="gta is a spec-first testing harness for Java and Spring, inside GitHub Copilot or OpenCode. Agents draft. Only gtaw, a deterministic program, may say a test passed. This page is a scripted demonstration.">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23b15f2c' d='M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="site.css">
-  <script>document.documentElement.classList.add('js')</script>
+  <link rel="alternate" hreflang="zh-CN" href="index.zh-CN.html">
+  <script>
+    document.documentElement.classList.add('js');
+    setTimeout(function () {
+      var root = document.documentElement;
+      if (root.classList.contains('ready')) return;
+      var loader = document.getElementById('loader');
+      if (loader) loader.remove();
+      root.classList.add('ready');
+      root.classList.remove('lock');
+    }, 4200);
+  </script>
 </head>
 <body>
-<a class="skip" href="#main">Skip to content</a>
-<header class="top">
-  <div class="bar">
-    <a class="brand" href="#top">gta<span class="dot" aria-hidden="true"></span></a>
-    <nav class="links" aria-label="On this page">
-      <a href="#problem">Problem</a>
-      <a href="#how">Loop</a>
-      <a href="#cheat">Refusals</a>
-      <a href="#start">Install</a>
-      <a class="lang" href="index.zh-CN.html" hreflang="zh-CN" lang="zh-CN">简体中文</a>
-    </nav>
-  </div>
-</header>
-<main id="main">
-  <header class="hero" id="top">
-    <div class="wrap hero-grid">
-      <div class="hero-copy">
-        <p class="eyebrow">Generic testing agent · Java / Spring</p>
-        <h1 aria-label="Agents may write the test. Only gtaw may say it passed."><span class="ai">Agents may write the test.</span><span class="det">Only gtaw may say it passed.</span></h1>
-        <p class="sub">gta is a spec-first testing harness. It runs inside GitHub Copilot or OpenCode. Four agents draft a behaviour spec and the tests. gtaw, a deterministic Java program, locks the values you confirmed, runs every test, and is the only one allowed to say that a test passed.</p>
-        <div class="cta">
-          <a class="btn primary" href="#how">Watch the loop</a>
-          <a class="btn" href="#cheat">Try the refusals</a>
-          <a class="btn" href="#start">Install</a>
-        </div>
-        <p class="sim">This page is a scripted demonstration. The marks are not live agents. Nothing here calls a model or runs gtaw.</p>
-        <ul class="facts">
-          <li>Spring Boot 2.2–4.1</li>
-          <li>Services on Java 8 and up</li>
-          <li>gtaw needs JDK 17+</li>
-          <li>Maven and Gradle</li>
-          <li>Windows, macOS, Linux</li>
-        </ul>
-        <ul class="dock" aria-label="The four agents">
-          <li style="--c:var(--orchestrator)"><i></i>gta-orchestrator</li>
-          <li style="--c:var(--analyst)"><i></i>gta-analyst</li>
-          <li style="--c:var(--author)"><i></i>gta-test-author</li>
-          <li style="--c:var(--reviewer)"><i></i>gta-reviewer</li>
-        </ul>
+  <a class="skip" href="#home">Skip to content</a>
+  <div id="loader" role="status" aria-live="polite">
+    <div class="mid">
+      <p class="brand"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</p>
+      <p class="tag">Agents write. Only gtaw may say it passed.</p>
+      <div class="track">
+        <div class="bar" aria-hidden="true"><div class="fill"></div></div>
+        <p class="meta"><span>Loading</span><span class="count">000</span></p>
       </div>
-      <aside class="slip" aria-label="Simulated oracle slip for order.create, scenario s03">
-        <header><span>order.create · s03</span><span>Simulated slip</span></header>
-        <p class="line">GIVEN a cart of 100.00</p>
-        <p class="line">WHEN the order is created</p>
-        <p class="then">THEN discount</p>
-        <p class="expect">10.00</p>
-        <p class="src">source=confirmed · you replied OK</p>
-        <p class="lockline"><span class="sealstamp">LOCKED</span><span>gtaw locks 10.00 before the test is allowed to run.</span></p>
-        <p class="refused"><s>0.00</s> &nbsp; POLICY_ORACLE_MODIFIED</p>
-      </aside>
+    </div>
+  </div>
+
+  <header class="header">
+    <div class="shell">
+      <a class="brand" href="#home"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</a>
+      <nav class="nav" aria-label="On this page">
+        <button type="button" data-go="home">Home</button>
+        <button type="button" data-go="loop">Loop</button>
+        <button type="button" data-go="agents">Agents</button>
+        <button type="button" data-go="refusals">Refusals</button>
+        <button type="button" data-go="proof">Bounds</button>
+        <button type="button" data-open="install">Install</button>
+      </nav>
+      <div class="header-right">
+        <p class="clock"><span>Local time</span><b data-time>9:41am</b><span class="dot" aria-hidden="true">·</span><b data-date>12 March, 2025</b></p>
+        <a class="lang" href="index.zh-CN.html" hreflang="zh-CN" lang="zh-CN">中文</a>
+        <button class="chip" type="button" data-menu aria-expanded="false" aria-controls="menu">Menu</button>
+      </div>
     </div>
   </header>
 
-  <section id="problem">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">01</span>
-        <div>
-          <p class="kicker">The usual failure</p>
-          <h2>Ask an agent to make a failing test pass, and it will.</h2>
-          <p class="lede">Usually by editing the test. The build goes green, the bug ships, and nobody is told. gta takes that edit away from the agent.</p>
+  <main>
+    <section class="hero" id="home" data-scene="lock">
+      <div class="hero-veil" aria-hidden="true"></div>
+      <p class="watermark" aria-hidden="true">GTA</p>
+      <div class="shell hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow"><i></i> Spec-first testing for Java and Spring</p>
+          <h1>
+            <span class="line"><span>Agents may</span></span>
+            <span class="line"><span>write the test.</span></span>
+            <span class="line"><span>Only gtaw decides.</span></span>
+          </h1>
+          <p class="facts"><span><i></i> Four agents. One referee.</span><span>This page does not call a model, and it does not run gtaw.</span></p>
+          <div class="cta">
+            <button class="pill dark" type="button" data-open="install">Install <span class="badge" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
+            <button class="pill outline" type="button" data-go="loop">Watch the loop</button>
+          </div>
+        </div>
+        <div class="hero-side">
+        <div class="product" aria-hidden="true">
+          <div class="rig">
+            <div class="sheet"><b></b><b></b><b></b></div>
+            <article class="slip">
+              <header><span>order.create / s03</span><span class="only only-lock">locked</span><span class="only only-edit">unpinned</span><span class="only only-refuse">refused</span></header>
+              <p class="sv"><span class="only only-lock">10.00</span><span class="only only-edit">0.00</span><span class="only only-refuse">10.00</span></p>
+              <p class="sn only only-lock">gtaw locks the expected value before the test runs.</p>
+              <p class="sn only only-edit">Without the lock, the draft says the code returned 0.00.</p>
+              <p class="sn only only-refuse">The expected value stays 10.00. The edit does not pass.</p>
+              <p class="sp only only-refuse">POLICY_ORACLE_MODIFIED</p>
+            </article>
+            <div class="seal"><span class="only only-lock">LOCKED</span><span class="only only-refuse">HELD</span></div>
+            <p class="token"><span class="only only-lock">gtaw · referee</span><span class="only only-edit">no referee</span><span class="only only-refuse">gtaw · refused</span></p>
+            <div class="floor"></div>
+          </div>
+        </div>
+          <div class="card">
+            <div class="card-row">
+              <div class="tile" aria-hidden="true">
+                <svg class="mark" viewBox="0 0 24 24"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg>
+              </div>
+              <div class="panel">
+                <p>
+                  <span class="cap only only-lock">The lock</span>
+                  <span class="ttl only only-lock">gtaw locks 10.00 before the test runs.</span>
+                  <span class="cap only only-edit">The edit</span>
+                  <span class="ttl only only-edit">Without the lock, the draft writes 0.00.</span>
+                  <span class="cap only only-refuse">The refusal</span>
+                  <span class="ttl only only-refuse">Changing 10.00 is refused. It does not pass.</span>
+                </p>
+              </div>
+            </div>
+            <div class="card-nav">
+              <div class="dots" aria-hidden="true"><i class="on"></i><i></i><i></i></div>
+              <div class="arrows">
+                <button type="button" data-prev aria-label="Previous scene"><svg viewBox="0 0 16 16"><path d="M13 8H3M7 4 3 8l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                <button type="button" data-next aria-label="Next scene"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              </div>
+            </div>
+          </div>
+          <div class="covers">
+            <p>Runs with</p>
+            <ul>
+              <li>Copilot</li><li>OpenCode</li><li>Maven</li><li>Gradle</li>
+              <li>Kafka</li><li>gRPC</li><li>Batch</li><li>Boot</li>
+            </ul>
+          </div>
         </div>
       </div>
-      <div class="versus reveal">
-        <div class="vs without">
-          <div class="vs-h"><b>Without gta</b><span>OrderControllerIT.java</span></div>
-<pre><span class="k">@Test</span>
-<span class="k">void</span> discountsAtTheThreshold() {
-  post(<span class="s">"/orders"</span>, cart(<span class="s">"100.00"</span>))
-    .andExpect(jsonPath(<span class="s">"$.discount"</span>)
-      .value(<span class="val">10.00</span>));
-}</pre>
-          <ul class="out">
-            <li class="bad on">✗ expected 10.00, got 0.00</li>
-            <li class="dim">the agent changes the expected value</li>
-            <li class="ok">✓ 1 test passed · build green</li>
+      <div class="shell status">
+        <span>Spring Boot 2.2–4.1</span>
+        <span>Java 8+ services · gtaw JDK 17+</span>
+        <span>Scripted page</span>
+      </div>
+      <p class="sr-only" id="scene-live" aria-live="polite">gtaw locks 10.00 before the test runs.</p>
+    </section>
+
+    <section class="about" id="about">
+      <div class="shell about-grid">
+        <h2 class="rise">gta reads one flow, writes a reviewable behaviour spec, asks a person, then tests whose expected values come from that approval. <em>Coverage is not the goal. Only gtaw may say a test passed.</em></h2>
+        <div>
+          <div class="about-foot rise">
+            <div>
+              <p class="cap">Read</p>
+              <div class="soc">
+                <a class="hot" href="../guides/quickstart.md">Q</a>
+                <a href="../design/plan.md">D</a>
+                <a href="../../README.md">R</a>
+              </div>
+            </div>
+            <p class="local">GitHub Copilot and OpenCode are generated from the same core. Neither is a reduced copy. The run stays on your machine.</p>
+          </div>
+          <ul class="flows rise">
+            <li>REST</li><li>Kafka</li><li>Pub/Sub</li><li>JMS / MQ</li><li>RabbitMQ</li><li>SQS</li>
+            <li>@Scheduled</li><li>Spring Batch</li><li>Flyway</li><li>WebFlux</li><li>gRPC</li><li>GraphQL</li>
+            <li>Temporal</li><li>BPMN</li><li>Beam</li><li>WebSocket</li>
           </ul>
-          <div class="verdict"><i></i>The bug ships. <span>Nobody is told.</span></div>
-        </div>
-        <div class="vs with">
-          <div class="vs-h"><b>With gta</b><span>OrderControllerIT.java</span></div>
-<pre><span class="k">@Test</span>
-<span class="k">void</span> discountsAtTheThreshold() {
-  post(<span class="s">"/orders"</span>, cart(<span class="s">"100.00"</span>))
-    .andExpect(jsonPath(<span class="s">"$.discount"</span>)
-      .value(<span class="val">10.00</span>));<svg class="lock" width="13" height="14" viewBox="0 0 13 14" aria-label="locked"><rect x="1" y="6" width="11" height="7.5" rx="1.5" fill="#9d2c1e"/><path d="M3.5 6V4.2a3 3 0 016 0V6" fill="none" stroke="#9d2c1e" stroke-width="1.6"/></svg>
-}</pre>
-          <ul class="out">
-            <li class="bad on">✗ expected 10.00, got 0.00</li>
-            <li class="bad">✗ gtaw: POLICY_ORACLE_MODIFIED, the edit is refused</li>
-            <li class="dim">re-ran twice: same result, not flaky</li>
-            <li class="ok">→ reported as a defect, pinned with @KnownDefect</li>
-          </ul>
-          <div class="verdict"><i></i>The bug is caught. <span>A person decides what happens next.</span></div>
         </div>
       </div>
-      <button class="replay" type="button" data-replay>Play again</button>
-      <p class="cite">The expected value comes from the spec a person confirmed, not from what the code returns today. A 2024 study of LLM-generated oracles found that they mostly restate the code’s actual behaviour (<a href="https://arxiv.org/abs/2410.21136">Konstantinou et al., arXiv:2410.21136</a>). That finding is one reason this design exists. It is not a result measured on gta.</p>
-    </div>
-  </section>
+    </section>
 
-  <section id="how">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">02</span>
-        <div>
-          <p class="kicker">The loop</p>
-          <h2>One command. Four agents. One referee.</h2>
-          <p class="lede">Type <code>/gta</code> and the orchestrator asks gtaw what is next, then hands that job to one agent. The agents read code and write. gtaw runs every test and makes every decision an agent could get wrong. The picture below is a scripted replay of <code>order.create</code>, using the shape of gtaw’s real messages.</p>
-        </div>
-      </div>
-      <div class="stages reveal">
-        <button class="stage on" type="button" aria-pressed="true" style="--k:var(--analyst)"><span class="n">01</span><h3><i></i>Read</h3><p>The analyst writes a behaviour spec and cites the line for every claim.</p><span class="meter"><b></b></span></button>
-        <button class="stage" type="button" aria-pressed="false" style="--k:var(--analyst)"><span class="n">02</span><h3><i></i>Ask</h3><p>What the code cannot settle becomes a question with one recommended answer. You reply OK.</p><span class="meter"><b></b></span></button>
-        <button class="stage" type="button" aria-pressed="false" style="--k:var(--seal)"><span class="n">03</span><h3><i></i>Lock</h3><p>Your answer becomes the expected value. gtaw locks it before the test runs.</p><span class="meter"><b></b></span></button>
-        <button class="stage" type="button" aria-pressed="false" style="--k:var(--reviewer)"><span class="n">04</span><h3><i></i>Catch</h3><p>A real failure is reported as a defect. It is not edited until the test is green.</p><span class="meter"><b></b></span></button>
-      </div>
-      <div class="ide reveal" data-ide aria-describedby="ide-note">
-        <div class="ide-bar">
-          <span class="file">order-service · scripted</span>
-          <div class="hud">
-            <span class="avatars" aria-hidden="true"><span style="--c:var(--orchestrator)">O</span><span style="--c:var(--analyst)">A</span><span style="--c:var(--author)">T</span><span style="--c:var(--reviewer)">R</span></span>
-            <span class="count">0/16</span>
-            <button type="button" data-restart>Replay</button>
-          </div>
-        </div>
-        <div class="ide-grid">
-          <div class="pane chat"><div class="pane-h">Chat · /gta</div><div class="chat-log"></div><div class="chat-input">Message gta…</div></div>
-          <div class="pane editor"><div class="tabs"></div><pre class="code"></pre></div>
-          <div class="pane term"><div class="pane-h">Terminal · gtaw</div><pre class="term-log"></pre></div>
-        </div>
-      </div>
-      <p class="note" id="ide-note">Scripted replay. The four names are gta-orchestrator, gta-analyst, gta-test-author and gta-reviewer. gtaw has no mark, because it does not guess.</p>
-      <p class="nojs">JavaScript draws the replay. The four steps above are the whole loop: read, ask, lock, catch.</p>
-    </div>
-  </section>
-
-  <section id="team">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">—</span>
-        <div>
-          <p class="kicker">The cast</p>
-          <h2>Four agents do one job each. A program keeps the score.</h2>
-          <p class="lede">Permissions are the fence. The agent that writes a test cannot declare that it passed, and it cannot change production code.</p>
-        </div>
-      </div>
-      <div class="team-grid">
-        <article class="member reveal" data-agent="orchestrator" style="--c:var(--orchestrator)">
-          <div class="role">The one you talk to</div>
-          <h3>gta-orchestrator</h3>
-          <p>Takes <code>/gta</code>, asks gtaw for the next node, and hands it to the analyst, the author or the reviewer. Shows you gtaw’s status block, in English or Chinese. It does not write the spec or the test, and it never answers for you.</p>
-          <div class="may">May run gtaw next, check, submit, answer, note, status. May not edit a file, run git, or decide that a test passed.</div>
-        </article>
-        <article class="member reveal" data-agent="analyst" style="--c:var(--analyst)">
-          <div class="role">Reads the code</div>
-          <h3>gta-analyst</h3>
-          <p>Turns one flow into a behaviour spec: EARS requirements, scenarios, a diagram, and a question for anything uncertain. It describes. It does not decide that today’s behaviour is correct.</p>
-          <div class="may">May write the named spec. May not write source=confirmed. That mark is yours, recorded by gtaw.</div>
-        </article>
-        <article class="member reveal" data-agent="author" style="--c:var(--author)">
-          <div class="role">Writes one test</div>
-          <h3>gta-test-author</h3>
-          <p>Writes the test for one approved scenario. Expected values come from the spec. When the spec and the code do not settle how to write the test, it asks instead of guessing.</p>
-          <div class="may">May edit the test files named in its brief. May not touch src/main, weaken a locked assertion, or skip the test.</div>
-        </article>
-        <article class="member reveal" data-agent="reviewer" style="--c:var(--reviewer)">
-          <div class="role">Judges, and does not edit</div>
-          <h3>gta-reviewer</h3>
-          <p>Reads the test against the approved scenario. On a failure it picks one verdict: a product defect, a test defect, a spec error, or another cause from the brief. It never recommends changing the expected value to whatever the code returned.</p>
-          <div class="may">Read only. One line back: verdict, and the reason.</div>
-        </article>
-      </div>
-      <div class="referee reveal">
-        <div>
-          <div class="role">The referee · not an agent</div>
-          <h3>gtaw</h3>
-          <p>A deterministic Java program. The same input produces the same decision. It has no mark on this page because it does not guess, and it calls no model.</p>
-        </div>
-        <ul>
-          <li><b>runs</b><span>every test, and re-runs a failure to rule out flakiness</span></li>
-          <li><b>locks</b><span>expected values from the approved spec</span></li>
-          <li><b>reverts</b><span>any edit outside the files that agent was given</span></li>
-          <li><b>commits</b><span>through its own ledger, so a side commit is visible</span></li>
-          <li><b>decides</b><span>what passed. Only gtaw can say so.</span></li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <section id="cheat">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">03</span>
-        <div>
-          <p class="kicker">Seven shortcuts</p>
-          <h2>Try to cheat. gtaw will not let you.</h2>
-          <p class="lede">You are the test author. The test fails: the code returns 0.00 where the confirmed spec says 10.00. Pick a shortcut. The author performs it. gtaw answers with the refusal it really uses. This board is scripted. The same attacks are executed against gtaw in <a href="../../evals/e2e/run-adversarial.sh">evals/e2e/run-adversarial.sh</a>.</p>
-        </div>
-      </div>
-      <div class="arena">
-        <div class="reveal">
-          <p class="score"><b data-score>0<span>/7</span></b><span class="score-l">shortcuts caught</span></p>
-          <div class="attacks">
-            <button class="attack" type="button"><span class="n">01</span><span><span class="t">Change the expected value</span><span class="why">.value(10.00) → .value(0.00)</span></span><span class="st">try</span></button>
-            <button class="attack" type="button"><span class="n">02</span><span><span class="t">Delete the assertion</span><span class="why">no assertion, no failure</span></span><span class="st">try</span></button>
-            <button class="attack" type="button"><span class="n">03</span><span><span class="t">Add @Disabled</span><span class="why">a skipped test is not red</span></span><span class="st">try</span></button>
-            <button class="attack" type="button"><span class="n">04</span><span><span class="t">Skip it with an assumption</span><span class="why">assumeTrue(false)</span></span><span class="st">try</span></button>
-            <button class="attack" type="button"><span class="n">05</span><span><span class="t">Quietly fix the production code</span><span class="why">&gt; becomes &gt;&zwnj;= in OrderService</span></span><span class="st">try</span></button>
-            <button class="attack" type="button"><span class="n">06</span><span><span class="t">Forge a confirmation in the spec</span><span class="why">observed → confirmed</span></span><span class="st">try</span></button>
-            <button class="attack" type="button"><span class="n">07</span><span><span class="t">Commit it yourself</span><span class="why">git commit, behind gtaw’s back</span></span><span class="st">try</span></button>
-          </div>
-        </div>
-        <div class="reveal">
-          <div class="editor">
-            <div class="tabs"></div>
-            <pre class="code"></pre>
-            <pre class="term-log" aria-live="polite"></pre>
-          </div>
-          <div class="won">7 of 7 caught, and none of it reached a commit. These attacks, and one more — a third attempt on the same item, which waits for a person — run in CI on every change to gta: <code>evals/e2e/run-adversarial.sh</code>. <button class="replay" type="button" data-again>Try again</button></div>
-          <p class="nojs">The board needs JavaScript. gtaw’s refusals for these seven edits are POLICY_ORACLE_MODIFIED, POLICY_ORACLE_MISMATCH, POLICY_TEST_SKIPPED and POLICY_OUT_OF_SCOPE_CHANGE. The script above runs them for real.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="bounds">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">04</span>
-        <div>
-          <p class="kicker">The bounds</p>
-          <h2>What it will and will not do.</h2>
-          <p class="lede">These are properties of the program, not a promise about a deployment we have not seen.</p>
-        </div>
-      </div>
-      <dl class="ledger reveal">
-        <div>
-          <dt>The run stays local</dt>
-          <dd>Tests run on the machine. Each run drops cloud credentials and the shell’s Spring profile and config variables, so a gta run does not load SIT, UAT or production configuration. Deployed environments are out of scope. The agents’ rules allow local dependencies only.</dd>
-        </div>
-        <div>
-          <dt>No containers required</dt>
-          <dd>Kafka and JMS run embedded. BigQuery and GCS use fakes. Oracle uses H2 in Oracle mode or a shared test schema. Pub/Sub uses an in-memory fake or an emulator downloaded from Nexus.</dd>
-        </div>
-        <div>
-          <dt>A test has to be able to fail</dt>
-          <dd>For a unit or slice test, gtaw can mutate the methods the spec cites (PIT) and send the test back if it still passes. If PIT cannot run, that is reported and not held against the test. The gate’s mutation mode defaults to advisory.</dd>
-        </div>
-        <div>
-          <dt>It asks. It does not guess.</dt>
-          <dd>Every question comes with one recommended answer and the reason. A bare <code>OK</code> takes it. <code>OK, but …</code> does not.</dd>
-        </div>
-        <div>
-          <dt>Your words are the record</dt>
-          <dd>Answers and approvals are stored as you wrote them, with the revision. A later reader can see who confirmed what.</dd>
-        </div>
-        <div>
-          <dt>English or Chinese</dt>
-          <dd>Set <code>output.language</code> to <code>zh-CN</code> and the questions and the status block are in Chinese. <code>OK</code>, <code>好</code> and <code>确认</code> all count as OK.</dd>
-        </div>
-      </dl>
-    </div>
-  </section>
-
-  <section id="flows">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">05</span>
-        <div>
-          <p class="kicker">What it tests</p>
-          <h2>The flows a Spring service is made of.</h2>
-          <p class="lede"><code>/gta</code> finds them and starts with the riskiest. A flow that is waiting for you does not stop the others.</p>
-        </div>
-      </div>
-      <ul class="flows reveal">
-        <li><h3>REST APIs</h3><p>security rules and caches</p></li>
-        <li><h3>Messaging</h3><p>Kafka · Pub/Sub · JMS/MQ · RabbitMQ · SQS</p></li>
-        <li><h3>Scheduled jobs</h3><p>@Scheduled · Quartz</p></li>
-        <li><h3>Spring Batch</h3><p>jobs and steps</p></li>
-        <li><h3>Migrations</h3><p>Flyway · Liquibase</p></li>
-        <li><h3>WebFlux</h3><p>reactive endpoints</p></li>
-        <li><h3>gRPC</h3><p>services</p></li>
-        <li><h3>GraphQL</h3><p>handlers</p></li>
-        <li><h3>Workflows</h3><p>Temporal · Statemachine · BPMN</p></li>
-        <li><h3>Beam</h3><p>transforms, checked with PAssert</p></li>
-        <li><h3>Realtime</h3><p>WebSocket · STOMP · SSE</p></li>
-        <li><h3>The build</h3><p>Maven · Gradle · multi-module</p></li>
+    <section class="band" aria-label="The handoff">
+      <ul class="shell">
+        <li class="light">Agents</li>
+        <li class="accent">write</li>
+        <li class="ghost" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h16M14 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></li>
+        <li class="dark">gtaw</li>
       </ul>
-    </div>
-  </section>
+    </section>
 
-  <section id="commands">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">06</span>
-        <div>
-          <p class="kicker">What you type</p>
-          <h2>Eight ways in. One status block back.</h2>
-          <p class="lede">Whenever gta stops for you, the block is gtaw’s: state, what happened, what was checked, what needs you, and what comes next. The orchestrator does not invent a second summary.</p>
+    <section class="work" id="agents">
+      <div class="shell">
+        <p class="center"><span class="kpill">The cast</span></p>
+        <h2 class="display center rise">Four agents. One job each.</h2>
+        <p class="lede center rise" style="margin-inline:auto">gtaw is not a fifth agent. It is the referee: a deterministic Java program. The same input produces the same decision, and it calls no model.</p>
+        <div class="cards">
+          <article class="agent rise">
+            <div class="meta"><span>01 · The one you talk to</span><span class="go" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>
+            <h3>gta-orchestrator</h3>
+            <p>Takes /gta, asks gtaw for the next node, and hands it to the analyst, the author or the reviewer. It shows gtaw’s status block. It does not write the spec or the test, and it never answers for you.</p>
+            <div class="tags"><span>next, check, submit, answer, note, status</span><span>no file edits</span><span>no git, no mvn</span></div>
+          </article>
+          <article class="agent rise">
+            <div class="meta"><span>02 · Reads the code</span><span class="go" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>
+            <h3>gta-analyst</h3>
+            <p>Turns one flow into a behaviour spec: requirements, scenarios, a diagram, and a question wherever the code is not enough. It describes. It does not decide that today’s behaviour is correct.</p>
+            <div class="tags"><span>writes the named spec</span><span>cannot mark source=confirmed</span></div>
+          </article>
+          <article class="agent rise">
+            <div class="meta"><span>03 · Writes one test</span><span class="go" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>
+            <h3>gta-test-author</h3>
+            <p>Writes the test for one approved scenario. Expected values come from the locked spec. When the spec and the code do not settle how to write it, the author asks instead of guessing.</p>
+            <div class="tags"><span>test files in the brief</span><span>no src/main</span><span>no @Disabled</span></div>
+          </article>
+          <article class="agent rise">
+            <div class="meta"><span>04 · Judges, and does not edit</span><span class="go" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>
+            <h3>gta-reviewer</h3>
+            <p>Reads the test against the approved scenario and returns one verdict. It never recommends changing the expected value to whatever the code returned.</p>
+            <div class="tags"><span>read only</span><span>one verdict</span></div>
+          </article>
         </div>
       </div>
-      <table class="cmds reveal">
-        <thead><tr><th scope="col">You type</th><th scope="col">What happens</th></tr></thead>
-        <tbody>
-          <tr><td><code>/gta</code></td><td>Continue, or list the flows. <code>OK</code> works through all of them, riskiest first.</td></tr>
-          <tr><td><code>/gta order.create</code></td><td>Spec, questions, your approval, then tests for that flow.</td></tr>
-          <tr><td><code>/gta explain order.create</code></td><td>The spec and the questions only. No tests.</td></tr>
-          <tr><td><code>/gta service</code></td><td>Every flow. One that is waiting for you does not stop the others.</td></tr>
-          <tr><td><code>/gta pr …</code></td><td>The flows this branch changes. The PR description is the intended behaviour.</td></tr>
-          <tr><td><code>/gta incident order.create …</code></td><td>A bug report becomes a test that fails on today’s code. You confirm the defect.</td></tr>
-          <tr><td><code>/gta note …</code></td><td>Something the code does not say. Kept in <code>.gta/notes.md</code>.</td></tr>
-          <tr><td><code>/gta status</code></td><td>Flows, items, and what is waiting for you.</td></tr>
-        </tbody>
-      </table>
-      <p class="reply">A bare <code>OK</code> takes the recommendation. <code>OK, 2B</code> changes one option. <code>好</code> and <code>确认</code> are OK. <code>批准 order.create@R2</code> approves that revision. <code>其余默认</code> keeps today’s behaviour for the remaining ordinary questions. Those scenarios become characterization tests: they lock what the code does now. They do not prove it is right.</p>
-    </div>
-  </section>
+    </section>
 
-  <section id="platforms">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">07</span>
-        <div>
-          <p class="kicker">Where it runs</p>
-          <h2>Two platforms. Generated from one source.</h2>
-          <p class="lede"><code>copilot/</code> and <code>opencode/</code> are generated from <code>core/</code> and <code>platforms/</code>. Neither is a reduced copy.</p>
+    <section class="loop" id="loop">
+      <div class="shell block">
+        <p><span class="kpill">The loop</span></p>
+        <h2 class="display rise">Read. Ask. Lock. Catch.</h2>
+        <p class="lede rise">A scripted replay of <code>order.create</code>. The words are the ones gta uses. Nothing on this board calls a model or runs gtaw. Jump to a stage, or let it play.</p>
+        <div class="rows" role="group" aria-label="Stages">
+          <button class="stage" type="button" aria-pressed="false"><span class="n">01</span><span class="body"><h3>Read</h3><p>The analyst writes the spec from the code.</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
+          <button class="stage" type="button" aria-pressed="false"><span class="n">02</span><span class="body"><h3>Ask</h3><p>A bare OK takes the recommendation. Then you approve.</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
+          <button class="stage" type="button" aria-pressed="false"><span class="n">03</span><span class="body"><h3>Lock</h3><p>gtaw locks 10.00, runs the test, and re-runs a failure.</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
+          <button class="stage" type="button" aria-pressed="false"><span class="n">04</span><span class="body"><h3>Catch</h3><p>The reviewer names a product defect. You confirm the pin.</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
+        </div>
+        <div class="ide" data-ide>
+          <div class="ide-bar">
+            <span>order.create</span>
+            <div class="hud">
+              <div class="avatars" aria-hidden="true"><span style="--c:#234e78">o</span><span style="--c:#1b5e4a">a</span><span style="--c:#8a5a12">t</span><span style="--c:#7a3048">r</span></div>
+              <span class="count">0/16</span>
+              <button type="button" data-restart>Replay</button>
+            </div>
+          </div>
+          <div class="ide-grid">
+            <div class="pane chat"><div class="pane-h">Chat · /gta</div><div class="chat-log" aria-live="polite"></div><div class="chat-input">Message gta…</div></div>
+            <div class="pane editor"><div class="tabs"></div><pre class="code"></pre></div>
+            <div class="pane term"><div class="pane-h">Terminal · gtaw</div><pre class="term-log" aria-live="polite"></pre></div>
+          </div>
+        </div>
+        <p class="note">Scripted replay. gta-orchestrator, gta-analyst, gta-test-author, gta-reviewer. gtaw has no avatar, because it does not guess. <code>好</code> and <code>确认</code> count as OK. <code>批准 order.create@R2</code> approves that revision. <code>其余默认</code> keeps today’s behaviour and those scenarios become characterization tests.</p>
+        <p class="nojs">JavaScript draws the replay. The four stages are the loop: read, ask, lock, catch.</p>
+      </div>
+    </section>
+
+    <section class="refusals" id="refusals">
+      <div class="shell block">
+        <p><span class="kpill">Seven shortcuts</span></p>
+        <h2 class="display rise">Try to cheat. gtaw will not let you.</h2>
+        <p class="lede rise">You are the test author. The test fails: the code returns 0.00 where the confirmed spec says 10.00. Pick a shortcut. The author performs it. gtaw answers with the refusal it really uses. This board is scripted. The same attacks are executed against gtaw in <a href="../../evals/e2e/run-adversarial.sh">evals/e2e/run-adversarial.sh</a>.</p>
+        <div class="arena">
+          <div>
+            <p class="score"><b data-score>0<span>/7</span></b><span class="score-l">shortcuts caught</span></p>
+            <div class="attacks">
+              <button class="attack" type="button"><span class="n">01</span><span class="body"><span class="t">Change the expected value</span><span class="why">.value(10.00) → .value(0.00)</span></span><span class="st">try</span></button>
+              <button class="attack" type="button"><span class="n">02</span><span class="body"><span class="t">Delete the assertion</span><span class="why">no assertion, no failure</span></span><span class="st">try</span></button>
+              <button class="attack" type="button"><span class="n">03</span><span class="body"><span class="t">Add @Disabled</span><span class="why">a skipped test is not red</span></span><span class="st">try</span></button>
+              <button class="attack" type="button"><span class="n">04</span><span class="body"><span class="t">Skip it with an assumption</span><span class="why">assumeTrue(false)</span></span><span class="st">try</span></button>
+              <button class="attack" type="button"><span class="n">05</span><span class="body"><span class="t">Quietly fix the production code</span><span class="why">&gt; becomes &gt;&zwnj;= in OrderService</span></span><span class="st">try</span></button>
+              <button class="attack" type="button"><span class="n">06</span><span class="body"><span class="t">Forge a confirmation in the spec</span><span class="why">observed → confirmed</span></span><span class="st">try</span></button>
+              <button class="attack" type="button"><span class="n">07</span><span class="body"><span class="t">Commit it yourself</span><span class="why">git commit, behind gtaw’s back</span></span><span class="st">try</span></button>
+            </div>
+          </div>
+          <div>
+            <div class="editor">
+              <div class="tabs"></div>
+              <pre class="code"></pre>
+              <pre class="term-log" aria-live="polite"></pre>
+            </div>
+            <div class="won">7 of 7 caught, and none of it reached a commit. These attacks, and one more — a third attempt on the same item, which waits for a person — run in CI on every change to gta: <code>evals/e2e/run-adversarial.sh</code>. <button class="replay" type="button" data-again>Try again</button></div>
+            <p class="nojs">This board needs JavaScript. The seven edits map to POLICY_ORACLE_MODIFIED, POLICY_ORACLE_MISMATCH, POLICY_TEST_SKIPPED and POLICY_OUT_OF_SCOPE_CHANGE. The script above runs them for real.</p>
+          </div>
         </div>
       </div>
-      <div class="platforms reveal">
-        <article class="platform">
-          <h3>GitHub Copilot</h3>
-          <p>VS Code and IntelliJ IDEA. Agents in <code>.github/agents</code>. The command in <code>.github/prompts</code>.</p>
-          <ul>
-            <li>the same 4 agents and /gta</li>
-            <li>the same rules and the same gtaw</li>
-            <li>privileged commands ask a person</li>
-          </ul>
-        </article>
-        <article class="platform">
-          <h3>OpenCode</h3>
-          <p>In the terminal. Agents, the command and the permissions live in <code>.opencode/</code>.</p>
-          <ul>
-            <li>the same 4 agents and /gta</li>
-            <li>the same rules and the same gtaw</li>
-            <li>privileged commands ask a person</li>
-          </ul>
-        </article>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section id="start">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">08</span>
-        <div>
-          <p class="kicker">Install</p>
-          <h2>Build it once. Then the command is /gta.</h2>
-          <p class="lede">From this repository the jar is the one you just built. A published jar also needs <code>--distribution-url</code> and <code>--distribution-sha256</code>. gtaw will not download an unpinned jar. The full notes are in the <a href="../guides/quickstart.md">quickstart</a>.</p>
+    <section class="proof" id="proof">
+      <div class="shell">
+        <div class="board">
+          <p class="eyebrow light"><i></i> What the repository contains</p>
+          <h2>Counts of the harness. Not a customer list.</h2>
+          <div class="stats">
+            <p><b data-count="4">4</b><span>named agents, each with one job</span></p>
+            <p><b data-count="7">7</b><span>shortcuts this page lets you try</span></p>
+            <p><b data-count="1">1</b><span>program allowed to say a test passed</span></p>
+            <p><b data-count="20">20</b><span>skills shipped in core/skills</span></p>
+          </div>
+          <p class="fine">A third attempt on the same item waits for a person. That one runs in CI, not in the seven above. Mutation on unit and slice tests is advisory unless a project turns it on; if PIT cannot run, that is reported and not held against the item. The page is a scripted demonstration.</p>
+        </div>
+        <div class="rows" style="margin-top:1.5rem">
+          <article class="bound"><h3>The run stays local</h3><p>Tests run on the machine. Each run drops cloud credentials and the shell’s Spring profile and config variables. SIT, UAT and production are out of scope. The agents’ rules allow local dependencies only. Kafka and JMS run embedded. BigQuery and GCS use fakes. Oracle uses H2 in Oracle mode or a shared test schema. Pub/Sub uses an in-memory fake or an emulator.</p></article>
+          <article class="bound"><h3>It asks. It does not guess.</h3><p>A bare OK takes the recommendation. OK, 2B changes one option. 好 and 确认 count as OK. 批准 order.create@R2 approves that revision. 其余默认 keeps today’s behaviour for the rest; those scenarios become characterization tests. They lock what the code does now. They do not prove it is right.</p></article>
+          <article class="bound"><h3>A known defect stays visible</h3><p>A test that fails because the code is wrong can be pinned with @KnownDefect. The build stays green while the defect exists. After the code is fixed, the test turns red until the pin is removed. Coverage is reference only.</p></article>
+          <article class="bound"><h3>Versions</h3><p>Spring Boot 2.2 to 4.1. Services on Java 8 and up. Maven or Gradle, one module or many, on Windows, macOS and Linux. gtaw itself needs JDK 17 or newer. No separate model key: the agents use the model Copilot or OpenCode already provides. gtaw calls no model, and it does not need Docker.</p></article>
         </div>
       </div>
-      <ol class="steps reveal">
-        <li>
-          <div class="body">
-            <code class="cmd">mvn -B install</code>
-            <p>In this repository. Builds gtaw and runs its tests.</p>
-          </div>
-          <button class="copy" type="button" data-copy="mvn -B install" data-done="Copied">Copy</button>
-        </li>
-        <li>
-          <div class="body">
-            <code class="cmd">java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot</code>
-            <p>Once per service, usually by the person who owns the build. Use <code>--platform opencode</code> for OpenCode, then commit what <code>init</code> wrote. For a jar from Nexus, add the URL and the sha256 from the quickstart. For local development, <code>GTA_CLI_JAR</code> points gtaw at the jar you built.</p>
-          </div>
-          <button class="copy" type="button" data-copy="java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot" data-done="Copied">Copy</button>
-        </li>
-        <li>
-          <div class="body">
-            <code class="cmd">cd my-service && ./gtaw doctor</code>
-            <p>Checks the JDK, the build and the harness. On Windows: <code>.\gtaw.cmd doctor</code>.</p>
-          </div>
-          <button class="copy" type="button" data-copy="cd my-service && ./gtaw doctor" data-done="Copied">Copy</button>
-        </li>
-        <li>
-          <div class="body">
-            <code class="cmd">/gta</code>
-            <p>In Copilot chat or OpenCode, inside the service. Reply <code>OK</code> to take the recommendations, then approve the spec it shows you.</p>
-          </div>
-          <button class="copy" type="button" data-copy="/gta" data-done="Copied">Copy</button>
-        </li>
-      </ol>
-      <p class="after"><a href="../guides/quickstart.md">Read the quickstart</a> · <a href="../design/plan.md">Read the design</a></p>
-    </div>
-  </section>
+    </section>
 
-  <section id="faq">
-    <div class="wrap">
-      <div class="sec-h reveal">
-        <span class="idx">09</span>
+    <section class="install" id="install">
+      <div class="shell block">
+        <p><span class="kpill">Install</span></p>
+        <h2 class="display rise">Build it once. Then the command is /gta.</h2>
+        <p class="lede rise">From this repository the jar is the one you just built. A published jar also needs <code>--distribution-url</code> and <code>--distribution-sha256</code>. gtaw will not download an unpinned jar. The full notes are in the <a href="../guides/quickstart.md">quickstart</a> and the <a href="../design/plan.md">design</a>.</p>
+        <ol class="steps">
+          <li>
+            <div>
+              <code>mvn -B install</code>
+              <p>In this repository. Builds gtaw and runs its tests.</p>
+              <button class="copy" type="button" data-copy="mvn -B install" data-done="Copied">Copy</button>
+            </div>
+          </li>
+          <li>
+            <div>
+              <code>java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot</code>
+              <p>Once per service, usually by the person who owns the build. Use <code>--platform opencode</code> for OpenCode, then commit what <code>init</code> wrote. For a jar from Nexus, add the URL and the sha256 from the quickstart. For local development, <code>GTA_CLI_JAR</code> points gtaw at the jar you built.</p>
+              <button class="copy" type="button" data-copy="java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot" data-done="Copied">Copy</button>
+            </div>
+          </li>
+          <li>
+            <div>
+              <code>cd my-service && ./gtaw doctor</code>
+              <p>Checks the JDK, the build and the harness. On Windows: <code>.\gtaw.cmd doctor</code>.</p>
+              <button class="copy" type="button" data-copy="cd my-service && ./gtaw doctor" data-done="Copied">Copy</button>
+            </div>
+          </li>
+          <li>
+            <div>
+              <code>/gta</code>
+              <p>In Copilot chat or OpenCode, inside the service. Reply <code>OK</code> to take the recommendations, then approve the spec it shows you.</p>
+              <button class="copy" type="button" data-copy="/gta" data-done="Copied">Copy</button>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell">
+      <div class="foot-cta">
+        <h2>Open the service. Type /gta.</h2>
+        <a class="pill light" href="../guides/quickstart.md">Read the quickstart <span class="badge" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></a>
+      </div>
+      <div class="cols">
         <div>
-          <p class="kicker">Questions</p>
-          <h2>New to this? Start here.</h2>
+          <a class="brand" href="#home"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</a>
+          <p>Agents draft the spec and the test. gtaw decides. This page will not do either of those things for you.</p>
+        </div>
+        <div>
+          <h3>On this page</h3>
+          <button type="button" data-go="loop">Loop</button>
+          <button type="button" data-go="agents">Agents</button>
+          <button type="button" data-go="refusals">Refusals</button>
+          <button type="button" data-go="proof">Bounds</button>
+          <button type="button" data-open="install">Install</button>
+        </div>
+        <div>
+          <h3>Read</h3>
+          <a href="../guides/quickstart.md">Quickstart</a>
+          <a href="../design/plan.md">Design</a>
+          <a href="../../README.md">README</a>
+          <a href="../../evals/e2e/run-adversarial.sh">Adversarial script</a>
+          <a href="index.zh-CN.html" hreflang="zh-CN" lang="zh-CN">中文</a>
         </div>
       </div>
-      <div class="faq reveal">
-        <details class="q"><summary>Can it reach production?</summary><p>It does not test deployed environments. Every run removes cloud credentials and the shell’s Spring profile and config variables, and the agents’ rules allow local dependencies only. SIT, UAT and production are out of scope.</p></details>
-        <details class="q"><summary>Do I need Docker, or a separate model key?</summary><p>Not for gtaw. Dependencies run embedded, as fakes, or — for Pub/Sub — with an emulator. The agents use the model your Copilot or OpenCode already provides. gtaw itself calls no model.</p></details>
-        <details class="q"><summary>What if it is not sure?</summary><p>It asks. The question includes the answer it recommends and why, so a bare <code>OK</code> is often enough. What the code cannot tell you, you can record once with <code>/gta note</code>.</p></details>
-        <details class="q"><summary>What is a known defect?</summary><p>A test that fails because the code is wrong, pinned with <code>@KnownDefect</code>. The build stays green and the defect stays visible. After the code is fixed, the test fails until the annotation is removed.</p></details>
-        <details class="q"><summary>Is the goal coverage?</summary><p>No. Coverage is reference only. gta checks that each approved scenario has a test, that a unit or slice test can fail, and that a new test is stable.</p></details>
-        <details class="q"><summary>Which Java and Spring versions?</summary><p>Spring Boot 2.2 to 4.1. Services on Java 8 and up. Maven or Gradle, one module or many, on Windows, macOS and Linux. gtaw itself needs JDK 17 or newer.</p></details>
-      </div>
+      <p class="legal"><span>Scripted demonstration. Not a live session, and not a claim about a deployment we have not seen.</span><span>gta 0.1.1-SNAPSHOT</span></p>
     </div>
-  </section>
+    <p class="foot-wm" aria-hidden="true">GTA</p>
+  </footer>
 
-  <section class="final">
-    <div class="wrap">
-      <p class="kicker">Begin</p>
-      <h2 class="title reveal">Open the service.<br>Type <span class="mono">/gta</span>.</h2>
-      <p class="lede reveal">The agents draft. gtaw decides. This page will not do either of those things for you.</p>
-      <div class="cta reveal">
-        <a class="btn primary" href="../guides/quickstart.md">Read the quickstart</a>
-        <a class="btn" href="../design/plan.md">Read the design</a>
-      </div>
+  <div class="menu" id="menu" aria-hidden="true">
+    <div class="shell menu-top">
+      <span class="brand"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</span>
+      <button class="close" type="button" data-close-menu>Close</button>
     </div>
-  </section>
-</main>
-<footer>
-  <div class="wrap">
-    <span>gta — generic testing agent. Agents write. gtaw decides.</span>
-    <nav aria-label="More">
-      <a href="../guides/quickstart.md">Quickstart</a>
-      <a href="../design/plan.md">Design</a>
-      <a href="../../README.md">README</a>
-      <a href="index.zh-CN.html" hreflang="zh-CN" lang="zh-CN">简体中文</a>
+    <nav class="shell" aria-label="Menu">
+      <button type="button" data-go="home"><i>01</i> Home</button>
+      <button type="button" data-go="loop"><i>02</i> Loop</button>
+      <button type="button" data-go="agents"><i>03</i> Agents</button>
+      <button type="button" data-go="refusals"><i>04</i> Refusals</button>
+      <button type="button" data-go="proof"><i>05</i> Bounds</button>
+      <button type="button" data-open="install"><i>06</i> Install</button>
     </nav>
+    <div class="shell menu-bot"><span>Scripted demonstration</span><a href="index.zh-CN.html" hreflang="zh-CN" lang="zh-CN">中文</a></div>
   </div>
-</footer>
-<script type="application/json" id="copy">
-{
+
+  <div class="modal" id="install-dialog" role="dialog" aria-modal="true" aria-labelledby="install-title" aria-hidden="true">
+    <div class="dialog">
+      <button class="x" type="button" data-close-modal aria-label="Close">×</button>
+      <p class="cap">Install</p>
+      <h2 id="install-title">Build it once. Then /gta.</h2>
+      <p class="lede">Nothing is sent from this dialog. The commands are copied to your clipboard. A published jar also needs <code>--distribution-url</code> and <code>--distribution-sha256</code>.</p>
+      <ol class="steps">
+        <li><div><code>mvn -B install</code><p>In this repository. Builds gtaw and runs its tests.</p><button class="copy" type="button" data-copy="mvn -B install" data-done="Copied">Copy</button></div></li>
+        <li><div><code>java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot</code><p>Once per service. OpenCode uses <code>--platform opencode</code>. <code>GTA_CLI_JAR</code> points at a jar you built.</p><button class="copy" type="button" data-copy="java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot" data-done="Copied">Copy</button></div></li>
+        <li><div><code>cd my-service && ./gtaw doctor</code><p>Windows: <code>.\gtaw.cmd doctor</code>.</p><button class="copy" type="button" data-copy="cd my-service && ./gtaw doctor" data-done="Copied">Copy</button></div></li>
+        <li><div><code>/gta</code><p>Reply OK to take the recommendations, then approve the spec.</p><button class="copy" type="button" data-copy="/gta" data-done="Copied">Copy</button></div></li>
+      </ol>
+    </div>
+  </div>
+  <script type="application/json" id="copy">{
   "agents": {
     "orchestrator": {
       "name": "gta-orchestrator",
@@ -1017,8 +946,7 @@
       }
     ]
   }
-}
-</script>
-<script src="site.js"></script>
+}</script>
+<script type="module" src="site.js"></script>
 </body>
 </html>
