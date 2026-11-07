@@ -203,39 +203,50 @@ if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) clos
 $$('[data-go]').forEach((b) => b.addEventListener('click', () => { closeMenu(); go(b.dataset.go); }));
 
 const hero = $('.hero');
-const scenes = ['lock', 'edit', 'refuse'];
+const scenes = ['found', 'draft', 'scope'];
 let scene = 0;
 const live = $('#scene-live');
 function showScene(i, animate) {
   if (!hero) return;
   scene = (i + scenes.length) % scenes.length;
   hero.dataset.scene = scenes[scene];
-  $$('.dots i', hero).forEach((dot, k) => dot.classList.toggle('on', k === scene));
-  const title = $(`.ttl.only-${scenes[scene]}`, hero);
-  if (live && title) live.textContent = title.textContent.trim();
-  const slip = $('.slip', hero);
-  if (animate && motionOn() && slip) {
-    slip.classList.remove('swap');
-    void slip.offsetWidth;
-    slip.classList.add('swap');
+  $$('[data-scene-go]', hero).forEach((b) => {
+    const on = Number(b.dataset.sceneGo) === scene;
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+    b.tabIndex = on ? 0 : -1;
+  });
+  const title = $(`h1 .only-${scenes[scene]}`, hero);
+  const shown = title ? title.innerText.trim() : '';
+  if (live && shown) live.textContent = shown;
+  if (animate && motionOn()) {
+    hero.classList.remove('scene-swap');
+    void hero.offsetWidth;
+    hero.classList.add('scene-swap');
   }
 }
 $$('[data-prev]').forEach((b) => b.addEventListener('click', () => showScene(scene - 1, true)));
 $$('[data-next]').forEach((b) => b.addEventListener('click', () => showScene(scene + 1, true)));
+$$('[data-scene-go]').forEach((b) => b.addEventListener('click', () => showScene(Number(b.dataset.sceneGo), true)));
 showScene(0, false);
 
 const rig = $('.rig');
 let settleTilt = () => {};
 if (hero && rig) {
-  let tx = 0, ty = 0, px = 0, py = 0, cx = 0, cy = 0, vx = 0, vy = 0, running = false;
+  let tx = 0, ty = 0, px = 0, py = 0, cx = 0, cy = 0, vx = 0, vy = 0, running = false, tiltGen = 0;
+  const paint = () => {
+    rig.style.transform = `translate3d(${(cy * 0.45).toFixed(1)}px, ${(cx * 0.35).toFixed(1)}px, 0)`;
+    hero.style.setProperty('--px', vx.toFixed(3));
+    hero.style.setProperty('--py', vy.toFixed(3));
+  };
   const tick = () => {
+    if (!motionOn()) { running = false; return; }
+    const gen = tiltGen;
     cx += (tx - cx) * 0.14;
     cy += (ty - cy) * 0.14;
     vx += (px - vx) * 0.14;
     vy += (py - vy) * 0.14;
-    rig.style.transform = `rotateX(${cx.toFixed(2)}deg) rotateY(${cy.toFixed(2)}deg)`;
-    hero.style.setProperty('--px', vx.toFixed(3));
-    hero.style.setProperty('--py', vy.toFixed(3));
+    if (gen !== tiltGen) return;
+    paint();
     if (Math.abs(tx - cx) > 0.04 || Math.abs(ty - cy) > 0.04 || Math.abs(px - vx) > 0.004 || Math.abs(py - vy) > 0.004) requestAnimationFrame(tick);
     else running = false;
   };
@@ -251,7 +262,14 @@ if (hero && rig) {
     tx = Math.max(-12, Math.min(12, py * -24));
     start();
   };
-  settleTilt = () => { tx = 0; ty = 0; px = 0; py = 0; start(); };
+  settleTilt = () => {
+    tiltGen += 1;
+    tx = ty = px = py = cx = cy = vx = vy = 0;
+    running = false;
+    rig.style.transform = 'none';
+    hero.style.setProperty('--px', '0');
+    hero.style.setProperty('--py', '0');
+  };
   hero.addEventListener('pointermove', (e) => {
     if (!motionOn() || e.pointerType === 'touch' || document.hidden) return;
     const r = hero.getBoundingClientRect();
@@ -260,6 +278,7 @@ if (hero && rig) {
   });
   hero.addEventListener('pointerleave', (e) => {
     if (e.pointerType === 'touch') return;
+    if (!motionOn()) { settleTilt(); return; }
     tx = 0; ty = 0; px = 0; py = 0; start();
   });
 }

@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>gta — 测试可以交给 agent 写。通过与否，只有 gtaw 能判。</title>
-  <meta name="description" content="gta 是跑在 GitHub Copilot 或 OpenCode 里的规格优先测试 harness，面向 Java 和 Spring。agent 起草。只有 gtaw 这个确定性程序能判定测试通过。本页是编排好的演示。">
-  <meta name="theme-color" content="#0a0a0a">
+  <title>gta — 从代码得到候选规格，再由人确认，然后测试。</title>
+  <meta name="description" content="gta 从代码列出一个 Java 入口，起草这段代码实际在做的事，等人确认之后 gtaw 才安排测试。读出代码并不是判定。本页是编排好的演示。">
+  <meta name="theme-color" content="#070b12">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23b15f2c' d='M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="site.css">
   <link rel="alternate" hreflang="en" href="index.html">
@@ -31,7 +31,7 @@
   <div id="loader" role="status" aria-live="polite">
     <div class="mid">
       <p class="brand"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</p>
-      <p class="tag">测试可以交给 agent 写。通过与否，只有 gtaw 能判。</p>
+      <p class="tag">代码给出候选。人来确认。gtaw 来跑。</p>
       <div class="track">
         <div class="bar" aria-hidden="true"><div class="fill"></div></div>
         <p class="meta"><span>载入</span><span class="count">000</span></p>
@@ -44,10 +44,9 @@
       <a class="brand" href="#home"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</a>
       <nav class="nav" aria-label="本页">
         <button type="button" data-go="home">首页</button>
-        <button type="button" data-go="loop">循环</button>
-        <button type="button" data-go="agents">Agent</button>
-        <button type="button" data-go="refusals">拦截</button>
-        <button type="button" data-go="proof">边界</button>
+        <button type="button" data-go="how">怎么来的</button>
+        <button type="button" data-go="loop">例子</button>
+        <button type="button" data-go="agents">角色</button>
         <button type="button" data-open="install">安装</button>
       </nav>
       <div class="header-right">
@@ -63,85 +62,141 @@
   </header>
 
   <main>
-    <section class="hero" id="home" data-scene="lock">
+    <section class="hero" id="home" data-scene="found">
+      <div class="sky" aria-hidden="true">
+        <div class="rig">
+          <svg class="scene found" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <radialGradient id="zh-found-bg" cx="78%" cy="46%" r="58%">
+                <stop offset="0%" stop-color="#1c3d66"/>
+                <stop offset="42%" stop-color="#0d1828"/>
+                <stop offset="100%" stop-color="#070b12"/>
+              </radialGradient>
+              <radialGradient id="zh-found-glow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#ffd2ad"/>
+                <stop offset="35%" stop-color="#e08a45" stop-opacity=".55"/>
+                <stop offset="100%" stop-color="#e08a45" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <rect width="1440" height="900" fill="url(#zh-found-bg)"/>
+            <g fill="none" stroke="rgba(224,138,69,.28)" stroke-width="1.2">
+              <path d="M520 780C760 520 980 360 1480 250"/>
+              <path d="M640 860C860 640 1080 500 1500 420" stroke="rgba(140,180,220,.22)"/>
+            </g>
+            <g fill="rgba(180,200,220,.45)">
+              <circle cx="760" cy="560" r="4"/><circle cx="900" cy="470" r="3.5"/><circle cx="1180" cy="300" r="3.5"/><circle cx="1280" cy="520" r="3"/>
+            </g>
+            <g stroke="rgba(224,138,69,.45)" stroke-width="1.2">
+              <path d="M1040 430 L760 560"/><path d="M1040 430 L900 470"/><path d="M1040 430 L1180 300"/><path d="M1040 430 L1280 520"/>
+            </g>
+            <g class="focal">
+              <circle cx="1040" cy="430" r="118" fill="url(#zh-found-glow)"/>
+              <circle cx="1040" cy="430" r="16" fill="#f6c49a"/>
+              <circle cx="1040" cy="430" r="6" fill="#fff8f2"/>
+            </g>
+            <g font-family="Onest, sans-serif" fill="#f4f1ea">
+              <text x="1064" y="418" font-size="22" font-weight="600">POST /api/orders</text>
+              <text x="1064" y="446" font-size="14" fill="rgba(244,241,234,.72)">OrderController#create</text>
+              <text x="700" y="590" font-size="13" fill="rgba(244,241,234,.55)">定时任务</text>
+              <text x="1110" y="286" font-size="13" fill="rgba(244,241,234,.55)">监听器</text>
+            </g>
+          </svg>
+          <svg class="scene draft" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <radialGradient id="zh-draft-bg" cx="80%" cy="50%" r="60%">
+                <stop offset="0%" stop-color="#5a341c"/>
+                <stop offset="40%" stop-color="#1a120e"/>
+                <stop offset="100%" stop-color="#070b12"/>
+              </radialGradient>
+            </defs>
+            <rect width="1440" height="900" fill="url(#zh-draft-bg)"/>
+            <g class="focal">
+              <rect x="860" y="210" width="420" height="110" rx="22" fill="rgba(255,255,255,.06)" stroke="rgba(240,178,122,.45)"/>
+              <text x="888" y="254" fill="#f0b27a" font-family="Onest, sans-serif" font-size="15" font-weight="600">网关 · 3 秒</text>
+              <text x="888" y="286" fill="rgba(244,241,234,.75)" font-family="Onest, sans-serif" font-size="18">没有回应</text>
+              <rect x="900" y="360" width="420" height="150" rx="22" fill="rgba(224,138,69,.14)" stroke="rgba(240,178,122,.7)"/>
+              <text x="928" y="430" fill="#fff6ee" font-family="Onest, sans-serif" font-size="64" font-weight="600">503</text>
+              <text x="1090" y="418" fill="rgba(244,241,234,.8)" font-family="Onest, sans-serif" font-size="16">PENDING_PAYMENT</text>
+              <rect x="940" y="550" width="420" height="100" rx="22" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.18)"/>
+              <text x="968" y="592" fill="rgba(244,241,234,.7)" font-family="Onest, sans-serif" font-size="18">order-created</text>
+              <text x="968" y="620" fill="#f0b27a" font-family="Onest, sans-serif" font-size="16">没有发出</text>
+              <line x1="980" y1="584" x2="1160" y2="584" stroke="#e08a45" stroke-width="2"/>
+            </g>
+            <g font-family="Onest, sans-serif">
+              <rect x="1120" y="690" width="150" height="42" rx="21" fill="none" stroke="rgba(244,241,234,.45)" stroke-dasharray="4 4"/>
+              <text x="1160" y="717" fill="rgba(244,241,234,.8)" font-size="15">重试？</text>
+            </g>
+          </svg>
+          <svg class="scene scope" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="zh-scope-plane" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#f0b27a"/>
+                <stop offset="100%" stop-color="#c56a2d"/>
+              </linearGradient>
+              <radialGradient id="zh-scope-bg" cx="75%" cy="55%" r="55%">
+                <stop offset="0%" stop-color="#16304a"/>
+                <stop offset="100%" stop-color="#070b12"/>
+              </radialGradient>
+            </defs>
+            <rect width="1440" height="900" fill="url(#zh-scope-bg)"/>
+            <g fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.16)">
+              <polygon points="980,180 1320,230 1260,340 900,280"/>
+              <polygon points="940,360 1340,420 1260,540 860,470"/>
+            </g>
+            <g font-family="Onest, sans-serif" fill="rgba(244,241,234,.45)" font-size="14">
+              <text x="1040" y="250">unit · 一个方法</text>
+              <text x="1020" y="450">slice · HTTP 这一层</text>
+            </g>
+            <g class="focal">
+              <polygon points="880,560 1380,620 1280,780 780,710" fill="url(#zh-scope-plane)"/>
+              <text x="920" y="650" fill="#2a160c" font-family="Onest, sans-serif" font-size="22" font-weight="600">component</text>
+              <text x="920" y="688" fill="#3a2012" font-family="Onest, sans-serif" font-size="16">网关 · 订单行 · 没有消息</text>
+              <text x="920" y="724" fill="#3a2012" font-family="Onest, sans-serif" font-size="15">OrderControllerIT</text>
+            </g>
+          </svg>
+        </div>
+      </div>
       <div class="hero-veil" aria-hidden="true"></div>
-      <p class="watermark" aria-hidden="true">GTA</p>
       <div class="shell hero-grid">
         <div class="hero-copy">
-          <p class="eyebrow"><i></i> 面向 Java 与 Spring 的规格优先测试</p>
+          <p class="eyebrow"><i></i> Java 与 Spring · 一次一条流程</p>
           <h1>
-            <span class="line"><span>测试可以</span></span>
-            <span class="line"><span>交给 agent 写。</span></span>
-            <span class="line"><span>只有 gtaw 能判。</span></span>
+            <span class="only only-found"><span class="line"><span>gtaw 先找到</span></span><span class="line"><span>这扇门。</span></span></span>
+            <span class="only only-draft"><span class="line"><span>草稿写的是</span></span><span class="line"><span>代码在做什么。</span></span></span>
+            <span class="only only-scope"><span class="line"><span>测试得走过</span></span><span class="line"><span>整条路径。</span></span></span>
           </h1>
-          <p class="facts"><span><i></i> 四个 agent。一个裁判。</span><span>本页不调用模型，也不运行 gtaw。</span></p>
-          <p class="plain">gta 的 agent 起草规格和测试。人来确认期望的答案。是否通过，由 gtaw 判定，不由模型判定。</p>
+          <p class="plain only only-found">JavaParser 列出入口。这一条是 POST /api/orders，流程叫 order.create。清单还不是规格。</p>
+          <p class="plain only only-draft">网关沉默时返回 503，订单停在待支付，消息不发出。这是候选，不是判定。</p>
+          <p class="plain only only-scope">gtaw 安排一条 component 测试，网关、订单行和没发出的消息都要看得见。</p>
+          <div class="scene-tabs" role="tablist" aria-label="一条流程怎样变成测试">
+            <button type="button" role="tab" data-scene-go="0" aria-selected="true">找到</button>
+            <button type="button" role="tab" data-scene-go="1" aria-selected="false">草稿</button>
+            <button type="button" role="tab" data-scene-go="2" aria-selected="false">范围</button>
+          </div>
           <div class="cta">
             <button class="pill dark" type="button" data-open="install">安装 <span class="badge" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
-            <button class="pill outline" type="button" data-go="loop">看一遍循环</button>
+            <button class="pill outline" type="button" data-go="loop">看这个例子</button>
           </div>
         </div>
         <div class="hero-side">
-        <div class="product" aria-hidden="true">
-          <div class="rig">
-            <div class="sheet"><b></b><b></b><b></b></div>
-            <article class="slip">
-              <header><span>order.create / s03</span><span class="only only-lock">已锁定</span><span class="only only-edit">未锁定</span><span class="only only-refuse">已拒绝</span></header>
-              <p class="sv"><span class="only only-lock">10.00</span><span class="only only-edit">0.00</span><span class="only only-refuse">10.00</span></p>
-              <p class="sn only only-lock">gtaw 在测试运行之前锁定期望值。</p>
-              <p class="sn only only-edit">没有这把锁，草稿会写成代码返回的 0.00。</p>
-              <p class="sn only only-refuse">期望值仍是 10.00。改掉它并不能通过。</p>
-              <p class="sp only only-refuse">POLICY_ORACLE_MODIFIED</p>
-            </article>
-            <div class="seal"><span class="only only-lock">锁定</span><span class="only only-refuse">拦住</span></div>
-            <p class="token"><span class="only only-lock">gtaw · 裁判</span><span class="only only-edit">没有裁判</span><span class="only only-refuse">gtaw · 已拒绝</span></p>
-            <div class="floor"></div>
-          </div>
-        </div>
-          <div class="card">
-            <div class="card-row">
-              <div class="tile" aria-hidden="true">
-                <svg class="mark" viewBox="0 0 24 24"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg>
-              </div>
-              <div class="panel">
-                <p>
-                  <span class="cap only only-lock">锁定</span>
-                  <span class="ttl only only-lock">gtaw 在测试运行之前锁定 10.00。</span>
-                  <span class="cap only only-edit">改写</span>
-                  <span class="ttl only only-edit">没有锁，草稿会写成 0.00。</span>
-                  <span class="cap only only-refuse">拒绝</span>
-                  <span class="ttl only only-refuse">改掉 10.00 会被拒绝，不能通过。</span>
-                </p>
-              </div>
-            </div>
-            <div class="card-nav">
-              <div class="dots" aria-hidden="true"><i class="on"></i><i></i><i></i></div>
-              <div class="arrows">
-                <button type="button" data-prev aria-label="上一个场景"><svg viewBox="0 0 16 16"><path d="M13 8H3M7 4 3 8l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                <button type="button" data-next aria-label="下一个场景"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-              </div>
-            </div>
-          </div>
-          <div class="covers">
-            <p>运行于</p>
-            <ul>
-              <li>Copilot</li><li>OpenCode</li><li>Maven</li><li>Gradle</li>
-              <li>Kafka</li><li>gRPC</li><li>Batch</li><li>Boot</li>
-            </ul>
-          </div>
+          <aside class="detail">
+            <div class="only only-found"><p class="k">入口 · 示意</p><strong>order.create</strong><p>POST /api/orders · OrderController#create。控制器、任务和监听器都是这样列出来的。</p></div>
+            <div class="only only-draft"><p class="k">候选 · source=observed</p><strong>503 · 待支付 · 无消息</strong><p>analyst 不能把这条写成已确认。人回答之后，它才是期望值。</p></div>
+            <div class="only only-scope"><p class="k">层级 · component</p><strong>OrderControllerIT</strong><p>unit 和 slice 仍然可用。一条会离开方法的路径，不该停在那两层。</p></div>
+          </aside>
         </div>
       </div>
       <div class="shell status">
         <span>Spring Boot 2.2–4.1</span>
         <span>服务 Java 8+ · gtaw 需要 JDK 17+</span>
-        <span>编排好的页面</span>
+        <span>编排页面 · 图是原创的</span>
       </div>
-      <p class="sr-only" id="scene-live" aria-live="polite">gtaw 在测试运行之前锁定 10.00。</p>
+      <p class="sr-only" id="scene-live" aria-live="polite">gtaw 先找到这扇门。</p>
     </section>
 
     <section class="about" id="about">
       <div class="shell about-grid">
-        <h2 class="rise">gta 读一条流程，写出可以审阅的行为规格，问人，再按批准后的期望值去测试。<em>覆盖率不是目标。只有 gtaw 能判定测试通过。</em></h2>
+        <h2 class="rise">一个入口来自代码。一份候选规格。你的回答。然后 gtaw 安排测试。<em>从代码里读出来，并不等于这件事是对的。</em></h2>
         <div>
           <div class="about-foot rise">
             <div>
@@ -172,11 +227,53 @@
       </ul>
     </section>
 
+    <section class="studies" id="how">
+      <div class="shell block">
+        <p><span class="kpill">三步</span></p>
+        <h2 class="display rise">先有证据，再提问，再定范围。</h2>
+        <div class="study-grid">
+          <article class="study rise">
+            <div class="study-art" aria-hidden="true">
+              <svg viewBox="0 0 640 400"><rect width="640" height="400" fill="#0c1522"/>
+                <circle cx="210" cy="200" r="70" fill="#e08a45" opacity=".9"/>
+                <circle cx="210" cy="200" r="8" fill="#fff6ee"/>
+                <g stroke="rgba(224,138,69,.6)" fill="none"><path d="M270 180 H420"/><path d="M270 220 H460"/></g>
+                <g fill="#d7deea" font-family="Onest, sans-serif" font-size="22"><text x="430" y="176">POST</text><text x="470" y="228">任务</text></g>
+              </svg>
+            </div>
+            <div class="body"><h3>gtaw 列出这扇门</h3><p>JavaParser 给控制器、定时方法、监听器、任务命名。流程 id 来自类名和方法名。analyst 从那个方法出发，只跟着代码里看得到的调用走。看不见的副作用，它要问，不能编。</p></div>
+          </article>
+          <article class="study rise">
+            <div class="study-art" aria-hidden="true">
+              <svg viewBox="0 0 640 400"><rect width="640" height="400" fill="#1a120e"/>
+                <rect x="70" y="70" width="500" height="90" rx="16" fill="rgba(255,255,255,.05)" stroke="rgba(240,178,122,.4)"/>
+                <text x="96" y="124" fill="#f4f1ea" font-family="Onest, sans-serif" font-size="28">503 · 待支付</text>
+                <rect x="70" y="190" width="220" height="64" rx="32" fill="none" stroke="rgba(244,241,234,.4)" stroke-dasharray="5 5"/>
+                <text x="108" y="230" fill="#f4f1ea" font-family="Onest, sans-serif" font-size="22">重试？</text>
+              </svg>
+            </div>
+            <div class="body"><h3>从代码看到，还没确认</h3><p>代码里看到的是 observed。它以后可以锁住今天的行为。analyst 不能写成 confirmed。猜的必须变成问题。文档只有在 gtaw 逐字对上引文之后才算数。</p></div>
+          </article>
+          <article class="study rise">
+            <div class="study-art" aria-hidden="true">
+              <svg viewBox="0 0 640 400"><rect width="640" height="400" fill="#0e1824"/>
+                <polygon points="80,90 560,120 520,190 60,160" fill="rgba(255,255,255,.06)"/>
+                <polygon points="70,200 570,230 520,310 40,275" fill="rgba(255,255,255,.08)"/>
+                <polygon points="50,300 590,330 540,390 20,360" fill="#e08a45"/>
+                <text x="80" y="358" fill="#2a160c" font-family="Onest, sans-serif" font-size="28" font-weight="600">component</text>
+              </svg>
+            </div>
+            <div class="body"><h3>层级就是检查能走到哪</h3><p>analyst 可以提示 unit、slice、component 或 contract。能力允许时 gtaw 保留这个提示，并丢掉 system：已部署的环境不在范围内。一条穿过网关、数据行和消息的路径，是 component 测试。</p></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
     <section class="work" id="agents">
       <div class="shell">
         <p class="center"><span class="kpill">角色</span></p>
-        <h2 class="display center rise">四个 agent。各做一件事。</h2>
-        <p class="lede center rise" style="margin-inline:auto">gtaw 不是第五个 agent。它是裁判：一个确定性的 Java 程序。同样的输入得到同样的判定，它不调用模型。</p>
+        <h2 class="display center rise">四个 agent。gtaw 是裁判。</h2>
+        <p class="lede center rise" style="margin-inline:auto">gtaw 不调用模型。同样的输入得到同样的判定。它不是第五个 agent。</p>
         <div class="cards">
           <article class="agent rise">
             <div class="meta"><span>01 · 你说话的对象</span><span class="go" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>
@@ -209,20 +306,20 @@
     <section class="loop" id="loop">
       <div class="shell block">
         <p><span class="kpill">循环</span></p>
-        <h2 class="display rise">读。问。锁。抓住。</h2>
-        <p class="lede rise">这是 <code>order.create</code> 的编排回放。用词和 gta 一致。这块板不调用模型，也不运行 gtaw。可以跳到某一段，也可以让它自己播。</p>
+        <h2 class="display rise">一笔订单，从门口到测试。</h2>
+        <p class="lede rise">这是示意用的 <code>order.create</code>。形状和 gta 一致。这块板不调用模型，也不运行 gtaw。它不是某个真实服务的现场记录。</p>
         <div class="rows" role="group" aria-label="阶段">
-          <button class="stage" type="button" aria-pressed="false"><span class="n">01</span><span class="body"><h3>读</h3><p>analyst 根据代码写出规格。</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
-          <button class="stage" type="button" aria-pressed="false"><span class="n">02</span><span class="body"><h3>问</h3><p>一个 OK 接受推荐。然后你批准规格。</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
-          <button class="stage" type="button" aria-pressed="false"><span class="n">03</span><span class="body"><h3>锁</h3><p>gtaw 锁定 10.00，运行测试，失败会再跑。</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
-          <button class="stage" type="button" aria-pressed="false"><span class="n">04</span><span class="body"><h3>抓住</h3><p>reviewer 指出产品缺陷。你确认这枚钉子。</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
+          <button class="stage" type="button" aria-pressed="false"><span class="n">01</span><span class="body"><h3>找到</h3><p>gtaw 标出 POST /api/orders。analyst 从这里开始。</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
+          <button class="stage" type="button" aria-pressed="false"><span class="n">02</span><span class="body"><h3>询问</h3><p>你接受这条候选，或改掉它。然后批准。</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
+          <button class="stage" type="button" aria-pressed="false"><span class="n">03</span><span class="body"><h3>范围</h3><p>一条 component 测试。网关、订单行，以及没发出的消息。</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
+          <button class="stage" type="button" aria-pressed="false"><span class="n">04</span><span class="body"><h3>运行</h3><p>gtaw 来跑。通过，表示和你接受的值一致。</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
         </div>
         <div class="ide" data-ide>
           <div class="ide-bar">
             <span>order.create</span>
             <div class="hud">
               <div class="avatars" aria-hidden="true"><span style="--c:#234e78">o</span><span style="--c:#1b5e4a">a</span><span style="--c:#8a5a12">t</span><span style="--c:#7a3048">r</span></div>
-              <span class="count">0/16</span>
+              <span class="count">0/14</span>
               <button type="button" data-restart>重放</button>
             </div>
           </div>
@@ -232,16 +329,16 @@
             <div class="pane term"><div class="pane-h">终端 · gtaw</div><pre class="term-log" aria-live="polite"></pre></div>
           </div>
         </div>
-        <p class="note">编排回放。gta-orchestrator、gta-analyst、gta-test-author、gta-reviewer。gtaw 没有头像，因为它不猜测。<code>好</code> 和 <code>确认</code> 都算 OK。<code>批准 order.create@R2</code> 批准该修订。<code>其余默认</code> 保留今天的行为，这些场景会变成特征测试。</p>
-        <p class="nojs">回放需要 JavaScript。上面四段就是整个循环：读、问、锁、抓住。</p>
+        <p class="note">示意夹具，编排好的。<code>好</code> 和 <code>确认</code> 都算 OK。<code>批准 order.create@R2</code> 批准该修订。<code>其余默认</code> 保留今天的行为，这些场景变成特征测试：锁住代码现在的做法，并不说这样做是对的。</p>
+        <p class="nojs">回放需要 JavaScript。四段是：找到、询问、范围、运行。</p>
       </div>
     </section>
 
     <section class="refusals" id="refusals">
       <div class="shell block">
-        <p><span class="kpill">七条捷径</span></p>
-        <h2 class="display rise">试着作弊。gtaw 不会让你得逞。</h2>
-        <p class="lede rise">你是测试作者。测试失败了：代码返回 0.00，已确认的规格写的是 10.00。选一条捷径。author 会去做，gtaw 用它真正会返回的拒绝来回答。这块板是编排的。同样的攻击会在 <a href="../../evals/e2e/run-adversarial.sh">evals/e2e/run-adversarial.sh</a> 里对 gtaw 真的执行一遍。</p>
+        <p><span class="kpill">和上面的例子分开</span></p>
+        <h2 class="display rise">七种改法，gtaw 会拒绝。</h2>
+        <p class="lede rise">这不是一条流程通常的测法。编排好的 author 在一次失败之后，试着让它变成通过。gtaw 用它真正会返回的拒绝来回答。同样的攻击在 <a href="../../evals/e2e/run-adversarial.sh">evals/e2e/run-adversarial.sh</a> 里执行。</p>
         <div class="arena">
           <div>
             <p class="score"><b data-score>0<span>/7</span></b><span class="score-l">条捷径被拦下</span></p>
@@ -275,15 +372,15 @@
           <h2>这些数字描述 harness，不是客户名单。</h2>
           <div class="stats">
             <p><b data-count="4">4</b><span>具名 agent，各做一件事</span></p>
-            <p><b data-count="7">7</b><span>本页可以试的捷径</span></p>
+            <p><b data-count="4">4</b><span>一条场景可以要求的层级</span></p>
             <p><b data-count="1">1</b><span>被允许判定通过的程序</span></p>
             <p><b data-count="20">20</b><span>core/skills 里的技能</span></p>
           </div>
-          <p class="fine">同一事项的第三次尝试会停下来等人。那一条在 CI 里跑，不在上面这七条里。单元和 slice 的变异测试默认是建议性的，除非项目自己打开；PIT 跑不了就记一笔，不记在这条事项上。本页是编排好的演示。</p>
+          <p class="fine">四个层级是 unit、slice、component 和 contract。gtaw 不会安排 system：已部署的环境不在范围内。这 20 个技能就是 <code>core/skills</code> 里的 20 个目录，每个目录一份 <code>SKILL.md</code>；项目说明里的数字与此相同。单元和 slice 的变异测试默认是建议性的，除非项目自己打开。本页是编排好的演示。这些画面是原创绘制的，不是照片。</p>
         </div>
         <div class="rows" style="margin-top:1.5rem">
           <article class="bound"><h3>测试在这台机器上跑</h3><p>gtaw 和测试在你这台机器上运行。模型请求，以及这些数据如何被处理，取决于 GitHub Copilot 或 OpenCode，以及你使用的提供方。每次测试运行都会去掉云凭证，以及 shell 里的 Spring profile 和配置变量。SIT、UAT 和生产环境都不在范围内。agent 的规则只允许本地依赖。Kafka 和 JMS 以内嵌方式运行。BigQuery 和 GCS 用替身。Oracle 用 H2 的 Oracle 模式或共享测试库。Pub/Sub 用内存替身或模拟器。</p></article>
-          <article class="bound"><h3>它会问。它不猜。</h3><p>一个 OK 接受推荐。OK, 2B 改掉其中一个选项。好和确认都算 OK。批准 order.create@R2 批准该修订。其余默认保留其余问题今天的行为；这些场景会变成特征测试。它们锁定代码现在的做法，并不证明这样做是对的。</p></article>
+          <article class="bound"><h3>回答不是推断。</h3><p>一个 OK 接受推荐。OK, 2B 改掉其中一个选项。好和确认都算 OK。批准 order.create@R2 批准该修订。其余默认保留其余问题今天的行为；这些场景会变成特征测试。它们锁定代码现在的做法，并不证明这样做是对的。</p></article>
           <article class="bound"><h3>已知缺陷保持可见</h3><p>因为代码写错而失败的测试可以用 @KnownDefect 标住。缺陷还在时，构建保持绿灯。代码修好之后，测试会变红，直到去掉这枚钉子。覆盖率只作参考。</p></article>
           <article class="bound"><h3>版本</h3><p>Spring Boot 2.2 到 4.1。服务可以是 Java 8 及以上。Maven 或 Gradle，单模块或多模块，Windows、macOS 和 Linux 都可以。gtaw 本身需要 JDK 17 或更新。不需要另外的模型密钥：agent 用 Copilot 或 OpenCode 已经提供的模型。模型请求以及这些数据如何被处理，取决于那个产品和你使用的提供方。gtaw 不调用模型，也不需要 Docker。</p></article>
         </div>
@@ -332,20 +429,20 @@
   <footer>
     <div class="shell">
       <div class="foot-cta">
-        <h2>打开服务。输入 /gta。</h2>
+        <h2>打开一个服务。输入 /gta。</h2>
         <a class="pill light" href="../guides/quickstart.zh-CN.md">阅读快速上手 <span class="badge" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></a>
       </div>
       <div class="cols">
         <div>
           <a class="brand" href="#home"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</a>
-          <p>agent 起草规格和测试。gtaw 判定。这两件事，本页都不会替你做。</p>
+          <p>代码给出候选。人来确认。gtaw 运行测试。这三件事，本页都不会替你做。</p>
         </div>
         <div>
           <h3>本页</h3>
-          <button type="button" data-go="loop">循环</button>
-          <button type="button" data-go="agents">Agent</button>
-          <button type="button" data-go="refusals">拦截</button>
-          <button type="button" data-go="proof">边界</button>
+          <button type="button" data-go="how">怎么来的</button>
+          <button type="button" data-go="loop">例子</button>
+          <button type="button" data-go="agents">角色</button>
+          <button type="button" data-go="refusals">捷径</button>
           <button type="button" data-open="install">安装</button>
         </div>
         <div>
@@ -369,10 +466,10 @@
     </div>
     <nav class="shell" aria-label="菜单">
       <button type="button" data-go="home"><i>01</i> 首页</button>
-      <button type="button" data-go="loop"><i>02</i> 循环</button>
-      <button type="button" data-go="agents"><i>03</i> Agent</button>
-      <button type="button" data-go="refusals"><i>04</i> 拦截</button>
-      <button type="button" data-go="proof"><i>05</i> 边界</button>
+      <button type="button" data-go="how"><i>02</i> 怎么来的</button>
+      <button type="button" data-go="loop"><i>03</i> 例子</button>
+      <button type="button" data-go="agents"><i>04</i> 角色</button>
+      <button type="button" data-go="refusals"><i>05</i> 捷径</button>
       <button type="button" data-open="install"><i>06</i> 安装</button>
     </nav>
     <div class="shell menu-bot"><span>编排好的演示</span><a href="index.html" hreflang="en" lang="en">English</a></div>
@@ -419,197 +516,38 @@
     "placeholder": "给 gta 发消息…",
     "locked": "已锁定",
     "steps": [
-      {
-        "stage": 0,
-        "you": "/gta order.create"
-      },
-      {
-        "stage": 0,
-        "by": "orchestrator",
-        "say": "order.create 有 5 个场景。先由 analyst 读代码。"
-      },
-      {
-        "stage": 0,
-        "by": "analyst",
-        "file": "create-order.spec.md",
-        "code": [
-          [
-            [
-              "h",
-              "### s03 · 门槛上的折扣"
-            ]
-          ],
-          [
-            [
-              "c",
-              "<!-- 来源：OrderService.java:42 -->"
-            ]
-          ],
-          "GIVEN 购物车小计 100.00",
-          "WHEN  创建订单"
-        ]
-      },
-      {
-        "stage": 1,
-        "by": "analyst",
-        "wait": 1700,
-        "say": "<span class=\"hd\">── order.create · 需要你回答 1 个问题 ──</span>\n小计正好 100.00 时打折吗？\nA) 打折，从 100.00 起打 10 %<span class=\"rec\">  ← 推荐</span>\nB) 不打，超过 100.00 才打"
-      },
-      {
-        "stage": 1,
-        "you": "OK"
-      },
-      {
-        "stage": 1,
-        "by": "analyst",
-        "file": "create-order.spec.md",
-        "code": [
-          "THEN  折扣 10.00，总额 90.00",
-          [
-            [
-              "c",
-              "<!-- source=confirmed：你回复了 OK -->"
-            ]
-          ]
-        ]
-      },
-      {
-        "stage": 1,
-        "by": "orchestrator",
-        "wait": 1200,
-        "say": "<span class=\"hd\">── order.create@r2 待批准 ──</span>\n回复 OK 批准 order.create@r2；要修改的话，直接说要改什么。"
-      },
-      {
-        "stage": 1,
-        "you": "OK"
-      },
-      {
-        "stage": 2,
-        "by": "orchestrator",
-        "cmd": "gtaw answer OK",
-        "out": [
-          [
-            "ok",
-            "✓ order.create：规格 r2 已批准并提交"
-          ]
-        ]
-      },
-      {
-        "stage": 2,
-        "by": "author",
-        "file": "OrderControllerIT.java",
-        "code": [
-          [
-            [
-              "k",
-              "@Test"
-            ]
-          ],
-          [
-            [
-              "k",
-              "void "
-            ],
-            [
-              "",
-              "discountsAtTheThreshold() {"
-            ]
-          ],
-          [
-            [
-              "",
-              "  post("
-            ],
-            [
-              "s",
-              "\"/orders\""
-            ],
-            [
-              "",
-              ", cart("
-            ],
-            [
-              "s",
-              "\"100.00\""
-            ],
-            [
-              "",
-              "))"
-            ]
-          ],
-          [
-            [
-              "",
-              "    .andExpect(jsonPath("
-            ],
-            [
-              "s",
-              "\"$.discount\""
-            ],
-            [
-              "",
-              ").value("
-            ],
-            [
-              "num",
-              "10.00"
-            ],
-            [
-              "",
-              "));"
-            ]
-          ],
-          "}"
-        ]
-      },
-      {
-        "stage": 2,
-        "by": "author",
-        "cmd": "gtaw submit --item order.create/s03",
-        "lock": "10.00",
-        "out": [
-          [
-            "bad",
-            "✗ order.create/s03：测试失败：expected 10.00, got 0.00"
-          ],
-          [
-            "dim",
-            "order.create/s03：gtaw 重跑 2 次，结果一致（不是不稳定）"
-          ]
-        ]
-      },
-      {
-        "stage": 3,
-        "by": "reviewer",
-        "wait": 1300,
-        "say": "order.create/s03：reviewer 判定为<span class=\"bad\">产品缺陷</span>：门槛用了 &gt; 而不是 &gt;="
-      },
-      {
-        "stage": 3,
-        "by": "orchestrator",
-        "wait": 1700,
-        "say": "<span class=\"hd\">── order.create/s03 疑似产品缺陷 ──</span>\nA) 是缺陷：用 @KnownDefect 标记（构建保持绿灯），并起草一个 issue<span class=\"rec\">  ← 推荐</span>\nB) 不是，规格写错了：退回重新审查"
-      },
-      {
-        "stage": 3,
-        "you": "OK"
-      },
-      {
-        "stage": 3,
-        "by": "orchestrator",
-        "cmd": "gtaw answer OK",
-        "out": [
-          [
-            "ok",
-            "✓ order.create/s03：已确认的缺陷已用 @KnownDefect 标注"
-          ]
-        ]
-      },
-      {
-        "stage": 3,
-        "by": "orchestrator",
-        "say": "<span class=\"good\">本次完成。</span>缺陷已经报告出来，没有被藏起来；src/main 没有任何改动。"
-      }
+      {"stage": 0, "you": "/gta order.create"},
+      {"stage": 0, "by": "orchestrator", "say": "gtaw 从代码里列出这个入口：OrderController#create 上的 POST /api/orders，流程 order.create。analyst 从这里开始，只跟着看得到的调用走。这段回放是示意夹具，不是对本仓库里某个服务的一次运行。"},
+      {"stage": 0, "by": "analyst", "file": "order.create.spec.md", "code": [
+        [["h", "## Boundary"]],
+        "范围内：POST /api/orders → 授权 → 保存 → 发布",
+        "范围外：支付回调（payment.callback）",
+        [["h", "### s03 · 网关沉默 3 秒"]],
+        [["c", "<!-- source=observed hint.layer=component -->"]],
+        "THEN 状态 `503`",
+        "AND orders.status 为 `PENDING_PAYMENT`",
+        "AND `order-created` 上没有消息"
+      ]},
+      {"stage": 1, "by": "analyst", "wait": 1500, "say": "<span class=\"hd\">── order.create · 1 个问题 ──</span>\n网关沉默 3 秒时，代码不会重试。测试要不要期望一次重试？\nA) 不重试（= 代码现状）<span class=\"rec\">  ← 推荐</span>\nB) 重试一次 → 还要期望网关被调用 2 次\nREADME 里写 504 的那一行记为发现，不拿来当作期望状态。"},
+      {"stage": 1, "you": "OK"},
+      {"stage": 1, "by": "analyst", "say": "OK 接受 A。期望值仍是 503、PENDING_PAYMENT，以及没有消息。analyst 不写 source=confirmed。gtaw 记下你的回答。"},
+      {"stage": 1, "by": "orchestrator", "wait": 1100, "say": "<span class=\"hd\">── order.create@R2 可以批准 ──</span>\n回复 OK 以批准这一版。"},
+      {"stage": 1, "you": "OK"},
+      {"stage": 2, "by": "orchestrator", "cmd": "gtaw answer OK", "out": [["ok", "✓ order.create：规格 r2 已批准并提交"]]},
+      {"stage": 2, "by": "author", "say": "一个场景，一条测试。层级是 component：检查必须看见网关、订单行，以及 order-created 没有发出。只测一个方法的 unit 看不见这件事。gtaw 把测试类命名为 OrderControllerIT。已部署的环境不是 gtaw 会跑的层级。"},
+      {"stage": 2, "by": "author", "file": "OrderControllerIT.java", "code": [
+        [["c", "// 示意夹具，不是本仓库里的类"]],
+        [["k", "@Test"]],
+        [["k", "void "], ["", "staysPendingWhenTheGatewayIsSilent() {"]],
+        "  gateway.stubSilence();",
+        [["", "  post("], ["s", "\"/api/orders\""], ["", ").statusCode("], ["num", "503"], ["", ");"]],
+        "  assertThat(order.status).isEqualTo(\"PENDING_PAYMENT\");",
+        "  assertThat(topic(\"order-created\")).isEmpty();",
+        "}"
+      ]},
+      {"stage": 3, "by": "author", "cmd": "gtaw submit --item order.create/s03#component-01", "lock": "503", "out": [["ok", "✓ order.create/s03：通过"]]},
+      {"stage": 3, "by": "reviewer", "wait": 1200, "say": "只读。断言和已接受的 THEN 一致。我不会建议用实际返回值换掉期望值。"},
+      {"stage": 3, "by": "orchestrator", "say": "<span class=\"good\">通过</span>表示测试和你接受的值一致。它不表示“不重试”已被证明是对的业务规则。src/main 没有被改动。"}
     ]
   },
   "cheat": {

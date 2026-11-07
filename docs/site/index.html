@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>gta — Agents write. Only gtaw may say it passed.</title>
-  <meta name="description" content="gta is a spec-first testing harness for Java and Spring, inside GitHub Copilot or OpenCode. Agents draft. Only gtaw, a deterministic program, may say a test passed. This page is a scripted demonstration.">
-  <meta name="theme-color" content="#0a0a0a">
+  <title>gta — From the code, a candidate spec, then a test you confirm.</title>
+  <meta name="description" content="gta lists a Java entry point, drafts what that code does, and asks a person before gtaw plans the test. Reading the code is not a verdict. This page is a scripted demonstration.">
+  <meta name="theme-color" content="#070b12">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23b15f2c' d='M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="site.css">
   <link rel="alternate" hreflang="zh-CN" href="index.zh-CN.html">
@@ -31,7 +31,7 @@
   <div id="loader" role="status" aria-live="polite">
     <div class="mid">
       <p class="brand"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</p>
-      <p class="tag">Agents write. Only gtaw may say it passed.</p>
+      <p class="tag">From the code. Confirmed by a person. Run by gtaw.</p>
       <div class="track">
         <div class="bar" aria-hidden="true"><div class="fill"></div></div>
         <p class="meta"><span>Loading</span><span class="count">000</span></p>
@@ -44,10 +44,9 @@
       <a class="brand" href="#home"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</a>
       <nav class="nav" aria-label="On this page">
         <button type="button" data-go="home">Home</button>
-        <button type="button" data-go="loop">Loop</button>
+        <button type="button" data-go="how">How</button>
+        <button type="button" data-go="loop">Example</button>
         <button type="button" data-go="agents">Agents</button>
-        <button type="button" data-go="refusals">Refusals</button>
-        <button type="button" data-go="proof">Bounds</button>
         <button type="button" data-open="install">Install</button>
       </nav>
       <div class="header-right">
@@ -63,85 +62,141 @@
   </header>
 
   <main>
-    <section class="hero" id="home" data-scene="lock">
+    <section class="hero" id="home" data-scene="found">
+      <div class="sky" aria-hidden="true">
+        <div class="rig">
+          <svg class="scene found" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <radialGradient id="en-found-bg" cx="78%" cy="46%" r="58%">
+                <stop offset="0%" stop-color="#1c3d66"/>
+                <stop offset="42%" stop-color="#0d1828"/>
+                <stop offset="100%" stop-color="#070b12"/>
+              </radialGradient>
+              <radialGradient id="en-found-glow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#ffd2ad"/>
+                <stop offset="35%" stop-color="#e08a45" stop-opacity=".55"/>
+                <stop offset="100%" stop-color="#e08a45" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <rect width="1440" height="900" fill="url(#en-found-bg)"/>
+            <g fill="none" stroke="rgba(224,138,69,.28)" stroke-width="1.2">
+              <path d="M520 780C760 520 980 360 1480 250"/>
+              <path d="M640 860C860 640 1080 500 1500 420" stroke="rgba(140,180,220,.22)"/>
+            </g>
+            <g fill="rgba(180,200,220,.45)">
+              <circle cx="760" cy="560" r="4"/><circle cx="900" cy="470" r="3.5"/><circle cx="1180" cy="300" r="3.5"/><circle cx="1280" cy="520" r="3"/>
+            </g>
+            <g stroke="rgba(224,138,69,.45)" stroke-width="1.2">
+              <path d="M1040 430 L760 560"/><path d="M1040 430 L900 470"/><path d="M1040 430 L1180 300"/><path d="M1040 430 L1280 520"/>
+            </g>
+            <g class="focal">
+              <circle cx="1040" cy="430" r="118" fill="url(#en-found-glow)"/>
+              <circle cx="1040" cy="430" r="16" fill="#f6c49a"/>
+              <circle cx="1040" cy="430" r="6" fill="#fff8f2"/>
+            </g>
+            <g font-family="Onest, sans-serif" fill="#f4f1ea">
+              <text x="1064" y="418" font-size="22" font-weight="600">POST /api/orders</text>
+              <text x="1064" y="446" font-size="14" fill="rgba(244,241,234,.72)">OrderController#create</text>
+              <text x="700" y="590" font-size="13" fill="rgba(244,241,234,.55)">@Scheduled</text>
+              <text x="1110" y="286" font-size="13" fill="rgba(244,241,234,.55)">listener</text>
+            </g>
+          </svg>
+          <svg class="scene draft" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <radialGradient id="en-draft-bg" cx="80%" cy="50%" r="60%">
+                <stop offset="0%" stop-color="#5a341c"/>
+                <stop offset="40%" stop-color="#1a120e"/>
+                <stop offset="100%" stop-color="#070b12"/>
+              </radialGradient>
+            </defs>
+            <rect width="1440" height="900" fill="url(#en-draft-bg)"/>
+            <g class="focal">
+              <rect x="860" y="210" width="420" height="110" rx="22" fill="rgba(255,255,255,.06)" stroke="rgba(240,178,122,.45)"/>
+              <text x="888" y="254" fill="#f0b27a" font-family="Onest, sans-serif" font-size="15" font-weight="600">GATEWAY · 3s</text>
+              <text x="888" y="286" fill="rgba(244,241,234,.75)" font-family="Onest, sans-serif" font-size="18">silent — no approval</text>
+              <rect x="900" y="360" width="420" height="150" rx="22" fill="rgba(224,138,69,.14)" stroke="rgba(240,178,122,.7)"/>
+              <text x="928" y="430" fill="#fff6ee" font-family="Onest, sans-serif" font-size="64" font-weight="600">503</text>
+              <text x="1090" y="418" fill="rgba(244,241,234,.8)" font-family="Onest, sans-serif" font-size="16">PENDING_PAYMENT</text>
+              <rect x="940" y="550" width="420" height="100" rx="22" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.18)"/>
+              <text x="968" y="592" fill="rgba(244,241,234,.7)" font-family="Onest, sans-serif" font-size="18">order-created</text>
+              <text x="968" y="620" fill="#f0b27a" font-family="Onest, sans-serif" font-size="16">not published</text>
+              <line x1="980" y1="584" x2="1160" y2="584" stroke="#e08a45" stroke-width="2"/>
+            </g>
+            <g font-family="Onest, sans-serif">
+              <rect x="1120" y="690" width="150" height="42" rx="21" fill="none" stroke="rgba(244,241,234,.45)" stroke-dasharray="4 4"/>
+              <text x="1152" y="717" fill="rgba(244,241,234,.8)" font-size="15">retry?</text>
+            </g>
+          </svg>
+          <svg class="scene scope" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="en-scope-plane" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#f0b27a"/>
+                <stop offset="100%" stop-color="#c56a2d"/>
+              </linearGradient>
+              <radialGradient id="en-scope-bg" cx="75%" cy="55%" r="55%">
+                <stop offset="0%" stop-color="#16304a"/>
+                <stop offset="100%" stop-color="#070b12"/>
+              </radialGradient>
+            </defs>
+            <rect width="1440" height="900" fill="url(#en-scope-bg)"/>
+            <g fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.16)">
+              <polygon points="980,180 1320,230 1260,340 900,280"/>
+              <polygon points="940,360 1340,420 1260,540 860,470"/>
+            </g>
+            <g font-family="Onest, sans-serif" fill="rgba(244,241,234,.45)" font-size="14">
+              <text x="1040" y="250">unit · one method</text>
+              <text x="1020" y="450">slice · the HTTP edge</text>
+            </g>
+            <g class="focal">
+              <polygon points="880,560 1380,620 1280,780 780,710" fill="url(#en-scope-plane)"/>
+              <text x="920" y="650" fill="#2a160c" font-family="Onest, sans-serif" font-size="22" font-weight="600">component</text>
+              <text x="920" y="688" fill="#3a2012" font-family="Onest, sans-serif" font-size="16">gateway · order row · no message</text>
+              <text x="920" y="724" fill="#3a2012" font-family="Onest, sans-serif" font-size="15">OrderControllerIT</text>
+            </g>
+          </svg>
+        </div>
+      </div>
       <div class="hero-veil" aria-hidden="true"></div>
-      <p class="watermark" aria-hidden="true">GTA</p>
       <div class="shell hero-grid">
         <div class="hero-copy">
-          <p class="eyebrow"><i></i> Spec-first testing for Java and Spring</p>
+          <p class="eyebrow"><i></i> Java and Spring · one flow at a time</p>
           <h1>
-            <span class="line"><span>Agents may</span></span>
-            <span class="line"><span>write the test.</span></span>
-            <span class="line"><span>Only gtaw decides.</span></span>
+            <span class="only only-found"><span class="line"><span>gtaw finds</span></span><span class="line"><span>the door in.</span></span></span>
+            <span class="only only-draft"><span class="line"><span>The draft is</span></span><span class="line"><span>what the code does.</span></span></span>
+            <span class="only only-scope"><span class="line"><span>The test has to</span></span><span class="line"><span>cross the path.</span></span></span>
           </h1>
-          <p class="facts"><span><i></i> Four agents. One referee.</span><span>This page does not call a model, and it does not run gtaw.</span></p>
-          <p class="plain">gta's agents draft the spec and the tests. A person confirms the expected answers. gtaw, not a model, decides whether a test passed.</p>
+          <p class="plain only only-found">JavaParser lists the entry. This one is POST /api/orders, named order.create. That list is not a spec.</p>
+          <p class="plain only only-draft">A silent gateway stays 503, the order stays pending, nothing is published. A candidate. Not a verdict.</p>
+          <p class="plain only only-scope">gtaw plans one component test, so the gateway, the row, and the missing message are all visible.</p>
+          <div class="scene-tabs" role="tablist" aria-label="How a flow becomes a test">
+            <button type="button" role="tab" data-scene-go="0" aria-selected="true">Found</button>
+            <button type="button" role="tab" data-scene-go="1" aria-selected="false">Draft</button>
+            <button type="button" role="tab" data-scene-go="2" aria-selected="false">Scope</button>
+          </div>
           <div class="cta">
             <button class="pill dark" type="button" data-open="install">Install <span class="badge" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
-            <button class="pill outline" type="button" data-go="loop">Watch the loop</button>
+            <button class="pill outline" type="button" data-go="loop">See the example</button>
           </div>
         </div>
         <div class="hero-side">
-        <div class="product" aria-hidden="true">
-          <div class="rig">
-            <div class="sheet"><b></b><b></b><b></b></div>
-            <article class="slip">
-              <header><span>order.create / s03</span><span class="only only-lock">locked</span><span class="only only-edit">unpinned</span><span class="only only-refuse">refused</span></header>
-              <p class="sv"><span class="only only-lock">10.00</span><span class="only only-edit">0.00</span><span class="only only-refuse">10.00</span></p>
-              <p class="sn only only-lock">gtaw locks the expected value before the test runs.</p>
-              <p class="sn only only-edit">Without the lock, the draft says the code returned 0.00.</p>
-              <p class="sn only only-refuse">The expected value stays 10.00. The edit does not pass.</p>
-              <p class="sp only only-refuse">POLICY_ORACLE_MODIFIED</p>
-            </article>
-            <div class="seal"><span class="only only-lock">LOCKED</span><span class="only only-refuse">HELD</span></div>
-            <p class="token"><span class="only only-lock">gtaw · referee</span><span class="only only-edit">no referee</span><span class="only only-refuse">gtaw · refused</span></p>
-            <div class="floor"></div>
-          </div>
-        </div>
-          <div class="card">
-            <div class="card-row">
-              <div class="tile" aria-hidden="true">
-                <svg class="mark" viewBox="0 0 24 24"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg>
-              </div>
-              <div class="panel">
-                <p>
-                  <span class="cap only only-lock">The lock</span>
-                  <span class="ttl only only-lock">gtaw locks 10.00 before the test runs.</span>
-                  <span class="cap only only-edit">The edit</span>
-                  <span class="ttl only only-edit">Without the lock, the draft writes 0.00.</span>
-                  <span class="cap only only-refuse">The refusal</span>
-                  <span class="ttl only only-refuse">Changing 10.00 is refused. It does not pass.</span>
-                </p>
-              </div>
-            </div>
-            <div class="card-nav">
-              <div class="dots" aria-hidden="true"><i class="on"></i><i></i><i></i></div>
-              <div class="arrows">
-                <button type="button" data-prev aria-label="Previous scene"><svg viewBox="0 0 16 16"><path d="M13 8H3M7 4 3 8l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                <button type="button" data-next aria-label="Next scene"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-              </div>
-            </div>
-          </div>
-          <div class="covers">
-            <p>Runs with</p>
-            <ul>
-              <li>Copilot</li><li>OpenCode</li><li>Maven</li><li>Gradle</li>
-              <li>Kafka</li><li>gRPC</li><li>Batch</li><li>Boot</li>
-            </ul>
-          </div>
+          <aside class="detail">
+            <div class="only only-found"><p class="k">Entry · illustrative</p><strong>order.create</strong><p>POST /api/orders · OrderController#create. Controllers, jobs and listeners are listed the same way.</p></div>
+            <div class="only only-draft"><p class="k">Candidate · source=observed</p><strong>503 · pending · silent</strong><p>The analyst may not mark this confirmed. A person answers before it is an expected value.</p></div>
+            <div class="only only-scope"><p class="k">Layer · component</p><strong>OrderControllerIT</strong><p>Unit and slice stay available. They are the wrong scope for a path that leaves the method.</p></div>
+          </aside>
         </div>
       </div>
       <div class="shell status">
         <span>Spring Boot 2.2–4.1</span>
-        <span>Java 8+ services · gtaw JDK 17+</span>
-        <span>Scripted page</span>
+        <span>Services on Java 8+ · gtaw needs JDK 17+</span>
+        <span>Scripted page · drawings are original</span>
       </div>
-      <p class="sr-only" id="scene-live" aria-live="polite">gtaw locks 10.00 before the test runs.</p>
+      <p class="sr-only" id="scene-live" aria-live="polite">gtaw finds the door in.</p>
     </section>
 
     <section class="about" id="about">
       <div class="shell about-grid">
-        <h2 class="rise">gta reads one flow, writes a reviewable behaviour spec, asks a person, then tests whose expected values come from that approval. <em>Coverage is not the goal. Only gtaw may say a test passed.</em></h2>
+        <h2 class="rise">One entry from the code. A candidate spec. Your answer. Then gtaw plans the test. <em>Reading the code does not make the behaviour correct.</em></h2>
         <div>
           <div class="about-foot rise">
             <div>
@@ -172,11 +227,67 @@
       </ul>
     </section>
 
+    <section class="studies" id="how">
+      <div class="shell block">
+        <p><span class="kpill">Three steps</span></p>
+        <h2 class="display rise">Evidence, then a question, then a scope.</h2>
+        <div class="study-grid">
+          <article class="study rise">
+            <div class="study-art" aria-hidden="true">
+              <svg viewBox="0 0 640 400">
+                <rect width="640" height="400" fill="#0c1522"/>
+                <circle cx="210" cy="200" r="70" fill="#e08a45" opacity=".9"/>
+                <circle cx="210" cy="200" r="8" fill="#fff6ee"/>
+                <g stroke="rgba(224,138,69,.6)" fill="none"><path d="M270 180 H420"/><path d="M270 220 H460"/></g>
+                <g fill="#d7deea" font-family="Onest, sans-serif" font-size="22">
+                  <text x="430" y="176">POST</text><text x="470" y="228">job</text>
+                </g>
+              </svg>
+            </div>
+            <div class="body">
+              <h3>gtaw lists the door</h3>
+              <p>JavaParser names controllers, scheduled methods, listeners, jobs and the rest. The flow id comes from the class and the method. The analyst starts at that method and follows calls it can see. It does not invent a side effect.</p>
+            </div>
+          </article>
+          <article class="study rise">
+            <div class="study-art" aria-hidden="true">
+              <svg viewBox="0 0 640 400">
+                <rect width="640" height="400" fill="#1a120e"/>
+                <rect x="70" y="70" width="500" height="90" rx="16" fill="rgba(255,255,255,.05)" stroke="rgba(240,178,122,.4)"/>
+                <text x="96" y="124" fill="#f4f1ea" font-family="Onest, sans-serif" font-size="28">503 · pending</text>
+                <rect x="70" y="190" width="280" height="64" rx="32" fill="none" stroke="rgba(244,241,234,.4)" stroke-dasharray="5 5"/>
+                <text x="108" y="230" fill="#f4f1ea" font-family="Onest, sans-serif" font-size="22">retry?</text>
+              </svg>
+            </div>
+            <div class="body">
+              <h3>Seen in code is not confirmed</h3>
+              <p>What the code does is <code>observed</code>. It can lock today's behaviour later. It cannot be marked confirmed by the analyst. A guess is a question. A document counts only when gtaw checks the quote.</p>
+            </div>
+          </article>
+          <article class="study rise">
+            <div class="study-art" aria-hidden="true">
+              <svg viewBox="0 0 640 400">
+                <rect width="640" height="400" fill="#0e1824"/>
+                <polygon points="80,90 560,120 520,190 60,160" fill="rgba(255,255,255,.06)"/>
+                <polygon points="70,200 570,230 520,310 40,275" fill="rgba(255,255,255,.08)"/>
+                <polygon points="50,300 590,330 540,390 20,360" fill="#e08a45"/>
+                <text x="80" y="358" fill="#2a160c" font-family="Onest, sans-serif" font-size="28" font-weight="600">component</text>
+              </svg>
+            </div>
+            <div class="body">
+              <h3>The layer is the reach of the check</h3>
+              <p>The analyst hints unit, slice, component or contract. gtaw keeps that hint when the capability allows it, and drops <code>system</code>: deployed environments are out of scope. A path through a gateway, a row and a message is a component test.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
     <section class="work" id="agents">
       <div class="shell">
         <p class="center"><span class="kpill">The cast</span></p>
-        <h2 class="display center rise">Four agents. One job each.</h2>
-        <p class="lede center rise" style="margin-inline:auto">gtaw is not a fifth agent. It is the referee: a deterministic Java program. The same input produces the same decision, and it calls no model.</p>
+        <h2 class="display center rise">Four agents. gtaw is the referee.</h2>
+        <p class="lede center rise" style="margin-inline:auto">gtaw calls no model. The same input gets the same decision. It is not a fifth agent.</p>
         <div class="cards">
           <article class="agent rise">
             <div class="meta"><span>01 · The one you talk to</span><span class="go" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>
@@ -209,20 +320,20 @@
     <section class="loop" id="loop">
       <div class="shell block">
         <p><span class="kpill">The loop</span></p>
-        <h2 class="display rise">Read. Ask. Lock. Catch.</h2>
-        <p class="lede rise">A scripted replay of <code>order.create</code>. The words are the ones gta uses. Nothing on this board calls a model or runs gtaw. Jump to a stage, or let it play.</p>
+        <h2 class="display rise">One order, from the door to the test.</h2>
+        <p class="lede rise">An illustrative <code>order.create</code>. The shape is the one gta uses. This board does not call a model, and it does not run gtaw. Nothing here is a recorded session of a real service.</p>
         <div class="rows" role="group" aria-label="Stages">
-          <button class="stage" type="button" aria-pressed="false"><span class="n">01</span><span class="body"><h3>Read</h3><p>The analyst writes the spec from the code.</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
-          <button class="stage" type="button" aria-pressed="false"><span class="n">02</span><span class="body"><h3>Ask</h3><p>A bare OK takes the recommendation. Then you approve.</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
-          <button class="stage" type="button" aria-pressed="false"><span class="n">03</span><span class="body"><h3>Lock</h3><p>gtaw locks 10.00, runs the test, and re-runs a failure.</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
-          <button class="stage" type="button" aria-pressed="false"><span class="n">04</span><span class="body"><h3>Catch</h3><p>The reviewer names a product defect. You confirm the pin.</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
+          <button class="stage" type="button" aria-pressed="false"><span class="n">01</span><span class="body"><h3>Found</h3><p>gtaw names POST /api/orders. The analyst starts there.</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
+          <button class="stage" type="button" aria-pressed="false"><span class="n">02</span><span class="body"><h3>Ask</h3><p>You accept the candidate, or you change it. Then you approve.</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
+          <button class="stage" type="button" aria-pressed="false"><span class="n">03</span><span class="body"><h3>Scope</h3><p>One component test. The gateway, the row, and the missing message.</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
+          <button class="stage" type="button" aria-pressed="false"><span class="n">04</span><span class="body"><h3>Run</h3><p>gtaw runs it. A pass matches the values you accepted.</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
         </div>
         <div class="ide" data-ide>
           <div class="ide-bar">
             <span>order.create</span>
             <div class="hud">
               <div class="avatars" aria-hidden="true"><span style="--c:#234e78">o</span><span style="--c:#1b5e4a">a</span><span style="--c:#8a5a12">t</span><span style="--c:#7a3048">r</span></div>
-              <span class="count">0/16</span>
+              <span class="count">0/14</span>
               <button type="button" data-restart>Replay</button>
             </div>
           </div>
@@ -232,16 +343,16 @@
             <div class="pane term"><div class="pane-h">Terminal · gtaw</div><pre class="term-log" aria-live="polite"></pre></div>
           </div>
         </div>
-        <p class="note">Scripted replay. gta-orchestrator, gta-analyst, gta-test-author, gta-reviewer. gtaw has no avatar, because it does not guess. <code>好</code> and <code>确认</code> count as OK. <code>批准 order.create@R2</code> approves that revision. <code>其余默认</code> keeps today’s behaviour and those scenarios become characterization tests.</p>
-        <p class="nojs">JavaScript draws the replay. The four stages are the loop: read, ask, lock, catch.</p>
+        <p class="note">Illustrative fixture, scripted. <code>好</code> and <code>确认</code> count as OK. <code>批准 order.create@R2</code> approves that revision. <code>其余默认</code> keeps today’s behaviour and those scenarios become characterization tests: they lock the code, they do not call it right.</p>
+        <p class="nojs">JavaScript draws the replay. The four stages are found, ask, scope, run.</p>
       </div>
     </section>
 
     <section class="refusals" id="refusals">
       <div class="shell block">
-        <p><span class="kpill">Seven shortcuts</span></p>
-        <h2 class="display rise">Try to cheat. gtaw will not let you.</h2>
-        <p class="lede rise">You are the test author. The test fails: the code returns 0.00 where the confirmed spec says 10.00. Pick a shortcut. The author performs it. gtaw answers with the refusal it really uses. This board is scripted. The same attacks are executed against gtaw in <a href="../../evals/e2e/run-adversarial.sh">evals/e2e/run-adversarial.sh</a>.</p>
+        <p><span class="kpill">Separate from the example</span></p>
+        <h2 class="display rise">Seven edits gtaw refuses.</h2>
+        <p class="lede rise">Not the way a flow is tested. A scripted author, after a real failure, tries to make it pass. gtaw answers with the refusal it actually uses. The same attacks run in <a href="../../evals/e2e/run-adversarial.sh">evals/e2e/run-adversarial.sh</a>.</p>
         <div class="arena">
           <div>
             <p class="score"><b data-score>0<span>/7</span></b><span class="score-l">shortcuts caught</span></p>
@@ -275,15 +386,15 @@
           <h2>Counts of the harness. Not a customer list.</h2>
           <div class="stats">
             <p><b data-count="4">4</b><span>named agents, each with one job</span></p>
-            <p><b data-count="7">7</b><span>shortcuts this page lets you try</span></p>
+            <p><b data-count="4">4</b><span>layers a scenario can ask for</span></p>
             <p><b data-count="1">1</b><span>program allowed to say a test passed</span></p>
             <p><b data-count="20">20</b><span>skills shipped in core/skills</span></p>
           </div>
-          <p class="fine">A third attempt on the same item waits for a person. That one runs in CI, not in the seven above. Mutation on unit and slice tests is advisory unless a project turns it on; if PIT cannot run, that is reported and not held against the item. The page is a scripted demonstration.</p>
+          <p class="fine">The four layers are unit, slice, component and contract. gtaw will not schedule <code>system</code>: a deployed environment is out of scope. The 20 skills are the 20 directories in <code>core/skills</code>, each with a <code>SKILL.md</code>; the README lists the same count. Mutation on unit and slice tests is advisory unless a project turns it on. The page is a scripted demonstration. The scenes are original drawings, not photographs.</p>
         </div>
         <div class="rows" style="margin-top:1.5rem">
           <article class="bound"><h3>Tests run on this machine</h3><p>gtaw and the tests run on your machine. A model request, and how that data is handled, depends on GitHub Copilot or OpenCode and on the provider you use. Each test run drops cloud credentials and the shell’s Spring profile and config variables. SIT, UAT and production are out of scope. The agents’ rules allow local dependencies only. Kafka and JMS run embedded. BigQuery and GCS use fakes. Oracle uses H2 in Oracle mode or a shared test schema. Pub/Sub uses an in-memory fake or an emulator.</p></article>
-          <article class="bound"><h3>It asks. It does not guess.</h3><p>A bare OK takes the recommendation. OK, 2B changes one option. 好 and 确认 count as OK. 批准 order.create@R2 approves that revision. 其余默认 keeps today’s behaviour for the rest; those scenarios become characterization tests. They lock what the code does now. They do not prove it is right.</p></article>
+          <article class="bound"><h3>An answer is not an inference</h3><p>A bare OK takes the recommendation and is recorded as your answer. OK, 2B changes one option. 好 and 确认 count as OK. 批准 order.create@R2 approves that revision. 其余默认 keeps today’s behaviour for the rest; those become characterization tests. They lock the code. They do not prove it is the right rule.</p></article>
           <article class="bound"><h3>A known defect stays visible</h3><p>A test that fails because the code is wrong can be pinned with @KnownDefect. The build stays green while the defect exists. After the code is fixed, the test turns red until the pin is removed. Coverage is reference only.</p></article>
           <article class="bound"><h3>Versions</h3><p>Spring Boot 2.2 to 4.1. Services on Java 8 and up. Maven or Gradle, one module or many, on Windows, macOS and Linux. gtaw itself needs JDK 17 or newer. No separate model key: the agents use the model Copilot or OpenCode already provides. A model request, and how that data is handled, depends on that product and on the provider you use. gtaw calls no model, and it does not need Docker.</p></article>
         </div>
@@ -332,20 +443,20 @@
   <footer>
     <div class="shell">
       <div class="foot-cta">
-        <h2>Open the service. Type /gta.</h2>
+        <h2>Open a service. Type /gta.</h2>
         <a class="pill light" href="../guides/quickstart.md">Read the quickstart <span class="badge" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></a>
       </div>
       <div class="cols">
         <div>
           <a class="brand" href="#home"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</a>
-          <p>Agents draft the spec and the test. gtaw decides. This page will not do either of those things for you.</p>
+          <p>The code suggests a candidate. A person confirms it. gtaw runs the test. This page does none of those things.</p>
         </div>
         <div>
           <h3>On this page</h3>
-          <button type="button" data-go="loop">Loop</button>
+          <button type="button" data-go="how">How</button>
+          <button type="button" data-go="loop">Example</button>
           <button type="button" data-go="agents">Agents</button>
-          <button type="button" data-go="refusals">Refusals</button>
-          <button type="button" data-go="proof">Bounds</button>
+          <button type="button" data-go="refusals">Shortcuts</button>
           <button type="button" data-open="install">Install</button>
         </div>
         <div>
@@ -369,10 +480,10 @@
     </div>
     <nav class="shell" aria-label="Menu">
       <button type="button" data-go="home"><i>01</i> Home</button>
-      <button type="button" data-go="loop"><i>02</i> Loop</button>
-      <button type="button" data-go="agents"><i>03</i> Agents</button>
-      <button type="button" data-go="refusals"><i>04</i> Refusals</button>
-      <button type="button" data-go="proof"><i>05</i> Bounds</button>
+      <button type="button" data-go="how"><i>02</i> How</button>
+      <button type="button" data-go="loop"><i>03</i> Example</button>
+      <button type="button" data-go="agents"><i>04</i> Agents</button>
+      <button type="button" data-go="refusals"><i>05</i> Shortcuts</button>
       <button type="button" data-open="install"><i>06</i> Install</button>
     </nav>
     <div class="shell menu-bot"><span>Scripted demonstration</span><a href="index.zh-CN.html" hreflang="zh-CN" lang="zh-CN">中文</a></div>
@@ -419,197 +530,38 @@
     "placeholder": "Message gta…",
     "locked": "locked",
     "steps": [
-      {
-        "stage": 0,
-        "you": "/gta order.create"
-      },
-      {
-        "stage": 0,
-        "by": "orchestrator",
-        "say": "order.create has 5 scenarios. The analyst reads the code first."
-      },
-      {
-        "stage": 0,
-        "by": "analyst",
-        "file": "create-order.spec.md",
-        "code": [
-          [
-            [
-              "h",
-              "### s03 · discount at the threshold"
-            ]
-          ],
-          [
-            [
-              "c",
-              "<!-- source: OrderService.java:42 -->"
-            ]
-          ],
-          "GIVEN a cart with subtotal 100.00",
-          "WHEN  the order is created"
-        ]
-      },
-      {
-        "stage": 1,
-        "by": "analyst",
-        "wait": 1700,
-        "say": "<span class=\"hd\">── order.create · 1 question for you ──</span>\nIs a subtotal of exactly 100.00 discounted?\nA) Yes, 10 % from 100.00<span class=\"rec\">  ← recommended</span>\nB) No, only above 100.00"
-      },
-      {
-        "stage": 1,
-        "you": "OK"
-      },
-      {
-        "stage": 1,
-        "by": "analyst",
-        "file": "create-order.spec.md",
-        "code": [
-          "THEN  discount 10.00, total 90.00",
-          [
-            [
-              "c",
-              "<!-- source=confirmed: you replied OK -->"
-            ]
-          ]
-        ]
-      },
-      {
-        "stage": 1,
-        "by": "orchestrator",
-        "wait": 1200,
-        "say": "<span class=\"hd\">── order.create@r2 ready for approval ──</span>\nReply OK to approve order.create@r2, or say what to change."
-      },
-      {
-        "stage": 1,
-        "you": "OK"
-      },
-      {
-        "stage": 2,
-        "by": "orchestrator",
-        "cmd": "gtaw answer OK",
-        "out": [
-          [
-            "ok",
-            "✓ order.create: spec r2 approved and committed"
-          ]
-        ]
-      },
-      {
-        "stage": 2,
-        "by": "author",
-        "file": "OrderControllerIT.java",
-        "code": [
-          [
-            [
-              "k",
-              "@Test"
-            ]
-          ],
-          [
-            [
-              "k",
-              "void "
-            ],
-            [
-              "",
-              "discountsAtTheThreshold() {"
-            ]
-          ],
-          [
-            [
-              "",
-              "  post("
-            ],
-            [
-              "s",
-              "\"/orders\""
-            ],
-            [
-              "",
-              ", cart("
-            ],
-            [
-              "s",
-              "\"100.00\""
-            ],
-            [
-              "",
-              "))"
-            ]
-          ],
-          [
-            [
-              "",
-              "    .andExpect(jsonPath("
-            ],
-            [
-              "s",
-              "\"$.discount\""
-            ],
-            [
-              "",
-              ").value("
-            ],
-            [
-              "num",
-              "10.00"
-            ],
-            [
-              "",
-              "));"
-            ]
-          ],
-          "}"
-        ]
-      },
-      {
-        "stage": 2,
-        "by": "author",
-        "cmd": "gtaw submit --item order.create/s03",
-        "lock": "10.00",
-        "out": [
-          [
-            "bad",
-            "✗ order.create/s03: test failed: expected 10.00, got 0.00"
-          ],
-          [
-            "dim",
-            "order.create/s03: gtaw re-ran it twice with the same result (not flaky)"
-          ]
-        ]
-      },
-      {
-        "stage": 3,
-        "by": "reviewer",
-        "wait": 1300,
-        "say": "order.create/s03: <span class=\"bad\">a product defect</span>: the threshold uses &gt; instead of &gt;="
-      },
-      {
-        "stage": 3,
-        "by": "orchestrator",
-        "wait": 1700,
-        "say": "<span class=\"hd\">── order.create/s03 looks like a product defect ──</span>\nA) Yes, a defect: pin it with @KnownDefect (the build stays green) and draft an issue<span class=\"rec\">  ← recommended</span>\nB) No, the spec is wrong: back to review"
-      },
-      {
-        "stage": 3,
-        "you": "OK"
-      },
-      {
-        "stage": 3,
-        "by": "orchestrator",
-        "cmd": "gtaw answer OK",
-        "out": [
-          [
-            "ok",
-            "✓ order.create/s03: confirmed defect pinned with @KnownDefect"
-          ]
-        ]
-      },
-      {
-        "stage": 3,
-        "by": "orchestrator",
-        "say": "<span class=\"good\">Done for now.</span> The defect is reported, not hidden, and nothing in src/main changed."
-      }
+      {"stage": 0, "you": "/gta order.create"},
+      {"stage": 0, "by": "orchestrator", "say": "gtaw listed this entry from the code: POST /api/orders on OrderController#create, flow order.create. The analyst starts there and follows the calls it can see. This replay is an illustrative fixture, not a run against a service in this repository."},
+      {"stage": 0, "by": "analyst", "file": "order.create.spec.md", "code": [
+        [["h", "## Boundary"]],
+        "In: POST /api/orders → authorize → save → publish",
+        "Out: payment callback (payment.callback)",
+        [["h", "### s03 · gateway silent for 3s"]],
+        [["c", "<!-- source=observed hint.layer=component -->"]],
+        "THEN status `503`",
+        "AND orders.status `PENDING_PAYMENT`",
+        "AND no message on `order-created`"
+      ]},
+      {"stage": 1, "by": "analyst", "wait": 1500, "say": "<span class=\"hd\">── order.create · 1 question ──</span>\nThe code does not retry a gateway that stays silent for 3s. Should the test expect a retry?\nA) No retry (= current code)<span class=\"rec\">  ← recommended</span>\nB) Retry once → also expect 2 gateway calls\nA README line that says 504 is a finding. It is not copied in as the expected status."},
+      {"stage": 1, "you": "OK"},
+      {"stage": 1, "by": "analyst", "say": "OK takes A. The expected values stay 503, PENDING_PAYMENT, and no message. The analyst does not write source=confirmed. gtaw records your answer."},
+      {"stage": 1, "by": "orchestrator", "wait": 1100, "say": "<span class=\"hd\">── order.create@R2 ready for approval ──</span>\nReply OK to approve this revision."},
+      {"stage": 1, "you": "OK"},
+      {"stage": 2, "by": "orchestrator", "cmd": "gtaw answer OK", "out": [["ok", "✓ order.create: spec r2 approved and committed"]]},
+      {"stage": 2, "by": "author", "say": "One scenario, one test. The layer is component: the check has to see the gateway, the order row, and that order-created was not published. A unit test of one method would not. gtaw names the class OrderControllerIT. A deployed environment is not a layer gtaw runs."},
+      {"stage": 2, "by": "author", "file": "OrderControllerIT.java", "code": [
+        [["c", "// illustrative fixture — not a class in this repository"]],
+        [["k", "@Test"]],
+        [["k", "void "], ["", "staysPendingWhenTheGatewayIsSilent() {"]],
+        "  gateway.stubSilence();",
+        [["", "  post("], ["s", "\"/api/orders\""], ["", ").statusCode("], ["num", "503"], ["", ");"]],
+        "  assertThat(order.status).isEqualTo(\"PENDING_PAYMENT\");",
+        "  assertThat(topic(\"order-created\")).isEmpty();",
+        "}"
+      ]},
+      {"stage": 3, "by": "author", "cmd": "gtaw submit --item order.create/s03#component-01", "lock": "503", "out": [["ok", "✓ order.create/s03: passed"]]},
+      {"stage": 3, "by": "reviewer", "wait": 1200, "say": "Read-only. The assertions match the accepted THEN. I do not suggest writing whatever came back in place of the expected value."},
+      {"stage": 3, "by": "orchestrator", "say": "<span class=\"good\">Passed</span> means the test matched the values you accepted. It does not mean a missing retry was proved to be the right rule. src/main was not changed."}
     ]
   },
   "cheat": {

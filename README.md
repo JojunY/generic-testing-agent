@@ -33,7 +33,7 @@ Coverage is not the goal. Tests should check what the service is *supposed* to d
 |---|---|
 | `gtaw` (Java CLI, `toolkit/gta-cli`) | Does every deterministic step: state, planning, test runs, failure triage, oracle lock, change check, commits, gate, report. Only `gtaw` decides that a test passed. |
 | 4 agents (`core/agents`) | `gta-orchestrator` (entry point), `gta-analyst` (specs), `gta-test-author` (one test per brief), `gta-reviewer` (read-only oracle review and triage). |
-| 17 skills (`core/skills`) | Testing know-how loaded by path from `.gta/skills/`: Spring APIs, WireMock, embedded dependencies without containers (Oracle, BigQuery, Pub/Sub, Kafka, JMS/MQ), Batch, schedulers, Beam and more. |
+| 20 skills (`core/skills`) | Testing know-how loaded by path from `.gta/skills/`: one directory per skill, each with a `SKILL.md`. Spring APIs, WireMock, embedded dependencies without containers (Oracle, BigQuery, Pub/Sub, Kafka, JMS/MQ), Batch, schedulers, Beam and more. |
 | `gta-junit` (`toolkit/gta-junit`) | `@KnownDefect` (strict expected-failure) and a listener that maps test results to scenarios. |
 | `copilot/`, `opencode/` | Ready-to-install harness folders, generated from `core/` + `platforms/` by `gta-harness-gen`. |
 
