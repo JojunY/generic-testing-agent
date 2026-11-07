@@ -11,6 +11,10 @@
   <link rel="alternate" hreflang="zh-CN" href="index.zh-CN.html">
   <script>
     document.documentElement.classList.add('js');
+    try {
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches)
+        document.documentElement.classList.add('motion-off');
+    } catch (e) {}
     setTimeout(function () {
       var root = document.documentElement;
       if (root.classList.contains('ready')) return;
@@ -23,6 +27,7 @@
 </head>
 <body>
   <a class="skip" href="#home">Skip to content</a>
+  <p class="sr-only" id="motion-live" aria-live="polite" data-on="Motion on" data-off="Motion paused"></p>
   <div id="loader" role="status" aria-live="polite">
     <div class="mid">
       <p class="brand"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</p>
@@ -47,6 +52,10 @@
       </nav>
       <div class="header-right">
         <p class="clock"><span>Local time</span><b data-time>9:41am</b><span class="dot" aria-hidden="true">·</span><b data-date>12 March, 2025</b></p>
+        <button class="motion" type="button" data-motion aria-pressed="false">
+          <span class="label-play">Pause motion</span>
+          <span class="label-pause">Resume motion</span>
+        </button>
         <a class="lang" href="index.zh-CN.html" hreflang="zh-CN" lang="zh-CN">中文</a>
         <button class="chip" type="button" data-menu aria-expanded="false" aria-controls="menu">Menu</button>
       </div>
@@ -66,6 +75,7 @@
             <span class="line"><span>Only gtaw decides.</span></span>
           </h1>
           <p class="facts"><span><i></i> Four agents. One referee.</span><span>This page does not call a model, and it does not run gtaw.</span></p>
+          <p class="plain">gta's agents draft the spec and the tests. A person confirms the expected answers. gtaw, not a model, decides whether a test passed.</p>
           <div class="cta">
             <button class="pill dark" type="button" data-open="install">Install <span class="badge" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
             <button class="pill outline" type="button" data-go="loop">Watch the loop</button>
@@ -137,12 +147,12 @@
             <div>
               <p class="cap">Read</p>
               <div class="soc">
-                <a class="hot" href="../guides/quickstart.md">Q</a>
-                <a href="../design/plan.md">D</a>
-                <a href="../../README.md">R</a>
+                <a class="hot" href="../guides/quickstart.md">Quickstart</a>
+                <a href="../design/plan.md">Design</a>
+                <a href="../../README.md">README</a>
               </div>
             </div>
-            <p class="local">GitHub Copilot and OpenCode are generated from the same core. Neither is a reduced copy. The run stays on your machine.</p>
+            <p class="local">GitHub Copilot and OpenCode are generated from the same core. Neither is a reduced copy. gtaw and the tests run on your machine. A model request, and how that data is handled, depends on Copilot or OpenCode and on the provider you use.</p>
           </div>
           <ul class="flows rise">
             <li>REST</li><li>Kafka</li><li>Pub/Sub</li><li>JMS / MQ</li><li>RabbitMQ</li><li>SQS</li>
@@ -251,7 +261,7 @@
               <pre class="code"></pre>
               <pre class="term-log" aria-live="polite"></pre>
             </div>
-            <div class="won">7 of 7 caught, and none of it reached a commit. These attacks, and one more — a third attempt on the same item, which waits for a person — run in CI on every change to gta: <code>evals/e2e/run-adversarial.sh</code>. <button class="replay" type="button" data-again>Try again</button></div>
+            <div class="won">All 7 were refused as a pass. An outside commit was detected and escalated to a person: commits made outside gtaw: 3f9c2a1. Agents must not run git. This board is scripted and does not run gtaw. These attacks, and one more — a third attempt on the same item, which waits for a person — run in CI on every change to gta: <code>evals/e2e/run-adversarial.sh</code>. <button class="replay" type="button" data-again>Try again</button></div>
             <p class="nojs">This board needs JavaScript. The seven edits map to POLICY_ORACLE_MODIFIED, POLICY_ORACLE_MISMATCH, POLICY_TEST_SKIPPED and POLICY_OUT_OF_SCOPE_CHANGE. The script above runs them for real.</p>
           </div>
         </div>
@@ -272,10 +282,10 @@
           <p class="fine">A third attempt on the same item waits for a person. That one runs in CI, not in the seven above. Mutation on unit and slice tests is advisory unless a project turns it on; if PIT cannot run, that is reported and not held against the item. The page is a scripted demonstration.</p>
         </div>
         <div class="rows" style="margin-top:1.5rem">
-          <article class="bound"><h3>The run stays local</h3><p>Tests run on the machine. Each run drops cloud credentials and the shell’s Spring profile and config variables. SIT, UAT and production are out of scope. The agents’ rules allow local dependencies only. Kafka and JMS run embedded. BigQuery and GCS use fakes. Oracle uses H2 in Oracle mode or a shared test schema. Pub/Sub uses an in-memory fake or an emulator.</p></article>
+          <article class="bound"><h3>Tests run on this machine</h3><p>gtaw and the tests run on your machine. A model request, and how that data is handled, depends on GitHub Copilot or OpenCode and on the provider you use. Each test run drops cloud credentials and the shell’s Spring profile and config variables. SIT, UAT and production are out of scope. The agents’ rules allow local dependencies only. Kafka and JMS run embedded. BigQuery and GCS use fakes. Oracle uses H2 in Oracle mode or a shared test schema. Pub/Sub uses an in-memory fake or an emulator.</p></article>
           <article class="bound"><h3>It asks. It does not guess.</h3><p>A bare OK takes the recommendation. OK, 2B changes one option. 好 and 确认 count as OK. 批准 order.create@R2 approves that revision. 其余默认 keeps today’s behaviour for the rest; those scenarios become characterization tests. They lock what the code does now. They do not prove it is right.</p></article>
           <article class="bound"><h3>A known defect stays visible</h3><p>A test that fails because the code is wrong can be pinned with @KnownDefect. The build stays green while the defect exists. After the code is fixed, the test turns red until the pin is removed. Coverage is reference only.</p></article>
-          <article class="bound"><h3>Versions</h3><p>Spring Boot 2.2 to 4.1. Services on Java 8 and up. Maven or Gradle, one module or many, on Windows, macOS and Linux. gtaw itself needs JDK 17 or newer. No separate model key: the agents use the model Copilot or OpenCode already provides. gtaw calls no model, and it does not need Docker.</p></article>
+          <article class="bound"><h3>Versions</h3><p>Spring Boot 2.2 to 4.1. Services on Java 8 and up. Maven or Gradle, one module or many, on Windows, macOS and Linux. gtaw itself needs JDK 17 or newer. No separate model key: the agents use the model Copilot or OpenCode already provides. A model request, and how that data is handled, depends on that product and on the provider you use. gtaw calls no model, and it does not need Docker.</p></article>
         </div>
       </div>
     </section>
@@ -373,7 +383,7 @@
       <button class="x" type="button" data-close-modal aria-label="Close">×</button>
       <p class="cap">Install</p>
       <h2 id="install-title">Build it once. Then /gta.</h2>
-      <p class="lede">Nothing is sent from this dialog. The commands are copied to your clipboard. A published jar also needs <code>--distribution-url</code> and <code>--distribution-sha256</code>.</p>
+      <p class="lede">Nothing is sent from this dialog. Copy places a command on the clipboard when the browser allows it. If it does not, the page says so and selects the command so you can copy it yourself. A published jar also needs <code>--distribution-url</code> and <code>--distribution-sha256</code>.</p>
       <ol class="steps">
         <li><div><code>mvn -B install</code><p>In this repository. Builds gtaw and runs its tests.</p><button class="copy" type="button" data-copy="mvn -B install" data-done="Copied">Copy</button></div></li>
         <li><div><code>java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot</code><p>Once per service. OpenCode uses <code>--platform opencode</code>. <code>GTA_CLI_JAR</code> points at a jar you built.</p><button class="copy" type="button" data-copy="java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot" data-done="Copied">Copy</button></div></li>

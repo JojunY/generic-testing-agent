@@ -1,0 +1,1 @@
+../../../../evals/e2e/run-adversarial.sh

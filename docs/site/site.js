@@ -1,10 +1,19 @@
 /* gta introduction. The loader, menu, clock and scroll are the page's own.
    The workbench and the seven shortcuts replay strings from #copy.
    They are scripted. They do not call a model and they do not run gtaw. */
-const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
+let pageChoice = null;
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
+function systemReduce() { return motionQuery.matches; }
+function motionOn() {
+  if (pageChoice === 'play') return true;
+  if (pageChoice === 'pause') return false;
+  return !systemReduce();
+}
+function holdPlayback() { return pageChoice === 'pause'; }
+function skipPlayback() { return !motionOn() && !holdPlayback(); }
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const make = (tag, cls, text) => {
   const el = document.createElement(tag);
@@ -14,18 +23,24 @@ const make = (tag, cls, text) => {
 };
 
 let lenis = null;
+let lenisLoading = false;
 function setLock(on) {
   document.documentElement.classList.toggle('lock', on);
   if (lenis) { if (on) lenis.stop(); else lenis.start(); }
 }
-if (!reduce) {
+function ensureLenis() {
+  if (lenis || lenisLoading || !motionOn()) return;
+  lenisLoading = true;
   import('./vendor/lenis.js').then((mod) => {
+    lenisLoading = false;
+    if (!motionOn() || lenis) return;
     lenis = new mod.default({ smoothWheel: true, syncTouch: false });
     if (document.documentElement.classList.contains('lock')) lenis.stop();
-    const raf = (t) => { lenis.raf(t); requestAnimationFrame(raf); };
+    const raf = (t) => { if (lenis) lenis.raf(t); requestAnimationFrame(raf); };
     requestAnimationFrame(raf);
-  }).catch(() => {});
+  }).catch(() => { lenisLoading = false; });
 }
+ensureLenis();
 
 function scaleType() {
   const FONT_BASE = 16, baseWidth = 1920, coef = 0.6666;
@@ -45,10 +60,10 @@ function dropLoader() {
   if (lenis) lenis.start();
   if (loader && loader.isConnected) {
     loader.classList.add('out');
-    setTimeout(() => loader.remove(), reduce ? 0 : 720);
+    setTimeout(() => loader.remove(), motionOn() ? 720 : 0);
   }
 }
-if (!loader || reduce || document.documentElement.classList.contains('ready')) dropLoader();
+if (!loader || !motionOn() || document.documentElement.classList.contains('ready')) dropLoader();
 else {
   setLock(true);
   const t0 = performance.now();
@@ -73,14 +88,20 @@ onScroll();
 const timeEl = $('[data-time]');
 const dateEl = $('[data-date]');
 if (timeEl && dateEl) {
+  const zh = (document.documentElement.lang || '').toLowerCase().startsWith('zh');
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const paintClock = () => {
     const d = new Date();
-    let h = d.getHours();
-    const ap = h >= 12 ? 'pm' : 'am';
-    h = h % 12 || 12;
-    timeEl.textContent = `${h}:${String(d.getMinutes()).padStart(2, '0')}${ap}`;
-    dateEl.textContent = `${d.getDate()} ${months[d.getMonth()]}, ${d.getFullYear()}`;
+    if (zh) {
+      timeEl.textContent = new Intl.DateTimeFormat('zh-CN', { hour: 'numeric', minute: '2-digit' }).format(d);
+      dateEl.textContent = new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }).format(d);
+    } else {
+      let h = d.getHours();
+      const ap = h >= 12 ? 'pm' : 'am';
+      h = h % 12 || 12;
+      timeEl.textContent = `${h}:${String(d.getMinutes()).padStart(2, '0')}${ap}`;
+      dateEl.textContent = `${d.getDate()} ${months[d.getMonth()]}, ${d.getFullYear()}`;
+    }
   };
   paintClock();
   setInterval(paintClock, 1000);
@@ -89,8 +110,8 @@ if (timeEl && dateEl) {
 function go(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  if (lenis && !reduce) lenis.scrollTo(el, { offset: -8 });
-  else el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  if (lenis && motionOn()) lenis.scrollTo(el, { offset: -8 });
+  else el.scrollIntoView({ behavior: motionOn() ? 'smooth' : 'auto', block: 'start' });
 }
 
 function trap(root) {
@@ -126,10 +147,18 @@ const menu = $('#menu');
 const modal = $('#install-dialog');
 let menuTrap = null;
 let modalTrap = null;
+let modalReturn = null;
+function setMenuExpanded(on) {
+  $$('[data-menu]').forEach((b) => {
+    b.setAttribute('aria-expanded', on ? 'true' : 'false');
+    if (!b.getAttribute('aria-controls')) b.setAttribute('aria-controls', 'menu');
+  });
+}
 function openMenu() {
   if (!menu) return;
   menu.classList.add('open');
   menu.setAttribute('aria-hidden', 'false');
+  setMenuExpanded(true);
   setLock(true);
   menuTrap = trap(menu);
   menuTrap.onClose(closeMenu);
@@ -140,11 +169,15 @@ function closeMenu(opts = {}) {
   const unlock = opts.unlock !== false;
   menu.classList.remove('open');
   menu.setAttribute('aria-hidden', 'true');
+  setMenuExpanded(false);
   if (menuTrap) { const t = menuTrap; menuTrap = null; t.release(restore); }
   if (unlock && (!modal || !modal.classList.contains('open'))) setLock(false);
 }
-function openModal() {
+function openModal(from) {
   if (!modal) return;
+  const menuOpen = !!(menu && menu.classList.contains('open'));
+  const opener = from instanceof Element ? from : document.activeElement;
+  modalReturn = menuOpen ? ($('[data-menu]') || opener) : opener;
   closeMenu({ restore: false, unlock: false });
   modal.classList.add('open');
   modal.setAttribute('aria-hidden', 'false');
@@ -156,12 +189,15 @@ function closeModal() {
   if (!modal || !modal.classList.contains('open')) return;
   modal.classList.remove('open');
   modal.setAttribute('aria-hidden', 'true');
-  if (modalTrap) { modalTrap.release(); modalTrap = null; }
+  const back = modalReturn;
+  modalReturn = null;
+  if (modalTrap) { modalTrap.release(false); modalTrap = null; }
   setLock(false);
+  if (back && typeof back.focus === 'function') back.focus();
 }
 $$('[data-menu]').forEach((b) => b.addEventListener('click', openMenu));
 $$('[data-close-menu]').forEach((b) => b.addEventListener('click', () => closeMenu()));
-$$('[data-open="install"]').forEach((b) => b.addEventListener('click', openModal));
+$$('[data-open="install"]').forEach((b) => b.addEventListener('click', () => openModal(b)));
 $$('[data-close-modal]').forEach((b) => b.addEventListener('click', closeModal));
 if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 $$('[data-go]').forEach((b) => b.addEventListener('click', () => { closeMenu(); go(b.dataset.go); }));
@@ -178,7 +214,7 @@ function showScene(i, animate) {
   const title = $(`.ttl.only-${scenes[scene]}`, hero);
   if (live && title) live.textContent = title.textContent.trim();
   const slip = $('.slip', hero);
-  if (animate && !reduce && slip) {
+  if (animate && motionOn() && slip) {
     slip.classList.remove('swap');
     void slip.offsetWidth;
     slip.classList.add('swap');
@@ -189,7 +225,8 @@ $$('[data-next]').forEach((b) => b.addEventListener('click', () => showScene(sce
 showScene(0, false);
 
 const rig = $('.rig');
-if (hero && rig && !reduce) {
+let settleTilt = () => {};
+if (hero && rig) {
   let tx = 0, ty = 0, px = 0, py = 0, cx = 0, cy = 0, vx = 0, vy = 0, running = false;
   const tick = () => {
     cx += (tx - cx) * 0.14;
@@ -214,8 +251,9 @@ if (hero && rig && !reduce) {
     tx = Math.max(-12, Math.min(12, py * -24));
     start();
   };
+  settleTilt = () => { tx = 0; ty = 0; px = 0; py = 0; start(); };
   hero.addEventListener('pointermove', (e) => {
-    if (e.pointerType === 'touch' || document.hidden) return;
+    if (!motionOn() || e.pointerType === 'touch' || document.hidden) return;
     const r = hero.getBoundingClientRect();
     if (r.bottom < 0 || r.top > innerHeight) return;
     aim(e.clientX, e.clientY);
@@ -227,7 +265,7 @@ if (hero && rig && !reduce) {
 }
 
 const rises = $$('.rise');
-if (reduce || !('IntersectionObserver' in window)) rises.forEach((el) => el.classList.add('in'));
+if (!motionOn() || !('IntersectionObserver' in window)) rises.forEach((el) => el.classList.add('in'));
 else {
   const io = new IntersectionObserver((entries) => entries.forEach((e) => {
     if (!e.isIntersecting) return;
@@ -238,10 +276,15 @@ else {
 }
 
 const counts = $$('[data-count]');
-if (reduce) counts.forEach((el) => { el.textContent = el.dataset.count; });
+let paintCounts = null;
+function finishCounts() {
+  counts.forEach((el) => { el.textContent = el.dataset.count; });
+  if (paintCounts) removeEventListener('scroll', paintCounts);
+}
+if (!motionOn()) finishCounts();
 else {
   let lastCount = 0;
-  const paintCounts = () => {
+  paintCounts = () => {
     const now = performance.now();
     if (now - lastCount < 30) return;
     lastCount = now;
@@ -261,12 +304,39 @@ else {
   paintCounts();
 }
 
-$$('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
-  const label = b.textContent;
-  try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = b.dataset.done || '✓'; }
-  catch (_) { b.textContent = '—'; }
-  setTimeout(() => { b.textContent = label; }, 1600);
-}));
+const zhPage = (document.documentElement.lang || '').toLowerCase().startsWith('zh');
+const copyFail = zhPage
+  ? '未能复制。请选中命令，再自行复制。'
+  : 'Could not copy. Select the command, then copy it yourself.';
+$$('[data-copy]').forEach((b, i) => {
+  const status = make('span', 'copy-status');
+  status.id = `copy-status-${i}`;
+  status.setAttribute('role', 'status');
+  b.setAttribute('aria-describedby', status.id);
+  b.insertAdjacentElement('afterend', status);
+  b.addEventListener('click', async () => {
+    status.textContent = '';
+    status.removeAttribute('data-state');
+    const text = b.dataset.copy || '';
+    try {
+      if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('clipboard unavailable');
+      await navigator.clipboard.writeText(text);
+      status.dataset.state = 'ok';
+      status.textContent = b.dataset.done || (zhPage ? '已复制' : 'Copied');
+    } catch (_) {
+      status.dataset.state = 'bad';
+      status.textContent = b.dataset.fail || copyFail;
+      const code = b.parentElement && b.parentElement.querySelector('code');
+      if (code) {
+        const range = document.createRange();
+        range.selectNodeContents(code);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    }
+  });
+});
 
 let copy = null;
 const copyNode = $('#copy');
@@ -290,12 +360,14 @@ class Scene {
     return seen >= 0.2;
   }
   async wait(ms) {
-    if (reduce) return;
+    if (skipPlayback()) return;
     let left = ms;
     while (left > 0) {
-      if (!this.visible()) { await sleep(150); continue; }
+      if (skipPlayback()) return;
+      if (holdPlayback() || !this.visible()) { await sleep(150); continue; }
       const step = Math.min(80, left);
       await sleep(step);
+      if (holdPlayback() || skipPlayback()) continue;
       left -= step;
     }
   }
@@ -304,7 +376,8 @@ const scenesOnPage = [];
 const arm = () => {
   for (const s of scenesOnPage) {
     if (s.started) continue;
-    if (reduce || s.visible()) { s.started = true; s.play(); }
+    if (holdPlayback()) continue;
+    if (skipPlayback() || s.visible()) { s.started = true; s.play(); }
   }
 };
 
@@ -344,9 +417,9 @@ if (copy && copy.demo) {
       stage(0, 0, 0);
     };
     const step = async (s, fast, alive) => {
-      const W = (ms) => (fast || reduce ? Promise.resolve() : S.wait(ms));
+      const W = (ms) => (fast || skipPlayback() ? Promise.resolve() : S.wait(ms));
       if (s.you) {
-        if (!fast && !reduce) {
+        if (!fast && !skipPlayback()) {
           await W(280);
           if (!alive()) return;
           input.classList.add('typing');
@@ -408,7 +481,7 @@ if (copy && copy.demo) {
         if (!fast) await S.wait(s.wait || 900);
         if (!alive()) return;
       }
-      if (reduce) return;
+      if (skipPlayback()) return;
       await S.wait(7000);
       if (alive() && S.visible()) play(0);
     };
@@ -432,7 +505,7 @@ if (copy && copy.cheat) {
     const buttons = $$('.attack', arena), score = $('[data-score]', S.el), won = $('.won', S.el);
     const total = C.attacks.length;
     let open = 'test', busy = false, caught = 0;
-    const W = (ms) => (reduce ? Promise.resolve() : S.wait(ms));
+    const W = (ms) => (skipPlayback() ? Promise.resolve() : S.wait(ms));
     const show = (key) => {
       open = key;
       tabsEl.textContent = '';
@@ -517,10 +590,36 @@ if (copy && copy.cheat) {
   }
 }
 
-if (reduce) scenesOnPage.forEach((s) => { s.started = true; s.play(); });
-else {
-  addEventListener('scroll', arm, { passive: true });
-  addEventListener('resize', arm);
-  document.addEventListener('visibilitychange', arm);
-  arm();
+let motionAnnounced = false;
+function syncMotion(announce) {
+  const on = motionOn();
+  document.documentElement.classList.toggle('motion-off', !on);
+  document.documentElement.classList.toggle('motion-on', on && systemReduce());
+  $$('[data-motion]').forEach((b) => b.setAttribute('aria-pressed', on ? 'false' : 'true'));
+  if (!on) {
+    settleTilt();
+    if (skipPlayback()) {
+      rises.forEach((el) => el.classList.add('in'));
+      finishCounts();
+    }
+  }
+  const live = $('#motion-live');
+  if (announce && live) live.textContent = on ? (live.dataset.on || '') : (live.dataset.off || '');
+  motionAnnounced = true;
 }
+$$('[data-motion]').forEach((b) => b.addEventListener('click', () => {
+  pageChoice = motionOn() ? 'pause' : 'play';
+  syncMotion(true);
+  if (motionOn()) ensureLenis();
+  arm();
+}));
+motionQuery.addEventListener('change', () => {
+  syncMotion(motionAnnounced);
+  if (motionOn()) ensureLenis();
+  arm();
+});
+syncMotion(false);
+addEventListener('scroll', arm, { passive: true });
+addEventListener('resize', arm);
+document.addEventListener('visibilitychange', arm);
+arm();

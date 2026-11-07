@@ -11,6 +11,10 @@
   <link rel="alternate" hreflang="en" href="index.html">
   <script>
     document.documentElement.classList.add('js');
+    try {
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches)
+        document.documentElement.classList.add('motion-off');
+    } catch (e) {}
     setTimeout(function () {
       var root = document.documentElement;
       if (root.classList.contains('ready')) return;
@@ -23,6 +27,7 @@
 </head>
 <body>
   <a class="skip" href="#home">跳到正文</a>
+  <p class="sr-only" id="motion-live" aria-live="polite" data-on="动效已继续" data-off="动效已暂停"></p>
   <div id="loader" role="status" aria-live="polite">
     <div class="mid">
       <p class="brand"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</p>
@@ -47,8 +52,12 @@
       </nav>
       <div class="header-right">
         <p class="clock"><span>本地时间</span><b data-time>9:41am</b><span class="dot" aria-hidden="true">·</span><b data-date>12 March, 2025</b></p>
+        <button class="motion" type="button" data-motion aria-pressed="false">
+          <span class="label-play">暂停动效</span>
+          <span class="label-pause">继续动效</span>
+        </button>
         <a class="lang" href="index.html" hreflang="en" lang="en">EN</a>
-        <button class="chip" type="button" data-menu aria-controls="menu">菜单</button>
+        <button class="chip" type="button" data-menu aria-expanded="false" aria-controls="menu">菜单</button>
       </div>
     </div>
   </header>
@@ -66,6 +75,7 @@
             <span class="line"><span>只有 gtaw 能判。</span></span>
           </h1>
           <p class="facts"><span><i></i> 四个 agent。一个裁判。</span><span>本页不调用模型，也不运行 gtaw。</span></p>
+          <p class="plain">gta 的 agent 起草规格和测试。人来确认期望的答案。是否通过，由 gtaw 判定，不由模型判定。</p>
           <div class="cta">
             <button class="pill dark" type="button" data-open="install">安装 <span class="badge" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
             <button class="pill outline" type="button" data-go="loop">看一遍循环</button>
@@ -137,12 +147,12 @@
             <div>
               <p class="cap">阅读</p>
               <div class="soc">
-                <a class="hot" href="../guides/quickstart.zh-CN.md">快</a>
-                <a href="../design/plan.zh-CN.md">设</a>
-                <a href="../../README.zh-CN.md">读</a>
+                <a class="hot" href="../guides/quickstart.zh-CN.md">快速上手</a>
+                <a href="../design/plan.zh-CN.md">设计文档</a>
+                <a href="../../README.zh-CN.md">项目说明</a>
               </div>
             </div>
-            <p class="local">GitHub Copilot 和 OpenCode 由同一份 core 生成。两边都不是缩减版。运行留在你自己的机器上。</p>
+            <p class="local">GitHub Copilot 和 OpenCode 由同一份 core 生成。两边都不是缩减版。gtaw 和测试在你这台机器上运行。模型请求，以及这些数据如何被处理，取决于 Copilot 或 OpenCode，以及你使用的提供方。</p>
           </div>
           <ul class="flows rise">
             <li>REST</li><li>Kafka</li><li>Pub/Sub</li><li>JMS / MQ</li><li>RabbitMQ</li><li>SQS</li>
@@ -251,7 +261,7 @@
               <pre class="code"></pre>
               <pre class="term-log" aria-live="polite"></pre>
             </div>
-            <div class="won">7 条全部被拦下，没有一条进入提交。这些攻击，再加上一条——同一事项的第三次尝试会停下来等人——会在 gta 的每次改动时于 CI 中重跑：<code>evals/e2e/run-adversarial.sh</code>。<button class="replay" type="button" data-again>再试一次</button></div>
+            <div class="won">7 条都没有被认可为通过。一次越权提交已被发现，并交给人处理：commits made outside gtaw: 3f9c2a1. Agents must not run git. 本板是编排的，并没有运行 gtaw。这些攻击，再加上一条——同一事项的第三次尝试会停下来等人——会在 gta 的每次改动时于 CI 中重跑：<code>evals/e2e/run-adversarial.sh</code>。<button class="replay" type="button" data-again>再试一次</button></div>
             <p class="nojs">这块板需要 JavaScript。这七种修改对应的拒绝是 POLICY_ORACLE_MODIFIED、POLICY_ORACLE_MISMATCH、POLICY_TEST_SKIPPED 和 POLICY_OUT_OF_SCOPE_CHANGE。上面的脚本会真的跑它们。</p>
           </div>
         </div>
@@ -272,10 +282,10 @@
           <p class="fine">同一事项的第三次尝试会停下来等人。那一条在 CI 里跑，不在上面这七条里。单元和 slice 的变异测试默认是建议性的，除非项目自己打开；PIT 跑不了就记一笔，不记在这条事项上。本页是编排好的演示。</p>
         </div>
         <div class="rows" style="margin-top:1.5rem">
-          <article class="bound"><h3>运行留在本地</h3><p>测试在这台机器上跑。每次运行都会去掉云凭证，以及 shell 里的 Spring profile 和配置变量。SIT、UAT 和生产环境都不在范围内。agent 的规则只允许本地依赖。Kafka 和 JMS 以内嵌方式运行。BigQuery 和 GCS 用替身。Oracle 用 H2 的 Oracle 模式或共享测试库。Pub/Sub 用内存替身或模拟器。</p></article>
+          <article class="bound"><h3>测试在这台机器上跑</h3><p>gtaw 和测试在你这台机器上运行。模型请求，以及这些数据如何被处理，取决于 GitHub Copilot 或 OpenCode，以及你使用的提供方。每次测试运行都会去掉云凭证，以及 shell 里的 Spring profile 和配置变量。SIT、UAT 和生产环境都不在范围内。agent 的规则只允许本地依赖。Kafka 和 JMS 以内嵌方式运行。BigQuery 和 GCS 用替身。Oracle 用 H2 的 Oracle 模式或共享测试库。Pub/Sub 用内存替身或模拟器。</p></article>
           <article class="bound"><h3>它会问。它不猜。</h3><p>一个 OK 接受推荐。OK, 2B 改掉其中一个选项。好和确认都算 OK。批准 order.create@R2 批准该修订。其余默认保留其余问题今天的行为；这些场景会变成特征测试。它们锁定代码现在的做法，并不证明这样做是对的。</p></article>
           <article class="bound"><h3>已知缺陷保持可见</h3><p>因为代码写错而失败的测试可以用 @KnownDefect 标住。缺陷还在时，构建保持绿灯。代码修好之后，测试会变红，直到去掉这枚钉子。覆盖率只作参考。</p></article>
-          <article class="bound"><h3>版本</h3><p>Spring Boot 2.2 到 4.1。服务可以是 Java 8 及以上。Maven 或 Gradle，单模块或多模块，Windows、macOS 和 Linux 都可以。gtaw 本身需要 JDK 17 或更新。不需要另外的模型密钥：agent 用 Copilot 或 OpenCode 已经提供的模型。gtaw 不调用模型，也不需要 Docker。</p></article>
+          <article class="bound"><h3>版本</h3><p>Spring Boot 2.2 到 4.1。服务可以是 Java 8 及以上。Maven 或 Gradle，单模块或多模块，Windows、macOS 和 Linux 都可以。gtaw 本身需要 JDK 17 或更新。不需要另外的模型密钥：agent 用 Copilot 或 OpenCode 已经提供的模型。模型请求以及这些数据如何被处理，取决于那个产品和你使用的提供方。gtaw 不调用模型，也不需要 Docker。</p></article>
         </div>
       </div>
     </section>
@@ -373,7 +383,7 @@
       <button class="x" type="button" data-close-modal aria-label="关闭">×</button>
       <p class="cap">安装</p>
       <h2 id="install-title">构建一次。然后是 /gta。</h2>
-      <p class="lede">这个对话框什么都不发送。命令只复制到剪贴板。已发布的 jar 还需要 <code>--distribution-url</code> 和 <code>--distribution-sha256</code>。</p>
+      <p class="lede">这个对话框什么都不发送。浏览器允许时，复制会把命令放进剪贴板。如果不允许，页面会说明，并选中命令，方便你自己复制。已发布的 jar 还需要 <code>--distribution-url</code> 和 <code>--distribution-sha256</code>。</p>
       <ol class="steps">
         <li><div><code>mvn -B install</code><p>在本仓库中执行。构建 gtaw 并运行它的测试。</p><button class="copy" type="button" data-copy="mvn -B install" data-done="已复制">复制</button></div></li>
         <li><div><code>java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot</code><p>每个服务做一次。OpenCode 用 <code>--platform opencode</code>。<code>GTA_CLI_JAR</code> 指向你构建出的 jar。</p><button class="copy" type="button" data-copy="java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot" data-done="已复制">复制</button></div></li>
