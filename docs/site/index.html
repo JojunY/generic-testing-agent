@@ -44,7 +44,6 @@
       <a class="brand" href="#home"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</a>
       <nav class="nav" aria-label="On this page">
         <button type="button" data-go="home">Home</button>
-        <button type="button" data-go="how">How</button>
         <button type="button" data-go="loop">Example</button>
         <button type="button" data-go="agents">Agents</button>
         <button type="button" data-open="install">Install</button>
@@ -65,156 +64,182 @@
     <section class="hero" id="home" data-scene="found">
       <div class="sky" aria-hidden="true">
         <div class="rig">
-          <svg class="scene found" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+          <svg class="scene found" viewBox="0 0 1600 1000" preserveAspectRatio="xMaxYMid slice">
             <defs>
-              <radialGradient id="en-found-bg" cx="78%" cy="46%" r="58%">
-                <stop offset="0%" stop-color="#1c3d66"/>
-                <stop offset="42%" stop-color="#0d1828"/>
-                <stop offset="100%" stop-color="#070b12"/>
+              <radialGradient id="en-found-atmo" cx="74%" cy="42%" r="62%">
+                <stop offset="0%" stop-color="#1a4c78"/>
+                <stop offset="38%" stop-color="#0c1c30"/>
+                <stop offset="100%" stop-color="#05070c"/>
               </radialGradient>
-              <radialGradient id="en-found-glow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="#ffd2ad"/>
-                <stop offset="35%" stop-color="#e08a45" stop-opacity=".55"/>
+              <radialGradient id="en-found-core" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#fff6ee"/>
+                <stop offset="18%" stop-color="#ffd2ad"/>
+                <stop offset="46%" stop-color="#e08a45" stop-opacity=".85"/>
                 <stop offset="100%" stop-color="#e08a45" stop-opacity="0"/>
               </radialGradient>
-            </defs>
-            <rect width="1440" height="900" fill="url(#en-found-bg)"/>
-            <g fill="none" stroke="rgba(224,138,69,.28)" stroke-width="1.2">
-              <path d="M520 780C760 520 980 360 1480 250"/>
-              <path d="M640 860C860 640 1080 500 1500 420" stroke="rgba(140,180,220,.22)"/>
-            </g>
-            <g fill="rgba(180,200,220,.45)">
-              <circle cx="760" cy="560" r="4"/><circle cx="900" cy="470" r="3.5"/><circle cx="1180" cy="300" r="3.5"/><circle cx="1280" cy="520" r="3"/>
-            </g>
-            <g stroke="rgba(224,138,69,.45)" stroke-width="1.2">
-              <path d="M1040 430 L760 560"/><path d="M1040 430 L900 470"/><path d="M1040 430 L1180 300"/><path d="M1040 430 L1280 520"/>
-            </g>
-            <g class="focal">
-              <circle cx="1040" cy="430" r="118" fill="url(#en-found-glow)"/>
-              <circle cx="1040" cy="430" r="16" fill="#f6c49a"/>
-              <circle cx="1040" cy="430" r="6" fill="#fff8f2"/>
-            </g>
-            <g font-family="Onest, sans-serif" fill="#f4f1ea">
-              <text x="1064" y="418" font-size="22" font-weight="600">POST /api/orders</text>
-              <text x="1064" y="446" font-size="14" fill="rgba(244,241,234,.72)">OrderController#create</text>
-              <text x="700" y="590" font-size="13" fill="rgba(244,241,234,.55)">@Scheduled</text>
-              <text x="1110" y="286" font-size="13" fill="rgba(244,241,234,.55)">listener</text>
-            </g>
-          </svg>
-          <svg class="scene draft" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <radialGradient id="en-draft-bg" cx="80%" cy="50%" r="60%">
-                <stop offset="0%" stop-color="#5a341c"/>
-                <stop offset="40%" stop-color="#1a120e"/>
-                <stop offset="100%" stop-color="#070b12"/>
-              </radialGradient>
-            </defs>
-            <rect width="1440" height="900" fill="url(#en-draft-bg)"/>
-            <g class="focal">
-              <rect x="860" y="210" width="420" height="110" rx="22" fill="rgba(255,255,255,.06)" stroke="rgba(240,178,122,.45)"/>
-              <text x="888" y="254" fill="#f0b27a" font-family="Onest, sans-serif" font-size="15" font-weight="600">GATEWAY · 3s</text>
-              <text x="888" y="286" fill="rgba(244,241,234,.75)" font-family="Onest, sans-serif" font-size="18">silent — no approval</text>
-              <rect x="900" y="360" width="420" height="150" rx="22" fill="rgba(224,138,69,.14)" stroke="rgba(240,178,122,.7)"/>
-              <text x="928" y="430" fill="#fff6ee" font-family="Onest, sans-serif" font-size="64" font-weight="600">503</text>
-              <text x="1090" y="418" fill="rgba(244,241,234,.8)" font-family="Onest, sans-serif" font-size="16">PENDING_PAYMENT</text>
-              <rect x="940" y="550" width="420" height="100" rx="22" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.18)"/>
-              <text x="968" y="592" fill="rgba(244,241,234,.7)" font-family="Onest, sans-serif" font-size="18">order-created</text>
-              <text x="968" y="620" fill="#f0b27a" font-family="Onest, sans-serif" font-size="16">not published</text>
-              <line x1="980" y1="584" x2="1160" y2="584" stroke="#e08a45" stroke-width="2"/>
-            </g>
-            <g font-family="Onest, sans-serif">
-              <rect x="1120" y="690" width="150" height="42" rx="21" fill="none" stroke="rgba(244,241,234,.45)" stroke-dasharray="4 4"/>
-              <text x="1152" y="717" fill="rgba(244,241,234,.8)" font-size="15">retry?</text>
-            </g>
-          </svg>
-          <svg class="scene scope" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="en-scope-plane" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#f0b27a"/>
-                <stop offset="100%" stop-color="#c56a2d"/>
+              <linearGradient id="en-found-left" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#05070c"/>
+                <stop offset="42%" stop-color="#05070c" stop-opacity=".55"/>
+                <stop offset="70%" stop-color="#05070c" stop-opacity="0"/>
               </linearGradient>
-              <radialGradient id="en-scope-bg" cx="75%" cy="55%" r="55%">
-                <stop offset="0%" stop-color="#16304a"/>
-                <stop offset="100%" stop-color="#070b12"/>
-              </radialGradient>
+              <linearGradient id="en-bezel" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#d5e4f4"/>
+                <stop offset="45%" stop-color="#6e879e"/>
+                <stop offset="100%" stop-color="#1b2836"/>
+              </linearGradient>
             </defs>
-            <rect width="1440" height="900" fill="url(#en-scope-bg)"/>
-            <g fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.16)">
-              <polygon points="980,180 1320,230 1260,340 900,280"/>
-              <polygon points="940,360 1340,420 1260,540 860,470"/>
-            </g>
-            <g font-family="Onest, sans-serif" fill="rgba(244,241,234,.45)" font-size="14">
-              <text x="1040" y="250">unit · one method</text>
-              <text x="1020" y="450">slice · the HTTP edge</text>
+            <rect width="1600" height="1000" fill="#05070c"/>
+            <rect width="1600" height="1000" fill="url(#en-found-atmo)"/>
+            <g fill="none" stroke="rgba(170,198,220,.16)" stroke-width="1.2">
+              <ellipse cx="1180" cy="860" rx="620" ry="120"/>
+              <ellipse cx="1180" cy="860" rx="470" ry="86"/>
+              <ellipse cx="1180" cy="860" rx="320" ry="54"/>
             </g>
             <g class="focal">
-              <polygon points="880,560 1380,620 1280,780 780,710" fill="url(#en-scope-plane)"/>
-              <text x="920" y="650" fill="#2a160c" font-family="Onest, sans-serif" font-size="22" font-weight="600">component</text>
-              <text x="920" y="688" fill="#3a2012" font-family="Onest, sans-serif" font-size="16">gateway · order row · no message</text>
-              <text x="920" y="724" fill="#3a2012" font-family="Onest, sans-serif" font-size="15">OrderControllerIT</text>
+              <circle cx="1180" cy="560" r="310" fill="url(#en-found-core)"/>
+              <circle cx="1180" cy="560" r="236" fill="none" stroke="url(#en-bezel)" stroke-width="30"/>
+              <circle cx="1180" cy="560" r="196" fill="#071018" stroke="rgba(255,236,214,.35)" stroke-width="2"/>
+              <circle cx="1180" cy="560" r="156" fill="none" stroke="rgba(224,138,69,.55)" stroke-width="10"/>
+              <circle cx="1180" cy="560" r="116" fill="none" stroke="rgba(255,210,170,.8)" stroke-width="8"/>
+              <circle cx="1180" cy="560" r="76" fill="none" stroke="#ffd8b8" stroke-width="6"/>
+              <circle cx="1180" cy="560" r="34" fill="#fff4ea"/>
+              <circle cx="1180" cy="560" r="12" fill="#fff"/>
+              <path d="M1180 364 A196 196 0 0 1 1356 456" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3"/>
             </g>
+            <g fill="none" stroke="rgba(240,178,122,.75)" stroke-width="2">
+              <path d="M1356 456 C1440 360 1488 250 1516 196"/>
+              <path d="M1376 520 C1460 470 1510 430 1556 400"/>
+              <path d="M1260 390 C1320 300 1360 250 1404 214"/>
+            </g>
+            <g fill="#d5e2ef" stroke="#243140" stroke-width="1">
+              <polygon points="1516,178 1552,160 1588,178 1552,196"/>
+              <polygon points="1516,178 1552,196 1552,236 1516,218"/>
+              <polygon points="1552,196 1588,178 1588,218 1552,236"/>
+              <polygon points="1556,382 1588,366 1620,382 1588,398"/>
+              <polygon points="1556,382 1588,398 1588,434 1556,418"/>
+              <polygon points="1588,398 1620,382 1620,418 1588,434"/>
+              <polygon points="1404,196 1440,178 1476,196 1440,214"/>
+              <polygon points="1404,196 1440,214 1440,252 1404,234"/>
+              <polygon points="1440,214 1476,196 1476,234 1440,252"/>
+            </g>
+            <g class="scene-label" fill="#f7f4ee">
+              <text x="980" y="430" font-size="28" font-weight="600">POST /api/orders</text>
+            </g>
+            <rect width="1600" height="1000" fill="url(#en-found-left)"/>
+          </svg>
+          <svg class="scene draft" viewBox="0 0 1600 1000" preserveAspectRatio="xMaxYMid slice">
+            <defs>
+              <radialGradient id="en-draft-atmo" cx="78%" cy="40%" r="68%">
+                <stop offset="0%" stop-color="#6a3a1c"/>
+                <stop offset="36%" stop-color="#24160f"/>
+                <stop offset="100%" stop-color="#05070c"/>
+              </radialGradient>
+              <linearGradient id="en-slab" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#4a2c1c"/>
+                <stop offset="48%" stop-color="#2a1810"/>
+                <stop offset="100%" stop-color="#140c09"/>
+              </linearGradient>
+              <linearGradient id="en-draft-left" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#05070c"/>
+                <stop offset="38%" stop-color="#05070c" stop-opacity=".5"/>
+                <stop offset="68%" stop-color="#05070c" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <rect width="1600" height="1000" fill="#05070c"/>
+            <rect width="1600" height="1000" fill="url(#en-draft-atmo)"/>
+            <ellipse cx="1280" cy="880" rx="520" ry="70" fill="rgba(0,0,0,.45)"/>
+            <polygon points="1120,70 1620,20 1660,860 1080,760" fill="#100c0a"/>
+            <g class="focal">
+              <polygon points="980,110 1540,48 1580,820 930,760" fill="url(#en-slab)"/>
+              <polyline points="980,110 1540,48 1580,820" fill="none" stroke="rgba(255,214,170,.55)" stroke-width="3"/>
+              <polygon points="1040,190 1460,150 1490,700 1020,680" fill="rgba(0,0,0,.28)"/>
+              <g class="scene-label">
+                <text x="1040" y="520" fill="#fff6ee" font-size="108" font-weight="700">503</text>
+              </g>
+            </g>
+            <rect width="1600" height="1000" fill="url(#en-draft-left)"/>
+          </svg>
+          <svg class="scene scope" viewBox="0 0 1600 1000" preserveAspectRatio="xMaxYMid slice">
+            <defs>
+              <linearGradient id="en-scope-sky" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#071018"/>
+                <stop offset="55%" stop-color="#102033"/>
+                <stop offset="100%" stop-color="#1a120e"/>
+              </linearGradient>
+              <linearGradient id="en-mesa" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#f0b27a"/>
+                <stop offset="40%" stop-color="#d4844a"/>
+                <stop offset="100%" stop-color="#8a4520"/>
+              </linearGradient>
+              <linearGradient id="en-scope-left" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#05070c"/>
+                <stop offset="36%" stop-color="#05070c" stop-opacity=".55"/>
+                <stop offset="66%" stop-color="#05070c" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <rect width="1600" height="1000" fill="url(#en-scope-sky)"/>
+            <path d="M760 390 C980 250 1280 230 1680 340 L1680 520 L760 500 Z" fill="#13283c"/>
+            <path d="M700 520 C960 390 1320 410 1700 530 L1700 700 L680 660 Z" fill="#1b3348"/>
+            <g fill="none" stroke="rgba(190,214,230,.22)" stroke-width="1.2">
+              <path d="M820 360 C1040 300 1300 300 1600 360"/>
+              <path d="M800 400 C1060 330 1340 340 1620 410"/>
+              <path d="M760 500 C1020 430 1360 450 1660 530"/>
+              <path d="M740 560 C1040 480 1380 500 1680 590"/>
+            </g>
+            <g class="focal">
+              <path d="M620 760 C900 470 1240 500 1720 640 L1720 1100 L520 1100 Z" fill="url(#en-mesa)"/>
+              <path d="M700 700 C980 560 1280 580 1660 690" fill="none" stroke="rgba(255,236,214,.45)" stroke-width="2"/>
+              <path d="M660 780 C980 620 1320 650 1700 780" fill="none" stroke="rgba(90,40,16,.35)" stroke-width="2"/>
+              <path d="M640 860 C1000 700 1360 740 1720 880" fill="none" stroke="rgba(90,40,16,.28)" stroke-width="2"/>
+              <g class="scene-label" fill="#2a160c">
+                <text x="980" y="560" font-size="34" font-weight="700" stroke="#ffe6cf" stroke-width="7" paint-order="stroke">component</text>
+              </g>
+            </g>
+            <rect width="1600" height="1000" fill="url(#en-scope-left)"/>
           </svg>
         </div>
       </div>
       <div class="hero-veil" aria-hidden="true"></div>
       <div class="shell hero-grid">
         <div class="hero-copy">
-          <p class="eyebrow"><i></i> Java and Spring · one flow at a time</p>
+          <p class="eyebrow"><i></i> One flow at a time</p>
           <h1>
             <span class="only only-found"><span class="line"><span>gtaw finds</span></span><span class="line"><span>the door in.</span></span></span>
             <span class="only only-draft"><span class="line"><span>The draft is</span></span><span class="line"><span>what the code does.</span></span></span>
             <span class="only only-scope"><span class="line"><span>The test has to</span></span><span class="line"><span>cross the path.</span></span></span>
           </h1>
-          <p class="plain only only-found">JavaParser lists the entry. This one is POST /api/orders, named order.create. That list is not a spec.</p>
-          <p class="plain only only-draft">A silent gateway stays 503, the order stays pending, nothing is published. A candidate. Not a verdict.</p>
-          <p class="plain only only-scope">gtaw plans one component test, so the gateway, the row, and the missing message are all visible.</p>
+          <p class="plain only only-found">gtaw lists this entry. The list is not a spec.</p>
+          <p class="plain only only-draft">The code returns 503 and sends no message. You confirm it before it is an expected value.</p>
+          <p class="plain only only-scope">One component test sees the gateway, the row, and the missing message.</p>
           <div class="scene-tabs" role="tablist" aria-label="How a flow becomes a test">
             <button type="button" role="tab" data-scene-go="0" aria-selected="true">Found</button>
             <button type="button" role="tab" data-scene-go="1" aria-selected="false">Draft</button>
             <button type="button" role="tab" data-scene-go="2" aria-selected="false">Scope</button>
           </div>
           <div class="cta">
-            <button class="pill dark" type="button" data-open="install">Install <span class="badge" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
-            <button class="pill outline" type="button" data-go="loop">See the example</button>
+            <button class="pill dark" type="button" data-go="loop">See the example</button>
           </div>
         </div>
         <div class="hero-side">
           <aside class="detail">
-            <div class="only only-found"><p class="k">Entry · illustrative</p><strong>order.create</strong><p>POST /api/orders · OrderController#create. Controllers, jobs and listeners are listed the same way.</p></div>
-            <div class="only only-draft"><p class="k">Candidate · source=observed</p><strong>503 · pending · silent</strong><p>The analyst may not mark this confirmed. A person answers before it is an expected value.</p></div>
-            <div class="only only-scope"><p class="k">Layer · component</p><strong>OrderControllerIT</strong><p>Unit and slice stay available. They are the wrong scope for a path that leaves the method.</p></div>
+            <div class="only only-found"><p class="k">Entry</p><strong>order.create</strong></div>
+            <div class="only only-draft"><p class="k">Candidate</p><strong>503</strong></div>
+            <div class="only only-scope"><p class="k">Test</p><strong>OrderControllerIT</strong></div>
           </aside>
         </div>
-      </div>
-      <div class="shell status">
-        <span>Spring Boot 2.2–4.1</span>
-        <span>Services on Java 8+ · gtaw needs JDK 17+</span>
-        <span>Scripted page · drawings are original</span>
       </div>
       <p class="sr-only" id="scene-live" aria-live="polite">gtaw finds the door in.</p>
     </section>
 
     <section class="about" id="about">
-      <div class="shell about-grid">
-        <h2 class="rise">One entry from the code. A candidate spec. Your answer. Then gtaw plans the test. <em>Reading the code does not make the behaviour correct.</em></h2>
-        <div>
-          <div class="about-foot rise">
-            <div>
-              <p class="cap">Read</p>
-              <div class="soc">
-                <a class="hot" href="../guides/quickstart.md">Quickstart</a>
-                <a href="../design/plan.md">Design</a>
-                <a href="../../README.md">README</a>
-              </div>
-            </div>
-            <p class="local">GitHub Copilot and OpenCode are generated from the same core. Neither is a reduced copy. gtaw and the tests run on your machine. A model request, and how that data is handled, depends on Copilot or OpenCode and on the provider you use.</p>
-          </div>
-          <ul class="flows rise">
+      <div class="shell">
+        <p class="rise">gtaw also lists jobs, listeners, and the entry points below.</p>
+        <ul class="flows rise">
             <li>REST</li><li>Kafka</li><li>Pub/Sub</li><li>JMS / MQ</li><li>RabbitMQ</li><li>SQS</li>
             <li>@Scheduled</li><li>Spring Batch</li><li>Flyway</li><li>WebFlux</li><li>gRPC</li><li>GraphQL</li>
             <li>Temporal</li><li>BPMN</li><li>Beam</li><li>WebSocket</li>
           </ul>
-        </div>
+        <p class="links rise"><a href="../guides/quickstart.md">Quickstart</a><a href="../design/plan.md">Design</a><a href="../../README.md">README</a></p>
       </div>
     </section>
 
@@ -227,93 +252,42 @@
       </ul>
     </section>
 
-    <section class="studies" id="how">
-      <div class="shell block">
-        <p><span class="kpill">Three steps</span></p>
-        <h2 class="display rise">Evidence, then a question, then a scope.</h2>
-        <div class="study-grid">
-          <article class="study rise">
-            <div class="study-art" aria-hidden="true">
-              <svg viewBox="0 0 640 400">
-                <rect width="640" height="400" fill="#0c1522"/>
-                <circle cx="210" cy="200" r="70" fill="#e08a45" opacity=".9"/>
-                <circle cx="210" cy="200" r="8" fill="#fff6ee"/>
-                <g stroke="rgba(224,138,69,.6)" fill="none"><path d="M270 180 H420"/><path d="M270 220 H460"/></g>
-                <g fill="#d7deea" font-family="Onest, sans-serif" font-size="22">
-                  <text x="430" y="176">POST</text><text x="470" y="228">job</text>
-                </g>
-              </svg>
-            </div>
-            <div class="body">
-              <h3>gtaw lists the door</h3>
-              <p>JavaParser names controllers, scheduled methods, listeners, jobs and the rest. The flow id comes from the class and the method. The analyst starts at that method and follows calls it can see. It does not invent a side effect.</p>
-            </div>
-          </article>
-          <article class="study rise">
-            <div class="study-art" aria-hidden="true">
-              <svg viewBox="0 0 640 400">
-                <rect width="640" height="400" fill="#1a120e"/>
-                <rect x="70" y="70" width="500" height="90" rx="16" fill="rgba(255,255,255,.05)" stroke="rgba(240,178,122,.4)"/>
-                <text x="96" y="124" fill="#f4f1ea" font-family="Onest, sans-serif" font-size="28">503 · pending</text>
-                <rect x="70" y="190" width="280" height="64" rx="32" fill="none" stroke="rgba(244,241,234,.4)" stroke-dasharray="5 5"/>
-                <text x="108" y="230" fill="#f4f1ea" font-family="Onest, sans-serif" font-size="22">retry?</text>
-              </svg>
-            </div>
-            <div class="body">
-              <h3>Seen in code is not confirmed</h3>
-              <p>What the code does is <code>observed</code>. It can lock today's behaviour later. It cannot be marked confirmed by the analyst. A guess is a question. A document counts only when gtaw checks the quote.</p>
-            </div>
-          </article>
-          <article class="study rise">
-            <div class="study-art" aria-hidden="true">
-              <svg viewBox="0 0 640 400">
-                <rect width="640" height="400" fill="#0e1824"/>
-                <polygon points="80,90 560,120 520,190 60,160" fill="rgba(255,255,255,.06)"/>
-                <polygon points="70,200 570,230 520,310 40,275" fill="rgba(255,255,255,.08)"/>
-                <polygon points="50,300 590,330 540,390 20,360" fill="#e08a45"/>
-                <text x="80" y="358" fill="#2a160c" font-family="Onest, sans-serif" font-size="28" font-weight="600">component</text>
-              </svg>
-            </div>
-            <div class="body">
-              <h3>The layer is the reach of the check</h3>
-              <p>The analyst hints unit, slice, component or contract. gtaw keeps that hint when the capability allows it, and drops <code>system</code>: deployed environments are out of scope. A path through a gateway, a row and a message is a component test.</p>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
+    
 
     <section class="work" id="agents">
       <div class="shell">
         <p class="center"><span class="kpill">The cast</span></p>
         <h2 class="display center rise">Four agents. gtaw is the referee.</h2>
-        <p class="lede center rise" style="margin-inline:auto">gtaw calls no model. The same input gets the same decision. It is not a fifth agent.</p>
+        <p class="lede center rise" style="margin-inline:auto">gtaw calls no model.</p>
         <div class="cards">
           <article class="agent rise">
             <div class="meta"><span>01 · The one you talk to</span><span class="go" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>
             <h3>gta-orchestrator</h3>
-            <p>Takes /gta, asks gtaw for the next node, and hands it to the analyst, the author or the reviewer. It shows gtaw’s status block. It does not write the spec or the test, and it never answers for you.</p>
-            <div class="tags"><span>next, check, submit, answer, note, status</span><span>no file edits</span><span>no git, no mvn</span></div>
+            <p>It takes /gta and asks gtaw what to do next.</p>
           </article>
           <article class="agent rise">
             <div class="meta"><span>02 · Reads the code</span><span class="go" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>
             <h3>gta-analyst</h3>
-            <p>Turns one flow into a behaviour spec: requirements, scenarios, a diagram, and a question wherever the code is not enough. It describes. It does not decide that today’s behaviour is correct.</p>
-            <div class="tags"><span>writes the named spec</span><span>cannot mark source=confirmed</span></div>
+            <p>It writes the candidate spec for one flow.</p>
           </article>
           <article class="agent rise">
             <div class="meta"><span>03 · Writes one test</span><span class="go" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>
             <h3>gta-test-author</h3>
-            <p>Writes the test for one approved scenario. Expected values come from the locked spec. When the spec and the code do not settle how to write it, the author asks instead of guessing.</p>
-            <div class="tags"><span>test files in the brief</span><span>no src/main</span><span>no @Disabled</span></div>
+            <p>It writes one test from the locked spec.</p>
           </article>
           <article class="agent rise">
             <div class="meta"><span>04 · Judges, and does not edit</span><span class="go" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>
             <h3>gta-reviewer</h3>
-            <p>Reads the test against the approved scenario and returns one verdict. It never recommends changing the expected value to whatever the code returned.</p>
-            <div class="tags"><span>read only</span><span>one verdict</span></div>
+            <p>It gives one verdict and does not edit the test.</p>
           </article>
         </div>
+        <details class="more">
+          <summary>What they must not do</summary>
+          <p>The orchestrator does not edit files, answer for you, or run git or mvn.</p>
+          <p>The analyst cannot mark a source as confirmed.</p>
+          <p>The author does not change src/main and does not add @Disabled.</p>
+          <p>The reviewer is read-only.</p>
+        </details>
       </div>
     </section>
 
@@ -321,7 +295,7 @@
       <div class="shell block">
         <p><span class="kpill">The loop</span></p>
         <h2 class="display rise">One order, from the door to the test.</h2>
-        <p class="lede rise">An illustrative <code>order.create</code>. The shape is the one gta uses. This board does not call a model, and it does not run gtaw. Nothing here is a recorded session of a real service.</p>
+        <p class="lede rise">This illustrative order.create is not a recorded run.</p>
         <div class="rows" role="group" aria-label="Stages">
           <button class="stage" type="button" aria-pressed="false"><span class="n">01</span><span class="body"><h3>Found</h3><p>gtaw names POST /api/orders. The analyst starts there.</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
           <button class="stage" type="button" aria-pressed="false"><span class="n">02</span><span class="body"><h3>Ask</h3><p>You accept the candidate, or you change it. Then you approve.</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
@@ -343,7 +317,8 @@
             <div class="pane term"><div class="pane-h">Terminal · gtaw</div><pre class="term-log" aria-live="polite"></pre></div>
           </div>
         </div>
-        <p class="note">Illustrative fixture, scripted. <code>好</code> and <code>确认</code> count as OK. <code>批准 order.create@R2</code> approves that revision. <code>其余默认</code> keeps today’s behaviour and those scenarios become characterization tests: they lock the code, they do not call it right.</p>
+        <p class="note">A pass matches the values you accepted.</p>
+        <details class="more"><summary>Replies you can give</summary><p>A bare OK takes the recommendation. 好 and 确认 mean OK. 批准 order.create@R2 approves that revision. 其余默认 keeps the current behaviour. Those scenarios become characterization tests.</p><p>The analyst writes the candidate as observed. Only gtaw records your answer as confirmed.</p></details>
         <p class="nojs">JavaScript draws the replay. The four stages are found, ask, scope, run.</p>
       </div>
     </section>
@@ -352,7 +327,7 @@
       <div class="shell block">
         <p><span class="kpill">Separate from the example</span></p>
         <h2 class="display rise">Seven edits gtaw refuses.</h2>
-        <p class="lede rise">Not the way a flow is tested. A scripted author, after a real failure, tries to make it pass. gtaw answers with the refusal it actually uses. The same attacks run in <a href="../../evals/e2e/run-adversarial.sh">evals/e2e/run-adversarial.sh</a>.</p>
+        <p class="lede rise">These seven edits do not make a failed test pass. The same attacks run in <a href="../../evals/e2e/run-adversarial.sh">evals/e2e/run-adversarial.sh</a>.</p>
         <div class="arena">
           <div>
             <p class="score"><b data-score>0<span>/7</span></b><span class="score-l">shortcuts caught</span></p>
@@ -383,20 +358,27 @@
       <div class="shell">
         <div class="board">
           <p class="eyebrow light"><i></i> What the repository contains</p>
-          <h2>Counts of the harness. Not a customer list.</h2>
+          <h2>Counts from this repository.</h2>
           <div class="stats">
             <p><b data-count="4">4</b><span>named agents, each with one job</span></p>
             <p><b data-count="4">4</b><span>layers a scenario can ask for</span></p>
             <p><b data-count="1">1</b><span>program allowed to say a test passed</span></p>
             <p><b data-count="20">20</b><span>skills shipped in core/skills</span></p>
           </div>
-          <p class="fine">The four layers are unit, slice, component and contract. gtaw will not schedule <code>system</code>: a deployed environment is out of scope. The 20 skills are the 20 directories in <code>core/skills</code>, each with a <code>SKILL.md</code>; the README lists the same count. Mutation on unit and slice tests is advisory unless a project turns it on. The page is a scripted demonstration. The scenes are original drawings, not photographs.</p>
-        </div>
-        <div class="rows" style="margin-top:1.5rem">
-          <article class="bound"><h3>Tests run on this machine</h3><p>gtaw and the tests run on your machine. A model request, and how that data is handled, depends on GitHub Copilot or OpenCode and on the provider you use. Each test run drops cloud credentials and the shell’s Spring profile and config variables. SIT, UAT and production are out of scope. The agents’ rules allow local dependencies only. Kafka and JMS run embedded. BigQuery and GCS use fakes. Oracle uses H2 in Oracle mode or a shared test schema. Pub/Sub uses an in-memory fake or an emulator.</p></article>
-          <article class="bound"><h3>An answer is not an inference</h3><p>A bare OK takes the recommendation and is recorded as your answer. OK, 2B changes one option. 好 and 确认 count as OK. 批准 order.create@R2 approves that revision. 其余默认 keeps today’s behaviour for the rest; those become characterization tests. They lock the code. They do not prove it is the right rule.</p></article>
-          <article class="bound"><h3>A known defect stays visible</h3><p>A test that fails because the code is wrong can be pinned with @KnownDefect. The build stays green while the defect exists. After the code is fixed, the test turns red until the pin is removed. Coverage is reference only.</p></article>
-          <article class="bound"><h3>Versions</h3><p>Spring Boot 2.2 to 4.1. Services on Java 8 and up. Maven or Gradle, one module or many, on Windows, macOS and Linux. gtaw itself needs JDK 17 or newer. No separate model key: the agents use the model Copilot or OpenCode already provides. A model request, and how that data is handled, depends on that product and on the provider you use. gtaw calls no model, and it does not need Docker.</p></article>
+          <details class="more">
+            <summary>What the counts mean</summary>
+            <p>The layers are unit, slice, component, and contract. gtaw does not schedule system.</p>
+            <p>The 20 skills are the directories in core/skills. Mutation on unit and slice tests is advisory unless the project turns it on.</p>
+          </details>
+          <details class="more">
+            <summary>Where tests run</summary>
+            <p>gtaw and the tests run on your machine. A model request depends on Copilot or OpenCode and on the provider.</p>
+            <p>Each test drops cloud credentials and Spring profiles. Kafka and JMS run embedded. BigQuery, GCS, Oracle, and Pub/Sub use fakes or a shared test schema.</p>
+          </details>
+          <details class="more">
+            <summary>Versions</summary>
+            <p>Spring Boot 2.2 to 4.1. Services can use Java 8 or newer. gtaw needs JDK 17 or newer.</p>
+          </details>
         </div>
       </div>
     </section>
@@ -405,33 +387,34 @@
       <div class="shell block">
         <p><span class="kpill">Install</span></p>
         <h2 class="display rise">Build it once. Then the command is /gta.</h2>
-        <p class="lede rise">From this repository the jar is the one you just built. A published jar also needs <code>--distribution-url</code> and <code>--distribution-sha256</code>. gtaw will not download an unpinned jar. The full notes are in the <a href="../guides/quickstart.md">quickstart</a> and the <a href="../design/plan.md">design</a>.</p>
+        <p class="lede rise">Build gtaw from this repository. Then run /gta in the service.</p>
+        <details class="more"><summary>A published jar</summary><p>A published jar needs a pinned URL and checksum. gtaw does not download an unpinned jar. The <a href="../guides/quickstart.md">quickstart</a> has the notes.</p></details>
         <ol class="steps">
           <li>
             <div>
               <code>mvn -B install</code>
-              <p>In this repository. Builds gtaw and runs its tests.</p>
+              <p>Builds gtaw in this repository.</p>
               <button class="copy" type="button" data-copy="mvn -B install" data-done="Copied">Copy</button>
             </div>
           </li>
           <li>
             <div>
               <code>java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot</code>
-              <p>Once per service, usually by the person who owns the build. Use <code>--platform opencode</code> for OpenCode, then commit what <code>init</code> wrote. For a jar from Nexus, add the URL and the sha256 from the quickstart. For local development, <code>GTA_CLI_JAR</code> points gtaw at the jar you built.</p>
+              <p>Sets up one service. Use <code>--platform opencode</code> for OpenCode.</p>
               <button class="copy" type="button" data-copy="java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot" data-done="Copied">Copy</button>
             </div>
           </li>
           <li>
             <div>
               <code>cd my-service && ./gtaw doctor</code>
-              <p>Checks the JDK, the build and the harness. On Windows: <code>.\gtaw.cmd doctor</code>.</p>
+              <p>Checks the JDK and the harness. On Windows, use <code>.\gtaw.cmd doctor</code>.</p>
               <button class="copy" type="button" data-copy="cd my-service && ./gtaw doctor" data-done="Copied">Copy</button>
             </div>
           </li>
           <li>
             <div>
               <code>/gta</code>
-              <p>In Copilot chat or OpenCode, inside the service. Reply <code>OK</code> to take the recommendations, then approve the spec it shows you.</p>
+              <p>Start in Copilot or OpenCode. Reply OK, then approve the spec.</p>
               <button class="copy" type="button" data-copy="/gta" data-done="Copied">Copy</button>
             </div>
           </li>
@@ -449,12 +432,11 @@
       <div class="cols">
         <div>
           <a class="brand" href="#home"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5 13.8 8.2 20.5 10 13.8 11.8 12 18.5 10.2 11.8 3.5 10 10.2 8.2Z"/></svg> gta</a>
-          <p>The code suggests a candidate. A person confirms it. gtaw runs the test. This page does none of those things.</p>
+          <p>A scripted introduction. Not a live run.</p>
         </div>
         <div>
           <h3>On this page</h3>
-          <button type="button" data-go="how">How</button>
-          <button type="button" data-go="loop">Example</button>
+            <button type="button" data-go="loop">Example</button>
           <button type="button" data-go="agents">Agents</button>
           <button type="button" data-go="refusals">Shortcuts</button>
           <button type="button" data-open="install">Install</button>
@@ -480,11 +462,10 @@
     </div>
     <nav class="shell" aria-label="Menu">
       <button type="button" data-go="home"><i>01</i> Home</button>
-      <button type="button" data-go="how"><i>02</i> How</button>
-      <button type="button" data-go="loop"><i>03</i> Example</button>
-      <button type="button" data-go="agents"><i>04</i> Agents</button>
-      <button type="button" data-go="refusals"><i>05</i> Shortcuts</button>
-      <button type="button" data-open="install"><i>06</i> Install</button>
+      <button type="button" data-go="loop"><i>02</i> Example</button>
+      <button type="button" data-go="agents"><i>03</i> Agents</button>
+      <button type="button" data-go="refusals"><i>04</i> Shortcuts</button>
+      <button type="button" data-open="install"><i>05</i> Install</button>
     </nav>
     <div class="shell menu-bot"><span>Scripted demonstration</span><a href="index.zh-CN.html" hreflang="zh-CN" lang="zh-CN">中文</a></div>
   </div>
@@ -494,7 +475,7 @@
       <button class="x" type="button" data-close-modal aria-label="Close">×</button>
       <p class="cap">Install</p>
       <h2 id="install-title">Build it once. Then /gta.</h2>
-      <p class="lede">Nothing is sent from this dialog. Copy places a command on the clipboard when the browser allows it. If it does not, the page says so and selects the command so you can copy it yourself. A published jar also needs <code>--distribution-url</code> and <code>--distribution-sha256</code>.</p>
+      <p class="lede">Copy places the command on the clipboard. If the browser refuses, the page selects the command.</p>
       <ol class="steps">
         <li><div><code>mvn -B install</code><p>In this repository. Builds gtaw and runs its tests.</p><button class="copy" type="button" data-copy="mvn -B install" data-done="Copied">Copy</button></div></li>
         <li><div><code>java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot</code><p>Once per service. OpenCode uses <code>--platform opencode</code>. <code>GTA_CLI_JAR</code> points at a jar you built.</p><button class="copy" type="button" data-copy="java -jar toolkit/gta-cli/target/gta-cli.jar --root my-service init --platform copilot" data-done="Copied">Copy</button></div></li>
