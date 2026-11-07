@@ -12,7 +12,7 @@ if [ -n "$GTA_CLI_JAR" ]; then
 else
   VERSION=$(prop version)
   URL=$(prop distributionUrl)
-  SHA=$(prop distributionSha256Sum)
+  SHA=$(prop distributionSha256Sum | tr 'A-F' 'a-f')
   [ -n "$VERSION" ] || { echo '{"error":{"code":"CONFIG_NOT_INITIALIZED","category":"config","message":"missing .gta/wrapper/gta-wrapper.properties","hint":"run gta-cli init --platform copilot|opencode","retryable":false}}'; exit 21; }
   # fail closed: never download or run a jar whose checksum is not pinned
   if [ -z "$SHA" ] || [ -z "$URL" ]; then
@@ -20,7 +20,7 @@ else
     exit 21
   fi
   CACHE="${GTA_HOME:-$HOME/.gta}/wrapper/dists"
-  JAR="$CACHE/gta-cli-$VERSION.jar"
+  JAR="$CACHE/gta-cli-$VERSION-$SHA.jar" # keyed by the pin: a new URL and sha256 downloads the new jar
   if [ ! -f "$JAR" ]; then
     mkdir -p "$CACHE"
     TMP=$(mktemp "$CACHE/gta-cli-$VERSION.XXXXXX") # one file per process: parallel first runs do not collide

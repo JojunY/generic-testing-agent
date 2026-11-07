@@ -174,4 +174,20 @@ class SurefireReportParserTest {
         assertEquals("boom", SurefireReportParser.withoutTypePrefix("boom", "java.lang.IllegalStateException"));
         assertNull(SurefireReportParser.withoutTypePrefix(null, "x.Y"));
     }
+
+    @Test
+    void shouldNeverTurnAFailureInTheReportIntoAKnownDefect() throws Exception {
+        // parameterized invocations share one gta-junit key: the last one (a known defect) must not hide the failure
+        report(
+                "com.acme.OrderIT",
+                "<testcase classname=\"com.acme.OrderIT\" name=\"pinned(int)[1]\"><failure type=\"java.lang.AssertionError\" message=\"no longer reproduces\"/></testcase>\n"
+                        + "<testcase classname=\"com.acme.OrderIT\" name=\"pinned(int)[2]\"><skipped/></testcase>\n");
+        tags(
+                "{\"className\":\"com.acme.OrderIT\",\"method\":\"pinned\",\"tags\":[\"gta\"],\"outcome\":\"known-defect\"}\n");
+
+        List<TestOutcome> cases = SurefireReportParser.parse(List.of(reports), gtaResults);
+
+        assertEquals("failed", cases.get(0).outcome);
+        assertEquals("known-defect", cases.get(1).outcome);
+    }
 }

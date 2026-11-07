@@ -70,7 +70,9 @@ public final class SurefireReportParser {
             if (n != null) {
                 n.path("tags").forEach(t -> c.tags.add(t.asText()));
                 c.displayName = n.path("displayName").asText(null);
-                if ("known-defect".equals(n.path("outcome").asText())) {
+                // a failure in the report is never turned into a pass (parameterized invocations share one key)
+                boolean failedInReport = "failed".equals(c.outcome) || "error".equals(c.outcome);
+                if ("known-defect".equals(n.path("outcome").asText()) && !failedInReport) {
                     c.outcome = "known-defect";
                 }
             }

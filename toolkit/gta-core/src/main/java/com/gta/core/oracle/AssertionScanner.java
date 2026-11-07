@@ -15,6 +15,7 @@ import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.expr.TextBlockLiteralExpr;
+import com.github.javaparser.ast.expr.UnaryExpr;
 import com.github.javaparser.ast.stmt.ExpressionStmt;
 import com.github.javaparser.ast.stmt.Statement;
 import com.gta.core.profile.JavaIndex;
@@ -325,7 +326,11 @@ public final class AssertionScanner {
             } else if (lit.isBooleanLiteralExpr()) {
                 tokens.add(String.valueOf(lit.asBooleanLiteralExpr().getValue())); // e.g. isEqualTo(true)
             } else if (!lit.isNullLiteralExpr()) {
-                tokens.add(lit.toString().replaceAll("[lLdDfF]$", "").replace("_", ""));
+                String number = lit.toString().replaceAll("[lLdDfF]$", "").replace("_", "");
+                // -1 is a unary minus on 1: the expected value is -1, and isEqualTo(-1) must not satisfy a THEN of 1
+                boolean negative = lit.getParentNode().orElse(null) instanceof UnaryExpr u
+                        && u.getOperator() == UnaryExpr.Operator.MINUS;
+                tokens.add(negative ? "-" + number : number);
             }
         }
         for (NameExpr n : stmt.findAll(NameExpr.class)) {

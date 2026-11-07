@@ -56,13 +56,13 @@ public final class ProcessRunner {
             }
             Process p = pb.start();
             if (p.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
-                return new Result(p.exitValue(), Files.readString(log, StandardCharsets.UTF_8));
+                return new Result(p.exitValue(), readLog(log));
             }
             p.descendants().forEach(ProcessHandle::destroyForcibly);
             p.destroyForcibly();
             p.waitFor(10, TimeUnit.SECONDS); // let the OS release the log file (Windows keeps it locked until exit)
-            String output = Files.readString(log, StandardCharsets.UTF_8) + "\n[gtaw] timed out after "
-                    + timeout.toMinutes() + " min: " + String.join(" ", command) + "\n";
+            String output = readLog(log) + "\n[gtaw] timed out after " + timeout.toMinutes() + " min: "
+                    + String.join(" ", command) + "\n";
             return new Result(TIMED_OUT, output, true);
         } catch (IOException e) {
             throw new GtaException(
@@ -75,6 +75,11 @@ public final class ProcessRunner {
         } finally {
             deleteQuietly(log);
         }
+    }
+
+    /** Decodes leniently: a console that writes GBK or Latin-1 must not turn a finished run into an error. */
+    private static String readLog(Path log) throws IOException {
+        return new String(Files.readAllBytes(log), StandardCharsets.UTF_8);
     }
 
     private static void deleteQuietly(Path file) {

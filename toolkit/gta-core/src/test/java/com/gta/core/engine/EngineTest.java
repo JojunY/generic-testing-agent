@@ -946,4 +946,66 @@ class EngineTest {
         assertTrue(brief.contains("hint.intent=reproducing"), brief);
         assertTrue(brief.contains(".gta/specs/order/create.incidents.md"), "the scenario cites the kept report");
     }
+
+    @Test
+    void shouldAskTheWaitingDecisionBeforePausingTheRunAndResumeAfterIt() throws Exception {
+        Path dir = Files.createTempDirectory(root, "pause");
+        StateStore store = new StateStore(OrderServiceTestData.create(dir));
+        TestRunnerFake runner = new TestRunnerFake();
+        Map<String, Object> first = new Engine(dir, runner).next(null, "order.create", null, false);
+        WorkState st = store.load();
+        st.consecutiveFailures = 2; // two earlier items reached a person and were cancelled
+        WorkState.ItemState s = st.items.get((String) first.get("itemId"));
+        s.token = "t";
+        store.save(st);
+        runner.then(timedOut());
+        Engine e = new Engine(dir, runner);
+        e.submitItem(s.id, "t");
+        e.submitItem(s.id, "t"); // the same timeout twice: needs-human, the third in a row
+
+        Map<String, Object> next = e.next(null, null, null, false);
+
+        assertEquals("answer", next.get("node"), "the person is asked before the run pauses");
+        e.answer("B");
+        assertEquals(0, store.load().consecutiveFailures, "the person has settled it");
+    }
+
+    @Test
+    void shouldKeepTheAutoCorrectedSpecThroughTheNextSubmit() throws Exception {
+        Path dir = Files.createTempDirectory(root, "autocorrect");
+        GtaPaths p = OrderServiceTestData.create(dir);
+        StateStore store = new StateStore(p);
+        TestRunnerFake runner = new TestRunnerFake();
+        new Engine(dir, runner).next(null, "order.create", null, false);
+        WorkState st = store.load();
+        PlanItem target = null;
+        for (PlanItem item : store.loadPlan()) {
+            if (item.isFoundation()) {
+                st.items.get(item.id).status = ItemStatus.PASSED;
+            } else if (target == null && !item.oracle.then.isEmpty()) {
+                target = item;
+            }
+        }
+        WorkState.ItemState s = st.items.get(target.id);
+        s.status = ItemStatus.TRIAGING;
+        s.token = "t";
+        s.baseline = new ChangeChecker(p).capture();
+        WorkState.LastError le = new WorkState.LastError();
+        le.code = "TEST_ASSERTION_FAILED";
+        le.message = "expected: <" + target.oracle.then.get(0) + "> but was: <999>";
+        s.lastError = le;
+        store.save(st);
+        Engine e = new Engine(dir, runner);
+        e.submitReview(target.id, "t", "spec-error", "the observation was wrong");
+        Map<String, Object> author = e.next(null, null, null, false);
+        Path test = p.testSource(target.testClass);
+        Files.createDirectories(test.getParent());
+        Files.writeString(test, "@Tag(\"gta\") class X { void t() { assertEquals(999, 1); } }\n");
+        RunResult ok = outcome("passed");
+        runner.then(ok);
+
+        e.submitItem(target.id, (String) author.get("token"));
+
+        assertTrue(Files.readString(p.spec("order.create")).contains("999"), "gtaw's own correction is not reverted");
+    }
 }

@@ -9,8 +9,10 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -69,16 +71,26 @@ public final class RefResolver {
         if (!Files.isDirectory(resources)) {
             return out;
         }
-        try (Stream<Path> files = Files.list(resources)) {
-            for (Path f : files.sorted().toList()) {
-                String name = String.valueOf(f.getFileName()); // a listed entry always has a file name
-                if (!name.startsWith("application")) {
-                    continue;
-                }
-                parseConfig(name, Files.readString(f, StandardCharsets.UTF_8)).forEach(out::putIfAbsent);
-            }
+        List<Path> files;
+        try (Stream<Path> listed = Files.list(resources)) {
+            // base files (application.yml) before profile files (application-dev.yml): the base value wins
+            files = listed.sorted(Comparator.comparing(
+                                    (Path f) -> String.valueOf(f.getFileName()).contains("-"))
+                            .thenComparing(f -> String.valueOf(f.getFileName())))
+                    .toList();
         } catch (IOException e) {
-            // unreadable config is reported by lint as unresolvable refs
+            return out; // reported by lint as unresolvable refs
+        }
+        for (Path f : files) {
+            String name = String.valueOf(f.getFileName()); // a listed entry always has a file name
+            if (!name.startsWith("application")) {
+                continue;
+            }
+            try {
+                parseConfig(name, Files.readString(f, StandardCharsets.UTF_8)).forEach(out::putIfAbsent);
+            } catch (IOException | RuntimeException e) {
+                // one unreadable file must not hide the others; lint reports refs that do not resolve
+            }
         }
         return out;
     }

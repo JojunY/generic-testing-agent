@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /** Deterministic spec rules (plan §3.3 "spec lint"). Returns human-readable issues; empty = valid. */
 public final class SpecLinter {
@@ -136,6 +137,17 @@ public final class SpecLinter {
                 issues.add("invariant " + inv.id() + ": an assumed invariant must be covered by an open question");
             }
         }
+        Set<String> seenIds = new HashSet<>();
+        Stream.of(
+                        spec.requirements.stream().map(Spec.Requirement::id),
+                        spec.requirements.stream()
+                                .flatMap(r -> r.scenarios.stream())
+                                .map(Spec.Scenario::id),
+                        spec.invariants.stream().map(Spec.Invariant::id))
+                .flatMap(x -> x)
+                .filter(id -> id != null && !seenIds.add(id))
+                .distinct()
+                .forEach(id -> issues.add("id '" + id + "' is used twice; plan items and the gate key on it"));
         for (Spec.Question q : spec.questions) {
             String qw = "question " + q.number;
             checkId(issues, qw, q.id(), flowId, 'q');

@@ -272,4 +272,15 @@ class SpecLinterTest {
         }
         assertTrue(lint(SpecTestData.CREATE_ORDER).isEmpty(), "one recommendation is right");
     }
+
+    @Test
+    void shouldRejectTwoScenariosWithTheSameId() throws Exception {
+        String twice = SpecTestData.CREATE_ORDER.replace("order.create/s02", "order.create/s01");
+
+        List<String> issues = lint(twice);
+
+        assertTrue(
+                issues.stream().anyMatch(i -> i.contains("order.create/s01") && i.contains("twice")),
+                issues.toString());
+    }
 }
