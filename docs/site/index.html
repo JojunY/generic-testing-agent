@@ -64,139 +64,13 @@
     <section class="hero" id="home" data-scene="found">
       <div class="sky" aria-hidden="true">
         <div class="rig">
-          <svg class="scene found" viewBox="0 0 1600 1000" preserveAspectRatio="xMaxYMid slice">
-            <defs>
-              <radialGradient id="en-found-atmo" cx="74%" cy="42%" r="62%">
-                <stop offset="0%" stop-color="#1a4c78"/>
-                <stop offset="38%" stop-color="#0c1c30"/>
-                <stop offset="100%" stop-color="#05070c"/>
-              </radialGradient>
-              <radialGradient id="en-found-core" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="#fff6ee"/>
-                <stop offset="18%" stop-color="#ffd2ad"/>
-                <stop offset="46%" stop-color="#e08a45" stop-opacity=".85"/>
-                <stop offset="100%" stop-color="#e08a45" stop-opacity="0"/>
-              </radialGradient>
-              <linearGradient id="en-found-left" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stop-color="#05070c"/>
-                <stop offset="42%" stop-color="#05070c" stop-opacity=".55"/>
-                <stop offset="70%" stop-color="#05070c" stop-opacity="0"/>
-              </linearGradient>
-              <linearGradient id="en-bezel" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#d5e4f4"/>
-                <stop offset="45%" stop-color="#6e879e"/>
-                <stop offset="100%" stop-color="#1b2836"/>
-              </linearGradient>
-            </defs>
-            <rect width="1600" height="1000" fill="#05070c"/>
-            <rect width="1600" height="1000" fill="url(#en-found-atmo)"/>
-            <g fill="none" stroke="rgba(170,198,220,.16)" stroke-width="1.2">
-              <ellipse cx="1180" cy="860" rx="620" ry="120"/>
-              <ellipse cx="1180" cy="860" rx="470" ry="86"/>
-              <ellipse cx="1180" cy="860" rx="320" ry="54"/>
-            </g>
-            <g class="focal">
-              <circle cx="1180" cy="560" r="310" fill="url(#en-found-core)"/>
-              <circle cx="1180" cy="560" r="236" fill="none" stroke="url(#en-bezel)" stroke-width="30"/>
-              <circle cx="1180" cy="560" r="196" fill="#071018" stroke="rgba(255,236,214,.35)" stroke-width="2"/>
-              <circle cx="1180" cy="560" r="156" fill="none" stroke="rgba(224,138,69,.55)" stroke-width="10"/>
-              <circle cx="1180" cy="560" r="116" fill="none" stroke="rgba(255,210,170,.8)" stroke-width="8"/>
-              <circle cx="1180" cy="560" r="76" fill="none" stroke="#ffd8b8" stroke-width="6"/>
-              <circle cx="1180" cy="560" r="34" fill="#fff4ea"/>
-              <circle cx="1180" cy="560" r="12" fill="#fff"/>
-              <path d="M1180 364 A196 196 0 0 1 1356 456" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3"/>
-            </g>
-            <g fill="none" stroke="rgba(240,178,122,.75)" stroke-width="2">
-              <path d="M1356 456 C1440 360 1488 250 1516 196"/>
-              <path d="M1376 520 C1460 470 1510 430 1556 400"/>
-              <path d="M1260 390 C1320 300 1360 250 1404 214"/>
-            </g>
-            <g fill="#d5e2ef" stroke="#243140" stroke-width="1">
-              <polygon points="1516,178 1552,160 1588,178 1552,196"/>
-              <polygon points="1516,178 1552,196 1552,236 1516,218"/>
-              <polygon points="1552,196 1588,178 1588,218 1552,236"/>
-              <polygon points="1556,382 1588,366 1620,382 1588,398"/>
-              <polygon points="1556,382 1588,398 1588,434 1556,418"/>
-              <polygon points="1588,398 1620,382 1620,418 1588,434"/>
-              <polygon points="1404,196 1440,178 1476,196 1440,214"/>
-              <polygon points="1404,196 1440,214 1440,252 1404,234"/>
-              <polygon points="1440,214 1476,196 1476,234 1440,252"/>
-            </g>
-            <g class="scene-label" fill="#f7f4ee">
-              <text x="980" y="430" font-size="28" font-weight="600">POST /api/orders</text>
-            </g>
-            <rect width="1600" height="1000" fill="url(#en-found-left)"/>
-          </svg>
-          <svg class="scene draft" viewBox="0 0 1600 1000" preserveAspectRatio="xMaxYMid slice">
-            <defs>
-              <radialGradient id="en-draft-atmo" cx="78%" cy="40%" r="68%">
-                <stop offset="0%" stop-color="#6a3a1c"/>
-                <stop offset="36%" stop-color="#24160f"/>
-                <stop offset="100%" stop-color="#05070c"/>
-              </radialGradient>
-              <linearGradient id="en-slab" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#4a2c1c"/>
-                <stop offset="48%" stop-color="#2a1810"/>
-                <stop offset="100%" stop-color="#140c09"/>
-              </linearGradient>
-              <linearGradient id="en-draft-left" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stop-color="#05070c"/>
-                <stop offset="38%" stop-color="#05070c" stop-opacity=".5"/>
-                <stop offset="68%" stop-color="#05070c" stop-opacity="0"/>
-              </linearGradient>
-            </defs>
-            <rect width="1600" height="1000" fill="#05070c"/>
-            <rect width="1600" height="1000" fill="url(#en-draft-atmo)"/>
-            <ellipse cx="1280" cy="880" rx="520" ry="70" fill="rgba(0,0,0,.45)"/>
-            <polygon points="1120,70 1620,20 1660,860 1080,760" fill="#100c0a"/>
-            <g class="focal">
-              <polygon points="980,110 1540,48 1580,820 930,760" fill="url(#en-slab)"/>
-              <polyline points="980,110 1540,48 1580,820" fill="none" stroke="rgba(255,214,170,.55)" stroke-width="3"/>
-              <polygon points="1040,190 1460,150 1490,700 1020,680" fill="rgba(0,0,0,.28)"/>
-              <g class="scene-label">
-                <text x="1040" y="520" fill="#fff6ee" font-size="108" font-weight="700">503</text>
-              </g>
-            </g>
-            <rect width="1600" height="1000" fill="url(#en-draft-left)"/>
-          </svg>
-          <svg class="scene scope" viewBox="0 0 1600 1000" preserveAspectRatio="xMaxYMid slice">
-            <defs>
-              <linearGradient id="en-scope-sky" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#071018"/>
-                <stop offset="55%" stop-color="#102033"/>
-                <stop offset="100%" stop-color="#1a120e"/>
-              </linearGradient>
-              <linearGradient id="en-mesa" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#f0b27a"/>
-                <stop offset="40%" stop-color="#d4844a"/>
-                <stop offset="100%" stop-color="#8a4520"/>
-              </linearGradient>
-              <linearGradient id="en-scope-left" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stop-color="#05070c"/>
-                <stop offset="36%" stop-color="#05070c" stop-opacity=".55"/>
-                <stop offset="66%" stop-color="#05070c" stop-opacity="0"/>
-              </linearGradient>
-            </defs>
-            <rect width="1600" height="1000" fill="url(#en-scope-sky)"/>
-            <path d="M760 390 C980 250 1280 230 1680 340 L1680 520 L760 500 Z" fill="#13283c"/>
-            <path d="M700 520 C960 390 1320 410 1700 530 L1700 700 L680 660 Z" fill="#1b3348"/>
-            <g fill="none" stroke="rgba(190,214,230,.22)" stroke-width="1.2">
-              <path d="M820 360 C1040 300 1300 300 1600 360"/>
-              <path d="M800 400 C1060 330 1340 340 1620 410"/>
-              <path d="M760 500 C1020 430 1360 450 1660 530"/>
-              <path d="M740 560 C1040 480 1380 500 1680 590"/>
-            </g>
-            <g class="focal">
-              <path d="M620 760 C900 470 1240 500 1720 640 L1720 1100 L520 1100 Z" fill="url(#en-mesa)"/>
-              <path d="M700 700 C980 560 1280 580 1660 690" fill="none" stroke="rgba(255,236,214,.45)" stroke-width="2"/>
-              <path d="M660 780 C980 620 1320 650 1700 780" fill="none" stroke="rgba(90,40,16,.35)" stroke-width="2"/>
-              <path d="M640 860 C1000 700 1360 740 1720 880" fill="none" stroke="rgba(90,40,16,.28)" stroke-width="2"/>
-              <g class="scene-label" fill="#2a160c">
-                <text x="980" y="560" font-size="34" font-weight="700" stroke="#ffe6cf" stroke-width="7" paint-order="stroke">component</text>
-              </g>
-            </g>
-            <rect width="1600" height="1000" fill="url(#en-scope-left)"/>
-          </svg>
+          <picture class="plate">
+            <source media="(max-width: 1023px) and (orientation: portrait)" type="image/avif" srcset="assets/hero-portrait.avif">
+            <source media="(max-width: 1023px) and (orientation: portrait)" type="image/webp" srcset="assets/hero-portrait.webp">
+            <source type="image/avif" srcset="assets/hero-1280.avif 1280w, assets/hero-1920.avif 1920w" sizes="100vw">
+            <source type="image/webp" srcset="assets/hero-1280.webp 1280w, assets/hero-1920.webp 1920w" sizes="100vw">
+            <img src="assets/gta-cinematic-orbit-hero.jpg" alt="" width="1280" height="720" decoding="async" fetchpriority="high">
+          </picture>
         </div>
       </div>
       <div class="hero-veil" aria-hidden="true"></div>
@@ -204,9 +78,9 @@
         <div class="hero-copy">
           <p class="eyebrow"><i></i> One flow at a time</p>
           <h1>
-            <span class="only only-found"><span class="line"><span>gtaw finds</span></span><span class="line"><span>the door in.</span></span></span>
+            <span class="only only-found"><span class="line"><span>gtaw lists</span></span><span class="line"><span>the entry.</span></span></span>
             <span class="only only-draft"><span class="line"><span>The draft is</span></span><span class="line"><span>what the code does.</span></span></span>
-            <span class="only only-scope"><span class="line"><span>The test has to</span></span><span class="line"><span>cross the path.</span></span></span>
+            <span class="only only-scope"><span class="line"><span>The test sees</span></span><span class="line"><span>the whole path.</span></span></span>
           </h1>
           <p class="plain only only-found">gtaw lists this entry. The list is not a spec.</p>
           <p class="plain only only-draft">The code returns 503 and sends no message. You confirm it before it is an expected value.</p>
@@ -228,7 +102,7 @@
           </aside>
         </div>
       </div>
-      <p class="sr-only" id="scene-live" aria-live="polite">gtaw finds the door in.</p>
+      <p class="sr-only" id="scene-live" aria-live="polite">gtaw lists the entry.</p>
     </section>
 
     <section class="about" id="about">
@@ -294,7 +168,7 @@
     <section class="loop" id="loop">
       <div class="shell block">
         <p><span class="kpill">The loop</span></p>
-        <h2 class="display rise">One order, from the door to the test.</h2>
+        <h2 class="display rise">One order, from the entry to the test.</h2>
         <p class="lede rise">This illustrative order.create is not a recorded run.</p>
         <div class="rows" role="group" aria-label="Stages">
           <button class="stage" type="button" aria-pressed="false"><span class="n">01</span><span class="body"><h3>Found</h3><p>gtaw names POST /api/orders. The analyst starts there.</p></span><span class="go" aria-hidden="true">→</span><span class="meter"><b></b></span></button>
