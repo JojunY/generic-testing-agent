@@ -1,3 +1,7 @@
+Copyright 2017-2024 Adobe (http://www.adobe.com/).
+
+Subset note: noto-serif-sc-500.woff2 and noto-serif-sc-700.woff2 are a subset of Noto Serif SC, Medium and Bold, keeping the characters used on the introduction page. The name table family is "Noto Serif SC". Outlines of the included glyphs are unchanged.
+
 This Font Software is licensed under the SIL Open Font License,
 Version 1.1.
 
