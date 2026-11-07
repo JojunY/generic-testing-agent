@@ -132,10 +132,17 @@ html:not(.motion-off) .motion .label-pause { display: none; }
 .menu-word { display: none; }
 @media (min-width: 640px) { .menu-word { display: inline; } }
 
-/* hero: one full-bleed plate. The left of the picture is already black. */
+/* hero: one full-bleed plate. The left of the picture is already black.
+   A wide screen with motion on scrolls through Found, Draft and Scope.
+   The page keeps scrolling. Reduced motion stays one still screen. */
 .hero {
-  position: relative; isolation: isolate; overflow: hidden;
+  position: relative; isolation: isolate;
   background: #05070c; min-height: 100lvh; color: var(--fg);
+}
+.hero-frame { position: relative; min-height: 100lvh; overflow: hidden; }
+@media (min-width: 1024px) {
+  html:not(.reduce) .hero { min-height: 230vh; }
+  html:not(.reduce) .hero-frame { position: sticky; top: 0; height: 100lvh; min-height: 0; }
 }
 .sky { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
 .sky .rig { position: absolute; inset: -3%; width: 106%; height: 106%; }
@@ -143,8 +150,14 @@ html:not(.motion-off) .motion .label-pause { display: none; }
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; object-position: 22% 50%;
 }
+.hero[data-scene="draft"] .sky img { object-position: 48% 40%; }
+.hero[data-scene="scope"] .sky img { object-position: 72% 60%; }
+html:not(.motion-off) .sky img { transition: object-position .8s ease; }
 @media (max-width: 1023px) and (orientation: portrait) {
-  .sky img { object-position: center bottom; }
+  .sky img,
+  .hero[data-scene="found"] .sky img,
+  .hero[data-scene="draft"] .sky img,
+  .hero[data-scene="scope"] .sky img { object-position: center bottom; transition: none; }
 }
 .hero-veil {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
@@ -190,7 +203,7 @@ html:not(.js) .hero .line > span { transform: none; }
 .hero[data-scene="found"] .only-found,
 .hero[data-scene="draft"] .only-draft,
 .hero[data-scene="scope"] .only-scope { display: block; }
-.plain { max-width: 34em; margin: .85rem 0 0; font-size: 1.05rem; line-height: 1.45; color: rgba(244,241,234,.82); }
+.plain { max-width: 22rem; margin: .85rem 0 0; font-size: 1.05rem; line-height: 1.45; color: rgba(244,241,234,.82); }
 @media (min-width: 1280px) { .plain { font-size: 1.15rem; } }
 .scene-tabs { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: 1.4rem; }
 .scene-tabs button {
@@ -199,6 +212,9 @@ html:not(.js) .hero .line > span { transform: none; }
   font-size: .85rem; font-weight: 600;
 }
 .scene-tabs button[aria-selected="true"] { background: #f4f1ea; color: #14110e; border-color: #f4f1ea; }
+.scene-meter { width: min(11rem, 100%); height: 1px; margin-top: .85rem; background: rgba(255,255,255,.2); }
+.scene-meter b { display: block; height: 100%; background: #f4f1ea; transform: scaleX(.34); transform-origin: left center; }
+html:not(.motion-off) .scene-meter b { transition: transform .35s linear; }
 .cta { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.4rem; }
 .hero-copy, .hero-side { position: relative; z-index: 2; }
 .hero-side { display: flex; flex-direction: column; justify-content: flex-end; min-height: 8rem; }

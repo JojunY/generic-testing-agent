@@ -13,7 +13,7 @@
     document.documentElement.classList.add('js');
     try {
       if (matchMedia('(prefers-reduced-motion: reduce)').matches)
-        document.documentElement.classList.add('motion-off');
+        document.documentElement.classList.add('motion-off', 'reduce');
     } catch (e) {}
     setTimeout(function () {
       var root = document.documentElement;
@@ -62,6 +62,7 @@
 
   <main>
     <section class="hero" id="home" data-scene="found">
+      <div class="hero-frame">
       <div class="sky" aria-hidden="true">
         <div class="rig">
           <picture class="plate">
@@ -78,11 +79,11 @@
         <div class="hero-copy">
           <p class="eyebrow"><i></i> 一次一条流程</p>
           <h1>
-            <span class="only only-found"><span class="line"><span>gtaw 先列出</span></span><span class="line"><span>这个入口。</span></span></span>
+            <span class="only only-found"><span class="line"><span>你来确认。</span></span><span class="line"><span>再写测试。</span></span></span>
             <span class="only only-draft"><span class="line"><span>草稿写的是</span></span><span class="line"><span>代码在做什么。</span></span></span>
             <span class="only only-scope"><span class="line"><span>测试会看到</span></span><span class="line"><span>整条路径。</span></span></span>
           </h1>
-          <p class="plain only only-found">gtaw 列出这个入口。这份清单不是规格。</p>
+          <p class="plain only only-found">gtaw 从代码列出这个入口。这份清单不是规格。</p>
           <p class="plain only only-draft">代码返回 503，并且不发出消息。你确认之后，它才是期望值。</p>
           <p class="plain only only-scope">一条 component 测试会看到网关、订单行，以及没有发出的消息。</p>
           <div class="scene-tabs" role="tablist" aria-label="一条流程怎样变成测试">
@@ -90,6 +91,7 @@
             <button type="button" role="tab" data-scene-go="1" aria-selected="false">草稿</button>
             <button type="button" role="tab" data-scene-go="2" aria-selected="false">范围</button>
           </div>
+          <div class="scene-meter" aria-hidden="true"><b></b></div>
           <div class="cta">
             <button class="pill dark" type="button" data-go="loop">看这个例子</button>
           </div>
@@ -102,7 +104,8 @@
           </aside>
         </div>
       </div>
-      <p class="sr-only" id="scene-live" aria-live="polite">gtaw 先列出这个入口。</p>
+      <p class="sr-only" id="scene-live" aria-live="polite">你来确认。再写测试。</p>
+      </div>
     </section>
 
     <section class="about" id="about">

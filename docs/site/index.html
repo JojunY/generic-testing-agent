@@ -13,7 +13,7 @@
     document.documentElement.classList.add('js');
     try {
       if (matchMedia('(prefers-reduced-motion: reduce)').matches)
-        document.documentElement.classList.add('motion-off');
+        document.documentElement.classList.add('motion-off', 'reduce');
     } catch (e) {}
     setTimeout(function () {
       var root = document.documentElement;
@@ -62,6 +62,7 @@
 
   <main>
     <section class="hero" id="home" data-scene="found">
+      <div class="hero-frame">
       <div class="sky" aria-hidden="true">
         <div class="rig">
           <picture class="plate">
@@ -78,11 +79,11 @@
         <div class="hero-copy">
           <p class="eyebrow"><i></i> One flow at a time</p>
           <h1>
-            <span class="only only-found"><span class="line"><span>gtaw lists</span></span><span class="line"><span>the entry.</span></span></span>
+            <span class="only only-found"><span class="line"><span>You confirm.</span></span><span class="line"><span>Then the test.</span></span></span>
             <span class="only only-draft"><span class="line"><span>The draft is</span></span><span class="line"><span>what the code does.</span></span></span>
             <span class="only only-scope"><span class="line"><span>The test sees</span></span><span class="line"><span>the whole path.</span></span></span>
           </h1>
-          <p class="plain only only-found">gtaw lists this entry. The list is not a spec.</p>
+          <p class="plain only only-found">gtaw lists this entry from the code. The list is not a spec.</p>
           <p class="plain only only-draft">The code returns 503 and sends no message. You confirm it before it is an expected value.</p>
           <p class="plain only only-scope">One component test sees the gateway, the row, and the missing message.</p>
           <div class="scene-tabs" role="tablist" aria-label="How a flow becomes a test">
@@ -90,6 +91,7 @@
             <button type="button" role="tab" data-scene-go="1" aria-selected="false">Draft</button>
             <button type="button" role="tab" data-scene-go="2" aria-selected="false">Scope</button>
           </div>
+          <div class="scene-meter" aria-hidden="true"><b></b></div>
           <div class="cta">
             <button class="pill dark" type="button" data-go="loop">See the example</button>
           </div>
@@ -102,7 +104,8 @@
           </aside>
         </div>
       </div>
-      <p class="sr-only" id="scene-live" aria-live="polite">gtaw lists the entry.</p>
+      <p class="sr-only" id="scene-live" aria-live="polite">You confirm. Then the test.</p>
+      </div>
     </section>
 
     <section class="about" id="about">

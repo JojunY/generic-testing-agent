@@ -5,7 +5,26 @@ const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
 let pageChoice = null;
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
+const sleepers = new Set();
+function wakeSleepers() {
+  const fns = Array.from(sleepers);
+  sleepers.clear();
+  fns.forEach((fn) => fn());
+}
+function sleep(ms) {
+  return new Promise((done) => {
+    let settled = false;
+    const timer = setTimeout(finish, ms);
+    function finish() {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      sleepers.delete(finish);
+      done();
+    }
+    sleepers.add(finish);
+  });
+}
 function systemReduce() { return motionQuery.matches; }
 function motionOn() {
   if (pageChoice === 'play') return true;
@@ -223,10 +242,50 @@ function showScene(i, animate) {
     void hero.offsetWidth;
     hero.classList.add('scene-swap');
   }
+  if (heroSpan() < 24) paintMeter((scene + 1) / scenes.length);
 }
-$$('[data-prev]').forEach((b) => b.addEventListener('click', () => showScene(scene - 1, true)));
-$$('[data-next]').forEach((b) => b.addEventListener('click', () => showScene(scene + 1, true)));
-$$('[data-scene-go]').forEach((b) => b.addEventListener('click', () => showScene(Number(b.dataset.sceneGo), true)));
+function heroSpan() {
+  if (!hero || document.documentElement.classList.contains('reduce') || innerWidth < 1024) return 0;
+  return Math.max(0, hero.offsetHeight - innerHeight);
+}
+function paintMeter(p) {
+  const bar = $('.scene-meter b', hero);
+  if (bar) bar.style.transform = `scaleX(${Math.max(0.08, Math.min(1, p))})`;
+}
+let sceneLock = 0;
+function syncHeroScroll() {
+  const total = heroSpan();
+  if (!hero || total < 24) return;
+  if (performance.now() < sceneLock) return;
+  const scrolled = Math.min(Math.max(-hero.getBoundingClientRect().top, 0), total);
+  const p = scrolled / total;
+  const i = Math.min(scenes.length - 1, Math.floor(p * scenes.length));
+  if (i !== scene) showScene(i, false);
+  paintMeter(p);
+}
+function scrollToScene(i) {
+  const n = (i + scenes.length) % scenes.length;
+  showScene(n, motionOn());
+  const total = heroSpan();
+  paintMeter((n + 1) / scenes.length);
+  if (total < 24) return;
+  sceneLock = performance.now() + 700;
+  const y = hero.offsetTop + ((n + 0.12) / scenes.length) * total;
+  if (lenis && motionOn()) lenis.scrollTo(y);
+  else scrollTo({ top: y, behavior: motionOn() ? 'smooth' : 'auto' });
+}
+$$('[data-prev]').forEach((b) => b.addEventListener('click', () => scrollToScene(scene - 1)));
+$$('[data-next]').forEach((b) => b.addEventListener('click', () => scrollToScene(scene + 1)));
+$$('[data-scene-go]').forEach((b) => b.addEventListener('click', () => scrollToScene(Number(b.dataset.sceneGo))));
+const sceneTabs = $('.scene-tabs', hero);
+if (sceneTabs) sceneTabs.addEventListener('keydown', (e) => {
+  if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+  e.preventDefault();
+  const n = e.key === 'ArrowRight' ? scene + 1 : scene - 1;
+  scrollToScene(n);
+  const btn = $(`[data-scene-go="${(n + scenes.length) % scenes.length}"]`, hero);
+  if (btn) btn.focus();
+});
 showScene(0, false);
 
 const rig = $('.rig');
@@ -378,16 +437,25 @@ class Scene {
     const seen = (Math.min(r.bottom, innerHeight) - Math.max(r.top, 0)) / Math.min(innerHeight, Math.max(1, r.height));
     return seen >= 0.2;
   }
-  async wait(ms) {
-    if (skipPlayback()) return;
+  async wait(ms, alive = () => true) {
+    if (!alive() || skipPlayback()) return;
     let left = ms;
     while (left > 0) {
-      if (skipPlayback()) return;
+      if (!alive() || skipPlayback()) return;
       if (holdPlayback() || !this.visible()) { await sleep(150); continue; }
-      const step = Math.min(80, left);
-      await sleep(step);
-      if (holdPlayback() || skipPlayback()) continue;
-      left -= step;
+      const slice = Math.min(80, left);
+      await sleep(slice);
+      if (!alive() || skipPlayback()) return;
+      if (holdPlayback()) continue;
+      left -= slice;
+    }
+    // A step boundary. Yield once so a pause click already queued beats the next paint.
+    if (ms >= 80) {
+      await sleep(0);
+      while (holdPlayback() || (!skipPlayback() && !this.visible())) {
+        if (!alive() || skipPlayback()) return;
+        await sleep(150);
+      }
     }
   }
 }
@@ -436,7 +504,7 @@ if (copy && copy.demo) {
       stage(0, 0, 0);
     };
     const step = async (s, fast, alive) => {
-      const W = (ms) => (fast || skipPlayback() ? Promise.resolve() : S.wait(ms));
+      const W = (ms) => (fast || skipPlayback() ? Promise.resolve() : S.wait(ms, alive));
       if (s.you) {
         if (!fast && !skipPlayback()) {
           await W(280);
@@ -492,17 +560,18 @@ if (copy && copy.demo) {
       for (let i = 0; i < D.steps.length; i++) {
         const s = D.steps[i];
         const fast = i < from;
-        if (!fast && i === from && from > 0) await S.wait(240);
+        if (!fast && i === from && from > 0) await S.wait(240, alive);
+        if (!alive()) return;
         await step(s, fast, alive);
         if (!alive()) return;
         done[s.stage]++;
         stage(s.stage, done[s.stage], i + 1, fast ? pressed : s.stage);
-        if (!fast) await S.wait(s.wait || 900);
+        if (!fast) await S.wait(s.wait || 900, alive);
         if (!alive()) return;
       }
       if (skipPlayback()) return;
-      await S.wait(7000);
-      if (alive() && S.visible()) play(0);
+      await S.wait(7000, alive);
+      if (alive() && S.visible() && !holdPlayback()) play(0);
     };
     S.play = () => play(0);
     stageEls.forEach((el, i) => el.addEventListener('click', () => {
@@ -613,6 +682,7 @@ let motionAnnounced = false;
 function syncMotion(announce) {
   const on = motionOn();
   document.documentElement.classList.toggle('motion-off', !on);
+  document.documentElement.classList.toggle('reduce', systemReduce() && pageChoice !== 'play');
   document.documentElement.classList.toggle('motion-on', on && systemReduce());
   $$('[data-motion]').forEach((b) => b.setAttribute('aria-pressed', on ? 'false' : 'true'));
   if (!on) {
@@ -628,6 +698,7 @@ function syncMotion(announce) {
 }
 $$('[data-motion]').forEach((b) => b.addEventListener('click', () => {
   pageChoice = motionOn() ? 'pause' : 'play';
+  wakeSleepers();
   syncMotion(true);
   if (motionOn()) ensureLenis();
   arm();
@@ -638,7 +709,7 @@ motionQuery.addEventListener('change', () => {
   arm();
 });
 syncMotion(false);
-addEventListener('scroll', arm, { passive: true });
-addEventListener('resize', arm);
+addEventListener('scroll', () => { arm(); syncHeroScroll(); }, { passive: true });
+addEventListener('resize', () => { arm(); syncHeroScroll(); });
 document.addEventListener('visibilitychange', arm);
 arm();
