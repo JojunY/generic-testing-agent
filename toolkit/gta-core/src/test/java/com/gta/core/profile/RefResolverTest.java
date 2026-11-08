@@ -89,4 +89,42 @@ class RefResolverTest {
         org.junit.jupiter.api.Assertions.assertTrue(
                 refs.hash("file:missing.sql").isEmpty());
     }
+
+    @Test
+    void shouldKeepOtherConfigFilesWhenOneIsNotUtf8AndLetTheBaseFileWin() throws Exception {
+        Path res = root.resolve("src/main/resources");
+        Files.write(res.resolve("application-dev.properties"), new byte[] {
+            'a',
+            '=',
+            (byte) 0xE9,
+            '\n',
+            'o',
+            'r',
+            'd',
+            'e',
+            'r',
+            '.',
+            'd',
+            'i',
+            's',
+            'c',
+            'o',
+            'u',
+            'n',
+            't',
+            '.',
+            'r',
+            'a',
+            't',
+            'e',
+            '=',
+            '5',
+            '\n'
+        });
+
+        Map<String, String> config = RefResolver.loadConfig(res);
+
+        assertEquals("10", config.get("order.discount.rate"), "application.properties, not the dev profile");
+        assertTrue(config.containsKey("order.discount.threshold"));
+    }
 }

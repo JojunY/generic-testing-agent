@@ -65,4 +65,15 @@ class ProcessRunnerTest {
 
         assertEquals(ErrorCode.ENV_TOOL_UNAVAILABLE, e.code());
     }
+
+    @Test
+    void shouldKeepOutputThatIsNotUtf8() {
+        assumeFalse(ProcessRunner.isWindows());
+
+        ProcessRunner.Result r =
+                ProcessRunner.run(dir, ProcessRunner.cmd("sh", "-c", "printf 'caf\\351 ok\\n'; exit 3"));
+
+        assertEquals(3, r.exitCode());
+        assertTrue(r.output().contains(" ok"), r.output());
+    }
 }

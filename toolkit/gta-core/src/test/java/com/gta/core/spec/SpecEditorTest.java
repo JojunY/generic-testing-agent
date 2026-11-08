@@ -60,4 +60,15 @@ class SpecEditorTest {
 
         assertTrue(text.contains("abc123"), text);
     }
+
+    @Test
+    void shouldLeaveTheWhenInputsOfTheScenarioAlone() {
+        // `50.00` is both the subtotal the client posts (WHEN) and the total expected back (THEN)
+        String text = new SpecEditor(SpecTestData.CREATE_ORDER)
+                .replaceThenLiteral("order.create/s01", "50.00", "45.00")
+                .text();
+
+        assertTrue(text.contains("posts subtotal `50.00`"), text);
+        assertTrue(text.contains("the total is `45.00`"), text);
+    }
 }

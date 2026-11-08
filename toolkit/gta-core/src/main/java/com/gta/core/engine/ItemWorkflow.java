@@ -83,7 +83,9 @@ final class ItemWorkflow {
     }
 
     Dispatch dispatch(WorkState st, Spec spec, ServiceProfile profile, List<PlanItem> items) {
-        if (st.consecutiveFailures >= config.budgets.maxConsecutiveFailures) {
+        // pause the run, but never before the person has been asked about the items that wait for them
+        boolean decisionWaiting = items.stream().anyMatch(i -> st.items.get(i.id).status == ItemStatus.NEEDS_HUMAN);
+        if (st.consecutiveFailures >= config.budgets.maxConsecutiveFailures && !decisionWaiting) {
             return Dispatch.of(
                     node(
                             "escalate",

@@ -176,7 +176,19 @@ public final class SpecEditor {
                 stop = candidate;
             }
         }
-        String block = text.substring(idx, stop).replace("`" + from + "`", "`" + to + "`");
+        // only THEN clauses and the ANDs that continue them: a WHEN input with the same literal stays as it is
+        boolean inThen = false;
+        StringBuilder block = new StringBuilder();
+        for (String line : text.substring(idx, stop).split("\n", -1)) {
+            if (line.contains("**THEN**")) {
+                inThen = true;
+            } else if (line.contains("**WHEN**") || line.contains("**GIVEN**")) {
+                inThen = false;
+            }
+            block.append(inThen ? line.replace("`" + from + "`", "`" + to + "`") : line)
+                    .append('\n');
+        }
+        block.setLength(block.length() - 1); // split(-1) gave one element more than there are newlines
         text = text.substring(0, idx) + block + text.substring(stop);
         return this;
     }

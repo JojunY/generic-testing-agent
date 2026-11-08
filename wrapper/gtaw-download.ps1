@@ -17,7 +17,7 @@ if (-not $sha -or -not $url) {
 $gtaHome = if ($env:GTA_HOME) { $env:GTA_HOME } else { Join-Path $env:USERPROFILE '.gta' }
 $cache = Join-Path $gtaHome 'wrapper\dists'
 New-Item -ItemType Directory -Force -Path $cache | Out-Null
-$jar = Join-Path $cache "gta-cli-$version.jar"
+$jar = Join-Path $cache "gta-cli-$version-$($sha.ToLower()).jar"
 if (-not (Test-Path $jar)) {
     $tmp = "$jar.$PID.part"  # one file per process: parallel first runs do not collide
     $headers = @{}

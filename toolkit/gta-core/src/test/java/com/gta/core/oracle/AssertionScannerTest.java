@@ -275,4 +275,17 @@ class AssertionScannerTest {
         assertTrue(o.tokens().contains("EXPECTED-NAME"), o.tokens().toString());
         assertFalse(o.tokens().contains("INPUT-NAME"), "the elements the pipeline starts from are inputs");
     }
+
+    @Test
+    void shouldReadANegativeNumberAsOneExpectedValue() throws Exception {
+        AssertionScanner.ScenarioOracle o = scan("""
+                class OrderIT {
+                    @Test @Tag("scenario:order.create/s01")
+                    void shouldCreate() { assertThat(balance).isEqualTo(-1); assertThat(delta).isEqualTo(-2.5d); }
+                }
+                """);
+
+        assertEquals(List.of(), AssertionScanner.missingThenLiterals(List.of("-1", "-2.5"), o.tokens()));
+        assertEquals(List.of("1"), AssertionScanner.missingThenLiterals(List.of("1"), o.tokens()));
+    }
 }

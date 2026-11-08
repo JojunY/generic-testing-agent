@@ -61,6 +61,9 @@ final class SessionEnd {
             if (verify.get("unstable") instanceof List<?> u) {
                 u.forEach(x -> unstable.add(String.valueOf(x)));
             }
+        } else {
+            // the gate reads this file: an earlier session's unstable tests must not fail this one
+            Json.writeAtomic(paths.verifyLatest(), Map.of("unstable", List.of()));
         }
         String baseRef = base != null ? base : defaultBase();
         Gate.Result gate = gateInternal(baseRef, List.of());

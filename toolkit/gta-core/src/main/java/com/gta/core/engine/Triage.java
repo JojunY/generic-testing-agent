@@ -2,6 +2,7 @@ package com.gta.core.engine;
 
 import static com.gta.core.engine.NodeResults.result;
 
+import com.gta.core.change.ChangeChecker;
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
@@ -122,6 +123,7 @@ final class Triage {
                     "Option " + letter + " is not available",
                     "Pick one of the listed letters");
         }
+        st.consecutiveFailures = 0; // a person has settled it: the run may go on
         st.newConfirmations.add(p.itemId + ": \"" + text + "\" (" + msg + ")");
         st.pending = null;
         return result(msg, null);
@@ -235,6 +237,8 @@ final class Triage {
             s.lock.tokens.add(actual);
             s.lock.statements.removeIf(stmt -> stmt.contains(exp));
         }
+        // the corrected spec is gtaw's own write: without a fresh baseline the next scope check would revert it
+        s.baseline = new ChangeChecker(paths).capture();
         st.move(s, ItemStatus.REPAIRING);
         s.reason = "spec corrected from the actual behaviour: `" + expected + "` → `" + actual
                 + "`; update the assertion to the new expected value";

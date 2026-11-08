@@ -5,6 +5,16 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 ## [Unreleased]
 
 ### Fixed
+- Review round 4:
+  - a negative expected value (`isEqualTo(-1)`) is one token, so it satisfies a THEN of `-1` and no longer a THEN of `1`;
+  - lint refuses a requirement, scenario or invariant id used twice (plan items and the gate key on it);
+  - the observation auto-correction rewrites the literal in THEN clauses only, not in the WHEN inputs, and the corrected spec is no longer reverted by the item's next scope check;
+  - after three items in a row need a person, gtaw asks the waiting decision first instead of pausing for good; any answer to a decision resets the counter;
+  - the session gate ignores the unstable tests of an earlier session's verify run;
+  - a failing parameterized invocation is never rewritten to `known-defect` because another invocation of the same method was pinned;
+  - build output that is not UTF-8 no longer aborts a run as "tool unavailable";
+  - one unreadable `application*` file no longer empties the `config:` refs, and the base file wins over profile files;
+  - the wrapper caches the jar by version and sha256, so changing the pinned URL and sha256 downloads the new jar on the first run.
 - Review round 2:
   - service mode no longer parks a test author's question: the waiting item kept its scope baseline, so other flows' changes in between read as out of scope when it resumed;
   - an own answer may say "approve" ("2: a manager must approve refunds"), and one written after a comma ("OK, 2: a manager signs off") is read as an own answer, not as option A;
