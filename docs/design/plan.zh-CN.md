@@ -2,11 +2,12 @@
 
 [English](plan.md) | **简体中文**
 
-> 状态：**P0 到 P4 已实现**，当前阶段为 P4（见 §15 路线图）· 版本：plan v11 · 日期：2026-11 · 代码审查与修复记录见 [round-2-remediation.md](../reviews/round-2-remediation.md) · [round-3-plan.md](../reviews/round-3-plan.md)
+> 状态：**P0 到 P4 已实现**，当前阶段为 P4（见 §15 路线图）· 版本：plan v12 · 日期：2026-11 · 代码审查与修复记录见 [round-2-remediation.md](../reviews/round-2-remediation.md) · [round-3-plan.md](../reviews/round-3-plan.md)
 > 范围：面向 Java（以 Spring 为主）服务的通用测试 harness
 > 使用面：**GitHub Copilot（VS Code、IntelliJ IDEA）和 OpenCode**，两者同等支持：相同的 agent、命令、护栏和测试
 > 目标环境：Maven；Spring Boot 4.1 为主，少量 3.5；JUnit 跟随 Spring Boot parent；Java 17+；开发机为 Windows；数据存储为 Oracle 和 BigQuery；消息为 Pub/Sub、Kafka、MQ；本地不能使用任何容器；所有依赖都经过公司 Nexus 代理，平台团队可以向 Nexus 上传包；CI（alm-github）可以接入；多数服务只有代码，没有规范文档。不启用 CODEOWNERS 和分支保护，不开启 Copilot preview policy
 > 命名空间：所有对外资产统一使用前缀 `gta`。修订记录见附录 B
+> 贯穿全文的示例：一个证券借贷服务 `stock-loan-service`。它的 flow `borrow.book`（`POST /api/borrows`）按借贷台可出借的库存登记一笔借券；其他 flow 包括 `locate.request`、`inventory.on-position-update`（Kafka）、`fee-accrual.accrue-daily`（`@Scheduled`）和 `db.add-haircut`（Flyway）。脚本化 evals 保留自己的样例 `evals/fixtures/order-service`
 
 ---
 
@@ -40,6 +41,7 @@
    - 人工确认附带原话和来源渠道，并列在 PR 评论里，由正常的 PR review 把关（§5.5）。
 9. **上手**：tech lead 在每个仓库执行一次 `./gtaw init`；开发者只需要一个命令 `/gta`（§12）。
 10. **新手也能用（P4）**
+    - 新手只需要 `/gta` 和回复 `OK`；其他子命令在需要时再用（§6）。flow 的名字由 gtaw 从代码推导，没有人需要自己起名或记住 id：列表中的编号、类名、接口路径或 topic 也都能用（§6、§9.4）。
     - 在没有进行中工作的服务上执行 `/gta`，会覆盖整个服务，风险最高的 flow 先做；某个 flow 在等人时，不会挡住其他 flow。
     - 人看到的所有内容都是一个固定格式的状态块（状态、刚才发生了什么、已确认、需要你、下一步），可选英文或中文。
     - 每个问题都带推荐答案，很多时候回一个 `OK` 就够了；agent 不知道的信息，人用 `/gta note` 补充一次即可（§5.10）。
@@ -211,70 +213,70 @@
 每个 `ref` 都带一个哈希：方法和 bean 引用取方法体的哈希，配置项取值的哈希。
 
 ````markdown
-# order.create — 创建订单
-<!-- gta: flowId=order.create capability=rest-api risk=6 status=in-review rev=R3
-     sources=method:com.acme.order.api.OrderController#create,config:payment.gateway.timeout -->
+# borrow.book — 登记一笔借券
+<!-- gta: flowId=borrow.book capability=rest-api risk=6 status=in-review rev=R3
+     sources=method:com.acme.lending.api.BorrowController#book,config:inventory.client.timeout -->
 
 ## Boundary
-- In scope：POST /api/orders → 持久化订单 → 发布 order-created
-- Out of scope：支付回调（见 `payment.callback`）
-- External：payment-gateway（HTTP，非 GCP）、Oracle、Pub/Sub `order-created`
+- In scope：POST /api/borrows → 预留库存 → 持久化借券 → 发布 borrow-booked
+- Out of scope：还券与召回（见 `borrow.return`）
+- External：inventory-service（HTTP，非 GCP）、Oracle、Pub/Sub `borrow-booked`
 
 ```mermaid
 sequenceDiagram
   participant C as Client
-  participant API as OrderController
-  participant PG as payment-gateway
+  participant API as BorrowController
+  participant INV as inventory-service
   participant DB as Oracle
   participant PS as Pub/Sub
-  C->>API: POST /api/orders
-  API->>PG: authorize (timeout 3s)
-  PG-->>API: approved
-  API->>DB: insert order (CREATED)
-  API-)PS: order-created
+  C->>API: POST /api/borrows
+  API->>INV: reserve 10,000 shares (timeout 3s)
+  INV-->>API: reserved
+  API->>DB: insert borrow (BOOKED)
+  API-)PS: borrow-booked
   API-->>C: 201
 ```
 
 ## Access
 | 角色 | 操作 | 所有权约束 | 来源 |
 |---|---|---|---|
-| customer | create | 只能为自己下单 | observed |
-| customer | read | 见 q02 | assumed |
+| client | create | 只能为自己下单 | observed |
+| client | read | 见 q02 | assumed |
 
 ## Requirements
 
-### Requirement: 支付网关超时
-<!-- gta: id=order.create/r02 ref=method:com.acme.order.OrderService#authorize refHash=7c1a… ref=config:payment.gateway.timeout refHash=19be… -->
-IF the payment gateway does not respond within 3s, THEN THE order service SHALL respond 503 and keep the order in PENDING_PAYMENT.
+### Requirement: 库存服务超时
+<!-- gta: id=borrow.book/r02 ref=method:com.acme.lending.BorrowService#reserve refHash=7c1a… ref=config:inventory.client.timeout refHash=19be… -->
+IF the inventory service does not respond within 3s, THEN THE lending service SHALL respond 503 and keep the borrow in PENDING_LOCATE.
 
-#### Scenario: 网关 3 秒未响应
-<!-- gta: id=order.create/s03 source=observed hint.layer=component hint.oracle=state -->
-- **WHEN** the gateway does not respond within 3s
+#### Scenario: 库存服务 3 秒未响应
+<!-- gta: id=borrow.book/s03 source=observed hint.layer=component hint.oracle=state -->
+- **WHEN** the inventory service does not respond within 3s
 - **THEN** the response status is `503` with a ProblemDetail body
-- **AND** orders.status is `PENDING_PAYMENT`
-- **AND** no message is published to `order-created`
+- **AND** borrows.status is `PENDING_LOCATE`
+- **AND** no message is published to `borrow-booked`
 
 ## Invariants
-- For any 两次使用相同 `Idempotency-Key` 的提交，THE order service SHALL 只创建一个订单 <!-- gta: id=order.create/i01 source=assumed hint.oracle=property → 见 q03 -->
+- For any 两次使用相同 `Idempotency-Key` 的提交，THE lending service SHALL 只登记一笔借券 <!-- gta: id=borrow.book/i01 source=assumed hint.oracle=property → 见 q03 -->
 
 ## Open questions
 <!-- gta: round=R3 -->
-<!-- gta: id=order.create/q01 impact=high affects=order.create/s03 -->
-1. [高影响] 网关超时后是否自动重试？
+<!-- gta: id=borrow.book/q01 impact=high affects=borrow.book/s03 -->
+1. [高影响] 库存服务超时后是否自动重试？
    - [ ] A) 不重试（= 代码现状）→ s03 不变
-   - [ ] B) 重试 1 次 → s03 THEN 增加 "gateway is called twice"
-<!-- gta: id=order.create/q02 impact=high affects=order.create/r05 -->
-2. [高影响] 非订单所有者能否读取订单？代码中没有看到所有权检查。
+   - [ ] B) 重试 1 次 → s03 THEN 增加 "the inventory service is called twice"
+<!-- gta: id=borrow.book/q02 impact=high affects=borrow.book/r05 -->
+2. [高影响] 客户能否读取其他客户登记的借券？代码中没有看到所有权检查。
    - [ ] A) 不能 → r05 THEN "the response is 404"
    - [ ] B) 不能 → r05 THEN "the response is 403"
    - [ ] C) 可以（= 代码现状）
-<!-- gta: id=order.create/q03 impact=normal affects=order.create/i01 -->
+<!-- gta: id=borrow.book/q03 impact=normal affects=borrow.book/i01 -->
 3. 相同 `Idempotency-Key` 重复提交时如何处理？
    - [ ] A) 返回第一次的结果（= 代码现状）
    - [ ] B) 返回 409
 
 ## Findings
-<!-- gta: id=order.create/f01 kind=doc-drift -->
+<!-- gta: id=borrow.book/f01 kind=doc-drift -->
 - README 写的是"超时返回 504"，代码返回 503。
 ````
 
@@ -324,7 +326,7 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
 3. **默认值**：高影响问题不能用默认值。"其余默认"一律选"= 代码现状"，对应的结论记为 `defaulted`。
 4. **批准**：
    - gtaw 应用答案后，会生成新的修订号（例如 `R4`），并展示规格的变化。
-   - 用户必须**另外发一条消息**，并且只回复"approve `order.create@R4`"（中文"批准 `order.create@R4`"同样接受）。其他任何回复，包括"不批准 …"，都作为修改意见。
+   - 用户必须**另外发一条消息**，并且只回复"approve `borrow.book@R4`"（中文"批准 `borrow.book@R4`"同样接受）。其他任何回复，包括"不批准 …"，都作为修改意见。
    - 规格必须与 gtaw 展示时完全一致；展示之后被改动的，退回 analyst，并以新修订号重新提交。
    - 批准按 Requirement 记录内容哈希。之后哪个 Requirement 的内容变了，只有它会退回 `in-review`。
 5. **权威审批**：由团队正常的 PR review 把关。gtaw 生成的 PR 评论会单独列出本次新增的所有 `confirmed`、批准、`relock` 和豁免，包括原话和渠道，**任何伪造都在 reviewer 眼前**。问题也可以通过 PR 异步交给产品负责人回答。以后如果启用 CODEOWNERS，规格的审批可以收紧为必须由 CODEOWNERS 批准，不需要改动设计。
@@ -412,7 +414,7 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
 1. orchestrator 调用 `./gtaw next`。gtaw 在内部完成所有确定性步骤：接管会话、恢复状态、profile、规格 lint、生成计划、影响分析、会话结束时的 verify、提交。然后只返回需要 agent 或人处理的节点：
 
    ```json
-   { "node": "author", "itemId": "order.create/s03#component-01", "agent": "gta-test-author",
+   { "node": "author", "itemId": "borrow.book/s03#component-01", "agent": "gta-test-author",
      "brief": ".gta/work/briefs/0007.md", "token": "s20261103120000-k3f9:0007", "dispatch": "subagent" }
    ```
 
@@ -660,7 +662,7 @@ always:
    - 无法判定时，进入 `triaging`（安全的默认值）。
    - 重跑结果不一致的，预判为 `flaky`。
    - 被跳过或中止的测试不算通过。
-2. **期望值复核**：每次 check 和 submit 都确定性地检查，THEN 中的期望值（例如 `503`、`PENDING_PAYMENT`）是否出现在解析后的断言期望位置上。请求（输入）中的字面量不算。缺失时返回 `POLICY_ORACLE_MISMATCH`。
+2. **期望值复核**：每次 check 和 submit 都确定性地检查，THEN 中的期望值（例如 `503`、`PENDING_LOCATE`）是否出现在解析后的断言期望位置上。请求（输入）中的字面量不算。缺失时返回 `POLICY_ORACLE_MISMATCH`。
 3. **Oracle lock（单调锁定）**
    - **锁什么**：只硬锁从 THEN 推出的期望值字面量，以及承载这些字面量的断言。
    - **单调**：已锁定的断言不能修改或删除，可以新增断言。所以正常的修复（setup、导入、等待逻辑、补充断言）都不受影响。
@@ -832,7 +834,7 @@ gta 要让从没用过它的开发者也能上手。人看到的所有内容都�
 不自行给人写状态。状态块固定五部分，顺序不变：
 
 ```
-── gta · order.create ── 等你回答（1 个决定）
+── gta · borrow.book ── 等你回答（1 个决定）
 进度：规格已批准 ▸ 测试 3/5 通过 ▸ 1 个疑似缺陷
 
 刚才发生了什么
@@ -879,12 +881,29 @@ gta 要让从没用过它的开发者也能上手。人看到的所有内容都�
 
 ## 6. 运行模式
 
-用法：`/gta [service|explain|pr|incident|note|status] [补充说明]`。不带参数时，有进行中的工作就继续；没有就推荐 service 模式。
+用法：`/gta [<flow>|status|note|spec|pr|incident] [补充说明]`。不带参数时，有进行中的工作就继续；没有就推荐 service 模式。
+
+子命令分三层呈现，新手先学两样：
+
+| 层级 | 输入 | 用途 |
+|---|---|---|
+| 入门 | `/gta`，然后回复 `OK` | 全部：继续，或从风险最高的开始覆盖整个服务（`/gta service` 效果相同，继续可用） |
+| 常用 | `/gta <flow>`、`/gta status`、`/gta note <文字>` | 一个 flow；当前进度；代码里看不出的规则 |
+| 需要时再用 | `/gta spec <flow>`、`/gta pr [描述]`、`/gta incident <flow> <报告>` | 只写规格不写测试；一个分支；一份事故报告 |
+
+`spec` 就是 explain 模式，用的是大家预期的名字：它的产出就是一份规格。`explain` 继续可用，gtaw 在状态中仍以 `explain` 记录这个模式。
+
+**怎么指定 flow。** 人用手边方便的任何形式指定 flow，由 gtaw 确定性地解析（`--target`）：
+- flowId（`borrow.book`），或它在选择列表中的编号（风险从高到低，与 `/gta` 列出的顺序相同）；
+- 入口的源文件（任意路径结尾，`\` 或 `/` 都可以）、类名（该类只有一个 flow 时），或 `Class#method`；
+- 接口（`POST /api/borrows`）或它的路径、listener 或调度注解中引号里的 topic、队列或 cron、迁移脚本或 BPMN 文件。
+
+一个名字对应多个 flow 时绝不猜测：gtaw 返回 `USAGE_AMBIGUOUS_FLOW`，按风险从高到低列出这些 flow 并标出推荐项，由人选择。一个也对应不上时返回 `USAGE_UNKNOWN_FLOW`，提示上述可用形式。
 
 | 模式 | 流程（D = gtaw，A = agent，H = 人） | 产出 |
 |---|---|---|
 | `service`（P4；没有进行中的工作时执行 `/gta`） | D profile → 按类型和风险列出找到的 flow → H 选择（带推荐：全部，风险高的先做）→ flow 排进队列，每个按 flow 模式执行。某个 flow 在等人时不会挡住其他 flow：gtaw 先把它的决定暂放（测试作者的提问会立即询问，因为作者在等答案），继续做下一个 flow；等队列里没有不需要人就能继续的 flow 时，再按先后顺序询问暂放的决定；状态区块会列出还在等你的 flow。`gtaw next --mode service` | 整个服务的规格、测试和用例台账 |
-| `explain <flowId\|path>` | D profile → A analyst | 全景图、时序图、规格草稿、问题；只读。回答并批准后自动转为 flow 模式 |
+| `spec <flow>`（也可用 `explain`） | D profile → A analyst | 全景图、时序图、规格草稿、问题；只读。回答并批准后自动转为 flow 模式 |
 | 默认（flow） | D → A analyst → H 回答 → H 批准 → D 计划 → 循环（A test-author ⇄ D check → D submit → A reviewer）→ D verify → D 报告 | 测试、oracle 分片、报告 |
 | `pr` | D impact：diff → 受影响的方法、配置项、bean（沿着注入关系追踪）→ flow，标为 `stale`<br>→ A analyst：把 PR 描述作为 `documented` 意图，只在意图不清时提问<br>→ H 批准（也可以在 PR 中进行）→ 后续同上 | 测试、PR 评论（行为变更摘要、findings、新增确认项、未映射的改动） |
 | `regression`（CI） | 已有的 `mvn verify` → D `verify --new` → D `gate --base <ref> --reports <dir>` → D `report` | 报告 |
@@ -1116,7 +1135,7 @@ gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 
 | 对象 | 规则 |
 |---|---|
 | 规格 / oracle 分片 | `.gta/specs/<domain>/<flow-name>.spec.md` / `.oracles.json`；服务全景为 `.gta/specs/service-overview.md`。monorepo 中每个服务模块各有一个 `.gta/` |
-| 测试类 | `<源类名><后缀>`，与源类同包，每个源类每种后缀只有一个：`Test` 单元、`SliceTest` Spring slice、`IT` 组件、`ContractIT` 契约、`E2ETest` 端到端（在 `src/test/e2e/java`）。源类是 flow 的入口（`api/OrderController` → `api/OrderControllerIT`），同一源类的多个 flow 共用一个测试类。种子测试为 `<@SpringBootApplication 类>IT`。完整规则、辅助代码后缀与例外见 [test-naming.md](../guides/test-naming.md) |
+| 测试类 | `<源类名><后缀>`，与源类同包，每个源类每种后缀只有一个：`Test` 单元、`SliceTest` Spring slice、`IT` 组件、`ContractIT` 契约、`E2ETest` 端到端（在 `src/test/e2e/java`）。源类是 flow 的入口（`api/BorrowController` → `api/BorrowControllerIT`），同一源类的多个 flow 共用一个测试类。种子测试为 `<@SpringBootApplication 类>IT`。完整规则、辅助代码后缀与例外见 [test-naming.md](../guides/test-naming.md) |
 | 测试选择 | 显式配置，不依赖插件默认值：gtaw 按后缀表传 `-Dtest`；服务自己的 Surefire 跑 `*Test`，Failsafe 跑 `*IT`；`E2ETest` 只在自己的 profile 中运行 |
 | 命名冲突 | gta 要写的测试类已存在且不是 gta 测试时，gtaw 询问开发者（共用文件、跳过或重新检查），从不自行决定 |
 | 测试方法 | `should<Outcome>When<Condition>()`，加 `@DisplayName("[<scenarioId>] …")` |
@@ -1130,17 +1149,30 @@ gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 
 
 | 对象 | 格式 | 示例 |
 |---|---|---|
-| flowId | `<domain>.<flow-name>`，只能两段；`foundation` 是保留字 | `order.create` |
-| requirement / scenario / invariant / question / finding id | `<flowId>/r<nn>`、`/s<nn>`、`/i<nn>`、`/q<nn>`、`/f<nn>` | `order.create/s03` |
-| 规格修订号 / 问题轮次 | `R<n>`（每个 flow 单调递增） | `order.create@R4` |
-| itemId | `<ref>#<slot>-<nn>`，其中 `<slot>` 是层级名或 `foundation` | `order.create/s03#component-01`、`order#foundation-01` |
-| itemKey（用于文件名） | 把 itemId 中的 `/` 和 `#` 替换为 `__` | `order.create__s03__component-01` |
+| flowId | `<domain>.<flow-name>`，只能两段；`foundation` 是保留字。由 gtaw 从代码推导（见下文），不需要人起名 | `borrow.book` |
+| requirement / scenario / invariant / question / finding id | `<flowId>/r<nn>`、`/s<nn>`、`/i<nn>`、`/q<nn>`、`/f<nn>` | `borrow.book/s03` |
+| 规格修订号 / 问题轮次 | `R<n>`（每个 flow 单调递增） | `borrow.book@R4` |
+| itemId | `<ref>#<slot>-<nn>`，其中 `<slot>` 是层级名或 `foundation` | `borrow.book/s03#component-01`、`borrow#foundation-01` |
+| itemKey（用于文件名） | 把 itemId 中的 `/` 和 `#` 替换为 `__` | `borrow.book__s03__component-01` |
 | sessionId / runId | `s<yyyymmddhhmmss>-<rand4>` / `r<yyyymmddhhmmss>-<sha7>-<rand4>`（UTC） | `r20261103120000-a1b2c3d-k3f9` |
 | shortRunId | `<mmddhhmmss>-<rand4>` | `1103120000-k3f9` |
-| Commit | `test(<domain>): …` 或 `docs(spec): …`；trailer 为 `Gta-Item`、`Gta-Run`（只供人阅读；改动检查信任的是提交账本，不是 trailer） | `test(order): cover gateway timeout` |
-| 云资源 | `gta-<shortRunId>-<purpose>`，按资源类型做转换（例如 BigQuery 用 `gta_<shortRunId>_<purpose>`，Oracle schema 用大写的 `GTA_<shortRunId>`，连字符换成下划线）；label 为 `gta-run-id`、`gta-ttl-hours` | `gta-1103120000-k3f9-orders` |
+| Commit | `test(<domain>): …` 或 `docs(spec): …`；trailer 为 `Gta-Item`、`Gta-Run`（只供人阅读；改动检查信任的是提交账本，不是 trailer） | `test(borrow): cover inventory timeout` |
+| 云资源 | `gta-<shortRunId>-<purpose>`，按资源类型做转换（例如 BigQuery 用 `gta_<shortRunId>_<purpose>`，Oracle schema 用大写的 `GTA_<shortRunId>`，连字符换成下划线）；label 为 `gta-run-id`、`gta-ttl-hours` | `gta-1103120000-k3f9-borrows` |
 
 ---
+
+**gtaw 如何推导 flowId。** profile 以确定的方式为每个入口命名：同样的代码永远得到同样的名字，名字也说明了 flow 从哪里开始：
+
+| 入口 | domain | flow 名 | 示例 |
+|---|---|---|---|
+| controller、listener、job、gRPC service、Temporal workflow 等的方法 | 去掉角色后缀（`Controller`、`Listener`、`Consumer`、`Job`、`Scheduler`、`Task`、`Handler`、`Endpoint`、`Resource`、`Api`、`GrpcService`、`Workflow` 等）后的类名，kebab 格式 | 方法名，kebab 格式 | `BorrowController#book` → `borrow.book`；`InventoryListener#onPositionUpdate` → `inventory.on-position-update`；`FeeAccrualJob#accrueDaily` → `fee-accrual.accrue-daily` |
+| Spring Statemachine 配置 / Beam 组合 transform | 类名 | `transitions` / `transform` | `LoanStateMachineConfig` → `loan-state-machine.transitions` |
+| Flyway 或 Liquibase 脚本 | `db` | 脚本描述 | `V12__add_haircut.sql` → `db.add-haircut` |
+| BPMN 文件 | `process` | 文件名 | `settlement.bpmn` → `process.settlement` |
+
+- **去掉重复的词**：flow 名重复了 domain 的词时，这些词会被去掉（`BorrowController#bookBorrow` → `borrow.book`，而不是 `borrow.book-borrow`）。以下情况不去掉：去掉后什么都不剩；只剩 listener 的 `on`（`PaymentListener#onPayment` 仍是 `payment.on-payment`）；短名字已被其他 flow 占用；或这个 flow 已经有以长名字保存的规格，这样已有的规格保持原名。
+- 两个 flow 会得到相同名字时，按 profile 发现的顺序加上 `-2`、`-3` 区分。
+- 为什么是两段：domain 决定 flow 的规格目录（`.gta/specs/<domain>/`）、提交（`test(<domain>): …`）以及该 domain 下各 flow 共用的 foundation 事项（`<domain>#foundation-01`）；用点号分隔，把 `/`、`#`、`@` 留给场景、事项和修订号。
 
 ### 9.5 Tag：统一的一套词汇（P4）
 
@@ -1185,17 +1217,17 @@ gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 
 
 ```json
 {
-  "id": "order.create/s03#component-01",
+  "id": "borrow.book/s03#component-01",
   "kind": "test",
-  "ref": "order.create/s03",
+  "ref": "borrow.book/s03",
   "capability": "rest-api",
   "layer": "component",
   "intent": "characterization",
   "agent": "gta-test-author",
   "skills": [".gta/skills/gta-testing-spring-apis", ".gta/skills/gta-stubbing-with-wiremock"],
-  "oracle": { "type": "state", "source": "observed", "then": ["503", "PENDING_PAYMENT", "order-created"] },
-  "ownsFiles": ["src/test/java/com/acme/order/api/OrderControllerIT.java"],
-  "dependsOn": ["order#foundation-01"],
+  "oracle": { "type": "state", "source": "observed", "then": ["503", "PENDING_LOCATE", "borrow-booked"] },
+  "ownsFiles": ["src/test/java/com/acme/lending/api/BorrowControllerIT.java"],
+  "dependsOn": ["borrow#foundation-01"],
   "priority": "p1",
   "scenarioRevision": "3f9c…"
 }
@@ -1206,7 +1238,7 @@ gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 
 `.gta/work/state.json` 中每个条目的状态：
 
 ```json
-{ "id": "order.create/s03#component-01", "status": "verifying", "attempts": 1, "checks": 3,
+{ "id": "borrow.book/s03#component-01", "status": "verifying", "attempts": 1, "checks": 3,
   "token": "s20261103120000-k3f9:0007",
   "baseline": { "head": "a1b2c3d", "dirty": { "README.md": "b77e…" } },
   "lock": { "fingerprint": "5be2…", "reachedAt": "r20261103121000-a1b2c3d-q7m2" },
@@ -1217,8 +1249,8 @@ gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 
 `<flow-name>.oracles.json`（已提交）：
 
 ```json
-{ "order.create/s03#component-01": { "scenarioRevision": "3f9c…", "fingerprint": "5be2…",
-    "tokens": ["503", "PENDING_PAYMENT"], "testClass": "com.acme.order.api.OrderControllerIT" } }
+{ "borrow.book/s03#component-01": { "scenarioRevision": "3f9c…", "fingerprint": "5be2…",
+    "tokens": ["503", "PENDING_LOCATE"], "testClass": "com.acme.lending.api.BorrowControllerIT" } }
 ```
 
 | 枚举 | 取值 |
@@ -1299,7 +1331,7 @@ gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 
 
 | 列 | 内容 |
 |---|---|
-| Test Case ID | scenario id（`order.create/s01`）；不另设 QA 风格的编号 |
+| Test Case ID | scenario id（`borrow.book/s01`）；不另设 QA 风格的编号 |
 | Test Title · Test Content · Expect Result | scenario 标题；第一条 WHEN 与第一条 THEN 的缩写，后接“(+n more)” |
 | Linked Spec | `<flow>.spec.md#sNN` |
 | Automation | 测试提交后为 `<测试类>#<方法>`，手工用例为 `Manual`，此前为 `–` |
@@ -1347,7 +1379,7 @@ gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 
 |---|---|---|
 | `gtaw init [--platform copilot,opencode]` · `gtaw upgrade` | 人 | 写入 harness、`.gta/skills`、AGENTS.md 段落、`.vscode` 设置、`.gitignore`、`managed-files.json`；打印可选的 CODEOWNERS 和分支保护建议 |
 | `gtaw doctor` | 人 | 检查 JDK、可用的模拟器（gcloud emulators、bigquery-emulator）、Maven 和 parent 版本、受管文件、IDE 设置（IntelliJ 给出自动批准的配置步骤） |
-| `gtaw next [--mode explain\|flow\|pr\|incident] [--target <flowId\|path>] [--base <ref>] [--intent <PR 描述\|incident 报告>]` · `gtaw next --takeover` | orchestrator · `--takeover` **仅限人** | 在内部执行确定性步骤，返回下一个节点 |
+| `gtaw next [--mode service\|spec\|flow\|pr\|incident] [--target <flow：id、列表编号、文件、类、接口或 topic>] [--base <ref>] [--intent <PR 描述\|incident 报告>]` · `gtaw next --takeover` | orchestrator · `--takeover` **仅限人** | 在内部执行确定性步骤，返回下一个节点 |
 | `gtaw check --item <id> --token <t>` | test-author | 编译并运行一次；不计入修复次数 |
 | `gtaw submit --item <id> --token <t> [--question "<text>"]` · `--spec <flowId> --token <t>` · `--review <id> --token <t> --verdict <v> --reason "<text>"` | 对应的 agent / orchestrator | 正式提交条目、规格或评审结论 |
 | `gtaw answer "<原话>"` · `gtaw answer --file <UTF-8 文件>` | orchestrator | 记录用户的回答或批准（§3.5） |
@@ -1453,20 +1485,20 @@ generic-testing-agent/
 **开发者第一次使用**
 
 ```
-你：/gta explain order.create
-GTA：规格草稿：.gta/specs/order/create.spec.md（含时序图和权限表）
+你：/gta spec borrow.book
+GTA：规格草稿：.gta/specs/borrow/book.spec.md（含时序图和权限表）
      ── R3 问题（gtaw 生成，原样展示）──
-     1.[高] 网关超时后是否自动重试？ A) 不重试（= 代码现状）  B) 重试 1 次
-     2.[高] 非订单所有者能否读取订单？代码中没有看到所有权检查。
+     1.[高] 库存服务超时后是否自动重试？ A) 不重试（= 代码现状）  B) 重试 1 次
+     2.[高] 客户能否读取其他客户登记的借券？代码中没有看到所有权检查。
             A) 不能，返回 404   B) 不能，返回 403   C) 可以（= 代码现状）
      3. 相同 Idempotency-Key 重复提交？ A) 返回第一次的结果（= 代码现状）  B) 409
      doc-drift：README 写的是"超时返回 504"，代码返回 503。
 你：R3: 1A 2A 其余默认
 GTA：已应用答案，规格更新为 R4（q1、q2 记为 confirmed；q3 记为 defaulted）。
-     变化：r05 新增 THEN "the response is 404"。回复"approve order.create@R4"（或"批准 order.create@R4"）继续。
-你：批准 order.create@R4
+     变化：r05 新增 THEN "the response is 404"。回复"approve borrow.book@R4"（或"批准 borrow.book@R4"）继续。
+你：批准 borrow.book@R4
 GTA：共生成 6 个条目，本次会话先处理 5 个……
-     ⚠ order.create/s07（非所有者读取）期望 404，实际 200。这是 product-defect 吗？
+     ⚠ borrow.book/s07（非所有者读取）期望 404，实际 200。这是 product-defect 吗？
        A) 确认是缺陷（用 @KnownDefect 固定，并生成 issue 草稿）  B) 规格有误  C) 重试
 ```
 
@@ -1641,3 +1673,4 @@ Java：以 Java 17 及以上的服务为主进行设计，少数 Java 8 或 11 �
 | v9.1 | P0 已实现，完成两轮代码审查（见 [round-2-remediation.md](../reviews/round-2-remediation.md)）：<br>- 只有精确的批准才算批准，其他回复作为修改意见，展示后被改动的规格不予批准；<br>- 用提交账本代替 trailer，分片和状态失败即关闭，规格循环有上限，review 带 token，超时计入次数；<br>- 文档统一为英文，README 和本设计另有中文版；示意图由 `scripts/diagrams/render.py` 按 diagram-design 风格生成 |
 | v10 | P0 到 P3 已实现。P4 重新划定范围：<br>- 部署环境上的测试不在范围内：团队自行测试 SIT 和 UAT，gta 绝不触碰这些环境，尤其是生产环境（Spring profile 隔离、agent 规则）；<br>- 新手易用性：给人的统一状态块（`en` 或 `zh-CN`）、带推荐答案的问题和 `OK` 回复、`/gta note`、service 模式、统一的 tag 词汇（§5.10、§9.5） |
 | v11 | P4 已实现并成为当前阶段。P5 精简：去掉 hooks、插件分发、record-replay 和 native-image；其余暂缓，等有团队需要时再做 |
+| v12 | 面向新手的命名：`/gta` 子命令分三层，explain 模式改称 `spec`，可以用列表编号、类名、文件、接口或 topic 指定 flow，有歧义时询问而不是猜测，推导出的 flow 名去掉与 domain 重复的词（§6、§9.4）；贯穿示例改为证券借贷服务（`borrow.book`） |

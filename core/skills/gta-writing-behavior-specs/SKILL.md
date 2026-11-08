@@ -10,15 +10,15 @@ description: Writes gta behaviour specs in the OpenSpec-compatible format - EARS
 Start from the template in the brief. Keep every `<!-- gta: ... -->` comment; ids are `<flowId>/r01`, `/s01`, `/i01`, `/q01`, `/f01`.
 
 ```markdown
-### Requirement: Payment gateway timeout
-<!-- gta: id=order.create/r02 ref=method:com.acme.order.OrderService#authorize ref=config:payment.gateway.timeout -->
-IF the payment gateway does not respond within 3s, THEN THE order service SHALL respond 503 and keep the order in PENDING_PAYMENT.
+### Requirement: Inventory service timeout
+<!-- gta: id=borrow.book/r02 ref=method:com.acme.lending.BorrowService#reserve ref=config:inventory.client.timeout -->
+IF the inventory service does not respond within 3s, THEN THE lending service SHALL respond 503 and keep the borrow in PENDING_LOCATE.
 
-#### Scenario: gateway silent for 3 seconds
-<!-- gta: id=order.create/s03 source=observed priority=P1 hint.layer=component hint.oracle=state -->
-- **WHEN** the gateway does not respond within 3s
+#### Scenario: inventory service silent for 3 seconds
+<!-- gta: id=borrow.book/s03 source=observed priority=P1 hint.layer=component hint.oracle=state -->
+- **WHEN** the inventory service does not respond within 3s
 - **THEN** the response status is `503` with a ProblemDetail body
-- **AND** orders.status is `PENDING_PAYMENT`
+- **AND** borrows.status is `PENDING_LOCATE`
 ```
 
 ## Workflow
@@ -34,10 +34,10 @@ IF the payment gateway does not respond within 3s, THEN THE order service SHALL 
 8. Questions (`## Open questions`): at most 5, highest impact first. Format:
 
    ```markdown
-   <!-- gta: id=order.create/q01 impact=high affects=order.create/s03 -->
-   1. [high impact] Should a gateway timeout be retried?
+   <!-- gta: id=borrow.book/q01 impact=high affects=borrow.book/s03 -->
+   1. [high impact] Should an inventory-service timeout be retried?
       - [ ] A) No retry (= current code)
-      - [ ] B) Retry once → s03 THEN adds "the gateway is called `2` times" (recommended: the README promises one retry)
+      - [ ] B) Retry once → s03 THEN adds "the inventory service is called `2` times" (recommended: the README promises one retry)
    ```
 
    Mark exactly one option per question `(recommended: <why>)`, the answer you would pick; `OK` takes it. Recommend

@@ -9,13 +9,13 @@ description: House rules for every gta test in a Maven Spring Boot 4.1 / 3.5 ser
 
 ```java
 @Tag("component") @Tag("gta")
-class OrderControllerIT {                  // tests of com.acme.order.api.OrderController (the flow's entry point)
+class BorrowControllerIT {                  // tests of com.acme.lending.api.BorrowController (the flow's entry point)
 
     @Test
-    @Tag("flow:order.create") @Tag("scenario:order.create/s03")
+    @Tag("flow:borrow.book") @Tag("scenario:borrow.book/s03")
     @Tag("hardening")
     @Tag("p1")
-    @DisplayName("[order.create/s03] gateway silent for 3 seconds")
+    @DisplayName("[borrow.book/s03] inventory service silent for 3 seconds")
     void shouldRespond503WhenGatewayTimesOut() {
         // arrange: inputs that produce the WHEN
         // act: call the entry point

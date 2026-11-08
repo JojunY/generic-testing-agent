@@ -1,17 +1,17 @@
 # Slice tests
 
 ```java
-@WebMvcTest(OrderController.class)
+@WebMvcTest(BorrowController.class)
 @Tag("slice") @Tag("gta")
-class OrderControllerSliceTest {                 // a slice test is named after the class it targets, not the annotation
+class BorrowControllerSliceTest {                 // a slice test is named after the class it targets, not the annotation
     @Autowired MockMvcTester mvc;
-    @MockitoBean OrderService service;
+    @MockitoBean BorrowService service;
 
     @Test
-    @Tag("flow:order.create") @Tag("scenario:order.create/s01")
-    @DisplayName("[order.create/s01] missing amount is rejected")
+    @Tag("flow:borrow.book") @Tag("scenario:borrow.book/s01")
+    @DisplayName("[borrow.book/s01] missing amount is rejected")
     void shouldReturn400WhenAmountMissing() {
-        var result = mvc.post().uri("/api/orders").contentType(MediaType.APPLICATION_JSON)
+        var result = mvc.post().uri("/api/borrows").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"currency\":\"EUR\"}").exchange();
         assertThat(result).hasStatus(400)
                 .bodyJson().extractingPath("$.title").isEqualTo("Bad Request");

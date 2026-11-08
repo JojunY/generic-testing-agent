@@ -11,13 +11,13 @@ description: Tests Spring Batch 5 and 6 jobs - readers, processors and writers i
 @SpringBatchTest
 @SpringBootTest
 @EnableJdbcJobRepository          // Batch 6 defaults to a resourceless repository: restart tests need JDBC
-class InvoiceImportJobIT {
+class PositionImportJobIT {
     @Autowired JobOperatorTestUtils jobs;
 
     @Test
-    @Tag("scenario:invoice.import/s04")
+    @Tag("scenario:position-import.import/s04")
     void shouldSkipPoisonRecordsWhenImporting() throws Exception {
-        JobExecution run = jobs.startJob(new JobParametersBuilder().addString("file", "com/acme/invoice/batch/InvoiceImportJobConfigIT/s04.poison.csv").toJobParameters());
+        JobExecution run = jobs.startJob(new JobParametersBuilder().addString("file", "com/acme/lending/batch/PositionImportJobConfigIT/s04.poison.csv").toJobParameters());
         StepExecution step = run.getStepExecutions().iterator().next();
         assertThat(run.getExitStatus().getExitCode()).isEqualTo("COMPLETED");
         assertThat(step.getSkipCount()).isEqualTo(2);

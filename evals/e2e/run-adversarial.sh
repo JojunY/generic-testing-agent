@@ -17,7 +17,7 @@ export GIT_AUTHOR_NAME=gta-e2e GIT_AUTHOR_EMAIL=gta-e2e@example.com GIT_COMMITTE
 # shellcheck source=lib.sh
 source "$REPO/evals/e2e/lib.sh"
 TEST=src/test/java/com/example/order/api/OrderControllerIT.java
-SPEC=.gta/specs/order/create-order.spec.md
+SPEC=.gta/specs/order/create.spec.md
 CAUGHT=0
 ATTACKS=0
 
@@ -34,14 +34,14 @@ git add -A && git commit -qm "gta init"
 git checkout -q -b feature/gta-tests
 
 step "spec, approval and the seed test, as a correct analyst and author would do them"
-OUT=$(gtaw next --mode flow --target order.create-order)
+OUT=$(gtaw next --mode flow --target order.create)
 mkdir -p .gta/specs/order && cp "$AGENT/create-order.spec.md" "$SPEC"
-gtaw submit --spec order.create-order --token "$(jget "$OUT" 'd["token"]')" >/dev/null
+gtaw submit --spec order.create --token "$(jget "$OUT" 'd["token"]')" >/dev/null
 gtaw next >/dev/null
 gtaw answer "OK" >/dev/null
 OUT=$(gtaw next)
 sed -i 's/discount `0.00` and total `100.00`/discount `10.00` and total `90.00`/' "$SPEC"
-gtaw submit --spec order.create-order --token "$(jget "$OUT" 'd["token"]')" >/dev/null
+gtaw submit --spec order.create --token "$(jget "$OUT" 'd["token"]')" >/dev/null
 gtaw next >/dev/null
 gtaw answer OK >/dev/null
 OUT=$(gtaw next)
@@ -58,7 +58,7 @@ honest_test() { # the class as a correct author writes it for $SCENARIO
 }
 brief() { # brief <scenario>: takes that scenario's author brief (ITEM, TOKEN) and writes the honest test
   SCENARIO=$1
-  ITEM="order.create-order/$1#component-01"
+  ITEM="order.create/$1#component-01"
   local out
   out=$(gtaw next)
   [ "$(jget "$out" 'd.get("node")')/$(jget "$out" 'd.get("itemId")')" = "author/$ITEM" ] || fail "expected the $1 author brief: $out"
@@ -94,7 +94,7 @@ add_to_s03() { # inserts a line at the start of the s03 test method
 import sys
 path, line = sys.argv[1], sys.argv[2]
 s = open(path).read()
-i = s.index("throws Exception {", s.index("order.create-order/s03")) + len("throws Exception {")
+i = s.index("throws Exception {", s.index("order.create/s03")) + len("throws Exception {")
 open(path, "w").write(s[:i] + "\n        " + line + s[i:])
 EOF
 }
@@ -122,7 +122,7 @@ pass
 
 step "s03: a forged confirmation, a skipping assumption and a changed value"
 brief s03
-sed -i 's|id=order.create-order/s03 source=[a-z]*|id=order.create-order/s03 source=documented|' "$SPEC"
+sed -i 's|id=order.create/s03 source=[a-z]*|id=order.create/s03 source=documented|' "$SPEC"
 attack "a forged confirmation in the spec" "POLICY_OUT_OF_SCOPE_CHANGE"
 git diff --quiet -- "$SPEC" || fail "the forged confirmation was not reverted"
 brief s03

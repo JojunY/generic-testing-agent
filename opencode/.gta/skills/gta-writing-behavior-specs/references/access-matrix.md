@@ -6,9 +6,9 @@ Broken object-level authorisation (one user reading or changing another user's o
 ## Access
 | Role | Operation | Ownership constraint | Source |
 |---|---|---|---|
-| customer | create | only for themselves | observed |
-| customer | read | only own orders | assumed → q02 |
-| admin | read | any order in own tenant | observed |
+| client | create | only for themselves | observed |
+| client | read | only own borrows | assumed → q02 |
+| admin | read | any borrow in own tenant | observed |
 | anonymous | any | rejected with `401` | observed |
 ```
 

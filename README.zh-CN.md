@@ -19,10 +19,10 @@ gta 是一个面向 Java/Spring 服务、"先写规格再写测试"的测试 har
 </picture>
 
 ```
-/gta order.create
-  → analyst 写出 .gta/specs/order/create.spec.md（EARS 需求、场景、Mermaid 图、问题）
+/gta borrow.book
+  → analyst 写出 .gta/specs/borrow/book.spec.md（EARS 需求、场景、Mermaid 图、问题）
   → 每个问题都带推荐答案：你回复 "OK"（或 "OK, 2B"），再回复一次 "OK" 批准 R2
-  → test author 编写 OrderCreateIT；gtaw 运行它、锁定期望值并提交
+  → test author 编写 BorrowControllerIT；gtaw 运行它、锁定期望值并提交
   → 与已确认期望不符的失败测试进入分流；确认的缺陷用 @KnownDefect 标注
   → 会话结束：稳定性运行、基于目标分支的质量门禁和报告
 ```

@@ -91,6 +91,28 @@ class ProfilerTest {
     }
 
     @Test
+    void shouldShortenAFlowNameThatRepeatsItsDomainUnlessItHasASpecOrTheNameIsTaken() {
+        List<ServiceProfile.EntryPoint> entries = List.of(
+                entry("borrow.book-borrow"),
+                entry("borrow.cancel-borrow"),
+                entry("borrow.return-borrow"),
+                entry("borrow.return"));
+
+        Profiler.dropRepeatedDomain(entries, flowId -> flowId.equals("borrow.cancel-borrow"));
+
+        assertEquals(
+                List.of("borrow.book", "borrow.cancel-borrow", "borrow.return-borrow", "borrow.return"),
+                entries.stream().map(e -> e.flowId).toList(),
+                "a flow with a spec keeps its name, and a short name already taken is not reused");
+    }
+
+    private static ServiceProfile.EntryPoint entry(String flowId) {
+        ServiceProfile.EntryPoint e = new ServiceProfile.EntryPoint();
+        e.flowId = flowId;
+        return e;
+    }
+
+    @Test
     void shouldKeepEveryPathOfAMapping() {
         ServiceProfile.EntryPoint find = byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"))
                 .get("order.find");
@@ -232,7 +254,7 @@ class ProfilerTest {
 
         assertEquals(
                 "spring-batch",
-                flows.get("import.import-orders").capability,
+                flows.get("import.orders").capability,
                 flows.keySet().toString());
         assertTrue(
                 flows.keySet().stream().noneMatch(f -> f.endsWith(".load")), "a Step is part of its job, not a flow");
@@ -382,7 +404,7 @@ class ProfilerTest {
         Map<String, ServiceProfile.EntryPoint> flows =
                 byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"));
 
-        ServiceProfile.EntryPoint rpc = flows.get("stock.get-stock");
+        ServiceProfile.EntryPoint rpc = flows.get("stock.get");
         assertEquals("grpc-api", rpc.capability, flows.keySet().toString());
         assertEquals("gRPC StockService.getStock", rpc.trigger);
         assertTrue(flows.keySet().stream().noneMatch(f -> f.endsWith(".helper")), "only overridden RPCs are flows");

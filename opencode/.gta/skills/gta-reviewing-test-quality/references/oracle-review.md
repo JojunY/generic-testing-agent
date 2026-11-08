@@ -10,4 +10,4 @@ Reject when any answer is "no":
 6. The test is isolated: unique data, no dependence on test order, no shared mutable static state.
 7. If gtaw flagged restructured assertions or inputs changed after a failure, the meaning is unchanged and the inputs were not bent to make the test pass.
 
-Accept with a reason that names what is checked ("asserts 503 and PENDING_PAYMENT after a 3.5 s stubbed delay").
+Accept with a reason that names what is checked ("asserts 503 and PENDING_LOCATE after a 3.5 s stubbed delay").

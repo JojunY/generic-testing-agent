@@ -8,11 +8,11 @@ From the spec's `## Access` table generate:
 
 ```java
 @Test
-@Tag("scenario:order.read/s07")
-@DisplayName("[order.read/s07] customer cannot read another customer's order")
-void shouldReturn404WhenReadingForeignOrder() {
-    var otherOrder = orders.save(anOrder().owner("bob").build());
-    var result = mvc.get().uri("/api/orders/{id}", otherOrder.getId())
+@Tag("scenario:borrow.read/s07")
+@DisplayName("[borrow.read/s07] a client cannot read another client's borrow")
+void shouldReturn404WhenReadingAnotherClientsBorrow() {
+    var otherBorrow = borrows.save(aBorrow().owner("bob").build());
+    var result = mvc.get().uri("/api/borrows/{id}", otherBorrow.getId())
             .with(jwt().jwt(j -> j.subject("alice"))).exchange();
     assertThat(result).hasStatus(404);
 }

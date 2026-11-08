@@ -3,7 +3,7 @@
 
 ## Boundary
 - In scope: ShippingJob#shipPaidOrders, run by @Scheduled every `shipping.interval-ms`
-- Out of scope: order.create-order, the schedule itself (tests call the job method directly)
+- Out of scope: order.create, the schedule itself (tests call the job method directly)
 - External: none (in-memory repository)
 
 ```mermaid

@@ -11,12 +11,12 @@ Split trigger from logic:
 
 ```java
 @Test
-@Tag("scenario:invoice.run-nightly/s02")
-@DisplayName("[invoice.run-nightly/s02] running twice does not bill twice")
-void shouldBillOnceWhenRunTwice() {
-    job.runNightly();            // call the job method directly
-    job.runNightly();
-    assertThat(invoices.countForDay(DAY)).isEqualTo(3);
+@Tag("scenario:fee-accrual.accrue-daily/s02")
+@DisplayName("[fee-accrual.accrue-daily/s02] running twice does not accrue fees twice")
+void shouldAccrueOnceWhenRunTwice() {
+    job.accrueDaily();            // call the job method directly
+    job.accrueDaily();
+    assertThat(accruals.countForDay(DAY)).isEqualTo(3);
 }
 ```
 

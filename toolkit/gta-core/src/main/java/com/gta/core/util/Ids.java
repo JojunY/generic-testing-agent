@@ -6,6 +6,8 @@ import java.security.SecureRandom;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
@@ -74,6 +76,32 @@ public final class Ids {
                 .replaceAll("[^A-Za-z0-9]+", "-")
                 .toLowerCase(Locale.ROOT)
                 .replaceAll("^-|-$", "");
+    }
+
+    /**
+     * The flow name without the words that repeat its domain (plan §9.4): {@code borrow.book-borrow} becomes
+     * {@code borrow.book}, {@code stock-loan.book-stock-loan} becomes {@code stock-loan.book}. Unchanged when the domain
+     * words do not appear in the name, nothing else would be left, or only a listener's {@code on} would.
+     */
+    public static String withoutRepeatedDomain(String flowId) {
+        int dot = flowId.indexOf('.');
+        if (dot < 0) {
+            return flowId;
+        }
+        List<String> domain = List.of(flowId.substring(0, dot).split("-"));
+        List<String> name = new ArrayList<>(List.of(flowId.substring(dot + 1).split("-")));
+        for (int i = 0; i + domain.size() <= name.size(); i++) {
+            if (name.subList(i, i + domain.size()).equals(domain)) {
+                if (name.size() == domain.size()
+                        || (name.size() == domain.size() + 1 && name.get(0).equals("on"))) {
+                    return flowId; // nothing left, or a listener's bare "on": payment.on-payment says more than
+                    // payment.on
+                }
+                name.subList(i, i + domain.size()).clear();
+                return flowId.substring(0, dot + 1) + String.join("-", name);
+            }
+        }
+        return flowId;
     }
 
     public static String pascal(String kebab) {

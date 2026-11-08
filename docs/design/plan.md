@@ -2,11 +2,12 @@
 
 **English** | [简体中文](plan.zh-CN.md)
 
-> Status: **P0 to P4 implemented**, P4 is the current phase (see the §15 roadmap) · Version: plan v11 · Date: 2026-11 · Code review and remediation record: [round-2-remediation.md](../reviews/round-2-remediation.md) · [round-3-plan.md](../reviews/round-3-plan.md)
+> Status: **P0 to P4 implemented**, P4 is the current phase (see the §15 roadmap) · Version: plan v12 · Date: 2026-11 · Code review and remediation record: [round-2-remediation.md](../reviews/round-2-remediation.md) · [round-3-plan.md](../reviews/round-3-plan.md)
 > Scope: a generic testing harness for Java services (mostly Spring)
 > Surfaces: **GitHub Copilot (VS Code, IntelliJ IDEA) and OpenCode**, supported equally: the same agents, command, guardrails and tests
 > Target environment: Maven; Spring Boot 4.1 mostly, a few 3.5; JUnit follows the Spring Boot parent; Java 17+; Windows developer machines; Oracle and BigQuery for data; Pub/Sub, Kafka and MQ for messaging; no containers locally; every dependency goes through the company Nexus proxy and the platform team can upload packages to Nexus; CI (alm-github) can be connected; most services have code but no specification documents. CODEOWNERS and branch protection are not enabled, and the Copilot preview policy is off
 > Namespace: every external asset uses the prefix `gta`. The revision history is in Appendix B
+> Running example: a securities-lending service, `stock-loan-service`. Its flow `borrow.book` (`POST /api/borrows`) books a stock borrow against the inventory the lending desk can lend; the other flows include `locate.request`, `inventory.on-position-update` (Kafka), `fee-accrual.accrue-daily` (`@Scheduled`) and `db.add-haircut` (Flyway). The scripted evals keep their own fixture, `evals/fixtures/order-service`
 
 ---
 
@@ -40,6 +41,7 @@
    - Human confirmations carry the original words and channel and are listed in the PR comment, so normal PR review keeps watch (§5.5).
 9. **Onboarding**: the tech lead runs `./gtaw init` once per repository; developers need a single command, `/gta` (§12).
 10. **Usable by a newcomer (P4)**
+    - A newcomer needs `/gta` and the reply `OK`; the other subcommands are there when needed (§6). Flows are named by gtaw from the code, so nobody has to invent or remember an id: the number in the list, a class, an endpoint or a topic work too (§6, §9.4).
     - `/gta` on a service with nothing in progress covers the whole service, riskiest flows first; a flow waiting for a person does not stop the others.
     - Everything a person sees is one fixed status block (state, what happened, checked, needs you, next), in English or Chinese.
     - Every question comes with a recommended answer, so `OK` is often the whole reply; what the agent cannot know, people add once with `/gta note` (§5.10).
@@ -211,70 +213,70 @@
 Every `ref` carries a hash: the method body for methods and beans, the value for config keys.
 
 ````markdown
-# order.create — Create an order
-<!-- gta: flowId=order.create capability=rest-api risk=6 status=in-review rev=R3
-     sources=method:com.acme.order.api.OrderController#create,config:payment.gateway.timeout -->
+# borrow.book — Book a stock borrow
+<!-- gta: flowId=borrow.book capability=rest-api risk=6 status=in-review rev=R3
+     sources=method:com.acme.lending.api.BorrowController#book,config:inventory.client.timeout -->
 
 ## Boundary
-- In scope: POST /api/orders → persist the order → publish order-created
-- Out of scope: payment callback (see `payment.callback`)
-- External: payment-gateway (HTTP, not GCP), Oracle, Pub/Sub `order-created`
+- In scope: POST /api/borrows → reserve inventory → persist the borrow → publish borrow-booked
+- Out of scope: returns and recalls (see `borrow.return`)
+- External: inventory-service (HTTP, not GCP), Oracle, Pub/Sub `borrow-booked`
 
 ```mermaid
 sequenceDiagram
   participant C as Client
-  participant API as OrderController
-  participant PG as payment-gateway
+  participant API as BorrowController
+  participant INV as inventory-service
   participant DB as Oracle
   participant PS as Pub/Sub
-  C->>API: POST /api/orders
-  API->>PG: authorize (timeout 3s)
-  PG-->>API: approved
-  API->>DB: insert order (CREATED)
-  API-)PS: order-created
+  C->>API: POST /api/borrows
+  API->>INV: reserve 10,000 shares (timeout 3s)
+  INV-->>API: reserved
+  API->>DB: insert borrow (BOOKED)
+  API-)PS: borrow-booked
   API-->>C: 201
 ```
 
 ## Access
 | Role | Operation | Ownership constraint | Source |
 |---|---|---|---|
-| customer | create | only for themselves | observed |
-| customer | read | see q02 | assumed |
+| client | create | only for themselves | observed |
+| client | read | see q02 | assumed |
 
 ## Requirements
 
-### Requirement: Payment gateway timeout
-<!-- gta: id=order.create/r02 ref=method:com.acme.order.OrderService#authorize refHash=7c1a… ref=config:payment.gateway.timeout refHash=19be… -->
-IF the payment gateway does not respond within 3s, THEN THE order service SHALL respond 503 and keep the order in PENDING_PAYMENT.
+### Requirement: Inventory service timeout
+<!-- gta: id=borrow.book/r02 ref=method:com.acme.lending.BorrowService#reserve refHash=7c1a… ref=config:inventory.client.timeout refHash=19be… -->
+IF the inventory service does not respond within 3s, THEN THE lending service SHALL respond 503 and keep the borrow in PENDING_LOCATE.
 
-#### Scenario: gateway silent for 3 seconds
-<!-- gta: id=order.create/s03 source=observed hint.layer=component hint.oracle=state -->
-- **WHEN** the gateway does not respond within 3s
+#### Scenario: inventory service silent for 3 seconds
+<!-- gta: id=borrow.book/s03 source=observed hint.layer=component hint.oracle=state -->
+- **WHEN** the inventory service does not respond within 3s
 - **THEN** the response status is `503` with a ProblemDetail body
-- **AND** orders.status is `PENDING_PAYMENT`
-- **AND** no message is published to `order-created`
+- **AND** borrows.status is `PENDING_LOCATE`
+- **AND** no message is published to `borrow-booked`
 
 ## Invariants
-- For any two submissions with the same `Idempotency-Key`, THE order service SHALL create only one order <!-- gta: id=order.create/i01 source=assumed hint.oracle=property → see q03 -->
+- For any two submissions with the same `Idempotency-Key`, THE lending service SHALL book only one borrow <!-- gta: id=borrow.book/i01 source=assumed hint.oracle=property → see q03 -->
 
 ## Open questions
 <!-- gta: round=R3 -->
-<!-- gta: id=order.create/q01 impact=high affects=order.create/s03 -->
-1. [high impact] Should a gateway timeout be retried automatically?
+<!-- gta: id=borrow.book/q01 impact=high affects=borrow.book/s03 -->
+1. [high impact] Should an inventory-service timeout be retried automatically?
    - [ ] A) No retry (= current code) → s03 unchanged
-   - [ ] B) Retry once → s03 THEN adds "gateway is called twice"
-<!-- gta: id=order.create/q02 impact=high affects=order.create/r05 -->
-2. [high impact] Can someone who does not own an order read it? The code has no ownership check.
+   - [ ] B) Retry once → s03 THEN adds "the inventory service is called twice"
+<!-- gta: id=borrow.book/q02 impact=high affects=borrow.book/r05 -->
+2. [high impact] Can a client read a borrow booked by another client? The code has no ownership check.
    - [ ] A) No → r05 THEN "the response is 404"
    - [ ] B) No → r05 THEN "the response is 403"
    - [ ] C) Yes (= current code)
-<!-- gta: id=order.create/q03 impact=normal affects=order.create/i01 -->
+<!-- gta: id=borrow.book/q03 impact=normal affects=borrow.book/i01 -->
 3. What happens when the same `Idempotency-Key` is submitted twice?
    - [ ] A) The first result is returned (= current code)
    - [ ] B) 409 is returned
 
 ## Findings
-<!-- gta: id=order.create/f01 kind=doc-drift -->
+<!-- gta: id=borrow.book/f01 kind=doc-drift -->
 - The README says "a timeout returns 504"; the code returns 503.
 ````
 
@@ -324,7 +326,7 @@ The diagrams of this document and the README are not Mermaid: they are rendered 
 3. **Defaults**: high-impact questions cannot be defaulted. "rest default" always picks "= current code", and the conclusion is recorded as `defaulted`.
 4. **Approval**:
    - After applying the answers, gtaw creates a new revision (e.g. `R4`) and shows how the spec changed.
-   - The user must reply in **a separate message** with exactly "approve `order.create@R4`". Any other reply, including "don't approve …", is a change request.
+   - The user must reply in **a separate message** with exactly "approve `borrow.book@R4`". Any other reply, including "don't approve …", is a change request.
    - The spec must still be exactly what gtaw showed; if it was edited afterwards, it goes back to the analyst and comes back as a new revision.
    - Approval records a content hash per Requirement. Later, only a Requirement whose content changed goes back to `in-review`.
 5. **Authoritative approval**: normal PR review keeps watch. The PR comment gtaw generates lists every new `confirmed`, approval, `relock` and waiver of the change with original words and channel, so **any forgery is in front of the reviewer**. Questions can also be answered asynchronously by the product owner through the PR. If CODEOWNERS is enabled later, spec approval can be tightened to require CODEOWNERS without changing the design.
@@ -414,7 +416,7 @@ From P4 replies get shorter (§5.10): `OK` takes every recommended answer, and o
 1. The orchestrator calls `./gtaw next`. gtaw does every deterministic step internally: taking over a session, recovering state, profiling, spec lint, planning, impact analysis, the end-of-session verify, commits. It returns only the nodes that need an agent or a person:
 
    ```json
-   { "node": "author", "itemId": "order.create/s03#component-01", "agent": "gta-test-author",
+   { "node": "author", "itemId": "borrow.book/s03#component-01", "agent": "gta-test-author",
      "brief": ".gta/work/briefs/0007.md", "token": "s20261103120000-k3f9:0007", "dispatch": "subagent" }
    ```
 
@@ -662,7 +664,7 @@ A working-state file that cannot be read is moved aside as `*.corrupt-<time>` an
    - When unclear, `triaging` (the safe default).
    - Inconsistent re-run results are pre-classified as `flaky`.
    - Skipped or aborted tests do not count as passed.
-2. **Expected-value check**: every check and submit verifies deterministically that the expected values of the THEN clauses (e.g. `503`, `PENDING_PAYMENT`) appear in the expected position of parsed assertions. Literals inside the request (the stimulus) do not count. Missing values give `POLICY_ORACLE_MISMATCH`.
+2. **Expected-value check**: every check and submit verifies deterministically that the expected values of the THEN clauses (e.g. `503`, `PENDING_LOCATE`) appear in the expected position of parsed assertions. Literals inside the request (the stimulus) do not count. Missing values give `POLICY_ORACLE_MISMATCH`.
 3. **Oracle lock (monotonic)**
    - **What is locked**: only the expected-value literals derived from THEN and the assertions that carry them.
    - **Monotonic**: locked assertions cannot be changed or removed; new assertions can be added. So normal repairs (setup, imports, waiting, extra assertions) are not affected.
@@ -836,7 +838,7 @@ orchestrator shows it verbatim and adds at most one line of its own; agents neve
 It has five parts, always in this order:
 
 ```
-── gta · order.create ── waiting for you (1 decision)
+── gta · borrow.book ── waiting for you (1 decision)
 Progress: spec approved ▸ tests 3/5 passed ▸ 1 suspected defect
 
 What happened
@@ -891,12 +893,29 @@ to `.gta/notes.md`, committed by gtaw. Analyst briefs list the notes, and a scen
 
 ## 6. Modes
 
-Usage: `/gta [service|explain|pr|incident|note|status] [notes]`. Without arguments it continues the work in progress, or offers service mode as the recommendation.
+Usage: `/gta [<flow>|status|note|spec|pr|incident] [notes]`. Without arguments it continues the work in progress, or offers service mode as the recommendation.
+
+The subcommands are shown in three tiers, so a newcomer learns two things first:
+
+| Tier | Input | Use |
+|---|---|---|
+| getting started | `/gta`, then the reply `OK` | everything: continue, or cover the whole service riskiest first (`/gta service` is the same and stays accepted) |
+| everyday | `/gta <flow>`, `/gta status`, `/gta note <text>` | one flow; where things stand; a rule the code does not show |
+| when needed | `/gta spec <flow>`, `/gta pr [description]`, `/gta incident <flow> <report>` | a spec without tests; a branch; a reported incident |
+
+`spec` is the explain mode under the name people expect: its output is a spec. `explain` stays accepted, and gtaw keeps `explain` as the mode's name in the state.
+
+**Naming a flow.** A person names a flow in whatever form is at hand, and gtaw resolves it deterministically (`--target`):
+- the flowId (`borrow.book`), or its number in the pick list (riskiest first, as `/gta` lists them);
+- the entry point's source file (any path ending, `\` or `/`), its class when the class has one flow, or `Class#method`;
+- the endpoint (`POST /api/borrows`) or its path, a topic, queue or cron quoted in the listener or scheduler annotation, a migration or BPMN file.
+
+A name that fits more than one flow is never guessed: gtaw answers `USAGE_AMBIGUOUS_FLOW` with the flows, riskiest first and marked recommended, and the person picks. A name that fits none gives `USAGE_UNKNOWN_FLOW` with the forms above.
 
 | Mode | Flow (D = gtaw, A = agent, H = human) | Output |
 |---|---|---|
 | `service` (P4; `/gta` with nothing in progress) | D profile → overview of the flows found, by kind and risk → H picks, with a recommendation (all, riskiest first) → the flows are queued and each runs as in flow mode. A flow waiting for a person does not stop the others: gtaw parks its decision (a test author's question is asked at once, since the author waits for it), goes on with the next flow, and asks the parked decisions, oldest first, once no queued flow can go on without the person; the status block names the flows still waiting. `gtaw next --mode service` | specs, tests and ledgers for the whole service |
-| `explain <flowId\|path>` | D profile → A analyst | overview diagram, sequence diagram, draft spec, questions; read-only. After answers and approval it turns into flow mode |
+| `spec <flow>` (also `explain`) | D profile → A analyst | overview diagram, sequence diagram, draft spec, questions; read-only. After answers and approval it turns into flow mode |
 | default (flow) | D → A analyst → H answers → H approves → D plan → loop (A test-author ⇄ D check → D submit → A reviewer) → D verify → D report | tests, oracle shards, report |
 | `pr` | D impact: diff → affected methods, config keys and beans (following injection) → flows, marked `stale`<br>→ A analyst: the PR description is a `documented` intent; questions only where the intent is unclear<br>→ H approves (also possible in the PR) → then as above | tests, PR comment (behaviour change summary, findings, new confirmations, unmapped changes) |
 | `regression` (CI) | the existing `mvn verify` → D `verify --new` → D `gate --base <ref> --reports <dir>` → D `report` | report |
@@ -1132,7 +1151,7 @@ External services are stubbed with WireMock, plus contract tests. Opt-in tests a
 | Object | Rule |
 |---|---|
 | spec / oracle shard | `.gta/specs/<domain>/<flow-name>.spec.md` / `.oracles.json`; the service overview is `.gta/specs/service-overview.md`. In a monorepo each service module has its own `.gta/` |
-| test classes | `<SourceClass><Suffix>` in the source class's package, one per source class and suffix: `Test` unit, `SliceTest` Spring slice, `IT` component, `ContractIT` contract, `E2ETest` end-to-end (in `src/test/e2e/java`). The source class is the flow's entry point (`api/OrderController` → `api/OrderControllerIT`); flows of one source share its test class. The seed test is `<@SpringBootApplication class>IT`. Full rules, support-code suffixes and exceptions: [test-naming.md](../guides/test-naming.md) |
+| test classes | `<SourceClass><Suffix>` in the source class's package, one per source class and suffix: `Test` unit, `SliceTest` Spring slice, `IT` component, `ContractIT` contract, `E2ETest` end-to-end (in `src/test/e2e/java`). The source class is the flow's entry point (`api/BorrowController` → `api/BorrowControllerIT`); flows of one source share its test class. The seed test is `<@SpringBootApplication class>IT`. Full rules, support-code suffixes and exceptions: [test-naming.md](../guides/test-naming.md) |
 | test selection | explicit, never a plugin default: gtaw passes `-Dtest` from the suffix table; the service's Surefire runs `*Test`, Failsafe `*IT`; `E2ETest` runs only in its profile |
 | name conflicts | when the test class gta would write exists and is not a gta test, gtaw asks the developer (share the file, skip, or check again) and never decides itself |
 | test methods | `should<Outcome>When<Condition>()`, with `@DisplayName("[<scenarioId>] …")` |
@@ -1146,17 +1165,30 @@ External services are stubbed with WireMock, plus contract tests. Opt-in tests a
 
 | Object | Format | Example |
 |---|---|---|
-| flowId | `<domain>.<flow-name>`, exactly two parts; `foundation` is reserved | `order.create` |
-| requirement / scenario / invariant / question / finding id | `<flowId>/r<nn>`, `/s<nn>`, `/i<nn>`, `/q<nn>`, `/f<nn>` | `order.create/s03` |
-| spec revision / question round | `R<n>` (increasing per flow) | `order.create@R4` |
-| itemId | `<ref>#<slot>-<nn>`, where `<slot>` is a layer name or `foundation` | `order.create/s03#component-01`, `order#foundation-01` |
-| itemKey (for file names) | the itemId with `/` and `#` replaced by `__` | `order.create__s03__component-01` |
+| flowId | `<domain>.<flow-name>`, exactly two parts; `foundation` is reserved. Derived by gtaw from the code (below); people never have to invent one | `borrow.book` |
+| requirement / scenario / invariant / question / finding id | `<flowId>/r<nn>`, `/s<nn>`, `/i<nn>`, `/q<nn>`, `/f<nn>` | `borrow.book/s03` |
+| spec revision / question round | `R<n>` (increasing per flow) | `borrow.book@R4` |
+| itemId | `<ref>#<slot>-<nn>`, where `<slot>` is a layer name or `foundation` | `borrow.book/s03#component-01`, `borrow#foundation-01` |
+| itemKey (for file names) | the itemId with `/` and `#` replaced by `__` | `borrow.book__s03__component-01` |
 | sessionId / runId | `s<yyyymmddhhmmss>-<rand4>` / `r<yyyymmddhhmmss>-<sha7>-<rand4>` (UTC) | `r20261103120000-a1b2c3d-k3f9` |
 | shortRunId | `<mmddhhmmss>-<rand4>` | `1103120000-k3f9` |
-| commit | `test(<domain>): …` or `docs(spec): …`; trailers `Gta-Item`, `Gta-Run` (documentation for people; the scope check trusts the commit ledger, not trailers) | `test(order): cover gateway timeout` |
-| cloud resources | `gta-<shortRunId>-<purpose>`, converted per resource type (e.g. `gta_<shortRunId>_<purpose>` for BigQuery, upper-case `GTA_<shortRunId>` for Oracle schemas, hyphens replaced by underscores); labels `gta-run-id`, `gta-ttl-hours` | `gta-1103120000-k3f9-orders` |
+| commit | `test(<domain>): …` or `docs(spec): …`; trailers `Gta-Item`, `Gta-Run` (documentation for people; the scope check trusts the commit ledger, not trailers) | `test(borrow): cover inventory timeout` |
+| cloud resources | `gta-<shortRunId>-<purpose>`, converted per resource type (e.g. `gta_<shortRunId>_<purpose>` for BigQuery, upper-case `GTA_<shortRunId>` for Oracle schemas, hyphens replaced by underscores); labels `gta-run-id`, `gta-ttl-hours` | `gta-1103120000-k3f9-borrows` |
 
 ---
+
+**How gtaw derives a flowId.** The profile names every entry point deterministically, so the same code always gets the same name, and the name says where the flow starts:
+
+| Entry point | Domain | Flow name | Example |
+|---|---|---|---|
+| a controller, listener, job, gRPC service, Temporal workflow… method | the class name without its role suffix (`Controller`, `Listener`, `Consumer`, `Job`, `Scheduler`, `Task`, `Handler`, `Endpoint`, `Resource`, `Api`, `GrpcService`, `Workflow`, …), in kebab case | the method, in kebab case | `BorrowController#book` → `borrow.book`; `InventoryListener#onPositionUpdate` → `inventory.on-position-update`; `FeeAccrualJob#accrueDaily` → `fee-accrual.accrue-daily` |
+| a Spring Statemachine configuration / a Beam composite transform | the class | `transitions` / `transform` | `LoanStateMachineConfig` → `loan-state-machine.transitions` |
+| a Flyway or Liquibase script | `db` | the script's description | `V12__add_haircut.sql` → `db.add-haircut` |
+| a BPMN file | `process` | the file name | `settlement.bpmn` → `process.settlement` |
+
+- **Repeated words are dropped**: when the flow name repeats the domain's words, they go (`BorrowController#bookBorrow` → `borrow.book`, not `borrow.book-borrow`). Not when nothing else would be left, when only a listener's `on` would (`PaymentListener#onPayment` stays `payment.on-payment`), when the short name is taken by another flow, or when the flow already has a spec under its long name, so existing specs keep their names.
+- Two flows that would get the same name are told apart with `-2`, `-3` in the order the profile finds them.
+- Why two parts: the domain groups a flow's spec folder (`.gta/specs/<domain>/`), its commits (`test(<domain>): …`) and the foundation item shared by the domain's flows (`<domain>#foundation-01`); the dot leaves `/`, `#` and `@` to scenario, item and revision ids.
 
 ### 9.5 Tags: one vocabulary (P4)
 
@@ -1201,17 +1233,17 @@ from the agent: gtaw's rule repair adds or corrects them before a run.
 
 ```json
 {
-  "id": "order.create/s03#component-01",
+  "id": "borrow.book/s03#component-01",
   "kind": "test",
-  "ref": "order.create/s03",
+  "ref": "borrow.book/s03",
   "capability": "rest-api",
   "layer": "component",
   "intent": "characterization",
   "agent": "gta-test-author",
   "skills": [".gta/skills/gta-testing-spring-apis", ".gta/skills/gta-stubbing-with-wiremock"],
-  "oracle": { "type": "state", "source": "observed", "then": ["503", "PENDING_PAYMENT", "order-created"] },
-  "ownsFiles": ["src/test/java/com/acme/order/api/OrderControllerIT.java"],
-  "dependsOn": ["order#foundation-01"],
+  "oracle": { "type": "state", "source": "observed", "then": ["503", "PENDING_LOCATE", "borrow-booked"] },
+  "ownsFiles": ["src/test/java/com/acme/lending/api/BorrowControllerIT.java"],
+  "dependsOn": ["borrow#foundation-01"],
   "priority": "p1",
   "scenarioRevision": "3f9c…"
 }
@@ -1222,7 +1254,7 @@ from the agent: gtaw's rule repair adds or corrects them before a run.
 The state of each item in `.gta/work/state.json`:
 
 ```json
-{ "id": "order.create/s03#component-01", "status": "verifying", "attempts": 1, "checks": 3,
+{ "id": "borrow.book/s03#component-01", "status": "verifying", "attempts": 1, "checks": 3,
   "token": "s20261103120000-k3f9:0007",
   "baseline": { "head": "a1b2c3d", "dirty": { "README.md": "b77e…" } },
   "lock": { "fingerprint": "5be2…", "reachedAt": "r20261103121000-a1b2c3d-q7m2" },
@@ -1233,8 +1265,8 @@ The state of each item in `.gta/work/state.json`:
 `<flow-name>.oracles.json` (committed; schema `core/schemas/oracles.v1.schema.json`):
 
 ```json
-{ "order.create/s03#component-01": { "scenarioRevision": "3f9c…", "fingerprint": "5be2…",
-    "tokens": ["503", "PENDING_PAYMENT"], "testClass": "com.acme.order.api.OrderControllerIT" } }
+{ "borrow.book/s03#component-01": { "scenarioRevision": "3f9c…", "fingerprint": "5be2…",
+    "tokens": ["503", "PENDING_LOCATE"], "testClass": "com.acme.lending.api.BorrowControllerIT" } }
 ```
 
 | Enum | Values |
@@ -1319,7 +1351,7 @@ only rows written in full, in its `## Manual cases` table (ids `<flowId>/mNN`).
 
 | Column | Content |
 |---|---|
-| Test Case ID | the scenario id (`order.create/s01`); no second, QA-style id |
+| Test Case ID | the scenario id (`borrow.book/s01`); no second, QA-style id |
 | Test Title · Test Content · Expect Result | the scenario title; the first WHEN and the first THEN, shortened, with "(+n more)" |
 | Linked Spec | `<flow>.spec.md#sNN` |
 | Automation | `<test class>#<method>` once a test is committed, `Manual` for manual cases, `–` before |
@@ -1374,7 +1406,7 @@ evidence, the PR comment draft).
 |---|---|---|
 | `gtaw init [--platform copilot\|opencode]` · `gtaw upgrade` | person | writes the harness, `.gta/skills`, the AGENTS.md block, `.vscode` settings, `.gitignore` and `managed-files.json`; files with comments are not rewritten (the keys to add are printed); `upgrade` removes managed files a new version no longer ships, or reports them if they were edited |
 | `gtaw doctor` | person | checks the JDK, available emulators, Maven and the parent version, the pinned wrapper jar, managed files and IDE settings (with auto-approve steps for IntelliJ) |
-| `gtaw next [--mode explain\|flow\|pr\|incident] [--target <flowId\|path>] [--base <ref>] [--intent <PR description\|incident report>]` · `gtaw next --takeover` | orchestrator · `--takeover` **people only** | runs the deterministic steps and returns the next node |
+| `gtaw next [--mode service\|spec\|flow\|pr\|incident] [--target <flow: id, list number, file, class, endpoint or topic>] [--base <ref>] [--intent <PR description\|incident report>]` · `gtaw next --takeover` | orchestrator · `--takeover` **people only** | runs the deterministic steps and returns the next node |
 | `gtaw check --item <id> --token <t>` | test-author | compiles and runs once; does not use a repair attempt |
 | `gtaw submit --item <id> --token <t> [--question "<text>"]` · `--spec <flowId> --token <t>` · `--review <id> --token <t> --verdict <v> --reason "<text>"` | the matching agent / orchestrator | formally submits an item, a spec or a review verdict |
 | `gtaw answer "<original words>"` · `gtaw answer --file <utf-8 file>` | orchestrator | records the user's answer or approval (§3.5) |
@@ -1480,24 +1512,24 @@ generic-testing-agent/
 **A developer's first run**
 
 ```
-you:  /gta explain order.create
-GTA:  draft spec: .gta/specs/order/create.spec.md (with sequence diagram and access table)
+you:  /gta spec borrow.book
+GTA:  draft spec: .gta/specs/borrow/book.spec.md (with sequence diagram and access table)
       ── R3 questions (rendered by gtaw, shown verbatim) ──
-      1.[high] Should a gateway timeout be retried?  A) No (= current code)  B) Retry once
-      2.[high] Can someone who does not own an order read it? The code has no ownership check.
+      1.[high] Should an inventory-service timeout be retried?  A) No (= current code)  B) Retry once
+      2.[high] Can a client read a borrow booked by another client? The code has no ownership check.
              A) No, 404   B) No, 403   C) Yes (= current code)
       3. Same Idempotency-Key submitted twice?  A) the first result (= current code)  B) 409
       doc-drift: the README says "a timeout returns 504"; the code returns 503.
 you:  R3: 1A 2A rest default
 GTA:  answers applied; the spec is now R4 (q1, q2 confirmed; q3 defaulted).
-      Change: r05 adds THEN "the response is 404". Reply "approve order.create@R4" to continue.
-you:  approve order.create@R4
+      Change: r05 adds THEN "the response is 404". Reply "approve borrow.book@R4" to continue.
+you:  approve borrow.book@R4
 GTA:  6 items planned, 5 in this session …
-      ⚠ order.create/s07 (non-owner read) expects 404, got 200. Is this a product defect?
+      ⚠ borrow.book/s07 (non-owner read) expects 404, got 200. Is this a product defect?
         A) Confirm the defect (pin with @KnownDefect and draft an issue)  B) The spec is wrong  C) Retry
 ```
 
-The same conversation works in Chinese: `R3: 1A 2A 其余默认` and `批准 order.create@R4` are accepted aliases.
+The same conversation works in Chinese: `R3: 1A 2A 其余默认` and `批准 borrow.book@R4` are accepted aliases.
 
 **Ease of use**
 - One command. The first run is read-only. After an interruption, typing `/gta` again continues.
@@ -1693,3 +1725,4 @@ the matrix. `gtaw doctor` warns for Java 8 to 16 and fails anything older.
 | v9.1 | P0 implemented, two code reviews applied (see [round-2-remediation.md](../reviews/round-2-remediation.md)):<br>- exact approvals only, change requests, approval refused after edits;<br>- commit ledger instead of trailers, fail-closed shards and state, bounded spec loop, review tokens, counted timeouts;<br>- English documentation with Chinese copies of README and this design; diagrams rendered by `scripts/diagrams/render.py` in the style of diagram-design |
 | v10 | P0 to P3 implemented. P4 rescoped:<br>- tests against deployed environments are out of scope: teams test SIT and UAT themselves, gta never touches them and production above all (Spring profile isolation, the agents' rules);<br>- usability for newcomers: one status block for people in `en` or `zh-CN`, questions with a recommended answer and `OK` replies, `/gta note`, service mode, one tag vocabulary (§5.10, §9.5) |
 | v11 | P4 implemented and current. P5 trimmed: hooks, plugin distribution, record-replay and native-image are dropped; the rest stays deferred until a team needs it |
+| v12 | newcomer naming: `/gta` subcommands in three tiers, `spec` as the name of explain mode, flows named by list number, class, file, endpoint or topic with ambiguity asked instead of guessed, repeated domain words dropped from derived flow names (§6, §9.4); the running example is a securities-lending service (`borrow.book`) |

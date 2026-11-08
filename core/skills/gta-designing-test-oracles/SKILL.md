@@ -11,12 +11,12 @@ For each THEN clause write one assertion that names the observable result and co
 
 ```java
 assertThat(response).hasStatus(503);                                   // THEN the response status is `503`
-assertThat(orderRepository.findById(id)).get()
-        .extracting(Order::getStatus).isEqualTo(OrderStatus.PENDING_PAYMENT); // THEN orders.status is `PENDING_PAYMENT`
-assertThat(outbox.messagesTo("order-created")).isEmpty();               // AND no message to `order-created`
+assertThat(borrowRepository.findById(id)).get()
+        .extracting(Borrow::getStatus).isEqualTo(BorrowStatus.PENDING_LOCATE); // THEN borrows.status is `PENDING_LOCATE`
+assertThat(outbox.messagesTo("borrow-booked")).isEmpty();               // AND no message to `borrow-booked`
 ```
 
-gtaw checks that every backtick value of the THEN (`503`, `PENDING_PAYMENT`, `order-created`) appears in an assertion of the method tagged `scenario:<id>`. `HttpStatus.SERVICE_UNAVAILABLE`, `status().isServiceUnavailable()` and `503` all count as `503`.
+gtaw checks that every backtick value of the THEN (`503`, `PENDING_LOCATE`, `borrow-booked`) appears in an assertion of the method tagged `scenario:<id>`. `HttpStatus.SERVICE_UNAVAILABLE`, `status().isServiceUnavailable()` and `503` all count as `503`.
 
 ## Workflow
 

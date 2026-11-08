@@ -4,6 +4,14 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 
 ## [Unreleased]
 
+### Changed
+- Easier for newcomers (plan §6, §9.4):
+  - the `/gta` subcommands are shown in three tiers: `/gta` and `OK` to start, `<flow>`, `status` and `note` every day, `spec`, `pr` and `incident` when needed; `/gta service` stays accepted and is the same as `/gta`;
+  - `/gta spec <flow>` (`gtaw next --mode spec`) is the new name of explain mode, whose output is a spec; `explain` stays accepted;
+  - a flow can be named by its number in the list, its class (when it has one flow), `Class#method`, its source file, its endpoint (`POST /api/borrows`) or path, a topic, queue or cron in its annotation, or its migration or BPMN file. A name that fits several flows is no longer resolved to the first one: gtaw answers `USAGE_AMBIGUOUS_FLOW` with the candidates, riskiest first;
+  - derived flow names drop the words that repeat the domain (`BorrowController#bookBorrow` is `borrow.book`, not `borrow.book-borrow`); a flow that already has a spec under its long name keeps it.
+- The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
+
 ### Fixed
 - Review round 4:
   - a negative expected value (`isEqualTo(-1)`) is one token, so it satisfies a THEN of `-1` and no longer a THEN of `1`;

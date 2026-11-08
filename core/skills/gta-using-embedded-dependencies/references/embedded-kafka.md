@@ -2,9 +2,9 @@
 
 ```java
 @SpringBootTest
-@EmbeddedKafka(partitions = 1, topics = {"order-created"}, kraft = true)
+@EmbeddedKafka(partitions = 1, topics = {"borrow-booked"}, kraft = true)
 @TestPropertySource(properties = "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
-class OrderEventsIT { ... }
+class BorrowEventsIT { ... }
 ```
 
 - Dependency: `org.springframework.kafka:spring-kafka-test` (version from the Boot parent).

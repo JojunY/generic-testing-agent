@@ -11,11 +11,11 @@ The spec's Access table is the oracle: one scenario per row that grants, and one
 
 ```java
 @Test
-@Tag("scenario:order.cancel-order/s03")
-@DisplayName("[order.cancel-order/s03] another customer cannot cancel the order")
-void shouldRefuseToCancelAnotherCustomersOrder() throws Exception {
-    mvc.perform(post("/api/orders/{id}/cancel", ORDER_OF_C1)
-                    .with(jwt().jwt(j -> j.subject("c-2")).authorities(new SimpleGrantedAuthority("SCOPE_orders.write"))))
+@Tag("scenario:borrow.cancel/s03")
+@DisplayName("[borrow.cancel/s03] another client cannot cancel the borrow")
+void shouldRefuseToCancelAnotherClientsBorrow() throws Exception {
+    mvc.perform(post("/api/borrows/{id}/cancel", BORROW_OF_C1)
+                    .with(jwt().jwt(j -> j.subject("c-2")).authorities(new SimpleGrantedAuthority("SCOPE_borrows.write"))))
             .andExpect(status().isForbidden());
 }
 ```

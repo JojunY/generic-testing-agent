@@ -38,8 +38,8 @@ class QuoteControllerIT {
     }
 
     @Test
-    @Tag("flow:quote.request-quote") @Tag("scenario:quote.request-quote/s02")
-    @DisplayName("[quote.request-quote/s02] ten items get the bulk discount")
+    @Tag("flow:quote.request") @Tag("scenario:quote.request/s02")
+    @DisplayName("[quote.request/s02] ten items get the bulk discount")
     void shouldGiveTheBulkDiscountWhenTenItems() throws Exception {
         Quote quote = quote(new QuoteRequest("sku-1", 10, new BigDecimal("5.00")));
 

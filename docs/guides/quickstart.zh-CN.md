@@ -2,7 +2,7 @@
 
 [English](quickstart.md) | **简体中文**
 
-> 这是 [quickstart.md](quickstart.md) 的中文副本，两份内容需要一起修改。命令、路径、回复格式（如 `approve order.create@R2`）保持原样。
+> 这是 [quickstart.md](quickstart.md) 的中文副本，两份内容需要一起修改。命令、路径、回复格式（如 `approve borrow.book@R2`）保持原样。
 
 谁做什么：
 
@@ -79,16 +79,22 @@ java -jar gta-cli-<version>.jar --root path/to/service init --platform copilot \
 
 在服务中打开 Copilot Chat（agent 模式）或 OpenCode，输入：
 
-| 输入 | 效果 |
-|---|---|
-| `/gta` | 继续，或列出流程；回复 `OK` 就处理全部流程（`service`） |
-| `/gta service` | 处理服务的全部流程，风险高的先做；某个流程等你回答时，gta 先做其他流程，等到没有你就无法继续时再问你 |
-| `/gta explain order.create` | 只写行为 spec 和问题，不写测试 |
-| `/gta order.create` | spec → 提问 → 批准 → 为该流程写测试 |
-| `/gta pr <PR 描述>` | 以 PR 描述为预期行为，重新检查并测试本分支改动到的流程 |
-| `/gta incident order.create <报告>` | 把缺陷报告变成一个在当前代码上失败的测试，然后由你确认缺陷 |
-| `/gta note <文字>` | 告诉 gta 代码里读不出来的信息（业务规则、已知的特殊情况）；保存在 `.gta/notes.md` |
-| `/gta status` | 流程、事项，以及等待你处理的内容 |
+新手只需要会两样：`/gta`，以及回复 `OK`。其他命令在需要时再用。
+
+| | 输入 | 效果 |
+|---|---|---|
+| **入门** | `/gta` | 继续，或列出流程；回复 `OK` 就处理全部流程，风险高的先做。某个流程等你回答时，gta 先做其他流程，等到没有你就无法继续时再问你（`/gta service` 效果相同） |
+| | `OK` | 接受推荐答案，或批准提示中显示的内容 |
+| **常用** | `/gta borrow.book` | spec → 提问 → 批准 → 为该流程写测试 |
+| | `/gta status` | 流程、事项，以及等待你处理的内容 |
+| | `/gta note <文字>` | 告诉 gta 代码里读不出来的信息（业务规则、已知的特殊情况）；保存在 `.gta/notes.md` |
+| **需要时再用** | `/gta spec borrow.book` | 只写行为 spec 和问题，不写测试（`explain` 也可以） |
+| | `/gta pr <PR 描述>` | 以 PR 描述为预期行为，重新检查并测试本分支改动到的流程 |
+| | `/gta incident borrow.book <报告>` | 把事故报告变成一个在当前代码上失败的测试，然后由你确认缺陷 |
+
+**怎么指定流程。** 你很少需要自己输入 flowId：gta 从代码推导出它（`BorrowController#book` → `borrow.book`），并给流程列表编号。
+`/gta 2`、`/gta BorrowController#book`、`/gta POST /api/borrows`、文件、只有一个流程的类名或 Kafka topic 都可以。
+一个名字对应多个流程时，gta 会按风险从高到低列出来，请你选择。
 
 gta 每次停下来等你或完成工作时，都会显示一个状态区块，固定五部分，顺序不变：状态和进度、刚才发生了什么、已确认、需要你、下一步。
 "需要你"那一栏写着"无"时，gta 还在继续工作。
@@ -101,11 +107,11 @@ gta 会在以下几处停下来等你。
 OK
 ```
 
-表示接受全部推荐。要改选其他选项，写题号加字母（`OK, 2B`）；要用自己的话回答，单独一行写（`2: 只对会员客户`）。`其余默认` 仍会为其余普通影响的问题选择“= 代码现状”选项；这些场景会变成*特征化*测试：锁定当前行为，但不证明它是正确的。接受推荐也是正式的回答：你的回复会被逐字记录。
+表示接受全部推荐。要改选其他选项，写题号加字母（`OK, 2B`）；要用自己的话回答，单独一行写（`2: 只对主经纪商客户`）。`其余默认` 仍会为其余普通影响的问题选择“= 代码现状”选项；这些场景会变成*特征化*测试：锁定当前行为，但不证明它是正确的。接受推荐也是正式的回答：你的回复会被逐字记录。
 
-**批准。** 提示会写明它展示的修订号。回复 `OK` 就批准这个修订号（`批准 order.create@R2` 同样有效）。“不批准 …”或“批准 … 但要先改 q2”会被当作修改请求，绝不当作批准。批准会连同你的原话一起提交，作为记录。
+**批准。** 提示会写明它展示的修订号。回复 `OK` 就批准这个修订号（`批准 borrow.book@R2` 同样有效）。“不批准 …”或“批准 … 但要先改 q2”会被当作修改请求，绝不当作批准。批准会连同你的原话一起提交，作为记录。
 
-**用中文。** 在 `.gta/config.json` 中设置 `"output": { "language": "zh-CN" }`，gta 就会用中文提问和显示提示。回复用哪种语言都可以：`好` / `确认` 等同 OK，`批准 order.create@R2` 表示批准，`其余默认`（或 `其他默认`）表示 rest default，选项标记 `= 代码现状` 对应 `= current code`。
+**用中文。** 在 `.gta/config.json` 中设置 `"output": { "language": "zh-CN" }`，gta 就会用中文提问和显示提示。回复用哪种语言都可以：`好` / `确认` 等同 OK，`批准 borrow.book@R2` 表示批准，`其余默认`（或 `其他默认`）表示 rest default，选项标记 `= 代码现状` 对应 `= current code`。
 
 **缺陷与升级。** 回复 `OK` 选择推荐的选项，或回复其他字母（A、B、C）。确认的缺陷会用 `@KnownDefect` 固定：
 
@@ -166,7 +172,7 @@ mvn verify -Dgroups=known-defect        # 修复后：找出该删除的标注
 - Oracle 的凭据从指定的环境变量读取，不会被保存。
 - `phase`：设为更晚的阶段（`"P5"`）可在默认开放前使用该阶段的能力；用于试点服务。P4 及之前的能力（WebFlux、gRPC、GraphQL、工作流、Beam、WebSocket/STOMP/SSE）默认已开启。
 - `spec.source`：仓库自己维护规格时设为 `openspec` 或 `speckit`（`openspec/specs/`、`specs/`）。analyst 会把它们当作 documented 来源引用，绝不修改。
-- `build.module`：多模块仓库中服务所在的模块，例如 `"order-api"`。`.gta/` 留在仓库根目录；测试写进该模块，Maven 以 `-pl <module> -am` 运行。未设置时 `gtaw doctor` 报失败。
+- `build.module`：多模块仓库中服务所在的模块，例如 `"lending-api"`。`.gta/` 留在仓库根目录；测试写进该模块，Maven 以 `-pl <module> -am` 运行。未设置时 `gtaw doctor` 报失败。
 - `build.tool`：`auto`（默认）在服务有 `build.gradle(.kts)` 而没有 `pom.xml` 时用 Gradle 构建，否则用 Maven；设为 `maven` 或 `gradle` 可强制指定。`build.gradle` 指定 Gradle 可执行文件（默认：存在时用 `./gradlew`）。在 Gradle 构建中 gta-junit 也把结果写到 `target/gta-results/`：请把它加入 `.gitignore`。
 - `build.javaHomeEnv`：如果服务的构建需要更旧的 JDK（例如 Java 8 加 Spring Boot 2），填写存放该 JDK 路径的环境变量名，例如 `"JAVA8_HOME"`。Maven 或 Gradle 会以该 `JAVA_HOME` 运行；gtaw 本身仍需要 JDK 17 或更新版本。
 

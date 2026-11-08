@@ -10,6 +10,17 @@ import org.junit.jupiter.api.Test;
 /** Id formats (AGENTS.md naming, plan §9.4). */
 class IdsTest {
     @Test
+    void shouldDropTheDomainWordsTheFlowNameRepeats() {
+        assertEquals("borrow.book", Ids.withoutRepeatedDomain("borrow.book-borrow"));
+        assertEquals("stock-loan.book", Ids.withoutRepeatedDomain("stock-loan.book-stock-loan"));
+        assertEquals("inventory.on-update", Ids.withoutRepeatedDomain("inventory.on-inventory-update"));
+        assertEquals("borrow.book", Ids.withoutRepeatedDomain("borrow.book"), "nothing repeated");
+        assertEquals("borrow.borrow", Ids.withoutRepeatedDomain("borrow.borrow"), "nothing would be left");
+        assertEquals("payment.on-payment", Ids.withoutRepeatedDomain("payment.on-payment"), "a bare on says nothing");
+        assertEquals("stock-loan.book-stock", Ids.withoutRepeatedDomain("stock-loan.book-stock"), "only all words");
+    }
+
+    @Test
     void shouldAcceptOnlyTwoSegmentFlowIdsOutsideTheReservedDomain() {
         assertEquals("order.create", Ids.requireFlowId("order.create"));
         assertThrows(GtaException.class, () -> Ids.requireFlowId("order"));
