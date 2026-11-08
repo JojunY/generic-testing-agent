@@ -29,10 +29,10 @@ class StockGrpcServiceIT {
     }
 
     @Test
-    @Tag("flow:stock.get-stock")
-    @Tag("scenario:stock.get-stock/s01")
+    @Tag("flow:stock.get")
+    @Tag("scenario:stock.get/s01")
     @Tag("characterization")
-    @DisplayName("[stock.get-stock/s01] a product in stock is available")
+    @DisplayName("[stock.get/s01] a product in stock is available")
     void shouldReportAProductInStockAsAvailable() {
         StockReply reply = stockOf("p-1");
 
@@ -41,10 +41,10 @@ class StockGrpcServiceIT {
     }
 
     @Test
-    @Tag("flow:stock.get-stock")
-    @Tag("scenario:stock.get-stock/s02")
+    @Tag("flow:stock.get")
+    @Tag("scenario:stock.get/s02")
     @Tag("hardening")
-    @DisplayName("[stock.get-stock/s02] a product without stock is not available")
+    @DisplayName("[stock.get/s02] a product without stock is not available")
     void shouldReportAProductWithoutStockAsUnavailable() {
         assertThat(stockOf("p-3").getAvailable()).isEqualTo(false);
     }

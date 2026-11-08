@@ -3,7 +3,7 @@
 
 ## Boundary
 - In scope: LoyaltyListener#onOrderCreated on an OrderCreated application event, LoyaltyService#award
-- Out of scope: order.create-order (the test publishes the event)
+- Out of scope: order.create (the test publishes the event)
 - External: none (in-process application event)
 
 ```mermaid

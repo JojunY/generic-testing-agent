@@ -9,19 +9,19 @@ description: Replaces downstream HTTP services (GCP and non-GCP) with in-process
 
 ```java
 @RegisterExtension
-static WireMockExtension gateway = WireMockExtension.newInstance()
+static WireMockExtension inventory = WireMockExtension.newInstance()
         .options(wireMockConfig().dynamicPort()).build();
 
 @DynamicPropertySource
 static void props(DynamicPropertyRegistry r) {
-    r.add("payment.gateway.url", gateway::baseUrl);
+    r.add("inventory.client.url", inventory::baseUrl);
 }
 
 @Test
-void shouldRespond503WhenGatewayTimesOut() {
-    gateway.stubFor(post(urlEqualTo("/authorize")).willReturn(ok().withFixedDelay(3_500)));
+void shouldRespond503WhenInventoryTimesOut() {
+    inventory.stubFor(post(urlEqualTo("/reservations")).willReturn(ok().withFixedDelay(3_500)));
     // act + assert
-    gateway.verify(1, postRequestedFor(urlEqualTo("/authorize")));
+    inventory.verify(1, postRequestedFor(urlEqualTo("/reservations")));
 }
 ```
 

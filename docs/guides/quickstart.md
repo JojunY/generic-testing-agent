@@ -79,16 +79,22 @@ Warnings are fine to start with. On IntelliJ, add the auto-approve rules by hand
 
 Open Copilot Chat (agent mode) or OpenCode in the service and type:
 
-| You type | What happens |
-|---|---|
-| `/gta` | continue, or list the flows; `OK` works on all of them (`service`) |
-| `/gta service` | every flow of the service, riskiest first; while one flow waits for your answer, gta goes on with the others and asks you once it cannot go on without you |
-| `/gta explain order.create` | write the behaviour spec and questions only, no tests |
-| `/gta order.create` | spec → questions → approval → tests for that flow |
-| `/gta pr <PR description>` | re-check and test the flows your branch changes, with the PR description as the intended behaviour |
-| `/gta incident order.create <report>` | turn a bug report into a test that fails on today's code, then confirm the defect |
-| `/gta note <text>` | tell gta something it cannot read from the code (a business rule, a known quirk); kept in `.gta/notes.md` |
-| `/gta status` | flows, items and what is waiting for you |
+A newcomer needs two things: `/gta`, and replying `OK`. The rest is there when you need it.
+
+| | You type | What happens |
+|---|---|---|
+| **Getting started** | `/gta` | continue, or list the flows; `OK` covers them all, riskiest first. While one flow waits for your answer, gta goes on with the others and asks you once it cannot go on without you (`/gta service` does the same) |
+| | `OK` | take the recommended answer, or approve what the prompt shows |
+| **Everyday** | `/gta borrow.book` | spec → questions → approval → tests for that flow |
+| | `/gta status` | flows, items and what is waiting for you |
+| | `/gta note <text>` | tell gta something it cannot read from the code (a business rule, a known quirk); kept in `.gta/notes.md` |
+| **When you need it** | `/gta spec borrow.book` | write the behaviour spec and questions only, no tests (`explain` works too) |
+| | `/gta pr <PR description>` | re-check and test the flows your branch changes, with the PR description as the intended behaviour |
+| | `/gta incident borrow.book <report>` | turn an incident report into a test that fails on today's code, then confirm the defect |
+
+**Naming a flow.** You rarely type a flowId: gta derives it from the code (`BorrowController#book` → `borrow.book`) and
+lists the flows with numbers. `/gta 2`, `/gta BorrowController#book`, `/gta POST /api/borrows`, a file, a class with one
+flow, or a Kafka topic work too. When a name fits several flows, gta lists them, riskiest first, and asks.
 
 Whenever gta stops for you or finishes, it shows one status block with five parts, always in this order: the state and
 progress, what happened, what was checked, what needs you, and what comes next. If "Needs you" says nothing, gta is
@@ -102,11 +108,11 @@ gta stops and waits for you at these points.
 OK
 ```
 
-to take every recommendation. To choose another option, add its number and letter (`OK, 2B`); to answer in your own words, write it on its own line (`2: only for loyalty customers`). `rest default` still picks the "= current code" option for the remaining normal-impact questions; those scenarios become *characterization* tests, which lock today's behaviour and do not prove it is correct. Taking a recommendation is a real answer: your reply is recorded word for word.
+to take every recommendation. To choose another option, add its number and letter (`OK, 2B`); to answer in your own words, write it on its own line (`2: only for prime brokerage clients`). `rest default` still picks the "= current code" option for the remaining normal-impact questions; those scenarios become *characterization* tests, which lock today's behaviour and do not prove it is correct. Taking a recommendation is a real answer: your reply is recorded word for word.
 
-**Approval.** The prompt names the revision it shows. Reply `OK` to approve exactly that revision (`approve order.create@R2` works too). "don't approve …" or "approve … after q2 is fixed" is treated as a change request, never as an approval. Approval is committed with your words as the record.
+**Approval.** The prompt names the revision it shows. Reply `OK` to approve exactly that revision (`approve borrow.book@R2` works too). "don't approve …" or "approve … after q2 is fixed" is treated as a change request, never as an approval. Approval is committed with your words as the record.
 
-**Replying in Chinese.** Set `"output": { "language": "zh-CN" }` in `.gta/config.json` and gta asks its questions and shows its prompts in Chinese. Replies work in either language: `好` / `确认` for OK, `批准 order.create@R2` for approve, `其余默认` (or `其他默认`) for rest default, and the option marker `= 代码现状` for `= current code`.
+**Replying in Chinese.** Set `"output": { "language": "zh-CN" }` in `.gta/config.json` and gta asks its questions and shows its prompts in Chinese. Replies work in either language: `好` / `确认` for OK, `批准 borrow.book@R2` for approve, `其余默认` (or `其他默认`) for rest default, and the option marker `= 代码现状` for `= current code`.
 
 **Defects and escalations.** Reply `OK` for the recommended option, or another letter (A, B, C). A confirmed defect is pinned with `@KnownDefect`:
 
@@ -171,7 +177,7 @@ mvn verify -Dgroups=known-defect        # after a fix: which pins to remove
 - Oracle credentials are read from the named environment variables and never stored.
 - `phase`: a later roadmap phase (`"P5"`) to use its capabilities before they are on by default; for pilot services. Everything up to P4 (WebFlux, gRPC, GraphQL, workflows, Beam, WebSocket/STOMP/SSE) is on by default.
 - `spec.source`: `openspec` or `speckit` when the repository keeps its own specs (`openspec/specs/`, `specs/`). The analyst cites them as documented sources and never edits them.
-- `build.module`: in a multi-module repository, the module that holds the service, such as `"order-api"`. `.gta/` stays at
+- `build.module`: in a multi-module repository, the module that holds the service, such as `"lending-api"`. `.gta/` stays at
   the repository root; tests are written into that module and Maven runs with `-pl <module> -am`. `gtaw doctor` fails
   until it is set.
 - `build.tool`: `auto` (default) builds with Gradle when the service has `build.gradle(.kts)` and no `pom.xml`, otherwise

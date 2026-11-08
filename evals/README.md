@@ -52,7 +52,7 @@ the new endpoint catches D16, a human confirms it, and the report counts one cat
 
 ## Scripted end-to-end run: `e2e/run.sh`
 
-`e2e/scripted-output/` holds what a correct analyst, author and reviewer would produce for `order.create-order`. The script plays those nodes and asserts each decision gtaw makes:
+`e2e/scripted-output/` holds what a correct analyst, author and reviewer would produce for `order.create`. The script plays those nodes and asserts each decision gtaw makes:
 
 - spec rounds and approval commits;
 - the seed test;
@@ -62,10 +62,10 @@ the new endpoint catches D16, a human confirms it, and the report counts one cat
 - verify, the gate and the report;
 - then, on new branches: a regression is caught by the gate, and fixing D1 makes the stale pin fail until it is removed;
 - then the P1 and P2 capabilities: `shipping.ship-paid-orders` (scheduler), `loyalty.on-order-created` (messaging),
-  `admin.purge-cancelled` (security), `price.update-price` (caching), `archive-job.archive-orders` (spring-batch) and
+  `admin.purge-cancelled` (security), `price.update` (caching), `archive-job.archive-orders` (spring-batch) and
   `db.customer-tier` (db-migration), each from spec to approval, a passing scenario, and its seeded defect (D4-D9)
   triaged, confirmed and pinned;
-- then the websocket flows (on by default since P4): `quote.request-quote`, where a STOMP client against the random
+- then the websocket flows (on by default since P4): `quote.request`, where a STOMP client against the random
   port passes s01 and catches D17, and `quote-stream.ladder`, where MockMvc reads the event stream and catches D18.
 
 `GTA_E2E_MODULE=order-service evals/e2e/run.sh` runs the same script with the fixture as a module of a multi-module
@@ -78,7 +78,7 @@ evals/e2e/run.sh               # optional: a work directory as the first argumen
 
 ## Model evals (P0a)
 
-The same fixture is used to choose models per `modelTier`. Run `/gta order.create-order` (and the D2/D3 flows) in each IDE and model combination. Score the run on:
+The same fixture is used to choose models per `modelTier`. Run `/gta order.create` (and the D2/D3 flows) in each IDE and model combination. Score the run on:
 
 - **Questions:** did the analyst ask about D1–D3?
 - **Defects:** were confirmed defects caught?
@@ -90,7 +90,7 @@ Record the chosen models in `platforms/<platform>/mapping.yaml`.
 
 ## Adversarial run
 
-`e2e/run-adversarial.sh` plays an author that cheats on the items of `order.create-order` in `order-service`: it
+`e2e/run-adversarial.sh` plays an author that cheats on the items of `order.create` in `order-service`: it
 changes or removes an expected value, disables the test or skips it with an assumption, edits production code, forges a
 confirmation in the spec and commits by itself. Each attack must be refused without gtaw
 committing the cheating test, and the run fails unless every one is caught (plan §14, metrics 3 and 4). CI runs it as

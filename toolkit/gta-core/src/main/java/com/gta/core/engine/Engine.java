@@ -50,6 +50,9 @@ import java.util.stream.Stream;
  * every state change, test run, classification, lock and commit. Agents only write specs and tests and give verdicts.
  */
 public final class Engine {
+    /** How many flows the pick list shows, numbered from 1. */
+    static final int PICK_LIST = 8;
+
     private final EngineContext ctx;
     private final GtaPaths paths;
     private final GtaConfig config;
@@ -82,6 +85,9 @@ public final class Engine {
 
     /** @param intent PR mode: the PR description, a documented intent for the analyst (plan §6) */
     public Map<String, Object> next(String mode, String target, String base, boolean takeover, String intent) {
+        if ("spec".equals(mode)) {
+            mode = "explain"; // `/gta spec` is what people type (plan §6); explain stays the mode's name in the state
+        }
         git.requireRepo();
         try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
             WorkState st = store.load();
@@ -329,23 +335,27 @@ public final class Engine {
         return ctx.sessionEnd.finishSession(st, next.sessionOverReason(), base);
     }
 
+    /** The flows in the order the pick list numbers them: riskiest first. */
+    private static List<ServiceProfile.EntryPoint> ranked(ServiceProfile profile) {
+        return profile.entrypoints.stream()
+                .sorted(Comparator.comparingInt((ServiceProfile.EntryPoint e) -> -e.risk))
+                .toList();
+    }
+
     private Map<String, Object> chooseFlow(ServiceProfile profile) {
         List<Map<String, Object>> candidates = new ArrayList<>();
-        profile.entrypoints.stream()
-                .sorted(Comparator.comparingInt((ServiceProfile.EntryPoint e) -> -e.risk))
-                .limit(8)
-                .forEach(e -> {
-                    Map<String, Object> c = new LinkedHashMap<>();
-                    c.put("flowId", e.flowId);
-                    c.put("risk", e.risk);
-                    c.put("entry", e.ref + (e.httpMethod != null ? " (" + e.httpMethod + " " + e.path + ")" : ""));
-                    c.put(
-                            "spec",
-                            Files.exists(paths.spec(e.flowId))
-                                    ? SpecParser.parse(paths.spec(e.flowId)).status()
-                                    : "none");
-                    candidates.add(c);
-                });
+        ranked(profile).stream().limit(PICK_LIST).forEach(e -> {
+            Map<String, Object> c = new LinkedHashMap<>();
+            c.put("flowId", e.flowId);
+            c.put("risk", e.risk);
+            c.put("entry", e.ref + (e.httpMethod != null ? " (" + e.httpMethod + " " + e.path + ")" : ""));
+            c.put(
+                    "spec",
+                    Files.exists(paths.spec(e.flowId))
+                            ? SpecParser.parse(paths.spec(e.flowId)).status()
+                            : "none");
+            candidates.add(c);
+        });
         Map<String, Object> extra = new LinkedHashMap<>();
         extra.put(
                 "message",
@@ -566,25 +576,75 @@ public final class Engine {
         return p;
     }
 
-    private String resolveTarget(String target, ServiceProfile profile) {
-        if (Ids.FLOW_ID.matcher(target).matches()) {
-            return Ids.requireFlowId(target);
+    /**
+     * The flow a person named (plan §6, naming a flow): a flowId, the number in the pick list, a source file or class,
+     * {@code Class#method}, an endpoint ({@code POST /api/borrows} or its path), or a topic, queue or cron quoted in the
+     * trigger. A name that fits several flows is never guessed: gtaw lists them, riskiest first.
+     */
+    static String resolveTarget(String target, ServiceProfile profile) {
+        String t = target.strip().replace('\\', '/');
+        boolean flowIdShaped = Ids.FLOW_ID.matcher(t).matches();
+        if (flowIdShaped && profile.entrypoints.stream().anyMatch(e -> e.flowId.equals(t))) {
+            return t;
         }
-        String t = target.replace('\\', '/');
-        for (ServiceProfile.EntryPoint e : profile.entrypoints) {
-            Optional<Ref> ref = Ref.parse(e.ref);
-            if (ref.isEmpty()) {
-                continue;
+        List<ServiceProfile.EntryPoint> ranked = ranked(profile);
+        if (t.matches("[0-9]{1,3}")) {
+            int n = Integer.parseInt(t);
+            if (n >= 1 && n <= Math.min(PICK_LIST, ranked.size())) {
+                return ranked.get(n - 1).flowId;
             }
-            String simple = ref.get().simpleName();
-            if (t.endsWith(ref.get().sourcePath()) || t.endsWith(simple + ".java") || t.equals(simple)) {
-                return e.flowId;
-            }
+            throw new GtaException(
+                    ErrorCode.USAGE_UNKNOWN_FLOW,
+                    "The flow list has no number " + n,
+                    "Run ./gtaw next without --target to see the numbered list");
+        }
+        List<String> hits = ranked.stream()
+                .filter(e -> names(e, t))
+                .map(e -> e.flowId)
+                .distinct()
+                .toList();
+        if (hits.size() == 1) {
+            return hits.get(0);
+        }
+        if (hits.isEmpty() && flowIdShaped) {
+            return Ids.requireFlowId(t); // a flow with a spec but no detected entry point (plan §6)
+        }
+        if (hits.size() > 1) {
+            throw new GtaException(
+                    ErrorCode.USAGE_AMBIGUOUS_FLOW,
+                    target + " fits " + hits.size() + " flows: " + String.join(", ", hits),
+                    "Name one of them; " + hits.get(0) + " is the riskiest (recommended): ./gtaw next --target "
+                            + hits.get(0));
         }
         throw new GtaException(
                 ErrorCode.USAGE_UNKNOWN_FLOW,
                 "No flow found for " + target,
-                "Use a flowId like order.create (see ./gtaw next without --target for candidates)");
+                "Use a flowId like borrow.book, a number from the list, a class, a file or an endpoint"
+                        + " (./gtaw next without --target lists the flows)");
+    }
+
+    /** Whether the person's text names this entry point (see {@link #resolveTarget}). */
+    static boolean names(ServiceProfile.EntryPoint e, String t) {
+        Optional<Ref> ref = Ref.parse(e.ref);
+        if (ref.isPresent()) {
+            Ref r = ref.get();
+            String simple = r.simpleName();
+            if (t.endsWith(r.sourcePath()) || t.endsWith(simple + ".java") || t.equals(simple)) {
+                return true;
+            }
+            if (r.member() != null && (t.equals(simple + "#" + r.member()) || t.equals(r.member()))) {
+                return true;
+            }
+            if (!r.isCode() && (r.target().endsWith(t) || t.endsWith(r.target()))) {
+                return true; // a migration script or BPMN file
+            }
+        }
+        if (e.path != null) {
+            if (t.equals(e.path) || (e.httpMethod != null && t.equalsIgnoreCase(e.httpMethod + " " + e.path))) {
+                return true;
+            }
+        }
+        return e.trigger != null && e.trigger.contains("\"" + t + "\""); // a topic, queue or cron
     }
 
     // ------------------------------------------------------------------ delegated to the workflows

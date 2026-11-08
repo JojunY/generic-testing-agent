@@ -3,7 +3,7 @@
 ## WebFlux (`Flux<ServerSentEvent<T>>`)
 
 ```java
-FluxExchangeResult<ServerSentEvent<String>> result = web.get().uri("/api/orders/o-1/events")
+FluxExchangeResult<ServerSentEvent<String>> result = web.get().uri("/api/borrows/b-1/events")
         .accept(MediaType.TEXT_EVENT_STREAM)
         .exchange()
         .expectStatus().isOk()

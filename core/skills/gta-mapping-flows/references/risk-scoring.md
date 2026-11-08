@@ -13,7 +13,7 @@ Priority used by gtaw: 9 → p0, 6 → p1, 3-4 → p2, 1-2 → p3.
 Examples:
 
 - Payment authorisation with retries and timeouts: P3 × I3 = 9.
-- Order creation writing to Oracle and publishing to Pub/Sub: P2 × I3 = 6.
+- Booking a borrow, writing to Oracle and publishing to Pub/Sub: P2 × I3 = 6.
 - Read-only list endpoint with paging: P2 × I1 = 2.
 - Nightly reconciliation batch: P2 × I3 = 6.
 

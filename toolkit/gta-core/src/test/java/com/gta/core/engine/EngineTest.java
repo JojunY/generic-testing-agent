@@ -552,7 +552,7 @@ class EngineTest {
     class FullLoop {
         static final Path REPO = Path.of("../..").toAbsolutePath().normalize();
         static final Path SCRIPTED = REPO.resolve("evals/e2e/scripted-output");
-        static final String FLOW = "order.create-order";
+        static final String FLOW = "order.create";
         static final String TEST = "src/test/java/com/example/order/api/OrderControllerIT.java";
 
         /** Scenario id -> outcome its test run reports ("passed", "failed" or "known-defect"). */
@@ -792,7 +792,7 @@ class EngineTest {
             WorkState st = store.load();
             WorkState.Pending parked = new WorkState.Pending();
             parked.type = "approve";
-            parked.flowId = "order.cancel-order";
+            parked.flowId = "order.cancel";
             parked.prompt = "approve?";
             st.parked.add(parked);
             WorkState.Pending now = new WorkState.Pending();
@@ -807,7 +807,7 @@ class EngineTest {
 
             assertTrue(
                     String.valueOf(out.get("display"))
-                            .contains("Also waiting for you, asked after this one: order.cancel-order"),
+                            .contains("Also waiting for you, asked after this one: order.cancel"),
                     out.toString());
         }
 
@@ -822,7 +822,7 @@ class EngineTest {
 
             // the human answers: the threshold discount is a bug
             loop().answer("R1: 1B");
-            assertTrue(Files.readString(paths.spec(FLOW)).contains("id=order.create-order/s03 source=confirmed"));
+            assertTrue(Files.readString(paths.spec(FLOW)).contains("id=order.create/s03 source=confirmed"));
             out = loop().next(null, null, null, false);
             assertEquals("analyze", out.get("node"), "revision node");
             String spec = Files.readString(paths.spec(FLOW));
@@ -1007,5 +1007,94 @@ class EngineTest {
         e.submitItem(target.id, (String) author.get("token"));
 
         assertTrue(Files.readString(p.spec("order.create")).contains("999"), "gtaw's own correction is not reverted");
+    }
+
+    @Nested
+    class NamingAFlow {
+        private final com.gta.core.profile.ServiceProfile profile = new com.gta.core.profile.ServiceProfile();
+
+        private void flow(String flowId, int risk, String ref, String httpMethod, String path, String trigger) {
+            com.gta.core.profile.ServiceProfile.EntryPoint e = new com.gta.core.profile.ServiceProfile.EntryPoint();
+            e.flowId = flowId;
+            e.risk = risk;
+            e.ref = ref;
+            e.httpMethod = httpMethod;
+            e.path = path;
+            e.trigger = trigger;
+            profile.entrypoints.add(e);
+        }
+
+        @BeforeEach
+        void service() {
+            flow(
+                    "borrow.read",
+                    2,
+                    "method:com.acme.lending.api.BorrowController#read",
+                    "GET",
+                    "/api/borrows/{id}",
+                    null);
+            flow("borrow.book", 6, "method:com.acme.lending.api.BorrowController#book", "POST", "/api/borrows", null);
+            flow(
+                    "inventory.on-position-update",
+                    6,
+                    "method:com.acme.lending.messaging.InventoryListener#onPositionUpdate",
+                    null,
+                    null,
+                    "@KafkaListener(topics = \"positions\")");
+            flow(
+                    "db.add-haircut",
+                    4,
+                    "file:src/main/resources/db/migration/V12__add_haircut.sql",
+                    null,
+                    null,
+                    "Flyway V12");
+        }
+
+        private String resolve(String target) {
+            return Engine.resolveTarget(target, profile);
+        }
+
+        @Test
+        void shouldAcceptEveryWayAPersonNamesAFlow() {
+            assertEquals("borrow.book", resolve("borrow.book"), "the flowId");
+            assertEquals("borrow.book", resolve("1"), "the number in the pick list, riskiest first");
+            assertEquals("inventory.on-position-update", resolve("2"), "equal risk keeps the profile's order");
+            assertEquals("borrow.read", resolve("4"));
+            assertEquals("borrow.book", resolve("post /api/borrows"), "the endpoint");
+            assertEquals("borrow.read", resolve("/api/borrows/{id}"), "the path");
+            assertEquals("borrow.book", resolve("BorrowController#book"), "Class#method");
+            assertEquals("inventory.on-position-update", resolve("InventoryListener"), "the class of one flow");
+            assertEquals("inventory.on-position-update", resolve("positions"), "the topic");
+            assertEquals("db.add-haircut", resolve("db/migration/V12__add_haircut.sql"), "the migration script");
+            flow("process.settlement", 5, "file:src/main/resources/processes/settlement.bpmn", null, null, null);
+            assertEquals("process.settlement", resolve("settlement.bpmn"), "a file name shaped like a flowId");
+            assertEquals("borrow.return", resolve("borrow.return"), "a flowId gtaw cannot detect stays as typed");
+            assertEquals(
+                    "inventory.on-position-update",
+                    resolve("src\\main\\java\\com\\acme\\lending\\messaging\\InventoryListener.java"),
+                    "a Windows path to the source file");
+        }
+
+        @Test
+        void shouldListTheFlowsANameFitsInsteadOfGuessing() {
+            GtaException e = assertThrows(GtaException.class, () -> resolve("BorrowController"));
+
+            assertEquals(ErrorCode.USAGE_AMBIGUOUS_FLOW, e.code());
+            assertTrue(e.getMessage().contains("borrow.book, borrow.read"), "riskiest first: " + e.getMessage());
+            assertTrue(e.hint().contains("borrow.book is the riskiest (recommended)"), e.hint());
+        }
+
+        @Test
+        void shouldRefuseANumberOrNameThatIsNotInTheList() {
+            assertEquals(
+                    ErrorCode.USAGE_UNKNOWN_FLOW,
+                    assertThrows(GtaException.class, () -> resolve("5")).code());
+            assertEquals(
+                    ErrorCode.USAGE_UNKNOWN_FLOW,
+                    assertThrows(GtaException.class, () -> resolve("0")).code());
+            GtaException e = assertThrows(GtaException.class, () -> resolve("LocateController"));
+            assertEquals(ErrorCode.USAGE_UNKNOWN_FLOW, e.code());
+            assertTrue(e.hint().contains("borrow.book"), "the hint uses the running example: " + e.hint());
+        }
     }
 }

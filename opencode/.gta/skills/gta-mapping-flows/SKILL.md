@@ -22,7 +22,7 @@ description: Traces one business flow of a Java/Spring service from its entry po
 
 ## Rules
 
-- Refs must resolve: `method:com.acme.order.OrderService#authorize`, `bean:com.acme.batch.ImportConfig#importStep`, `config:payment.gateway.timeout`. gtaw computes their hashes.
+- Refs must resolve: `method:com.acme.lending.BorrowService#reserve`, `bean:com.acme.batch.ImportConfig#importStep`, `config:inventory.client.timeout`. gtaw computes their hashes.
 - Do not guess side effects you cannot see in code; ask a question instead.
 
 ## References

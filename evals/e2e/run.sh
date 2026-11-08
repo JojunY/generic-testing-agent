@@ -63,25 +63,25 @@ grep -q "never deleted, only cancelled" .gta/notes.md || fail "note not kept in 
 echo "ok   note kept and committed"
 
 step "analyze: spec R1 with one high-impact question"
-OUT=$(gtaw next --mode flow --target order.create-order)
+OUT=$(gtaw next --mode flow --target order.create)
 expect "$(jget "$OUT" 'd["node"]')" analyze "first node"
 grep -q "never deleted, only cancelled" "$(jget "$OUT" 'd["brief"]')" || fail "the analyst brief lacks the notes"
 TOKEN=$(jget "$OUT" 'd["token"]')
-mkdir -p .gta/specs/order && cp "$AGENT/create-order.spec.md" .gta/specs/order/create-order.spec.md
-OUT=$(gtaw submit --spec order.create-order --token "$TOKEN")
+mkdir -p .gta/specs/order && cp "$AGENT/create-order.spec.md" .gta/specs/order/create.spec.md
+OUT=$(gtaw submit --spec order.create --token "$TOKEN")
 expect "$(jget "$OUT" 'd["rev"]')" R1 "spec revision"
 OUT=$(gtaw next)
 expect "$(jget "$OUT" 'd["type"]')" answer "question round"
 
 step "human takes the recommended answer (1B: the threshold discount is a bug)"
 gtaw answer "OK" >/dev/null
-grep -q 'id=order.create-order/s03 source=confirmed' .gta/specs/order/create-order.spec.md || fail "s03 not confirmed by gtaw"
-grep -q 'B(recommended)' .gta/specs/order/create-order.spec.md || fail "OK should be recorded as taking the recommendation"
+grep -q 'id=order.create/s03 source=confirmed' .gta/specs/order/create.spec.md || fail "s03 not confirmed by gtaw"
+grep -q 'B(recommended)' .gta/specs/order/create.spec.md || fail "OK should be recorded as taking the recommendation"
 OUT=$(gtaw next)
 expect "$(jget "$OUT" 'd["node"]')" analyze "revision node"
 TOKEN=$(jget "$OUT" 'd["token"]')
-sed -i 's/discount `0.00` and total `100.00`/discount `10.00` and total `90.00`/' .gta/specs/order/create-order.spec.md
-OUT=$(gtaw submit --spec order.create-order --token "$TOKEN")
+sed -i 's/discount `0.00` and total `100.00`/discount `10.00` and total `90.00`/' .gta/specs/order/create.spec.md
+OUT=$(gtaw submit --spec order.create --token "$TOKEN")
 expect "$(jget "$OUT" 'd["rev"]')" R2 "revised spec"
 OUT=$(gtaw next)
 expect "$(jget "$OUT" 'd["type"]')" approve "approval prompt"
@@ -89,8 +89,8 @@ jget "$OUT" 'd["display"]' | grep -q "Needs you" || fail "the approval reaches t
 echo "ok   the approval is shown in the status block"
 
 step "human approves (ASCII form)"
-gtaw answer "approve order.create-order@R2" >/dev/null
-git log -1 --format=%s | grep -q "order.create-order R2 approved" || fail "approval not committed"
+gtaw answer "approve order.create@R2" >/dev/null
+git log -1 --format=%s | grep -q "order.create R2 approved" || fail "approval not committed"
 echo "ok   approval committed"
 
 step "foundation: seed test"
@@ -109,19 +109,19 @@ author() { # author <scenario> -> prints token of the author node
     echo "session ended ($(jget "$out" 'd["message"]')); starting the next one" >&2
     out=$(gtaw next)
   fi
-  [ "$(jget "$out" 'd.get("itemId")')" = "order.create-order/$1#component-01" ] || fail "expected author node for $1: $out"
+  [ "$(jget "$out" 'd.get("itemId")')" = "order.create/$1#component-01" ] || fail "expected author node for $1: $out"
   jget "$out" 'd["token"]'
 }
 review_accept() {
   local out; out=$(gtaw next)
   expect "$(jget "$out" 'd["kind"]')" oracle-review "review kind for $1"
-  out=$(gtaw submit --review "order.create-order/$1#component-01" --token "$(jget "$out" 'd["token"]')" --verdict accept --reason "asserts the THEN values")
+  out=$(gtaw submit --review "order.create/$1#component-01" --token "$(jget "$out" 'd["token"]')" --verdict accept --reason "asserts the THEN values")
   jget "$out" 'd["result"]' | grep -q '^passed' || fail "$1 not passed after review: $out"
   echo "ok   $1 passed and committed"
 }
 
 step "s01: oracle lock and change check"
-ITEM="order.create-order/s01#component-01"; TOKEN=$(author s01)
+ITEM="order.create/s01#component-01"; TOKEN=$(author s01)
 mkdir -p "$(dirname "$TEST")" && { cat "$AGENT/OrderControllerIT.head.java.txt"; echo "}"; } > "$TEST" && add_method "$AGENT/s01.method.java.txt"
 OUT=$(gtaw check --item "$ITEM" --token "$TOKEN")
 expect "$(jget "$OUT" 'd["passed"]')" 1 "s01 check"
@@ -138,11 +138,11 @@ echo "ok   production edit reverted"
 TOKEN=$(author s01)
 gtaw submit --item "$ITEM" --token "$TOKEN" >/dev/null
 review_accept s01
-grep -A2 'scenario:order.create-order/s01' "$TEST" | grep -q '@Tag("p[0-2]")' || fail "gtaw did not set the priority tag of s01"
+grep -A2 'scenario:order.create/s01' "$TEST" | grep -q '@Tag("p[0-2]")' || fail "gtaw did not set the priority tag of s01"
 echo "ok   gtaw set the intent and priority tags"
 
 step "s02: the author asks instead of guessing, the person takes the recommendation"
-ITEM="order.create-order/s02#component-01"; TOKEN=$(author s02)
+ITEM="order.create/s02#component-01"; TOKEN=$(author s02)
 OUT=$(gtaw submit --item "$ITEM" --token "$TOKEN" --question "Reuse the seed test's MockMvc setup?" --recommend "yes, same class")
 expect "$(jget "$OUT" 'd["type"]')" question "author question"
 OUT=$(gtaw next)
@@ -158,7 +158,7 @@ gtaw submit --item "$ITEM" --token "$TOKEN" >/dev/null
 review_accept s02
 
 step "s03: confirmed expectation exposes seeded defect D1"
-ITEM="order.create-order/s03#component-01"; TOKEN=$(author s03)
+ITEM="order.create/s03#component-01"; TOKEN=$(author s03)
 add_method "$AGENT/s03.method.java.txt"
 OUT=$(gtaw submit --item "$ITEM" --token "$TOKEN")
 expect "$(jget "$OUT" 'd["code"]')" TEST_ASSERTION_FAILED "s03 failure"
@@ -171,13 +171,13 @@ gtaw answer A >/dev/null
 OUT=$(gtaw next)
 TOKEN=$(jget "$OUT" 'd["token"]')
 FP=$(grep -o 'failure = "[0-9a-f]*"' "$(jget "$OUT" 'd["brief"]')" | head -1 | grep -o '[0-9a-f]\{12\}')
-sed -i "s|    @DisplayName(\"\[order.create-order/s03\] order exactly at the threshold\")|&\n    @KnownDefect(id = \"order.create-order/s03\", failure = \"$FP\")|" "$TEST"
+sed -i "s|    @DisplayName(\"\[order.create/s03\] order exactly at the threshold\")|&\n    @KnownDefect(id = \"order.create/s03\", failure = \"$FP\")|" "$TEST"
 OUT=$(gtaw submit --item "$ITEM" --token "$TOKEN")
 jget "$OUT" 'd["result"]' | grep -q '^defect-found' || fail "pin: $OUT"
 echo "ok   s03 pinned with @KnownDefect ($FP)"
 
 step "s04: the reviewer rejects the first oracle, the author resubmits"
-ITEM="order.create-order/s04#component-01"; TOKEN=$(author s04)
+ITEM="order.create/s04#component-01"; TOKEN=$(author s04)
 add_method "$AGENT/s04.method.java.txt"
 gtaw submit --item "$ITEM" --token "$TOKEN" >/dev/null
 OUT=$(gtaw next)
@@ -196,10 +196,10 @@ expect "$(jget "$OUT" 'd["gate"]')" concerns "gate on the feature branch"
 grep -q "Product defects found" "$(jget "$OUT" 'd["report"]')" || fail "report lacks the known defect"
 case "$(jget "$OUT" 'd["report"]')" in .gta/reports/*) echo "ok   session report is tracked in .gta/reports" ;; *) fail "report outside .gta/reports: $OUT" ;; esac
 git ls-files --error-unmatch "$(jget "$OUT" 'd["report"]')" >/dev/null 2>&1 || fail "session report not committed"
-LEDGER=.gta/specs/order/create-order.cases.md
-expect "$(grep -c '^| order.create-order/s0' "$LEDGER")" 4 "ledger rows, one per scenario"
-grep -q '^| order.create-order/s01 .*OrderControllerIT#.* | Pass .* | Active |$' "$LEDGER" || fail "s01 ledger row: $(grep s01 "$LEDGER")"
-grep -q 'order.create-order' .gta/specs/INDEX.md || fail "INDEX.md lacks the flow"
+LEDGER=.gta/specs/order/create.cases.md
+expect "$(grep -c '^| order.create/s0' "$LEDGER")" 4 "ledger rows, one per scenario"
+grep -q '^| order.create/s01 .*OrderControllerIT#.* | Pass .* | Active |$' "$LEDGER" || fail "s01 ledger row: $(grep s01 "$LEDGER")"
+grep -q 'order.create' .gta/specs/INDEX.md || fail "INDEX.md lacks the flow"
 grep -q '^- \[reviewer\] .*also assert that nothing was stored' .gta/lessons.md || fail "the reviewer's reject is not a lesson"
 git ls-files --error-unmatch .gta/lessons.md >/dev/null 2>&1 || fail ".gta/lessons.md is not committed with the report"
 echo "ok   the reviewer's reject is a committed lesson"
@@ -210,7 +210,7 @@ gtaw abort >/dev/null
 sed -i 's|    void shouldRejectOrderWhenCustomerIdIsBlank() throws Exception {|&\n        if (Boolean.parseBoolean("true")) { throw new IllegalStateException("broken fixture"); }|' "$TEST"
 REPAIRED=0
 for i in $(seq 1 30); do
-  OUT=$(gtaw next --mode flow --target order.create-order)
+  OUT=$(gtaw next --mode flow --target order.create)
   NODE=$(jget "$OUT" 'd.get("node", "result")')
   case "$NODE" in
     author)
@@ -244,7 +244,7 @@ sed -i 's/subtotal.compareTo(threshold) > 0/subtotal.compareTo(threshold) >= 0/'
 git commit -qam "fix threshold discount"
 OUT=$(gtaw gate --base main || true)
 expect "$(jget "$OUT" 'd["decision"]')" fail "gate with a stale @KnownDefect"
-sed -i '/@KnownDefect(id = "order.create-order\/s03"/d' "$TEST"
+sed -i '/@KnownDefect(id = "order.create\/s03"/d' "$TEST"
 git commit -qam "remove known defect pin"
 OUT=$(gtaw gate --base main || true)
 expect "$(jget "$OUT" 'd["decision"]')" pass "gate after the fix"
@@ -305,17 +305,17 @@ echo "ok   can-fail: the repaired test kills the mutant"
 
 cap_flow admin.purge-cancelled purge-cancelled.spec.md AdminControllerIT.java.txt \
   "${P}src/test/java/com/example/order/admin/AdminControllerIT.java" "the admin API only requires a login (D6)" gta-testing-spring-security
-cap_flow price.update-price update-price.spec.md PriceControllerIT.java.txt \
+cap_flow price.update update-price.spec.md PriceControllerIT.java.txt \
   "${P}src/test/java/com/example/order/price/PriceControllerIT.java" "PriceService#update does not evict the cache (D7)" gta-testing-caches
-grep -q '^- \[rule-repair\] .*scenario:price.update-price/s01' .gta/lessons.md \
-  || fail "the missing scenario tag of price.update-price/s01 should have been repaired by rule"
+grep -q '^- \[rule-repair\] .*scenario:price.update/s01' .gta/lessons.md \
+  || fail "the missing scenario tag of price.update/s01 should have been repaired by rule"
 echo "ok   a missing scenario tag was repaired by rule, before the LLM"
 cap_flow archive-job.archive-orders archive-orders.spec.md ArchiveJobConfigIT.java.txt \
   "${P}src/test/java/com/example/order/archive/ArchiveJobConfigIT.java" "the archive step also takes CANCELLED orders (D8)"
 cap_flow db.customer-tier customer-tier.spec.md DbCustomerTierIT.java.txt \
   "${P}src/test/java/com/example/order/DbCustomerTierIT.java" "V2 uses > instead of >= (D9)"
 
-cap_flow quote.request-quote request-quote.spec.md QuoteControllerIT.java.txt \
+cap_flow quote.request request-quote.spec.md QuoteControllerIT.java.txt \
   "${P}src/test/java/com/example/order/quote/QuoteControllerIT.java" "the bulk discount starts above 10 items instead of at 10 (D17)" \
   gta-testing-streaming-endpoints
 cap_flow quote-stream.ladder ladder.spec.md QuoteStreamControllerIT.java.txt \
@@ -328,8 +328,8 @@ for _ in $(seq 1 5); do
   [ "$(jget "$OUT" 'd.get("node")')" = done ] && break
 done
 expect "$(jget "$OUT" 'd["node"]')" done "P1 and P2 session end"
-for f in shipping.ship-paid-orders loyalty.on-order-created admin.purge-cancelled price.update-price \
-         archive-job.archive-orders db.customer-tier quote.request-quote quote-stream.ladder; do
+for f in shipping.ship-paid-orders loyalty.on-order-created admin.purge-cancelled price.update \
+         archive-job.archive-orders db.customer-tier quote.request quote-stream.ladder; do
   STATUS=$(gtaw status)
   expect "$(jget "$STATUS" '" ".join(sorted(set(i["status"] for i in d["items"] if i["id"].startswith("'"$f"'/"))))')" \
     "defect-found passed" "$f item states"

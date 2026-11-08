@@ -25,7 +25,7 @@ import org.junit.jupiter.api.io.TempDir;
 class SpecWorkflowTest {
     static final Path REPO = Path.of("../..").toAbsolutePath().normalize();
     static final Path FIXTURE = REPO.resolve("evals/fixtures/order-service");
-    static final String FLOW = "order.create-order";
+    static final String FLOW = "order.create";
 
     @TempDir
     Path root;
@@ -138,8 +138,8 @@ class SpecWorkflowTest {
                 paths.spec(FLOW),
                 scripted()
                         .replace(
-                                "id=order.create-order/s01 source=observed",
-                                "id=order.create-order/s01 source=documented doc=README.md#orders quote=\"orders are free\""));
+                                "id=order.create/s01 source=observed",
+                                "id=order.create/s01 source=documented doc=README.md#orders quote=\"orders are free\""));
 
         Map<String, Object> out = engine().submitSpec(FLOW, token);
 
@@ -206,7 +206,7 @@ class SpecWorkflowTest {
 
         assertTrue(String.valueOf(out.get("result")).contains("spec is now " + FLOW + "@R2"), out.toString());
         assertEquals("approve", engine().next(null, null, null, false).get("type"));
-        assertTrue(Files.readString(paths.spec(FLOW)).contains("id=order.create-order/s03 source=confirmed"));
+        assertTrue(Files.readString(paths.spec(FLOW)).contains("id=order.create/s03 source=confirmed"));
     }
 
     @Test
@@ -248,7 +248,7 @@ class SpecWorkflowTest {
         assertTrue(
                 spec.contains("- [x] A) No discount at exactly 100.00"), "the recommended option is ticked: " + spec);
         assertTrue(spec.contains("A(recommended)"), "the record says the recommendation was taken");
-        assertTrue(spec.contains("id=order.create-order/s03 source=confirmed"), "accepting is an explicit answer");
+        assertTrue(spec.contains("id=order.create/s03 source=confirmed"), "accepting is an explicit answer");
         assertEquals("approve", engine().next(null, null, null, false).get("type"));
         engine().answer("OK");
         assertTrue(Files.readString(paths.spec(FLOW)).contains("status=approved"), "OK approves the shown revision");

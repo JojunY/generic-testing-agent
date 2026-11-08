@@ -9,7 +9,7 @@ Use for large structured outputs (reports, batch output files, rendered document
 
 ```java
 String actual = mask(objectMapper.writeValueAsString(report), "$.generatedAt", "$.id");
-String expected = Files.readString(Path.of("src/test/resources/golden/invoice/monthly/basic.approved.json"));
+String expected = Files.readString(Path.of("src/test/resources/golden/fee-statement/monthly/basic.approved.json"));
 JSONAssert.assertEquals(expected, actual, JSONCompareMode.STRICT);
 ```
 

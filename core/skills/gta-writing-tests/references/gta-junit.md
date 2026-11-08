@@ -18,8 +18,8 @@ It provides:
 
 ```java
 @Test
-@Tag("scenario:order.read/s07")
-@KnownDefect(id = "order.read/f01", failure = "3f9c0a1b2c4d")   // values come from the brief
+@Tag("scenario:borrow.read/s07")
+@KnownDefect(id = "borrow.read/f01", failure = "3f9c0a1b2c4d")   // values come from the brief
 void shouldRejectReadWhenNotOwner() { ... }
 ```
 

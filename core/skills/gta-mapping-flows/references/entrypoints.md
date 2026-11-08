@@ -15,7 +15,7 @@ gtaw builds the entry-point inventory deterministically (`.gta/work/flow-catalog
 - domain = class name without `Controller`, `Resource`, `Endpoint`, `Api`, `Listener`, `Consumer`, `Job`, `Scheduler`, `Task`, `Handler`
 - flow-name = method name in kebab-case
 
-`OrderController#create` → `order.create`; `InvoiceImportJob#runNightly` → `invoice-import.run-nightly`.
+`BorrowController#create` → `borrow.book`; `PositionImportJob#runNightly` → `position-import.run-nightly`.
 `foundation` is reserved.
 
 ## Custom frameworks

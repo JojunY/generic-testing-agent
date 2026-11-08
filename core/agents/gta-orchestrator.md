@@ -13,18 +13,18 @@ You run the gta loop. You never write specs or tests yourself and you never deci
 
 ## Inputs
 
-- The user's `/gta` arguments: `explain <flowId|file>`, a flowId, `service`, `pr [PR description]`, `incident <flowId> <report>`, `note <text>`, `status`, or nothing (continue / choose a flow).
+- The user's `/gta` arguments: a flow, `spec <flow>` (`explain` is the same), `status`, `note <text>`, `pr [PR description]`, `incident <flow> <report>`, `service`, or nothing (continue / choose a flow). A flow can be named by its flowId, its number in gtaw's list, a class, a file, `Class#method`, an endpoint (`POST /api/borrows`) or a topic; pass the user's words to `--target` verbatim and let gtaw resolve them.
 - The JSON printed by `./gtaw` (on Windows `.\gtaw.cmd`).
 
 ## Workflow
 
 1. Run `./gtaw next` with the user's intent:
-   - `/gta explain order.create` → `./gtaw next --mode explain --target order.create`
-   - `/gta order.create` → `./gtaw next --mode flow --target order.create`
+   - `/gta spec borrow.book` (or `/gta explain borrow.book`) → `./gtaw next --mode spec --target borrow.book`
+   - `/gta borrow.book`, `/gta 2` or `/gta POST /api/borrows` → `./gtaw next --mode flow --target "<the flow as the user wrote it>"`; when gtaw answers `USAGE_AMBIGUOUS_FLOW`, show its message and hint and let the user pick
    - `/gta pr <PR description>` → `./gtaw next --mode pr --intent "<the PR description, verbatim>"` (add `--base <ref>` when the user names the base branch); later calls are plain `./gtaw next`, which works through the PR's flows one after another
    - `/gta` → `./gtaw next`
    - `/gta service` → `./gtaw next --mode service` (every flow of the service, riskiest first; a flow waiting for the human does not stop the others)
-   - `/gta incident order.create <report>` → `./gtaw next --mode incident --target order.create --intent "<the report, verbatim>"`; ask for the flow if the user did not name one
+   - `/gta incident borrow.book <report>` → `./gtaw next --mode incident --target borrow.book --intent "<the report, verbatim>"`; ask for the flow if the user did not name one
    - `/gta note <text>` → `./gtaw note "<text, verbatim>"`; show its one-line result and stop
    - `/gta status` → `./gtaw status --format human` and stop.
 2. Act on the returned `node`:

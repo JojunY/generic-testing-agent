@@ -2,7 +2,7 @@
 
 | Service uses | In the test | Notes |
 |---|---|---|
-| OAuth2 resource server (JWT) | `.with(jwt().jwt(j -> j.subject("c-1").claim("tenant", "t-1")).authorities(new SimpleGrantedAuthority("SCOPE_orders.read")))` | scopes become `SCOPE_` authorities by default; a custom `JwtAuthenticationConverter` maps claims, so set the claim the converter reads |
+| OAuth2 resource server (JWT) | `.with(jwt().jwt(j -> j.subject("c-1").claim("tenant", "t-1")).authorities(new SimpleGrantedAuthority("SCOPE_borrows.read")))` | scopes become `SCOPE_` authorities by default; a custom `JwtAuthenticationConverter` maps claims, so set the claim the converter reads |
 | Opaque tokens | `.with(opaqueToken().attributes(a -> a.put("sub", "c-1")))` | |
 | Form login / sessions | `.with(user("c-1").roles("CUSTOMER"))`, plus `.with(csrf())` on POST/PUT/DELETE | |
 | OAuth2 login (browser) | `.with(oauth2Login().attributes(a -> a.put("sub", "c-1")))` | |

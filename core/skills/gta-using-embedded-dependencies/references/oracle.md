@@ -16,7 +16,7 @@ Configured by the team in `.gta/config.json`:
 ## Fallback: H2 in Oracle mode (low fidelity)
 
 ```properties
-spring.datasource.url=jdbc:h2:mem:orders;MODE=Oracle;DB_CLOSE_DELAY=-1;DEFAULT_NULL_ORDERING=HIGH
+spring.datasource.url=jdbc:h2:mem:lending;MODE=Oracle;DB_CLOSE_DELAY=-1;DEFAULT_NULL_ORDERING=HIGH
 ```
 
 Not faithful: PL/SQL, `MERGE` variants, sequences with caching, hierarchical queries, `NUMBER` precision, `DATE` vs `TIMESTAMP`, locking (`SELECT … FOR UPDATE SKIP LOCKED`), case-sensitive identifiers. Scenarios that depend on these get `fidelity: low` and the report asks for the shared schema.

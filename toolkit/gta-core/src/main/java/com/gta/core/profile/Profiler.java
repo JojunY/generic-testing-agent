@@ -122,6 +122,7 @@ public final class Profiler {
         }
         p.applicationClass = applicationClass(main);
         p.entrypoints.addAll(entrypoints(main));
+        dropRepeatedDomain(p.entrypoints, flowId -> Files.exists(paths.spec(flowId)));
         p.entrypoints.addAll(migrations(paths.mainResources()));
         p.entrypoints.addAll(processes(paths.mainResources()));
         return p;
@@ -184,6 +185,23 @@ public final class Profiler {
                     .anyMatch(f -> m.matches(root.relativize(f)));
         } catch (IOException e) {
             return false;
+        }
+    }
+
+    /**
+     * Shortens flow names that repeat their domain ({@code BorrowController#bookBorrow}: {@code borrow.book}, plan
+     * §9.4). A flow keeps its long name when it already has a spec under it, or when the short name is taken.
+     */
+    static void dropRepeatedDomain(
+            List<ServiceProfile.EntryPoint> entries, java.util.function.Predicate<String> hasSpec) {
+        Set<String> taken = new LinkedHashSet<>();
+        entries.forEach(e -> taken.add(e.flowId));
+        for (ServiceProfile.EntryPoint e : entries) {
+            String shorter = Ids.withoutRepeatedDomain(e.flowId);
+            if (!shorter.equals(e.flowId) && !hasSpec.test(e.flowId) && taken.add(shorter)) {
+                taken.remove(e.flowId);
+                e.flowId = shorter;
+            }
         }
     }
 

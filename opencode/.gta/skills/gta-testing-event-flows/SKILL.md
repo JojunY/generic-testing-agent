@@ -9,12 +9,12 @@ description: Tests message-driven flows over Kafka, Pub/Sub and MQ (JMS) without
 
 ```java
 @Test
-@Tag("scenario:payment.on-order-created/s03")
+@Tag("scenario:inventory.on-borrow-booked/s03")
 void shouldProcessOnceWhenMessageIsDeliveredTwice() {
-    template.send("order-created", "ord-1", payload);
-    template.send("order-created", "ord-1", payload);           // duplicate delivery
+    template.send("borrow-booked", "b-1", payload);
+    template.send("borrow-booked", "b-1", payload);           // duplicate delivery
     await().atMost(Duration.ofSeconds(10))
-           .untilAsserted(() -> assertThat(payments.countByOrder("ord-1")).isEqualTo(1));
+           .untilAsserted(() -> assertThat(reservations.countByBorrow("b-1")).isEqualTo(1));
 }
 ```
 

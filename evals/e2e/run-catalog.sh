@@ -78,7 +78,7 @@ echo "ok   product.reserve/s02 pinned with @KnownDefect ($FP)"
 cap_flow product-graphql.products-up-to products-up-to.spec.md ProductGraphqlControllerIT.java.txt \
   src/test/java/com/example/catalog/graphql/ProductGraphqlControllerIT.java "< instead of <= (D11)" gta-testing-spring-apis
 
-cap_flow stock.get-stock get-stock.spec.md StockGrpcServiceIT.java.txt \
+cap_flow stock.get get-stock.spec.md StockGrpcServiceIT.java.txt \
   src/test/java/com/example/catalog/grpc/StockGrpcServiceIT.java ">= instead of > (D12)" gta-testing-spring-apis
 
 cap_flow restock.restock restock.spec.md RestockWorkflowImplTest.java.txt \
@@ -95,7 +95,7 @@ for _ in $(seq 1 5); do
   [ "$(jget "$OUT" 'd.get("node")')" = done ] && break
 done
 expect "$(jget "$OUT" 'd["node"]')" done "session end"
-for f in product.reserve product-graphql.products-up-to stock.get-stock restock.restock low-stock.transform; do
+for f in product.reserve product-graphql.products-up-to stock.get restock.restock low-stock.transform; do
   STATUS=$(gtaw status)
   expect "$(jget "$STATUS" '" ".join(sorted(set(i["status"] for i in d["items"] if i["id"].startswith("'"$f"'/"))))')" \
     "defect-found passed" "$f item states"

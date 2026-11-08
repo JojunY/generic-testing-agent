@@ -33,6 +33,7 @@ public enum ErrorCode {
     // usage (20)
     USAGE_UNKNOWN_ITEM(Category.USAGE),
     USAGE_UNKNOWN_FLOW(Category.USAGE),
+    USAGE_AMBIGUOUS_FLOW(Category.USAGE),
     USAGE_INVALID_ARGUMENT(Category.USAGE),
     USAGE_NOT_AVAILABLE_IN_PHASE(Category.USAGE),
     USAGE_UNPARSEABLE_ANSWER(Category.USAGE),

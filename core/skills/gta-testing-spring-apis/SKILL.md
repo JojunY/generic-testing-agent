@@ -11,22 +11,22 @@ description: Tests Spring MVC, WebFlux, gRPC and GraphQL endpoints at the slice 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @Tag("component") @Tag("gta")
-class OrderControllerIT {
+class BorrowControllerIT {
     @Autowired MockMvcTester mvc;
-    @Autowired OrderRepository orders;
+    @Autowired BorrowRepository borrows;
 
     @Test
-    @Tag("flow:order.create") @Tag("scenario:order.create/s03")
-    @DisplayName("[order.create/s03] gateway silent for 3 seconds")
-    void shouldRespond503WhenGatewayTimesOut() {
-        gateway.stubFor(post("/authorize").willReturn(ok().withFixedDelay(3_500)));   // WireMock, see stubbing skill
+    @Tag("flow:borrow.book") @Tag("scenario:borrow.book/s03")
+    @DisplayName("[borrow.book/s03] inventory service silent for 3 seconds")
+    void shouldRespond503WhenInventoryTimesOut() {
+        inventory.stubFor(post("/reservations").willReturn(ok().withFixedDelay(3_500)));   // WireMock, see stubbing skill
 
-        var result = mvc.post().uri("/api/orders").contentType(APPLICATION_JSON)
+        var result = mvc.post().uri("/api/borrows").contentType(APPLICATION_JSON)
                 .content(fixture("s03.request.json")).exchange();
 
         assertThat(result).hasStatus(503);
-        assertThat(orders.findAll()).singleElement()
-                .extracting(Order::getStatus).isEqualTo(OrderStatus.PENDING_PAYMENT);
+        assertThat(borrows.findAll()).singleElement()
+                .extracting(Borrow::getStatus).isEqualTo(BorrowStatus.PENDING_LOCATE);
     }
 }
 ```
@@ -34,7 +34,7 @@ class OrderControllerIT {
 ## Workflow
 
 1. Pick the layer from the brief: `slice` for validation, serialisation, error mapping and the access matrix; `component` for anything involving persistence, downstream calls, transactions or messages.
-2. Slice: `@WebMvcTest(OrderController.class)` + `MockMvcTester` + `@MockitoBean` for services (`references/slices.md`).
+2. Slice: `@WebMvcTest(BorrowController.class)` + `MockMvcTester` + `@MockitoBean` for services (`references/slices.md`).
 3. Component: real Spring context, embedded dependencies (`gta-using-embedded-dependencies`), WireMock for every HTTP downstream, REST Assured or `MockMvcTester` against the running app (`references/components.md`).
 4. Access matrix: one positive and one negative test per ownership constraint (`references/authz.md`).
 5. gRPC / GraphQL: `references/grpc.md`, `references/graphql.md`.

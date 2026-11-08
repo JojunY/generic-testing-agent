@@ -1,18 +1,23 @@
 ---
 name: gta
-description: Run the Generic Testing Agent - explain a flow, write tests for a flow, continue where you left off, or show status.
+description: Run the Generic Testing Agent - continue where you left off, write tests for a flow or the whole service, write a spec only, or show status.
 agent: gta-orchestrator
 ---
 
 Run the gta loop for this repository. Arguments from the user: {{args}}
 
-- `explain <flowId|file>` — write a behaviour spec and questions only (read-only for code)
-- `<flowId>` — spec, questions, approval, then tests for that flow
-- `service` — every flow of the service, riskiest first; while one flow waits for your answer, gta goes on with the others
-- `pr [PR description]` — the flows this branch changes: re-check their specs against the diff and the description, then test them
-- `incident <flowId> <report>` — turn a reported incident into a reproducing test that fails on today's code; the fix stays with the developers
-- `note <text>` — tell gta something about the service (a rule, a known quirk); gta keeps it in `.gta/notes.md` and its specs cite it
+Getting started (all a newcomer needs):
+- nothing — continue the current work, or list the flows; `OK` covers them all, riskiest first (`service` does the same)
+- reply `OK` to take a recommended answer or to approve
+
+Everyday:
+- `<flow>` — spec, questions, approval, then tests for that flow. Name it by flowId (`borrow.book`), its number in the list, class, file, endpoint (`POST /api/borrows`) or topic
 - `status` — show flows, items and what is waiting for the human
-- nothing — continue the current work, or list the flows with `service` recommended
+- `note <text>` — tell gta something about the service (a rule, a known quirk); gta keeps it in `.gta/notes.md` and its specs cite it
+
+When you need it:
+- `spec <flow>` — write the behaviour spec and questions only, no tests (`explain` works too)
+- `pr [PR description]` — the flows this branch changes: re-check their specs against the diff and the description, then test them
+- `incident <flow> <report>` — turn a reported incident into a reproducing test that fails on today's code; the fix stays with the developers
 
 Follow your agent instructions: call `./gtaw next` (Windows: `.\gtaw.cmd next`), dispatch nodes, show gtaw prompts verbatim, and pass the human's replies verbatim to `./gtaw answer`.

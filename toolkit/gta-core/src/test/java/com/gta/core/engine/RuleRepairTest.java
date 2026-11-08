@@ -17,10 +17,10 @@ class RuleRepairTest {
 
     private static PlanItem item() {
         PlanItem i = new PlanItem();
-        i.id = "price.update-price/s01#component-01";
+        i.id = "price.update/s01#component-01";
         i.kind = "test";
-        i.ref = "price.update-price/s01";
-        i.flowId = "price.update-price";
+        i.ref = "price.update/s01";
+        i.flowId = "price.update";
         return i;
     }
 
@@ -33,7 +33,7 @@ class RuleRepairTest {
             class PriceIT {
                 @Test
                 @Tag("gta")
-                @DisplayName("[price.update-price/s01] an update returns the new price")
+                @DisplayName("[price.update/s01] an update returns the new price")
                 void shouldReturnTheNewPrice() {
                     BigDecimal price = new BigDecimal("7.25");
                 }
@@ -54,8 +54,8 @@ class RuleRepairTest {
                 fixed.contains("import java.math.BigDecimal;") && fixed.contains("import org.junit.jupiter.api.Tag;"),
                 fixed);
         assertTrue(
-                fixed.contains("    @Tag(\"flow:price.update-price\")\n    @Tag(\"scenario:price.update-price/s01\")\n"
-                        + "    @DisplayName(\"[price.update-price/s01]"),
+                fixed.contains("    @Tag(\"flow:price.update\")\n    @Tag(\"scenario:price.update/s01\")\n"
+                        + "    @DisplayName(\"[price.update/s01]"),
                 fixed);
         assertEquals(3, done.size(), done.toString());
         assertTrue(done.stream().noneMatch(d -> d.contains("NoSuchHelper")), "only well-known types are imported");
@@ -64,7 +64,7 @@ class RuleRepairTest {
     @Test
     void shouldLeaveAWellFormedTestAndForeignFilesAlone() throws Exception {
         Path file = dir.resolve("PriceIT.java");
-        String tagged = TEST.replace("@Tag(\"gta\")", "@Tag(\"gta\")\n    @Tag(\"scenario:price.update-price/s01\")");
+        String tagged = TEST.replace("@Tag(\"gta\")", "@Tag(\"gta\")\n    @Tag(\"scenario:price.update/s01\")");
         Files.writeString(file, tagged);
 
         assertEquals(List.of(), RuleRepair.apply(file, item(), "", true));
@@ -83,7 +83,7 @@ class RuleRepairTest {
         item.intent = "hardening";
         item.priority = "p0";
         Path file = dir.resolve("PriceIT.java");
-        String scenario = "@Tag(\"gta\")\n    @Tag(\"scenario:price.update-price/s01\")\n"
+        String scenario = "@Tag(\"gta\")\n    @Tag(\"scenario:price.update/s01\")\n"
                 + "    @Tag(\"characterization\")\n    @Tag(\"p1\")\n    @Tag(\"p2\")";
         Files.writeString(file, TEST.replace("@Tag(\"gta\")", scenario));
 
@@ -92,7 +92,7 @@ class RuleRepairTest {
         String text = Files.readString(file);
         assertEquals(1, done.size(), done.toString());
         assertTrue(
-                text.contains("@Tag(\"scenario:price.update-price/s01\")\n    @Tag(\"hardening\")\n    @Tag(\"p0\")\n"
+                text.contains("@Tag(\"scenario:price.update/s01\")\n    @Tag(\"hardening\")\n    @Tag(\"p0\")\n"
                         + "    @DisplayName"),
                 text);
         assertTrue(!text.contains("characterization") && !text.contains("\"p1\"") && !text.contains("\"p2\""), text);
@@ -106,15 +106,15 @@ class RuleRepairTest {
         item.intent = "hardening";
         item.priority = "p0";
         String oneLine = TEST.replace(
-                "@Tag(\"gta\")\n    @DisplayName(\"[price.update-price/s01] an update returns the new price\")\n    void shouldReturnTheNewPrice() {",
-                "@Test @Tag(\"scenario:price.update-price/s01\") void shouldReturnTheNewPrice() {");
+                "@Tag(\"gta\")\n    @DisplayName(\"[price.update/s01] an update returns the new price\")\n    void shouldReturnTheNewPrice() {",
+                "@Test @Tag(\"scenario:price.update/s01\") void shouldReturnTheNewPrice() {");
         assertTrue(oneLine.contains("void shouldReturnTheNewPrice() {"), oneLine);
 
         String text = RuleRepair.normalizeTags(oneLine, item, new java.util.ArrayList<>());
 
         assertTrue(
                 text.contains(
-                        "    @Tag(\"hardening\")\n    @Tag(\"p0\")\n    @Test @Tag(\"scenario:price.update-price/s01\") void"),
+                        "    @Tag(\"hardening\")\n    @Tag(\"p0\")\n    @Test @Tag(\"scenario:price.update/s01\") void"),
                 text);
     }
 
@@ -124,14 +124,13 @@ class RuleRepairTest {
         item.intent = "characterization";
         item.priority = "p1";
         String inline = TEST.replace(
-                "@Tag(\"gta\")",
-                "@Tag(\"flow:price.update-price\") @Tag(\"scenario:price.update-price/s01\") @Tag(\"p2\")");
+                "@Tag(\"gta\")", "@Tag(\"flow:price.update\") @Tag(\"scenario:price.update/s01\") @Tag(\"p2\")");
         List<String> done = new java.util.ArrayList<>();
 
         String text = RuleRepair.normalizeTags(inline, item, done);
 
         assertTrue(
-                text.contains("    @Tag(\"flow:price.update-price\") @Tag(\"scenario:price.update-price/s01\")\n"
+                text.contains("    @Tag(\"flow:price.update\") @Tag(\"scenario:price.update/s01\")\n"
                         + "    @Tag(\"characterization\")\n    @Tag(\"p1\")\n    @DisplayName"),
                 text);
         assertTrue(done.get(0).contains("was @Tag(\"p2\")"), done.toString());

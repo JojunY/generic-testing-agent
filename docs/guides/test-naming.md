@@ -31,8 +31,8 @@ A test file grows with JUnit `@Nested` classes or more methods, never with a sec
 | Performance (later) | Gatling | `Simulation` | `src/test/gatling/java` | `gatling` profile |
 | Architecture rules | ArchUnit | `ArchitectureTest` (exception E3) | `src/test/java/<base>/architecture/` | Surefire |
 
-A slice test is named after the class it targets, never after the annotation: `OrderControllerSliceTest`, not
-`OrderWebMvcTest`.
+A slice test is named after the class it targets, never after the annotation: `BorrowControllerSliceTest`, not
+`BorrowWebMvcTest`.
 
 ## Why selection is explicit
 
@@ -57,10 +57,10 @@ So nothing relies on these defaults:
 
 | Kind | Suffix | Placement |
 |---|---|---|
-| Fake: a working, lightweight implementation of a port | `Fake` | same package as the port: `domain/OrderRepository` → `domain/OrderRepositoryFake` |
+| Fake: a working, lightweight implementation of a port | `Fake` | same package as the port: `domain/BorrowRepository` → `domain/BorrowRepositoryFake` |
 | Stub of a downstream system | `Stub` | `<base>/support/stub/`: `PaymentGatewayStub` |
 | Mock | no class: inline Mockito | – |
-| Test data builder | `TestData` | same package as the built type: `domain/OrderTestData` |
+| Test data builder | `TestData` | same package as the built type: `domain/BorrowTestData` |
 | Test configuration | `TestConfig` | same package as the configuration it replaces: `config/ClockTestConfig` |
 | JUnit extension | `Extension` | `<base>/support/`: `EmbeddedOracleExtension` |
 
@@ -68,7 +68,7 @@ So nothing relies on these defaults:
 
 | Kind | Path |
 |---|---|
-| Fixtures of one test class | `src/test/resources/<package path>/<TestClass>/<sNN>.<role>.<ext>`, e.g. `com/acme/order/api/OrderControllerIT/s01.request.json` |
+| Fixtures of one test class | `src/test/resources/<package path>/<TestClass>/<sNN>.<role>.<ext>`, e.g. `com/acme/lending/api/BorrowControllerIT/s01.request.json` |
 | Golden (approved) output | the same folder, `<sNN>.approved.<ext>` |
 | WireMock files | WireMock's own layout: `src/test/resources/wiremock/<downstream>/mappings/` and `__files/` |
 | Spring test properties | `src/test/resources/application-test.yml` |
@@ -89,7 +89,7 @@ So nothing relies on these defaults:
 ## How gta applies the rule in a service
 
 ```
-source  = outer class of the flow's entry point (method:com.acme.order.api.OrderController#create)
+source  = outer class of the flow's entry point (method:com.acme.lending.api.BorrowController#book)
 test    = <source root of the layer>/<source package>/<SourceClass><Suffix>.java
 fixture = src/test/resources/<source package>/<SourceClass><Suffix>/
 seed    = <@SpringBootApplication class>IT (one per application)

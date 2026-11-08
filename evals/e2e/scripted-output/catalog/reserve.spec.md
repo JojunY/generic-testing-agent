@@ -3,7 +3,7 @@
 
 ## Boundary
 - In scope: POST /api/products/{id}/reserve?quantity=n (WebFlux, returns Mono<Product>)
-- Out of scope: product.get-product
+- Out of scope: product.get
 - External: none (in-memory repository)
 
 ```mermaid

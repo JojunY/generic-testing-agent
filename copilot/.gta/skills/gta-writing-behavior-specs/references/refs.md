@@ -4,10 +4,10 @@ Refs say which code a requirement depends on. gtaw hashes them; when a hash chan
 
 | Form | Hash of | Example |
 |---|---|---|
-| `method:<fqcn>#<method>` | the method body (all overloads) | `method:com.acme.order.OrderService#authorize` |
+| `method:<fqcn>#<method>` | the method body (all overloads) | `method:com.acme.lending.BorrowService#reserve` |
 | `bean:<fqcn>#<method>` | the `@Bean` factory method (e.g. a Batch `Step` with `.skipLimit()`) | `bean:com.acme.batch.ImportConfig#importStep` |
-| `config:<key>` | the value in `application*.yml/properties` | `config:payment.gateway.timeout` |
-| `file:<path in the module>` | the file, for non-Java behaviour such as a migration script | `file:src/main/resources/db/migration/V2__customer_tier.sql` |
+| `config:<key>` | the value in `application*.yml/properties` | `config:inventory.client.timeout` |
+| `file:<path in the module>` | the file, for non-Java behaviour such as a migration script | `file:src/main/resources/db/migration/V2__client_tier.sql` |
 
 Rules:
 

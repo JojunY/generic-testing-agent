@@ -13,13 +13,13 @@ One diagram per flow, at most 40 lines, only what the tests need.
 ```mermaid
 sequenceDiagram
   participant C as Client
-  participant API as OrderController
-  participant PG as payment-gateway
+  participant API as BorrowController
+  participant INV as inventory-service
   participant DB as Oracle
-  C->>API: POST /api/orders
-  API->>PG: authorize (timeout 3s)
-  PG-->>API: approved
-  API->>DB: insert order (CREATED)
+  C->>API: POST /api/borrows
+  API->>INV: reserve 10,000 shares (timeout 3s)
+  INV-->>API: reserved
+  API->>DB: insert borrow (BOOKED)
   API-->>C: 201
 ```
 
@@ -32,8 +32,8 @@ Style (the linter enforces it):
 
 ```mermaid
 flowchart LR
-  C[Client] -->|posts an order| API[OrderController]:::focus
-  API -->|authorizes| PG[payment-gateway]:::external
+  C[Client] -->|books a borrow| API[BorrowController]:::focus
+  API -->|reserves| INV[inventory-service]:::external
   API -->|times out after 3s| E[503 response]
   classDef focus stroke:#bf4520,stroke-width:1.5px
   classDef external stroke-dasharray:4 4

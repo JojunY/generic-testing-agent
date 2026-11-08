@@ -2,7 +2,7 @@
 
 ```java
 await().atMost(Duration.ofSeconds(10)).pollInterval(Duration.ofMillis(100))
-       .untilAsserted(() -> assertThat(repo.findById(id)).get().extracting(Order::getStatus).isEqualTo(PAID));
+       .untilAsserted(() -> assertThat(repo.findById(id)).get().extracting(Borrow::getStatus).isEqualTo(PAID));
 ```
 
 - Always set `atMost`; timeouts are classified as `TEST_TIMEOUT` and triaged.
