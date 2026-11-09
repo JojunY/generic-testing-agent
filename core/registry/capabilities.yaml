@@ -59,7 +59,9 @@ capabilities:
     detect:
       buildDeps: [spring-kafka, spring-cloud-gcp-starter-pubsub, spring-cloud-stream, spring-jms,
                   spring-boot-starter-artemis, mq-jms-spring-boot-starter, spring-boot-starter-amqp,
-                  spring-cloud-aws-starter-sqs]
+                  spring-cloud-aws-starter-sqs, spring-cloud-stream-binder-kafka, spring-cloud-stream-binder-rabbit,
+                  spring-cloud-starter-stream-kafka, spring-cloud-starter-stream-rabbit,
+                  spring-cloud-gcp-pubsub-stream-binder]
       annotations: ["@KafkaListener", "@JmsListener", "@RabbitListener", "@SqsListener", "@ApplicationModuleListener",
                     "@TransactionalEventListener"]
     layers: [unit, component, contract]
@@ -88,6 +90,42 @@ capabilities:
     layers: [unit, component]
     diagrams: [sequence]
     skills: [gta-testing-streaming-endpoints]
+  - id: cloud-function        # Spring Cloud Function beans, e.g. deployed as Cloud Run functions
+    since: P4
+    detect:
+      buildDeps: [spring-cloud-function-context, spring-cloud-function-web, spring-cloud-function-adapter-gcp,
+                  spring-cloud-starter-function-web, spring-cloud-starter-function-webflux]
+    layers: [unit, component]
+    diagrams: [sequence]
+    skills: [gta-testing-cloud-functions]
+  - id: integration
+    since: P4
+    detect:
+      buildDeps: [spring-boot-starter-integration, spring-integration-core]
+      annotations: ["@EnableIntegration", "@MessagingGateway"]
+    layers: [unit, component]
+    diagrams: [flowchart]
+    skills: [gta-testing-integration-flows, gta-using-embedded-dependencies]
+  - id: resilience            # never produces flows; adds the resilience skill to the flows of a service that uses it
+    since: P4
+    dispatch: false
+    detect:
+      buildDeps: [resilience4j-spring-boot2, resilience4j-spring-boot3, resilience4j-spring-boot4,
+                  spring-cloud-starter-circuitbreaker-resilience4j, spring-retry]
+      annotations: ["@CircuitBreaker", "@Retry", "@RateLimiter", "@Bulkhead", "@TimeLimiter", "@Retryable"]
+    skills: [gta-testing-resilience]
+  - id: secret-manager        # never produces flows; tests must not read real secrets
+    since: P4
+    dispatch: false
+    detect:
+      buildDeps: [spring-cloud-gcp-starter-secretmanager, google-cloud-secretmanager]
+    skills: [gta-using-embedded-dependencies]
+  - id: cucumber              # never produces flows; a service with a Cucumber suite gets its component scenarios as features
+    since: P4
+    dispatch: false
+    detect:
+      buildDeps: [cucumber-java, cucumber-junit-platform-engine, cucumber-spring]
+    skills: [gta-writing-cucumber-scenarios]
   - id: security              # never produces flows; adds the security skill to the flows of a secured service
     since: P2
     dispatch: false

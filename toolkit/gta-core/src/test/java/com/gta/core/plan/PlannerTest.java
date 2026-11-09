@@ -159,4 +159,36 @@ class PlannerTest {
 
         assertEquals("reproducing", s01.intent, "hint.intent overrides the intent the source implies");
     }
+
+    @Test
+    void shouldPlanComponentScenariosAsFeaturesInAServiceThatRunsCucumber() {
+        ServiceProfile profile = profile();
+        profile.cucumber = new ServiceProfile.Cucumber();
+        profile.cucumber.suite = "com.acme.RunCucumberTest";
+        profile.cucumber.features = "features";
+        profile.cucumber.glue = "com.acme";
+
+        List<PlanItem> items = Planner.plan(spec(), CapabilityRegistry.loadBundled(), profile);
+
+        PlanItem s01 = items.get(1);
+        assertEquals("com.acme.RunCucumberTest", s01.testClass, "the suite runs the scenario");
+        assertEquals("src/test/resources/features/order/create.feature", s01.feature);
+        assertEquals("com.acme.order.OrderControllerSteps", s01.steps);
+        assertEquals(
+                List.of(
+                        "src/test/resources/features/order/create.feature",
+                        "src/test/java/com/acme/order/OrderControllerSteps.java",
+                        "src/test/resources/com/acme/order/OrderControllerSteps/**",
+                        "src/test/java/com/acme/GtaCucumberHooks.java"),
+                s01.ownsFiles,
+                "never the suite: it belongs to the team");
+        assertEquals("com.acme.OrderApplicationIT", items.get(0).testClass, "the seed test stays JUnit");
+        assertTrue(items.get(0).ownsFiles.contains("src/test/java/com/acme/GtaCucumberHooks.java"));
+
+        profile.cucumber.glue = "com.acme.steps";
+        assertEquals(
+                "com.acme.steps.OrderControllerSteps",
+                Planner.plan(spec(), CapabilityRegistry.loadBundled(), profile).get(1).steps,
+                "steps outside the glue would never be found");
+    }
 }

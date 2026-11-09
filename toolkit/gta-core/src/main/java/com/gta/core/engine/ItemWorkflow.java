@@ -155,7 +155,7 @@ final class ItemWorkflow {
             return Dispatch.of(authorNode(item, s, brief));
         }
         if (conflict != null) {
-            st.pending = ctx.prompts.namingConflict(conflict, lastAuthor(conflict));
+            st.pending = ctx.prompts.namingConflict(conflict, conflictFile(conflict), lastAuthor(conflict));
             return Dispatch.of(NodeResults.answerNode(st.pending));
         }
         boolean blocked =
@@ -170,6 +170,18 @@ final class ItemWorkflow {
 
     /** The item's test class exists and is not a gta test (no {@code @Tag("gta")}): a developer owns that name. */
     boolean takenByDeveloper(PlanItem item) {
+        if (item.feature != null) {
+            // a Cucumber item: the feature is gta's when it carries @gta (gtaw keeps that tag); before gta wrote it, a
+            // developer's class at the steps' name is the conflict
+            Path feature = paths.root().resolve(item.feature);
+            try {
+                return Files.isRegularFile(feature)
+                        ? !Files.readString(feature, StandardCharsets.UTF_8).contains("@gta")
+                        : Files.isRegularFile(paths.testSource(item.steps));
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
         Path test = paths.testSource(item.testClass);
         if (!Files.isRegularFile(test)) {
             return false;
@@ -182,10 +194,19 @@ final class ItemWorkflow {
         }
     }
 
+    /** The file a naming conflict is about: the test class, or a Cucumber item's feature (or its steps class). */
+    String conflictFile(PlanItem item) {
+        if (item.feature != null) {
+            return Files.isRegularFile(paths.root().resolve(item.feature))
+                    ? item.feature
+                    : paths.testSourceRel(item.steps);
+        }
+        return paths.testSourceRel(item.testClass);
+    }
+
     private String lastAuthor(PlanItem item) {
         ProcessRunner.Result r = ProcessRunner.run(
-                paths.root(),
-                ProcessRunner.cmd("git", "log", "-1", "--format=%an", "--", paths.testSourceRel(item.testClass)));
+                paths.root(), ProcessRunner.cmd("git", "log", "-1", "--format=%an", "--", conflictFile(item)));
         return r.ok() && !r.output().isBlank() ? r.output().strip() : "not committed yet";
     }
 
@@ -240,8 +261,13 @@ final class ItemWorkflow {
         String details;
         if (kind.equals("oracle-review")) {
             details = "The test passed. Check that it asserts exactly what the THEN clauses say, on the right object, "
-                    + "and that inputs really exercise the WHEN. Test file: `" + paths.testSourceRel(item.testClass)
-                    + "`."
+                    + "and that inputs really exercise the WHEN. Test file: `"
+                    + (item.feature != null
+                            ? item.feature + "` (scenario @scenario:" + item.ref
+                                    + "; its Then steps are the assertions, " + "asserted by `"
+                                    + paths.testSourceRel(item.steps) + "`)"
+                            : paths.testSourceRel(item.testClass) + "`")
+                    + "."
                     + (s.structuralOracleChange
                             ? "\n\n**Locked assertions were restructured (values unchanged): confirm the meaning is the same.**"
                             : "")
@@ -421,14 +447,23 @@ final class ItemWorkflow {
             }
         }
         // tags come from the spec and the plan, never from the author (plan §9.5)
-        RuleRepair.normalizeTags(paths.testSource(item.testClass), item);
+        if (item.feature != null) {
+            RuleRepair.normalizeFeatureTags(paths.root().resolve(item.feature), item);
+        } else {
+            RuleRepair.normalizeTags(paths.testSource(item.testClass), item);
+        }
         String runId = Ids.newRunId(git.head());
         RunResult run = ctx.runs.runItem(runId, item, false, false);
         s.evidenceRunId = runId;
         if (!run.timedOut && (run.compileError || run.cases.isEmpty())) {
             // rules before the LLM: fix deterministic slips in the item's own test, then run again once
-            List<String> repaired = RuleRepair.apply(
-                    paths.testSource(item.testClass), item, run.compileError ? buildLog(run) : "", run.cases.isEmpty());
+            List<String> repaired = item.feature != null
+                    ? RuleRepair.apply(paths.testSource(item.steps), item, run.compileError ? buildLog(run) : "", false)
+                    : RuleRepair.apply(
+                            paths.testSource(item.testClass),
+                            item,
+                            run.compileError ? buildLog(run) : "",
+                            run.cases.isEmpty());
             if (!repaired.isEmpty()) {
                 repaired.forEach(r -> com.gta.core.state.Lessons.record(
                         paths, "rule-repair", item.capability + " " + item.layer + " test", r));
@@ -456,8 +491,11 @@ final class ItemWorkflow {
                     item,
                     s,
                     ErrorCode.TEST_NOT_FOUND,
-                    "No test ran for " + item.testClass
-                            + (item.isFoundation() ? "" : " with @Tag(\"scenario:" + item.ref + "\")"));
+                    item.feature != null
+                            ? "No scenario tagged @scenario:" + item.ref + " ran: write it in " + item.feature
+                                    + " (the Cucumber suite " + item.testClass + " runs the features)"
+                            : "No test ran for " + item.testClass
+                                    + (item.isFoundation() ? "" : " with @Tag(\"scenario:" + item.ref + "\")"));
         }
         AssertionScanner.ScenarioOracle oracle = ctx.runs.scanOracle(item);
         if (!item.isFoundation()) {
@@ -499,6 +537,17 @@ final class ItemWorkflow {
         if ("known-defect".equals(s.intentOverride)
                 && !run.cases.isEmpty()
                 && run.cases.stream().allMatch(c -> "known-defect".equals(c.outcome))) {
+            if (item.feature != null && !hasCucumberPinHook()) {
+                // without the hook a plain build runs the pinned scenario and goes red (gta-junit KnownDefects)
+                return fail(
+                        st,
+                        item,
+                        s,
+                        ErrorCode.TEST_CODE_ERROR,
+                        "Pinned Cucumber scenarios need the hook that keeps a plain build green: add a @Before(order = 0)"
+                                + " hook calling KnownDefects.abortPinnedOutsideGta(scenario.getSourceTagNames()) to the"
+                                + " glue (see the brief)");
+            }
             st.move(s, ItemStatus.DEFECT_FOUND);
             ctx.committer.commitItem(st, item, s, runId, "pin known defect " + item.ref);
             ctx.escalations.writeEscalation(
@@ -705,5 +754,23 @@ final class ItemWorkflow {
                     ErrorCode.STATE_ILLEGAL_TRANSITION, itemId + " is " + s.status.id(), "Run ./gtaw next");
         }
         return s;
+    }
+
+    /** True when a test source calls gta-junit's KnownDefects hook (a Cucumber service's glue). */
+    private boolean hasCucumberPinHook() {
+        if (!Files.isDirectory(paths.testJava())) {
+            return false;
+        }
+        try (java.util.stream.Stream<Path> files = Files.walk(paths.testJava())) {
+            return files.filter(f -> f.toString().endsWith(".java")).anyMatch(f -> {
+                try {
+                    return Files.readString(f).contains("KnownDefects.abortPinnedOutsideGta");
+                } catch (java.io.IOException e) {
+                    return false;
+                }
+            });
+        } catch (java.io.IOException e) {
+            return false;
+        }
     }
 }

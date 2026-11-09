@@ -150,4 +150,61 @@ class RuleRepairTest {
         assertEquals(List.of(), RuleRepair.normalizeTags(file, item));
         assertEquals(TEST, Files.readString(file));
     }
+
+    @Test
+    void shouldGiveACucumberScenarioThePlansTagsAndKeepItsPin() throws Exception {
+        PlanItem item = item();
+        item.layer = "component";
+        item.intent = "hardening";
+        item.priority = "p0";
+        Path feature = dir.resolve("update.feature");
+        Files.writeString(feature, """
+                @gta @component
+                Feature: price updates
+
+                  @scenario:price.update/s01 @characterization @p2 @known-defect @known-defect:abc123
+                  Scenario: [price.update/s01] an update returns the new price
+                    When the price of "ACME" is set to 7.25
+                    Then the price is 7.25
+
+                  Scenario: [price.update/s02] untouched
+                    Then nothing changes
+                """);
+
+        List<String> done = RuleRepair.normalizeFeatureTags(feature, item);
+
+        String text = Files.readString(feature);
+        assertEquals(1, done.size(), done.toString());
+        assertTrue(
+                text.contains(
+                        "  @flow:price.update @scenario:price.update/s01 @hardening @p0 @known-defect @known-defect:abc123\n"
+                                + "  Scenario: [price.update/s01]"),
+                text);
+        assertTrue(text.contains("    Then the price is 7.25"), "steps are never touched");
+        assertTrue(RuleRepair.normalizeFeatureTags(feature, item).isEmpty(), "right tags stay as they are");
+    }
+
+    @Test
+    void shouldTagACucumberScenarioNamedAfterTheScenario() {
+        PlanItem item = item();
+        item.layer = "component";
+        item.intent = "characterization";
+        item.priority = "p1";
+        List<String> done = new java.util.ArrayList<>();
+
+        String text = RuleRepair.normalizeFeatureTags(
+                "Feature: prices\n\n  Scenario: [price.update/s01] an update\n    Then the price is 7.25\n",
+                item,
+                done);
+
+        assertTrue(
+                text.contains("  @gta @component @flow:price.update @scenario:price.update/s01 @characterization @p1\n"
+                        + "  Scenario: [price.update/s01] an update"),
+                text);
+        assertTrue(done.get(0).startsWith("added @scenario:price.update/s01"), done.toString());
+        assertEquals(
+                "Feature: other\n",
+                RuleRepair.normalizeFeatureTags("Feature: other\n", item, new java.util.ArrayList<>()),
+                "a feature without the scenario is left alone");
+    }
 }

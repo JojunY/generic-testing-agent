@@ -35,7 +35,8 @@ import java.util.function.Predicate;
 /**
  * Extracts the oracle of a scenario's test methods (methods tagged {@code @Tag("scenario:<id>")}):
  * assertion statements, the expected-value tokens inside them, and a hash of everything else that is "watched"
- * (inputs, setup, referenced fixture files). Used for the THEN-literal check and the oracle lock (plan §5.3).
+ * (inputs, setup, referenced fixture files). Used for the THEN-literal check and the oracle lock (plan §5.3). A scenario
+ * no test method carries is looked up in the Cucumber features of the test resources ({@link FeatureScanner}).
  */
 public final class AssertionScanner {
     private static final Set<String> ASSERTION_CALLS = Set.of(
@@ -71,7 +72,7 @@ public final class AssertionScanner {
             "hasValue",
             "isZero",
             "isPositive");
-    private static final Map<String, String> STATUS_NAMES = Map.ofEntries(
+    static final Map<String, String> STATUS_NAMES = Map.ofEntries(
             Map.entry("OK", "200"),
             Map.entry("CREATED", "201"),
             Map.entry("ACCEPTED", "202"),
@@ -158,6 +159,15 @@ public final class AssertionScanner {
     private AssertionScanner() {}
 
     public static ScenarioOracle scan(Path testFile, String scenarioId, Path testResources) {
+        ScenarioOracle java = scanJava(testFile, scenarioId, testResources);
+        if (java.found() || scenarioId == null || testResources == null) {
+            return java;
+        }
+        ScenarioOracle feature = FeatureScanner.scan(testResources, scenarioId);
+        return feature.found() ? feature : java;
+    }
+
+    static ScenarioOracle scanJava(Path testFile, String scenarioId, Path testResources) {
         if (!Files.exists(testFile)) {
             return new ScenarioOracle(0, List.of(), Set.of(), "");
         }

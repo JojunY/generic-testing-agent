@@ -393,18 +393,30 @@ final class CaseLedgers {
         return item.testClass;
     }
 
-    /** Removes the methods tagged with the scenario; deletes the file when no test method is left. */
+    /**
+     * Removes the methods tagged with the scenario; deletes the file when no test method is left. A Cucumber scenario is
+     * removed from its feature file instead (the test class is then the service's suite, which is never touched).
+     */
     private List<String> deleteTestMethods(String testClass, String scenarioId) {
+        List<String> features = deleteFeatureScenarios(scenarioId);
+        if (!features.isEmpty()) {
+            return features;
+        }
         if (testClass == null || !Files.exists(paths.testSource(testClass))) {
             return List.of();
         }
         Path file = paths.testSource(testClass);
         try {
             CompilationUnit cu = LexicalPreservingPrinter.setup(StaticJavaParser.parse(file));
+            int removed = 0;
             for (MethodDeclaration m : cu.findAll(MethodDeclaration.class)) {
                 if (m.getAnnotations().stream().anyMatch(a -> tags(a, "scenario:" + scenarioId))) {
                     m.remove();
+                    removed++;
                 }
+            }
+            if (removed == 0) {
+                return List.of(); // nothing of this scenario in the class: leave it as it is
             }
             boolean anyTestLeft = cu.findAll(MethodDeclaration.class).stream()
                     .anyMatch(m -> m.getAnnotationByName("Test").isPresent()
@@ -430,6 +442,31 @@ final class CaseLedgers {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    /** Removes the scenario from every feature file that has it; deletes a feature file left without scenarios. */
+    private List<String> deleteFeatureScenarios(String scenarioId) {
+        List<String> out = new ArrayList<>();
+        for (Path f : com.gta.core.oracle.FeatureScanner.find(paths.testResources(), scenarioId)) {
+            try {
+                Optional<String> rest =
+                        com.gta.core.oracle.FeatureScanner.withoutScenario(Files.readString(f), scenarioId);
+                if (rest.isEmpty()) {
+                    continue;
+                }
+                if (com.gta.core.oracle.FeatureScanner.parse(rest.get())
+                        .scenarios()
+                        .isEmpty()) {
+                    Files.delete(f);
+                } else {
+                    AtomicFiles.write(f, rest.get());
+                }
+                out.add(paths.rel(f));
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+        return out;
     }
 
     private static boolean tags(AnnotationExpr a, String tag) {

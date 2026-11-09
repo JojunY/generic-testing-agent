@@ -25,6 +25,8 @@ Wire everything with `@DynamicPropertySource`. No Docker, Testcontainers, or rea
 2. Pick the highest-fidelity option that is available; never fail the item because an emulator is missing — fall back and say so.
 3. Put shared setup (embedded broker start, schema creation) in the foundation item's support classes so all tests reuse it.
 4. State the fidelity you used in your one-line result (`fidelity: low (H2 Oracle mode)`).
+5. Secrets from Secret Manager (`sm@`) come from a fake client in the bootstrap registry, never from GCP
+   (`references/secret-manager.md`).
 
 ## Rules
 
@@ -36,3 +38,4 @@ Wire everything with `@DynamicPropertySource`. No Docker, Testcontainers, or rea
 
 - `references/oracle.md` · `references/bigquery-fakes.md` · `references/pubsub-emulator.md` · `references/embedded-kafka.md`
 - `references/jms-artemis.md` · `references/in-memory-fakes.md` · `references/fidelity.md` · `references/windows.md`
+- `references/secret-manager.md`

@@ -25,6 +25,17 @@ public class ServiceProfile {
     public List<String> capabilities = new ArrayList<>();
     public List<String> explainOnlyCapabilities = new ArrayList<>();
     public List<EntryPoint> entrypoints = new ArrayList<>();
+    /** The Cucumber suite the service already runs its feature files with, or null (plan §7.10). */
+    public Cucumber cucumber;
+
+    /** Where the service's Cucumber scenarios live: the suite class, the features folder and the glue package. */
+    public static class Cucumber {
+        public String suite;
+        /** The folder of the feature files, relative to the test resources ({@code features}). */
+        public String features;
+
+        public String glue;
+    }
 
     public static class EntryPoint {
         public String flowId;

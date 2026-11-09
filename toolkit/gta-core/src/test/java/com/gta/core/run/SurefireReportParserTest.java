@@ -190,4 +190,31 @@ class SurefireReportParserTest {
         assertEquals("failed", cases.get(0).outcome);
         assertEquals("known-defect", cases.get(1).outcome);
     }
+
+    @Test
+    void shouldMapACucumberScenarioByItsNameAndTakeThePinVerdictOfGtaJunit() throws Exception {
+        // Surefire names a Cucumber scenario after the scenario, under the suite's simple name
+        report("com.acme.RunCucumberTest", """
+                <testcase classname="RunCucumberTest" name="[borrow.book/s01] a borrow of no shares is refused"/>
+                <testcase classname="RunCucumberTest" name="[borrow.book/s02] pending (inventory down)"><failure type="org.opentest4j.AssertionFailedError" message="expected: 503 but was: 201">stack</failure></testcase>
+                <testcase classname="RunCucumberTest" name="[borrow.book/s03] fixed"/>
+                """);
+        tags("""
+                {"className":"com.acme.RunCucumberTest","method":"[borrow.book/s01] a borrow of no shares is refused","tags":["gta","scenario:borrow.book/s01"],"outcome":"passed","feature":"features/borrow/book.feature"}
+                {"className":"com.acme.RunCucumberTest","method":"[borrow.book/s02] pending (inventory down)","tags":["scenario:borrow.book/s02","known-defect"],"outcome":"known-defect","message":"gta-known-defect: still failing","feature":"features/borrow/book.feature","pinned":true}
+                {"className":"com.acme.RunCucumberTest","method":"[borrow.book/s03] fixed","tags":["scenario:borrow.book/s03"],"outcome":"failed","message":"Known defect no longer reproduces","feature":"features/borrow/book.feature","pinned":true}
+                """);
+
+        List<TestOutcome> cases = SurefireReportParser.parse(List.of(reports), gtaResults);
+
+        assertEquals(
+                List.of("borrow.book/s01", "borrow.book/s02", "borrow.book/s03"),
+                cases.stream().map(TestOutcome::scenarioId).toList());
+        assertEquals("com.acme.RunCucumberTest", cases.get(0).className, "the suite that runs the feature");
+        assertEquals(
+                List.of("passed", "known-defect", "failed"),
+                cases.stream().map(c -> c.outcome).toList(),
+                "a pinned scenario still failing as recorded is a known defect; a pinned one that passes fails");
+        assertEquals("Known defect no longer reproduces", cases.get(2).message);
+    }
 }

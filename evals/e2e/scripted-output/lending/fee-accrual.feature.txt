@@ -1,0 +1,12 @@
+@gta @component @flow:fee-accrual.flow
+Feature: Accrue the daily lending fee
+
+  @scenario:fee-accrual.flow/s01 @characterization @p2
+  Scenario: [fee-accrual.flow/s01] a borrow at a zero rate accrues nothing
+    When a day accrues on borrow "b-1" of 10000 shares at 50.00 with a rate of 0 bps
+    Then 0 daily fees are published
+
+  @scenario:fee-accrual.flow/s02 @hardening @p0
+  Scenario: [fee-accrual.flow/s02] the daily fee uses Act/360
+    When a day accrues on borrow "b-1" of 10000 shares at 50.00 with a rate of 25 bps
+    Then the daily fee of borrow "b-1" is 3.47

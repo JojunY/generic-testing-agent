@@ -24,6 +24,8 @@ void shouldProcessOnceWhenMessageIsDeliveredTwice() {
 2. For every consumer test: duplicate delivery, out-of-order delivery, poison message → DLQ/backout, retry with backoff, restart/rebalance where relevant.
 3. For producers: what is published (and not published) after commit and after rollback (outbox).
 4. In-process events: Spring Modulith `Scenario` or `@RecordApplicationEvents` (`references/modulith-scenario.md`).
+5. Spring Cloud Stream functions (`@Bean Function` bound to `<name>-in-0` / `<name>-out-0`): the test binder's
+   `InputDestination` and `OutputDestination` (`references/cloud-stream.md`).
 
 ## Rules
 
@@ -33,3 +35,4 @@ void shouldProcessOnceWhenMessageIsDeliveredTwice() {
 ## References
 
 - `references/awaitility.md` · `references/pubsub-emulator-limits.md` · `references/kafka.md` · `references/jms.md` · `references/modulith-scenario.md`
+- `references/cloud-stream.md`

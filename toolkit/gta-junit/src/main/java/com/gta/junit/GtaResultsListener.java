@@ -6,20 +6,30 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 import org.junit.platform.engine.TestExecutionResult;
+import org.junit.platform.engine.TestSource;
 import org.junit.platform.engine.TestTag;
+import org.junit.platform.engine.support.descriptor.ClassSource;
+import org.junit.platform.engine.support.descriptor.ClasspathResourceSource;
+import org.junit.platform.engine.support.descriptor.FileSource;
 import org.junit.platform.engine.support.descriptor.MethodSource;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
+import org.junit.platform.launcher.TestPlan;
 
 /**
  * Writes one JSON line per executed test (class, method, tags, display name, outcome) to
  * {@code target/gta-results/} so gtaw can map results to scenarios. Registered through the
- * JUnit Platform ServiceLoader, so adding gta-junit as a test dependency is enough.
+ * JUnit Platform ServiceLoader, so adding gta-junit as a test dependency is enough. A Cucumber scenario (a test whose
+ * source is its feature file) is written too when it carries a {@code scenario:} tag, with its feature file and the
+ * verdict on its pin ({@link KnownDefects}).
  */
 public final class GtaResultsListener implements TestExecutionListener {
     private final Path file;
+    private TestPlan plan;
 
     public GtaResultsListener() {
         String dir = System.getProperty("gta.results.dir", "target/gta-results");
@@ -34,9 +44,14 @@ public final class GtaResultsListener implements TestExecutionListener {
     }
 
     @Override
+    public void testPlanExecutionStarted(TestPlan testPlan) {
+        this.plan = testPlan;
+    }
+
+    @Override
     public void executionSkipped(TestIdentifier id, String reason) {
         if (id.isTest()) {
-            write(id, "skipped", reason);
+            write(id, "skipped", reason, false);
         }
     }
 
@@ -59,23 +74,72 @@ public final class GtaResultsListener implements TestExecutionListener {
             default:
                 outcome = "failed";
         }
-        write(id, outcome, message);
+        // a pinned Cucumber scenario that ran (a gtaw run): a known defect only while it fails as recorded
+        List<String> tags = tagNames(id);
+        String pinned = isMethod(id) ? null : KnownDefects.fingerprint(tags);
+        if (pinned != null && !"known-defect".equals(outcome) && !"skipped".equals(outcome)) {
+            if ("passed".equals(outcome)) {
+                outcome = "failed";
+                message = "Known defect no longer reproduces: the defect looks fixed. Remove the @known-defect tags so "
+                        + "the scenario becomes a regular regression test.";
+            } else {
+                Throwable t = result.getThrowable().orElse(null);
+                String actual = t == null ? "" : Fingerprint.of(t);
+                if (pinned.equals(actual)) {
+                    outcome = "known-defect";
+                    message = KnownDefectExtension.ABORT_PREFIX + " still failing as recorded: " + actual;
+                } else {
+                    message = "Known defect now fails differently (fingerprint " + actual + ", expected " + pinned
+                            + "): " + message;
+                }
+            }
+        }
+        write(id, outcome, message, pinned != null);
     }
 
-    private void write(TestIdentifier id, String outcome, String message) {
+    private static boolean isMethod(TestIdentifier id) {
+        return id.getSource().orElse(null) instanceof MethodSource;
+    }
+
+    private static List<String> tagNames(TestIdentifier id) {
+        List<String> out = new ArrayList<>();
+        for (TestTag t : id.getTags()) {
+            out.add(t.getName());
+        }
+        return out;
+    }
+
+    private void write(TestIdentifier id, String outcome, String message, boolean pinned) {
         Object source = id.getSource().orElse(null);
-        if (!(source instanceof MethodSource)) {
+        String className;
+        String method;
+        String feature = null;
+        if (source instanceof MethodSource) {
+            MethodSource m = (MethodSource) source;
+            className = m.getClassName();
+            method = m.getMethodName();
+        } else if ((source instanceof ClasspathResourceSource || source instanceof FileSource)
+                && tagNames(id).stream().anyMatch(t -> t.startsWith("scenario:"))) {
+            // a Cucumber scenario: reports name it by its scenario name, under the suite class that ran it
+            className = suiteClass(id);
+            method = id.getLegacyReportingName();
+            feature = source instanceof ClasspathResourceSource
+                    ? ((ClasspathResourceSource) source).getClasspathResourceName()
+                    : ((FileSource) source).getFile().getPath();
+        } else {
             return;
         }
-        MethodSource m = (MethodSource) source;
         String tags = id.getTags().stream()
                 .map(TestTag::getName)
                 .map(GtaResultsListener::quote)
                 .collect(Collectors.joining(","));
-        String line = "{\"className\":" + quote(m.getClassName()) + ",\"method\":" + quote(m.getMethodName())
+        String line = "{\"className\":" + quote(className) + ",\"method\":" + quote(method)
                 + ",\"displayName\":" + quote(id.getDisplayName()) + ",\"tags\":[" + tags + "],\"outcome\":"
                 + quote(outcome)
-                + ",\"message\":" + quote(message) + "}\n";
+                + ",\"message\":" + quote(message)
+                + (feature == null ? "" : ",\"feature\":" + quote(feature))
+                + (pinned ? ",\"pinned\":true" : "")
+                + "}\n";
         try {
             Path dir = file.toAbsolutePath().getParent();
             if (dir != null) {
@@ -86,6 +150,19 @@ public final class GtaResultsListener implements TestExecutionListener {
         } catch (IOException e) {
             // results are an optimisation for gtaw; never fail the build because of them
         }
+    }
+
+    /** The class of the nearest ancestor with a class source (the JUnit Platform suite), or "". */
+    private String suiteClass(TestIdentifier id) {
+        TestIdentifier at = id;
+        while (plan != null && at != null) {
+            TestSource s = at.getSource().orElse(null);
+            if (s instanceof ClassSource) {
+                return ((ClassSource) s).getClassName();
+            }
+            at = plan.getParent(at).orElse(null);
+        }
+        return "";
     }
 
     static String quote(String s) {

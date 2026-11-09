@@ -1,0 +1,38 @@
+package com.example.lending.recall;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.jayway.jsonpath.JsonPath;
+import io.cucumber.java.en.Then;
+import io.cucumber.java.en.When;
+import java.nio.charset.StandardCharsets;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.stream.binder.test.InputDestination;
+import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
+
+public class RecallFunctionsSteps {
+    @Autowired
+    InputDestination input;
+
+    @Autowired
+    OutputDestination output;
+
+    @When("a recall of {long} of the {long} shares of borrow {string} arrives")
+    public void recall(long recalled, long borrowed, String borrowId) {
+        output.clear();
+        String notice = "{\"borrowId\":\"%s\",\"borrowedQuantity\":%d,\"recalledQuantity\":%d}"
+                .formatted(borrowId, borrowed, recalled);
+        input.send(MessageBuilder.withPayload(notice.getBytes(StandardCharsets.UTF_8)).build(), "recall-notices");
+    }
+
+    @Then("a return instruction for {long} shares of borrow {string} is sent")
+    public void returnInstruction(long quantity, String borrowId) {
+        Message<byte[]> sent = output.receive(2000, "return-instructions");
+        assertThat(sent).as("a return instruction on return-instructions").isNotNull();
+        String json = new String(sent.getPayload(), StandardCharsets.UTF_8);
+        assertThat(JsonPath.<String>read(json, "$.borrowId")).isEqualTo(borrowId);
+        assertThat(JsonPath.<Number>read(json, "$.quantity").longValue()).isEqualTo(quantity);
+    }
+}

@@ -1,0 +1,3 @@
+# Test-only overrides (config/ is read after the main application.properties, so nothing is hidden): no GCP client starts
+spring.cloud.gcp.pubsub.enabled=false
+spring.cloud.stream.default-binder=integration

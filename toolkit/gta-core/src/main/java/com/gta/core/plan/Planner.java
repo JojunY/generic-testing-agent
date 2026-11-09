@@ -65,8 +65,19 @@ public final class Planner {
                 item.oracle.then = s.thenLiterals();
                 item.oracle.reviewerChecked = s.reviewerChecked();
                 item.testClass = testClass(source, layer, domain, flowName, profile);
-                item.ownsFiles.add(GtaPaths.testSourceRel(profile.module, item.testClass));
-                item.ownsFiles.add(GtaPaths.inModule(profile.module, fixtureFolder(item.testClass) + "/**"));
+                if (profile.cucumber != null && layer.equals("component")) {
+                    // the service runs its component scenarios with Cucumber: a feature file and its steps (plan §7.10)
+                    item.feature = GtaPaths.inModule(profile.module, featureFile(profile.cucumber, domain, flowName));
+                    item.steps = stepsClass(profile.cucumber, item.testClass);
+                    item.testClass = profile.cucumber.suite;
+                    item.ownsFiles.add(item.feature);
+                    item.ownsFiles.add(GtaPaths.testSourceRel(profile.module, item.steps));
+                    item.ownsFiles.add(GtaPaths.inModule(profile.module, fixtureFolder(item.steps) + "/**"));
+                    item.ownsFiles.add(GtaPaths.testSourceRel(profile.module, cucumberHooks(profile.cucumber)));
+                } else {
+                    item.ownsFiles.add(GtaPaths.testSourceRel(profile.module, item.testClass));
+                    item.ownsFiles.add(GtaPaths.inModule(profile.module, fixtureFolder(item.testClass) + "/**"));
+                }
                 item.priority = priority(s);
                 item.scenarioRevision = s.revision();
                 items.add(item);
@@ -93,6 +104,10 @@ public final class Planner {
             f.ownsFiles.add(GtaPaths.testSourceRel(profile.module, f.testClass));
             f.ownsFiles.add(GtaPaths.inModule(profile.module, GtaPaths.TEST_JAVA + "/" + basePath + "support/**"));
             f.ownsFiles.add(GtaPaths.inModule(profile.module, GtaPaths.TEST_RESOURCES + "/**"));
+            if (profile.cucumber != null) {
+                // the hook that keeps pinned scenarios green in a plain build (gta-junit KnownDefects)
+                f.ownsFiles.add(GtaPaths.testSourceRel(profile.module, cucumberHooks(profile.cucumber)));
+            }
             f.ownsFiles.add(GtaPaths.inModule(profile.module, "pom.xml"));
             // a Gradle service's test dependencies go into its build script instead
             f.ownsFiles.add(GtaPaths.inModule(profile.module, "build.gradle"));
@@ -161,6 +176,31 @@ public final class Planner {
         }
         String base = profile.basePackage == null || profile.basePackage.isEmpty() ? "" : profile.basePackage + ".";
         return base + "ApplicationIT";
+    }
+
+    /** {@code src/test/resources/<features>/<domain>/<flow name>.feature}: one feature file per flow. */
+    static String featureFile(ServiceProfile.Cucumber cucumber, String domain, String flowName) {
+        String folder = cucumber.features == null || cucumber.features.isEmpty() ? "" : cucumber.features + "/";
+        return GtaPaths.TEST_RESOURCES + "/" + folder + domain + "/" + flowName + ".feature";
+    }
+
+    /**
+     * {@code <test class without its suffix>Steps}, in the test's package when the glue covers it, else in the glue
+     * package ({@code borrow.BorrowControllerIT} -> {@code borrow.BorrowControllerSteps}).
+     */
+    static String stepsClass(ServiceProfile.Cucumber cucumber, String testClass) {
+        String base = testClass.endsWith("IT") ? testClass.substring(0, testClass.length() - 2) : testClass;
+        String pkg = base.contains(".") ? base.substring(0, base.lastIndexOf('.')) : "";
+        String simple = base.substring(base.lastIndexOf('.') + 1);
+        String glue = cucumber.glue == null ? "" : cucumber.glue;
+        boolean covered = glue.isEmpty() || pkg.equals(glue) || pkg.startsWith(glue + ".");
+        String target = covered ? pkg : glue;
+        return (target.isEmpty() ? "" : target + ".") + simple + "Steps";
+    }
+
+    /** The service's hook class for pinned scenarios, in the glue package. */
+    public static String cucumberHooks(ServiceProfile.Cucumber cucumber) {
+        return (cucumber.glue == null || cucumber.glue.isEmpty() ? "" : cucumber.glue + ".") + "GtaCucumberHooks";
     }
 
     /** Fixtures of one test class: {@code src/test/resources/<package path>/<TestClass>} (relative to the module). */

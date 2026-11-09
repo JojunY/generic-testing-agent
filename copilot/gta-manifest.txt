@@ -33,6 +33,8 @@
 .gta/skills/gta-testing-beam-pipelines/references/test-stream.md
 .gta/skills/gta-testing-caches/SKILL.md
 .gta/skills/gta-testing-caches/references/cache-stores.md
+.gta/skills/gta-testing-cloud-functions/SKILL.md
+.gta/skills/gta-testing-cloud-functions/references/function-definition.md
 .gta/skills/gta-testing-db-migrations/SKILL.md
 .gta/skills/gta-testing-db-migrations/references/flyway.md
 .gta/skills/gta-testing-db-migrations/references/liquibase.md
@@ -40,12 +42,17 @@
 .gta/skills/gta-testing-db-migrations/references/oracle-ddl.md
 .gta/skills/gta-testing-event-flows/SKILL.md
 .gta/skills/gta-testing-event-flows/references/awaitility.md
+.gta/skills/gta-testing-event-flows/references/cloud-stream.md
 .gta/skills/gta-testing-event-flows/references/jms.md
 .gta/skills/gta-testing-event-flows/references/kafka.md
 .gta/skills/gta-testing-event-flows/references/modulith-scenario.md
 .gta/skills/gta-testing-event-flows/references/pubsub-emulator-limits.md
+.gta/skills/gta-testing-integration-flows/SKILL.md
+.gta/skills/gta-testing-integration-flows/references/outputs.md
 .gta/skills/gta-testing-reactive-apis/SKILL.md
 .gta/skills/gta-testing-reactive-apis/references/stepverifier.md
+.gta/skills/gta-testing-resilience/SKILL.md
+.gta/skills/gta-testing-resilience/references/breaker-states.md
 .gta/skills/gta-testing-scheduled-jobs/SKILL.md
 .gta/skills/gta-testing-scheduled-jobs/references/cloud-scheduler.md
 .gta/skills/gta-testing-scheduled-jobs/references/cron.md
@@ -75,6 +82,7 @@
 .gta/skills/gta-using-embedded-dependencies/references/jms-artemis.md
 .gta/skills/gta-using-embedded-dependencies/references/oracle.md
 .gta/skills/gta-using-embedded-dependencies/references/pubsub-emulator.md
+.gta/skills/gta-using-embedded-dependencies/references/secret-manager.md
 .gta/skills/gta-using-embedded-dependencies/references/windows.md
 .gta/skills/gta-writing-behavior-specs/SKILL.md
 .gta/skills/gta-writing-behavior-specs/references/access-matrix.md
@@ -84,6 +92,8 @@
 .gta/skills/gta-writing-behavior-specs/references/refs.md
 .gta/skills/gta-writing-behavior-specs/references/suspicious-behavior.md
 .gta/skills/gta-writing-behavior-specs/references/test-design-techniques.md
+.gta/skills/gta-writing-cucumber-scenarios/SKILL.md
+.gta/skills/gta-writing-cucumber-scenarios/references/state.md
 .gta/skills/gta-writing-tests/SKILL.md
 .gta/skills/gta-writing-tests/references/boot3-vs-boot4.md
 .gta/skills/gta-writing-tests/references/build-files.md

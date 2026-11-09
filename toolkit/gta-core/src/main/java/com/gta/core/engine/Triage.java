@@ -70,7 +70,8 @@ final class Triage {
             msg = switch (letter) {
                 case "A" -> {
                     s.sharesDeveloperFile = true;
-                    yield "gta will add its tests to " + paths.testSourceRel(item.testClass);
+                    yield "gta will add its tests to "
+                            + (item.feature != null ? item.feature : paths.testSourceRel(item.testClass));
                 }
                 case "B" -> {
                     st.move(s, ItemStatus.CANCELLED);

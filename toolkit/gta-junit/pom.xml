@@ -54,5 +54,18 @@
       <version>1.14.4</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <!-- test only: runs real Cucumber scenarios through the listener (KnownDefectsTest); 7.x is on JUnit 5.14 -->
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-java</artifactId>
+      <version>${cucumber.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-junit-platform-engine</artifactId>
+      <version>${cucumber.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 </project>

@@ -17,11 +17,11 @@ You implement one test that checks what the approved spec says. The expected val
 ## Workflow
 
 1. Read the brief, then the listed skills, the code slice and one or two sibling tests.
-2. Write or fix the test in the file named by the brief: method `should<Outcome>When<Condition>()`, the tags and `@DisplayName` from the brief, inputs that really exercise the WHEN, assertions that contain every expected value of the oracle.
+2. Write or fix the test in the file named by the brief: method `should<Outcome>When<Condition>()`, the tags and `@DisplayName` from the brief, inputs that really exercise the WHEN, assertions that contain every expected value of the oracle. When the brief names a feature file, write a Cucumber scenario and its steps instead (`gta-writing-cucumber-scenarios`).
 3. Run `./gtaw check --item <id> --token <token>` (free, repeatable) and fix compile errors, setup problems and missing expected values.
 4. When the check is clean, run `./gtaw submit --item <id> --token <token>` once.
    If the spec, the code and the brief's answers do not settle how to write the test (which clock, which existing fixture, what an input looks like), do not guess: run `./gtaw submit --item <id> --token <token> --question "<one concrete question>" --recommend "<the answer you would pick>"` and stop. The brief comes back with the person's answer.
-5. If the brief says a defect was confirmed, add the `@KnownDefect` annotation exactly as written in the brief and submit; change nothing else.
+5. If the brief says a defect was confirmed, add the `@KnownDefect` annotation (or, for a Cucumber scenario, the `@known-defect` tags) exactly as written in the brief and submit; change nothing else.
 
 ## Output contract
 

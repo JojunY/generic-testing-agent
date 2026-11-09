@@ -1,0 +1,14 @@
+@gta @component @flow:borrow.book
+Feature: Book a stock borrow
+
+  @scenario:borrow.book/s01 @characterization @p1
+  Scenario: [borrow.book/s01] a borrow of no shares is refused
+    When client "c-1" books a borrow of 0 shares of "ACME"
+    Then the response status is 400
+
+  @scenario:borrow.book/s02 @hardening @p0
+  Scenario: [borrow.book/s02] an unreachable inventory leaves the borrow pending a locate
+    Given the inventory service is unreachable
+    When client "c-1" books a borrow of 10000 shares of "ACME"
+    Then the response status is 503
+    And the borrow status is "PENDING_LOCATE"

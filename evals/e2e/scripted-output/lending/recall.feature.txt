@@ -1,0 +1,12 @@
+@gta @component @flow:recall.recall
+Feature: Turn a recall into a return instruction
+
+  @scenario:recall.recall/s01 @characterization @p1
+  Scenario: [recall.recall/s01] a partial recall returns the recalled shares
+    When a recall of 400 of the 1000 shares of borrow "b-1" arrives
+    Then a return instruction for 400 shares of borrow "b-1" is sent
+
+  @scenario:recall.recall/s02 @hardening @p0
+  Scenario: [recall.recall/s02] a recall larger than the borrow returns the borrowed shares
+    When a recall of 1500 of the 1000 shares of borrow "b-1" arrives
+    Then a return instruction for 1000 shares of borrow "b-1" is sent

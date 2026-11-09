@@ -2,7 +2,7 @@
 
 [English](plan.md) | **简体中文**
 
-> 状态：**P0 到 P4 已实现**，当前阶段为 P4（见 §15 路线图）· 版本：plan v12 · 日期：2026-11 · 代码审查与修复记录见 [round-2-remediation.md](../reviews/round-2-remediation.md) · [round-3-plan.md](../reviews/round-3-plan.md)
+> 状态：**P0 到 P4 已实现**，当前阶段为 P4（见 §15 路线图）· 版本：plan v13 · 日期：2026-11 · 代码审查与修复记录见 [round-2-remediation.md](../reviews/round-2-remediation.md) · [round-3-plan.md](../reviews/round-3-plan.md)
 > 范围：面向 Java（以 Spring 为主）服务的通用测试 harness
 > 使用面：**GitHub Copilot（VS Code、IntelliJ IDEA）和 OpenCode**，两者同等支持：相同的 agent、命令、护栏和测试
 > 目标环境：Maven；Spring Boot 4.1 为主，少量 3.5；JUnit 跟随 Spring Boot parent；Java 17+；开发机为 Windows；数据存储为 Oracle 和 BigQuery；消息为 Pub/Sub、Kafka、MQ；本地不能使用任何容器；所有依赖都经过公司 Nexus 代理，平台团队可以向 Nexus 上传包；CI（alm-github）可以接入；多数服务只有代码，没有规范文档。不启用 CODEOWNERS 和分支保护，不开启 Copilot preview policy
@@ -146,7 +146,7 @@
 - 不使用 Gliffy（格式私有、无法 diff、LLM 难以可靠生成），统一用 Mermaid。
 - 不依赖 OpenSpec CLI；不使用 EvoMaster；jqwik 不作为默认（§7.9）。
 - v1 不使用 hooks、MCP、handoffs、plugins，也不让平台自动加载 skills（见 §4.0）。
-- 不做插件分发、SARIF、向量库、dashboard。以下内容推迟：读取 OpenSpec/Spec Kit 规格（P2）、Cucumber、性能测试。
+- 不做插件分发、SARIF、向量库、dashboard。以下内容推迟：性能测试（§15）。服务本来就在用 Cucumber 时，gta 支持 Cucumber（§7.10）。
 
 ---
 
@@ -352,8 +352,8 @@ IF the inventory service does not respond within 3s, THEN THE lending service SH
 | **Prompt files / commands** | ✅ 1 个 `/gta` | 唯一入口，并自动选中 orchestrator；不按模式拆成多个命令 |
 | **Instructions**（AGENTS.md） | ✅ 一段 3 行 | 职责单一：告诉普通对话"测试相关请用 `/gta`，不要手改 `.gta/` 下的文件"。各 agent 的规则写在 agent 正文里，不写进全局 instructions，也不用 `copilot-instructions.md` 或 `.instructions.md` 重复一遍 |
 | **Skills（Agent Skills 格式）** | ⚠️ 只借用格式 | 用 `SKILL.md` 和 `references/` 组织知识，由 brief 按路径加载。**不放进平台的 skills 目录**，以免在普通对话中被自动触发 |
-| **Hooks** | ❌ v1 不用 | VS Code 的 hooks 是 preview，而你们不开启 preview policy，所以在 VS Code 中无法依赖。hook 原本承担的职责已经由其他机制完成：<br>- 越界改动：§5.8 的改动检查，越界文件会被还原；<br>- 特权命令：不在终端自动批准列表中，需要人点击确认；<br>- 期望值篡改：oracle lock 加上 CI 门禁。<br>P5 可以作为可选增强，用来更早拦截问题，以及捕获人类输入 |
-| **MCP** | ❌ v1 不用 | gtaw 通过终端调用就够了。引入 MCP server 要额外处理进程、配置、鉴权，而且各 IDE 都要单独配置。只有终端批准弹窗确实成为痛点时，才考虑在 P5 把 gtaw 包装成 MCP 工具，利用 IntelliJ 按工具设置的自动批准 |
+| **Hooks** | ❌ v1 不用 | VS Code 的 hooks 是 preview，而你们不开启 preview policy，所以在 VS Code 中无法依赖。hook 原本承担的职责已经由其他机制完成：<br>- 越界改动：§5.8 的改动检查，越界文件会被还原；<br>- 特权命令：不在终端自动批准列表中，需要人点击确认；<br>- 期望值篡改：oracle lock 加上 CI 门禁。<br>v11 已决定不做（§15）：变更检查、终端批准和门禁已经承担了这些职责 |
+| **MCP** | ❌ v1 不用 | gtaw 通过终端调用就够了。引入 MCP server 要额外处理进程、配置、鉴权，而且各 IDE 都要单独配置。只有终端批准弹窗确实成为痛点时，才考虑在 P7 把 gtaw 包装成 MCP 工具，利用 IntelliJ 按工具设置的自动批准 |
 | **Handoffs** | ❌ | 只有 VS Code 支持；人工节点统一在 Chat 中完成 |
 | **Plugins / marketplace** | ❌ 不计划 | 安装统一用 `gtaw init`，两个 IDE 的行为一致 |
 | **Anthropic 的方法论** | ✅ 作为设计依据 | 采用的部分：workflow 优先、单调状态、一个条目一个上下文、eval 驱动。不采用的部分：只在 Claude Code 中可用的机制 |
@@ -513,7 +513,9 @@ capabilities:
     detect:
       buildDeps: [spring-kafka, spring-cloud-gcp-starter-pubsub, spring-cloud-stream, spring-jms,
                   spring-boot-starter-artemis, mq-jms-spring-boot-starter, spring-boot-starter-amqp,
-                  spring-cloud-aws-starter-sqs]
+                  spring-cloud-aws-starter-sqs, spring-cloud-stream-binder-kafka, spring-cloud-stream-binder-rabbit,
+                  spring-cloud-starter-stream-kafka, spring-cloud-starter-stream-rabbit,
+                  spring-cloud-gcp-pubsub-stream-binder]
       annotations: ["@KafkaListener", "@JmsListener", "@RabbitListener", "@SqsListener", "@ApplicationModuleListener",
                     "@TransactionalEventListener"]
     layers: [unit, component, contract]
@@ -542,6 +544,42 @@ capabilities:
     layers: [unit, component]
     diagrams: [sequence]
     skills: [gta-testing-streaming-endpoints]
+  - id: cloud-function        # Spring Cloud Function beans, e.g. deployed as Cloud Run functions
+    since: P4
+    detect:
+      buildDeps: [spring-cloud-function-context, spring-cloud-function-web, spring-cloud-function-adapter-gcp,
+                  spring-cloud-starter-function-web, spring-cloud-starter-function-webflux]
+    layers: [unit, component]
+    diagrams: [sequence]
+    skills: [gta-testing-cloud-functions]
+  - id: integration
+    since: P4
+    detect:
+      buildDeps: [spring-boot-starter-integration, spring-integration-core]
+      annotations: ["@EnableIntegration", "@MessagingGateway"]
+    layers: [unit, component]
+    diagrams: [flowchart]
+    skills: [gta-testing-integration-flows, gta-using-embedded-dependencies]
+  - id: resilience            # never produces flows; adds the resilience skill to the flows of a service that uses it
+    since: P4
+    dispatch: false
+    detect:
+      buildDeps: [resilience4j-spring-boot2, resilience4j-spring-boot3, resilience4j-spring-boot4,
+                  spring-cloud-starter-circuitbreaker-resilience4j, spring-retry]
+      annotations: ["@CircuitBreaker", "@Retry", "@RateLimiter", "@Bulkhead", "@TimeLimiter", "@Retryable"]
+    skills: [gta-testing-resilience]
+  - id: secret-manager        # never produces flows; tests must not read real secrets
+    since: P4
+    dispatch: false
+    detect:
+      buildDeps: [spring-cloud-gcp-starter-secretmanager, google-cloud-secretmanager]
+    skills: [gta-using-embedded-dependencies]
+  - id: cucumber              # never produces flows; a service with a Cucumber suite gets its component scenarios as features
+    since: P4
+    dispatch: false
+    detect:
+      buildDeps: [cucumber-java, cucumber-junit-platform-engine, cucumber-spring]
+    skills: [gta-writing-cucumber-scenarios]
   - id: security              # never produces flows; adds the security skill to the flows of a secured service
     since: P2
     dispatch: false
@@ -558,7 +596,7 @@ capabilities:
       buildDeps: [spring-boot-starter-cache, caffeine, spring-boot-starter-data-redis]
       annotations: ["@Cacheable", "@CacheEvict", "@CachePut", "@EnableCaching"]
     skills: [gta-testing-caches]
-  - id: data-dependencies     # 不产生 flow，只为命中的条目追加 skill
+  - id: data-dependencies     # never produces flows; adds the embedded-dependency skill to detected items
     since: P0
     dispatch: false
     detect:
@@ -568,7 +606,7 @@ capabilities:
 
 always:
   skills: [gta-designing-test-oracles, gta-writing-tests]
-# 所有条目都派给 gta-test-author
+# every item goes to gta-test-author
 ```
 
 **profile 阶段**，gtaw 会生成确定性的入口清单：controller、`@Scheduled`、listener、job、pipeline，并附上 `ref`。
@@ -686,6 +724,7 @@ always:
      - 以相同指纹失败：标记为 aborted，构建保持绿色；
      - 测试通过了：构建失败，提示"缺陷已修复，请移除注解"；
      - 以其他原因失败：构建失败。
+   - Cucumber 场景改用标签标注（§7.10），在 gtaw 的运行中同样有这三种结果。
    - 没有经过人确认就加上的 `@KnownDefect` 会被拒绝（`POLICY_UNCONFIRMED_KNOWN_DEFECT`）。
    - 被跳过的测试（`@Disabled`、失败的 assumption）什么也没验证，会被拒绝（`POLICY_TEST_SKIPPED`）。
 8. **语言适配**：v1 只支持 Java 编写的测试。其他语言通过 `LanguageAdapter` 接入（入口识别、构建运行、断言指纹）。没有适配器的语言，测试永远不会被标为 `passed`。
@@ -937,6 +976,7 @@ gta 要让从没用过它的开发者也能上手。人看到的所有内容都�
 | **MQ**（JMS） | 嵌入式 ActiveMQ Artemis 作为 JMS broker，测试 JMS 语义：事务、重投、DLQ、选择器 | 进程内 fake（不使用 JMS API 时） | JMS 语义为 medium；厂商特有的功能（例如 IBM MQ 的 channel 和队列管理器配置）不在 gta 测试范围内 |
 | **GCS** | `google-cloud-nio` 的 `LocalStorageHelper`（内存实现） | — | medium |
 | **下游 HTTP**（包括非 GCP 服务） | WireMock（进程内） | — | high |
+| **Secret Manager**（`sm@` 导入） | 在测试 classpath 上（`META-INF/spring.factories`）向 bootstrap registry 注册一个假客户端：占位符解析成测试值，不调用 GCP | — | 代码 high；从不读取真实密钥 |
 
 - 每个测试都在报告中记录 `fidelity`。如果某个 p0/p1 scenario 只有 low 保真度的测试，门禁记为 concerns，并建议补一个共享测试库的测试。
 - 连接信息统一通过 `@DynamicPropertySource` 注入。
@@ -955,14 +995,18 @@ gta 要让从没用过它的开发者也能上手。人看到的所有内容都�
 |---|---|---|
 | unit | JUnit + AssertJ + Mockito | 业务规则、边界值、金额和时间的计算 |
 | slice | `@WebMvcTest` + `MockMvcTester` / `@WebFluxTest`；`@JsonTest` | 参数校验、ProblemDetail、序列化；**权限矩阵**（角色 × 操作 × 所有权，包括越权和跨租户的负例） |
-| component | `@SpringBootTest(RANDOM_PORT)` + 嵌入式依赖（§7.0）+ WireMock + REST Assured | 真实依赖；下游超时、5xx、重试、熔断。**不要用测试管理的 `@Transactional`**，它会掩盖 AFTER_COMMIT、outbox、flush 约束和懒加载问题 |
+| component | `@SpringBootTest(RANDOM_PORT)` + 嵌入式依赖（§7.0）+ WireMock + REST Assured | 真实依赖；下游超时、5xx、重试、熔断（Resilience4j、Spring Retry：阈值取自配置，测试之间重置 registry，掩盖故障的 fallback 是一个发现）。**不要用测试管理的 `@Transactional`**，它会掩盖 AFTER_COMMIT、outbox、flush 约束和懒加载问题 |
 | contract | Pact（多语言消费者）或 Spring Cloud Contract（纯 Spring）；oasdiff；Schemathesis | 覆盖每个 operation × status code |
 | system | 不在范围内（§15） | 部署环境（SIT、UAT）由团队自己测试，gta 从不测试 |
 
 - **Boot 4 的变化**：
   - 移除了 `@MockBean`，改用 `@MockitoBean`；
   - `@SpringBootTest` 需要显式加 `@AutoConfigureMockMvc` 或 `@AutoConfigureTestRestTemplate`；
-  - test slice 按技术拆成了独立模块。
+  - test slice 按技术拆成了独立模块；
+  - `RestClient` 使用 JDK HTTP 客户端，它会在明文 HTTP 上请求 HTTP/2：WireMock 要加 `http2PlainDisabled(true)`。
+- **Spring Cloud Function**（P4，`cloud-function`；经 `spring-cloud-function-adapter-gcp` 部署为 Cloud Run functions）：
+  每个 `@Bean Function`/`Consumer`/`Supplier` 是一个 flow，通过 bean 本身、`FunctionCatalog` 和
+  `spring-cloud-function-web` 的 `POST /<name>` 测试；从不调用已部署的函数。
 
 ### 7.2 Scheduler
 
@@ -1008,6 +1052,11 @@ gta 要让从没用过它的开发者也能上手。人看到的所有内容都�
 - Pub/Sub emulator 支持 dead-letter、过滤和有序投递，**不支持** IAM、protobuf schema、SMT，也不会投递到 BigQuery 订阅。这些情况不在 gta 测试范围内。
 - MQ（JMS）额外要测：本地事务回滚后消息重投、超过重投次数后进入 backout/DLQ 队列、消息选择器、持久化与非持久化消息。
 - schema 兼容性检查；AsyncAPI 用 Microcks；验证 outbox。
+- **Spring Cloud Stream 函数**（P4）：Cloud Stream 服务里的 `@Bean Function`/`Consumer`/`Supplier` 是 messaging flow，
+  绑定到 `<name>-in-0`/`<name>-out-0`；测试 binder 的 `InputDestination`/`OutputDestination` 在 JVM 内替代
+  Kafka、Rabbit 或 Pub/Sub。
+- **Spring Integration**（P4，`integration`）：每个 `@Bean IntegrationFlow` 是一个 flow；测试向它的输入 channel
+  发送、从输出 channel 读取，用 `@SpringIntegrationTest` 让入站 adapter 不自动启动；每个过滤、路由和错误路径一个场景。
 
 ### 7.6 Workflow / 编排
 
@@ -1022,7 +1071,7 @@ gta 要让从没用过它的开发者也能上手。人看到的所有内容都�
 
 gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 Windows 启动服务，用自己的账号自行测试 SIT 和 UAT。gta 的职责是确保自己
 绝不触碰这些环境，尤其是生产环境：每次运行都会去掉云凭证以及开发者的 Spring profile 和配置变量；并且 test-author 和 reviewer
-的规则写明测试只在本地运行（§13）。不需要维护主机名单：agent 看到 URL 或 profile 文件里的 `prod`、`sit`、`uat` 就认得出来，认不出来的由环境隔离兜底。外部服务用 WireMock stub，再加上契约测试。以后可能加入使用者选择开启的 SIT/UAT 测试（§15 P5）。它们的设计已经确定：
+的规则写明测试只在本地运行（§13）。不需要维护主机名单：agent 看到 URL 或 profile 文件里的 `prod`、`sit`、`uat` 就认得出来，认不出来的由环境隔离兜底。外部服务用 WireMock stub，再加上契约测试。以后可能加入使用者选择开启的 SIT/UAT 测试（§15 P7）。它们的设计已经确定：
 - 只在团队的部署流程中运行（`mvn verify -Dgroups=remote`）；gtaw 只在本地确认它们能编译、带有 `@Tag("remote")`，从不连接 SIT
   或 UAT，本地运行和门禁都排除 `remote`；
 - 默认只读；需要写入时必须在规格中标注，只能使用固定前缀（`gta-test-`）的数据，并且事后清理；
@@ -1047,12 +1096,40 @@ gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 
 | 数据管道 | unit + component | TestPipeline + PAssert + TestStream | 期望数据 / differential |
 | 异步消息 | component | EmbeddedKafka / Pub/Sub 模拟器 / 嵌入式 Artemis + Awaitility | 终态 + DLQ + 重复投递 |
 | 编排 | component + system | 状态机路径测试 | 执行历史 + 终态 |
+| 函数（Cloud Run functions） | unit + component | bean 本身、`FunctionCatalog`、`POST /<name>` | 输出值 |
+| integration flow | component | 输入 channel + `QueueChannel` + `@SpringIntegrationTest` | 发布的消息 + 被过滤掉的消息 |
+| 韧性（横切） | component | WireMock 故障 + Resilience4j registry | 熔断器状态 + fallback 结果 + stub 收到的次数 |
 | 数据库迁移 | component | Flyway / Liquibase + Oracle 共享测试库 | N-1 兼容 + 数据保持 |
 | 不变量 | unit | `@ParameterizedTest` + Instancio 生成输入 + 记录 seed | 不变量成立 |
 | 跨服务链路 | 不在范围内（SIT/UAT，由团队测试） | — | — |
 
 **jqwik 不作为默认**：从 1.10 起，jqwik 对 coding agent 的使用附加了限制性声明（见 [release notes](https://jqwik.net/release-notes.html)）。仓库已经在用 jqwik 时，锁定在 1.10 之前的版本；gtaw 只解析 Surefire XML。
 
+
+### 7.10 服务本来就在用 Cucumber 时（P4）
+
+只有团队本来就在跑 Cucumber，gta 才写 Cucumber 场景；其他服务照旧写 JUnit 测试。profile 会找出团队的 suite
+（带 `@IncludeEngines("cucumber")` 或 `@Cucumber` 的测试类）、feature 目录（`@SelectClasspathResource` 或
+`@SelectPackages`）和 glue（`cucumber.glue`），找不到时都默认取 suite 所在的包。
+
+- **item 的变化**：component 层的场景写成 `src/test/resources/<features>/<domain>/<flow name>.feature` 里的一个
+  `Scenario`，step 定义写在 glue 里的 `<test class>Steps`。item 的测试类是团队的 suite，gtaw 用场景的标签运行它；suite、
+  `@CucumberContextConfiguration` 和其他 feature 都不属于 item 的文件。种子测试、unit 和 slice 测试仍然是 JUnit。
+- **标签**（§9.5）：feature 带 `@gta @<layer> @flow:<flowId>`，场景带 `@scenario:<id> @<intent> @<priority>`；
+  Cucumber 会把它们传给 JUnit Platform，所以 `-Dgroups` 选场景和选方法一样。gtaw 的规则修复在每次运行前校正这些标签。
+- **Oracle**（§5.3）：带标签场景的 Then 步骤就是断言，里面的值（引号文字、数字、常量、doc string、表格单元格、
+  outline 的 examples）就是期望值检查和锁读取的 token。Background、Given 和 When 步骤以及所有 glue 文件是受监看的输入。
+  step 定义必须断言它的参数；reviewer 会检查这一点，就像检查 Java 断言一样。
+- **结果**：gta-junit 记录每个带 `scenario:` 标签的场景及其 feature 文件；报告用场景名称命名场景，gtaw 就靠它把两边对上。
+- **标注缺陷**（§5.3 第 7 条）：Cucumber 无法包住一个步骤，所以已确认的缺陷用标签 `@known-defect
+  @known-defect:<fingerprint>` 标注。普通构建（团队的 `mvn verify`、IDE）里，glue 的 hook
+  `KnownDefects.abortPinnedOutsideGta` 把场景报告为 aborted，构建保持绿色。gtaw 自己运行时设置 `-Dgta.run=true`：
+  场景照常运行，只有以记录的指纹失败时才算已知缺陷；通过或其他失败都会让 item 失败。种子 item 负责添加这个 hook
+  （`<glue>.GtaCucumberHooks`）；没有 hook 时拒绝标注。因此普通构建发现不了已修复的缺陷，由 gtaw 的运行、
+  `gtaw verify` 和 CI 门禁的 verify 步骤发现。
+- **退役**一个场景时，从它的 feature 文件中删除（文件里没有场景了就删除文件）；从不改动 suite。
+- 限制：只支持英文 Gherkin 关键字；只有一个 `@CucumberContextConfiguration`（团队的）；Boot 3.x 用 Cucumber 7（JUnit 5），
+  Boot 4 用 Cucumber 8（JUnit 6）。
 ---
 
 ## 8. Skills 目录
@@ -1079,14 +1156,18 @@ gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 
 | `gta-testing-spring-apis` | test-author | `slices.md`、`components.md`、`authz.md`、`grpc.md`、`graphql.md` |
 | `gta-stubbing-with-wiremock` | test-author | `fault-injection.md`、`external-services.md` |
 | `gta-testing-api-contracts` | test-author | `pact.md`、`spring-cloud-contract.md`、`oasdiff.md`、`schemathesis.md`、`specmatic.md` |
-| `gta-using-embedded-dependencies` | test-author | `oracle.md`（共享测试库与 H2 Oracle 模式）、`bigquery-fakes.md`、`pubsub-emulator.md`、`embedded-kafka.md`、`jms-artemis.md`、`in-memory-fakes.md`、`fidelity.md`、`windows.md` |
+| `gta-using-embedded-dependencies` | test-author | `oracle.md`（共享测试库与 H2 Oracle 模式）、`bigquery-fakes.md`、`pubsub-emulator.md`、`embedded-kafka.md`、`jms-artemis.md`、`in-memory-fakes.md`、`fidelity.md`、`windows.md`、`secret-manager.md` |
 | `gta-testing-scheduled-jobs` | test-author | `cron.md`、`shedlock.md`、`cloud-scheduler.md` |
 | `gta-testing-spring-batch-jobs` | test-author | `batch5-vs-batch6.md`、`restart.md` |
 | `gta-testing-beam-pipelines` | test-author | `test-stream.md`、`dataflow-runs.md` |
-| `gta-testing-event-flows` | test-author | `awaitility.md`、`pubsub-emulator-limits.md`、`kafka.md`、`jms.md`、`modulith-scenario.md` |
+| `gta-testing-event-flows` | test-author | `awaitility.md`、`pubsub-emulator-limits.md`、`kafka.md`、`jms.md`、`modulith-scenario.md`、`cloud-stream.md` |
 | `gta-testing-workflows` | test-author | `gcp-workflows.md`、`state-machines.md` |
 | `gta-testing-db-migrations` | test-author | `flyway.md`、`liquibase.md`、`oracle-ddl.md`、`n-minus-1.md` |
 | `gta-testing-streaming-endpoints`（P4） | test-author | `sse.md` |
+| `gta-testing-cloud-functions`（P4） | test-author | `function-definition.md` |
+| `gta-testing-integration-flows`（P4） | test-author | `outputs.md` |
+| `gta-testing-resilience`（P4） | test-author | `breaker-states.md` |
+| `gta-writing-cucumber-scenarios`（P4） | test-author | `state.md` |
 | `gta-reviewing-test-quality` | reviewer | `oracle-review.md`、`triage.md`、`catching-assessment.md`、`mutation.md` |
 
 ---
@@ -1167,6 +1248,8 @@ gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 
 |---|---|---|---|
 | controller、listener、job、gRPC service、Temporal workflow 等的方法 | 去掉角色后缀（`Controller`、`Listener`、`Consumer`、`Job`、`Scheduler`、`Task`、`Handler`、`Endpoint`、`Resource`、`Api`、`GrpcService`、`Workflow` 等）后的类名，kebab 格式 | 方法名，kebab 格式 | `BorrowController#book` → `borrow.book`；`InventoryListener#onPositionUpdate` → `inventory.on-position-update`；`FeeAccrualJob#accrueDaily` → `fee-accrual.accrue-daily` |
 | Spring Statemachine 配置 / Beam 组合 transform | 类名 | `transitions` / `transform` | `LoanStateMachineConfig` → `loan-state-machine.transitions` |
+| `@Bean Function`/`Consumer`/`Supplier`（Cloud Stream 或 Spring Cloud Function） | 类名（去掉 `Functions`） | bean 名 | `RecallFunctions#recall` → `recall.recall` |
+| `@Bean IntegrationFlow` | 类名（去掉 `IntegrationConfig`） | 去掉 `Flow` 的 bean 名；与 domain 相同时用 `flow` | `FeeAccrualIntegrationConfig#feeAccrualFlow` → `fee-accrual.flow` |
 | Flyway 或 Liquibase 脚本 | `db` | 脚本描述 | `V12__add_haircut.sql` → `db.add-haircut` |
 | BPMN 文件 | `process` | 文件名 | `settlement.bpmn` → `process.settlement` |
 
@@ -1185,7 +1268,7 @@ gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 
 | `flow:<flowId>`、`scenario:<scenarioId>` | 方法 | 规格 | gtaw 运行单个场景；可追溯 |
 | 意图：`characterization`、`hardening`、`reproducing`、`catching` 中恰好一个 | 方法 | 场景的来源和 `hint.intent` | `-Dgroups=hardening` 运行已确认行为的测试 |
 | 优先级：`p0`、`p1`、`p2` | 方法 | 场景的 `priority`（未写时为 P1） | 打包或部署时用 `mvn verify -Dgroups=p0` 运行必须通过的测试，不需要安装 gta |
-| `known-defect` | 方法，自动 | `@KnownDefect` 自带（元注解） | 修复后用 `-Dgroups=known-defect` 找出哪些标注该删除 |
+| `known-defect` | 方法，自动 | `@KnownDefect` 自带（元注解）；Cucumber 标注的标签（§7.10） | 修复后用 `-Dgroups=known-defect` 找出哪些标注该删除 |
 
 - 所有地方使用同一种表达式语法，即 JUnit tag 表达式：`gtaw run --tags "p0 & component"` 取代 `--layer`（保留为别名）；`gtaw impact`
   把回归范围输出成可直接使用的 `-Dgroups` 表达式（`groups`）。
@@ -1193,7 +1276,7 @@ gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 
   同样能选中这些测试。
 - 刻意不做成 tag 的：能力（flow 的规格里已有）、保真度和耗时（报告里已有，耗时 tag 会频繁变动）、负责人（CODEOWNERS），以及任何会
   跳过或隔离测试的标记（§5.3）。
-- 预留：`remote`，用于使用者选择开启的 SIT/UAT 测试（§15 P5）。
+- 预留：`remote`，用于使用者选择开启的 SIT/UAT 测试（§15 P7）。
 
 ## 10. 文件契约与 Schema
 
@@ -1232,6 +1315,9 @@ gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 
   "scenarioRevision": "3f9c…"
 }
 ```
+
+Cucumber item（§7.10）还有 `feature`（它的 feature 文件）和 `steps`（它的 step 定义类）；它的 `testClass` 是团队的
+Cucumber suite，从不在 `ownsFiles` 里。
 
 ### 10.3 状态与枚举
 
@@ -1580,10 +1666,17 @@ agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/wor
 | **P1 接入：多模块、事件、定时任务、PR 模式** | 多模块 Maven 服务（一次一个模块，Maven 以 `-pl <module> -am` 运行；已实现）；`messaging`（Kafka、Pub/Sub、JMS/MQ、RabbitMQ、SQS；已实现）；`scheduler`（`@Scheduled`、ShedLock、Quartz；已实现）；PR 模式：impact（方法、配置、bean 图；已实现）、alm-github CI 模板 `gta-gate.yml`（`gtaw init --ci`；已实现）、`gtaw next --mode pr`（受影响的流程标为 stale，并在一个会话内依次处理，PR 描述作为 documented 意图；已实现）、PR 评论、analyzing-change-impact；OpenCode 端到端 | 每个新能力各有 1 个试点服务跑通，另有 1 个多模块服务跑通；在真实 PR 上产出行为变更摘要，门禁上线（mutation 为 advisory） |
 | **P2 数据、安全与质量** | `db-migration`（Flyway、Liquibase；已实现）；`security`（Spring Security、OAuth2 resource server、JWT：已认证与被拒绝的路径、方法级安全；已实现）；`caching`（Spring Cache、Redis、Caffeine：命中、失效、读到旧值；已实现）；`spring-batch`（已实现）；`mutate` 和能失败检查（共用 PIT 集成；均已实现）；学习回路（已实现）；先规则后 LLM 的修复；`spec.source=openspec\|speckit`（已实现） | 每个新能力各有 1 个试点服务；mutation 在试点仓库校准后切换为 enforced |
 | **P3 响应式、Gradle、其他协议、catching** | `webflux`（用 `WebTestClient` 和 `StepVerifier` 测响应式端点和客户端）；Gradle 构建（在 Maven 之外增加第二个 `TestRunner` 和构建文件读取）；`grpc-api` 和 `graphql-api`；`workflow`（Temporal、Camunda、Spring Statemachine）；`beam-pipeline`；incident 模式（`gtaw next --mode incident --target <flowId> --intent "<报告>"`：报告以 `<flow>.incidents.md` 保存在规格旁边，并由一个 `hint.intent=reproducing` 场景引用；已实现）；catching 测试与 assessor（PR 模式下的 `hint.intent=catching` 场景；失败时 gtaw 在 PR 的 base 上再运行一次，若在 base 上也失败就拒绝 `product-defect`，再由 reviewer 评估、由人确认；报告统计 catching 命中数；已实现） | 每类各试点 1 个服务 |
-| **P4 易用性、生产环境防护、流式端点** | 按以下顺序：<br>- 易用性（§5.10、§9.5）：状态块和 `output.language`（`en`、`zh-CN`）；带推荐答案的问题和 `OK` 回复；test-author 的 `--question`；`/gta note`；覆盖整个服务、不因某个 flow 等人而停下的 service 模式；统一的 tag 词汇；<br>- 生产环境防护：每次运行去掉 Spring profile 和配置，以及 test-author 和 reviewer 的规则（已实现）；<br>- `websocket`（WebSocket、STOMP、SSE）：用 `gta-testing-streaming-endpoints` 在本地测试。<br>部署环境上的测试（`gtaw env`、Karate、Cloud Run/GKE/Dataflow 运行、BigQuery 临时数据集）不在范围内：团队自行测试 SIT 和 UAT（§7.7） | 一位没用过 gta 的开发者只靠 `/gta` 覆盖 1 个试点服务；衡量：每个 flow 的回复次数、用 `OK` 回答的比例、到第一个通过验证的测试所需的时间 |
-| **P5** | 暂缓，等有团队需要时再做：使用者选择开启的 SIT/UAT 测试（`@Tag("remote")`、`safety.remoteHosts`，默认关闭；生产环境永远禁止）、MCP 包装、SARIF、性能测试、并行编写、其他语言的适配器。<br>不计划（v11 决定）：hooks（早期拦截、`verified` 回答渠道）、插件分发、record-replay、native-image | 按需 |
+| **P4 易用性、生产环境防护、流式端点** | 按以下顺序：<br>- 易用性（§5.10、§9.5）：状态块和 `output.language`（`en`、`zh-CN`）；带推荐答案的问题和 `OK` 回复；test-author 的 `--question`；`/gta note`；覆盖整个服务、不因某个 flow 等人而停下的 service 模式；统一的 tag 词汇；<br>- 生产环境防护：每次运行去掉 Spring profile 和配置，以及 test-author 和 reviewer 的规则（已实现）；<br>- `websocket`（WebSocket、STOMP、SSE）：用 `gta-testing-streaming-endpoints` 在本地测试；<br>- v13 新增：Spring Cloud Function（Cloud Run functions）、Spring Cloud Stream 函数、Spring Integration flow、Resilience4j 和 Spring Retry、Secret Manager，以及服务本来就在用的 Cucumber（§7.10）。<br>部署环境上的测试（`gtaw env`、Karate、Cloud Run/GKE/Dataflow 运行、BigQuery 临时数据集）不在范围内：团队自行测试 SIT 和 UAT（§7.7） | 一位没用过 gta 的开发者只靠 `/gta` 覆盖 1 个试点服务；衡量：每个 flow 的回复次数、用 `OK` 回答的比例、到第一个通过验证的测试所需的时间 |
+| **P5**（下一步，按需） | 与 gta 已覆盖内容最接近的，按以下顺序：SOAP 端点和客户端（Spring WS、JAX-WS），用于托管和结算对接；PostgreSQL 和 MySQL（Cloud SQL）作为数据库，不用容器、嵌入式运行；Cloud Tasks 和 Eventarc（CloudEvents）处理器；Spring Cloud Config 等外部配置；`CommandLineRunner` 和一次性任务；Actuator 的 health 和 readiness | 每个能力一个试点服务 |
+| **P6**（按需） | 其他数据存储和边缘组件：Firestore/Datastore 和 Bigtable（各自的模拟器）、Spanner（模拟器）、MongoDB、Redis 作为主存储（Memorystore）、R2DBC、Elasticsearch、Cassandra、Neo4j、LDAP；Spring Cloud Gateway 路由；JAX-RS 资源；为 Kotlin 服务用 Kotlin 写测试；把指标和链路追踪（Micrometer、OpenTelemetry）作为期望值 | 每个能力一个试点服务 |
+| **P7**（按需） | 超出 IDE 内功能测试的部分：使用者选择开启的 SIT/UAT 测试（`@Tag("remote")`、`safety.remoteHosts`，默认关闭；生产环境永远不开放）、性能测试、SARIF、MCP 包装、并行编写、其他语言的适配器 | 按需 |
+| **不支持** | 不是 Spring 或 Java 服务，或无法在开发机上测试：Dataproc/Spark 和 Composer/Airflow 作业、Quarkus 和 Micronaut 服务。<br>不做（v11 决定）：hooks（提前拦截、`verified` 回答通道）、插件分发、record-replay、native-image | — |
 
 ### 能力顺序
+
+后续阶段（P5 到 P7）的顺序依据两点：金融行业在 GCP 上的 Spring 服务需要它的可能性，以及它能复用多少 gta 现有机制。
+P5 增加与 gta 已测内容相邻的入口和依赖，P6 是需要自带模拟器或嵌入式服务器的数据存储，P7 是本地功能测试之外的工作。
+每个阶段都在有团队提出需要时开始，并带上它的 skill、registry 条目、评测 fixture 和一个试点服务。
 
 主流的 Spring 服务类型都在范围内。阶段按各类型在 Spring 服务中的常见程度排列，只有一个例外：多模块支持排在最前，因为它决定 gta 能否装进一个仓库。能力从所在阶段起启用（`core/registry/capabilities.yaml` 中的 `since`），在此之前只能 explain。
 
@@ -1616,6 +1709,15 @@ P4 是当前阶段，它的能力（包括 `websocket`）默认就会写测试�
 | 17 | Beam / Dataflow 管道 | P3 | 自动写测试；每个组合 `PTransform` 都是一个流程，用 `TestPipeline` 和 `PAssert` 在 DirectRunner 上运行 |
 | 18 | 部署环境上的系统测试（Karate、Kubernetes） | — | 不在范围内：团队自行测试 SIT 和 UAT（§7.7） |
 | 19 | WebSocket、STOMP、SSE | P4 | 会写测试；STOMP handler、`WebSocketHandler` 和事件流（`SseEmitter`、`ServerSentEvent`、`text/event-stream`）都是 flow |
+| 20 | Spring Cloud Function、Cloud Run functions | P4 | 会写测试；每个函数 bean 是一个 `cloud-function` flow（`gta-testing-cloud-functions`） |
+| 21 | Spring Cloud Stream 函数 | P4 | 会写测试；Cloud Stream 服务的每个函数 bean 是一个 `messaging` flow，在测试 binder 上运行 |
+| 22 | Spring Integration | P4 | 会写测试；每个 `@Bean IntegrationFlow` 是一个 `integration` flow（`gta-testing-integration-flows`） |
+| 23 | Resilience4j、Spring Retry | P4 | 会写测试；该 skill 附加到使用它们的服务的 flow 上（`gta-testing-resilience`） |
+| 24 | Secret Manager | P4 | 作为依赖在 bootstrap registry 中伪造；测试从不读取真实密钥 |
+| 25 | Cucumber | P4 | 服务有 Cucumber suite 时，component 场景写成 feature 文件，Then 步骤被锁定（§7.10） |
+| 26 | SOAP、Cloud SQL（PostgreSQL、MySQL）、Cloud Tasks、Eventarc、Spring Cloud Config、`CommandLineRunner`、Actuator | P5 | 尚未支持：流程需要时只做说明 |
+| 27 | Firestore、Datastore、Bigtable、Spanner、MongoDB、Redis 作为存储、R2DBC、Elasticsearch、Cassandra、Neo4j、LDAP、Spring Cloud Gateway、JAX-RS、Kotlin 测试、指标和链路追踪 | P6 | 尚未支持 |
+| 28 | Dataproc/Spark、Composer/Airflow、Quarkus、Micronaut | — | 不支持 |
 
 Java：以 Java 17 及以上的服务为主进行设计，少数 Java 8 或 11 的服务也支持。测试按服务自身的语言版本编写，Spring Boot 2.2 到 2.7 使用 `javax.*` 导入。`gta-junit` 编译为 Java 8 字节码，旧服务也能加载；gtaw 本身运行在 JDK 17+ 上。旧服务的构建需要自己的 JDK 时，用 `build.javaHomeEnv` 指定存放该 JDK 路径的环境变量，Maven 会以该 `JAVA_HOME` 运行。CI 在 JDK 17、21、25 上构建 gta，每个新的 LTS 都会加入矩阵。`gtaw doctor` 对 Java 8 到 16 给出警告，更旧的报失败。
 
@@ -1673,4 +1775,5 @@ Java：以 Java 17 及以上的服务为主进行设计，少数 Java 8 或 11 �
 | v9.1 | P0 已实现，完成两轮代码审查（见 [round-2-remediation.md](../reviews/round-2-remediation.md)）：<br>- 只有精确的批准才算批准，其他回复作为修改意见，展示后被改动的规格不予批准；<br>- 用提交账本代替 trailer，分片和状态失败即关闭，规格循环有上限，review 带 token，超时计入次数；<br>- 文档统一为英文，README 和本设计另有中文版；示意图由 `scripts/diagrams/render.py` 按 diagram-design 风格生成 |
 | v10 | P0 到 P3 已实现。P4 重新划定范围：<br>- 部署环境上的测试不在范围内：团队自行测试 SIT 和 UAT，gta 绝不触碰这些环境，尤其是生产环境（Spring profile 隔离、agent 规则）；<br>- 新手易用性：给人的统一状态块（`en` 或 `zh-CN`）、带推荐答案的问题和 `OK` 回复、`/gta note`、service 模式、统一的 tag 词汇（§5.10、§9.5） |
 | v11 | P4 已实现并成为当前阶段。P5 精简：去掉 hooks、插件分发、record-replay 和 native-image；其余暂缓，等有团队需要时再做 |
+| v13 | P4 新增能力：Spring Cloud Function（Cloud Run functions）、Spring Cloud Stream 函数、Spring Integration flow、Resilience4j 和 Spring Retry、Secret Manager（§7.0、§7.1、§7.5）；服务本来就在用 Cucumber 时支持 Cucumber，Then 步骤被锁定、缺陷用标签标注（§7.10）；后续阶段 P5 到 P7 排定顺序，并列出不支持的内容（§15）；评测 fixture `lending-service` |
 | v12 | 面向新手的命名：`/gta` 子命令分三层，explain 模式改称 `spec`，可以用列表编号、类名、文件、接口或 topic 指定 flow，有歧义时询问而不是猜测，推导出的 flow 名去掉与 domain 重复的词（§6、§9.4）；贯穿示例改为证券借贷服务（`borrow.book`） |
