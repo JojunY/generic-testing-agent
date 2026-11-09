@@ -1,0 +1,13 @@
+package com.example.lending;
+
+import com.gta.junit.KnownDefects;
+import io.cucumber.java.Before;
+import io.cucumber.java.Scenario;
+
+/** Keeps pinned scenarios (@known-defect) green in a plain build; gtaw runs them and checks their fingerprint. */
+public class GtaCucumberHooks {
+    @Before(order = 0)
+    public void knownDefects(Scenario scenario) {
+        KnownDefects.abortPinnedOutsideGta(scenario.getSourceTagNames());
+    }
+}

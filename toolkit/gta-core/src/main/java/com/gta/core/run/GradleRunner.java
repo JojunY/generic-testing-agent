@@ -26,6 +26,7 @@ public final class GradleRunner extends MavenRunner {
                     t.useJUnitPlatform { if (groups) includeTags groups.toString() }
                     def results = project.findProperty('gta.results.dir')
                     if (results) t.systemProperty 'gta.results.dir', results.toString()
+                    t.systemProperty 'gta.run', 'true'
                     t.filter { excludeTestsMatching '*E2ETest'; failOnNoMatchingTests = false }
                     t.outputs.upToDateWhen { false }
                 }

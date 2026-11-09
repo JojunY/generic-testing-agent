@@ -1,0 +1,42 @@
+package com.example.lending.accrual;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import io.cucumber.java.en.Then;
+import io.cucumber.java.en.When;
+import java.math.BigDecimal;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.integration.channel.QueueChannel;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.support.MessageBuilder;
+
+public class FeeAccrualIntegrationConfigSteps {
+    @Autowired
+    @Qualifier("accrualRequests")
+    MessageChannel accrualRequests;
+
+    @Autowired
+    QueueChannel accruals;
+
+    @When("a day accrues on borrow {string} of {long} shares at {bigdecimal} with a rate of {int} bps")
+    public void accrue(String borrowId, long quantity, BigDecimal price, int rateBps) {
+        accruals.clear();
+        accrualRequests.send(MessageBuilder.withPayload(new AccrualRequest(borrowId, quantity, price, rateBps)).build());
+    }
+
+    @Then("{int} daily fees are published")
+    public void published(int count) {
+        assertThat(accruals.getQueueSize()).isEqualTo(count);
+    }
+
+    @Then("the daily fee of borrow {string} is {bigdecimal}")
+    public void fee(String borrowId, BigDecimal expected) {
+        Message<?> published = accruals.receive(2000);
+        assertThat(published).as("a daily fee on accruals").isNotNull();
+        DailyFee fee = (DailyFee) published.getPayload();
+        assertThat(fee.borrowId()).isEqualTo(borrowId);
+        assertThat(fee.fee()).isEqualByComparingTo(expected);
+    }
+}

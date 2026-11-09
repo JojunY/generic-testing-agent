@@ -29,7 +29,11 @@ class CapabilityRegistryTest {
                 "graphql-api",
                 "workflow",
                 "beam-pipeline",
-                "websocket")) {
+                "websocket",
+                "cloud-function",
+                "integration",
+                "resilience",
+                "secret-manager")) {
             assertTrue(registry.capability(id).activeIn(CapabilityRegistry.CURRENT_PHASE), id);
         }
     }
@@ -57,6 +61,9 @@ class CapabilityRegistryTest {
                 registry.skillsFor("rest-api", Set.of("rest-api", "security")).contains("gta-testing-spring-security"));
         assertFalse(registry.skillsFor("rest-api", Set.of("rest-api")).contains("gta-testing-spring-security"));
         assertTrue(registry.skillsFor("rest-api", Set.of("caching")).contains("gta-testing-caches"));
+        assertTrue(registry.skillsFor("rest-api", Set.of("resilience")).contains("gta-testing-resilience"));
+        assertTrue(
+                registry.skillsFor("messaging", Set.of("secret-manager")).contains("gta-using-embedded-dependencies"));
     }
 
     @Test

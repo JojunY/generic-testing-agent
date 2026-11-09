@@ -28,6 +28,7 @@ A test file grows with JUnit `@Nested` classes or more methods, never with a sec
 | End-to-end | JUnit against a running system | `E2ETest` | `src/test/e2e/java` | `e2e` profile only |
 | Batch job, scheduler, listener | Spring Batch test, Awaitility, embedded broker | `IT` on the job configuration, scheduler or listener class | `src/test/java` | Failsafe |
 | Beam pipeline | `TestPipeline` | `Test` | `src/test/java` | Surefire |
+| Cucumber scenario (a service that already runs Cucumber, plan §7.10) | Cucumber, the team's suite | `<domain>/<flow name>.feature`, steps in `<source>Steps` | `src/test/resources/<features>`, steps in the glue | the team's suite (`@IncludeEngines("cucumber")`) |
 | Performance (later) | Gatling | `Simulation` | `src/test/gatling/java` | `gatling` profile |
 | Architecture rules | ArchUnit | `ArchitectureTest` (exception E3) | `src/test/java/<base>/architecture/` | Surefire |
 

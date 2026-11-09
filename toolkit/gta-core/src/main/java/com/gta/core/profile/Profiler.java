@@ -74,6 +74,12 @@ public final class Profiler {
     static final List<String> GRAPHQL =
             List.of("QueryMapping", "MutationMapping", "SubscriptionMapping", "SchemaMapping", "BatchMapping");
 
+    /** java.util.function types a Spring Cloud Function or Cloud Stream bean is declared with. */
+    static final List<String> FUNCTION_TYPES = List.of("Function", "Consumer", "Supplier");
+
+    /** Spring Integration flow bean types (integration). */
+    static final List<String> INTEGRATION_FLOW_TYPES = List.of("IntegrationFlow", "StandardIntegrationFlow");
+
     private Profiler() {}
 
     public static ServiceProfile profile(Path root, CapabilityRegistry registry, String configuredBasePackage) {
@@ -121,11 +127,76 @@ public final class Profiler {
             }
         }
         p.applicationClass = applicationClass(main);
-        p.entrypoints.addAll(entrypoints(main));
+        p.entrypoints.addAll(entrypoints(main, pom.dependencies));
         dropRepeatedDomain(p.entrypoints, flowId -> Files.exists(paths.spec(flowId)));
         p.entrypoints.addAll(migrations(paths.mainResources()));
         p.entrypoints.addAll(processes(paths.mainResources()));
+        p.cucumber = cucumber(JavaIndex.of(paths.testJava()), paths.testResources());
         return p;
+    }
+
+    /**
+     * The service's Cucumber suite: a test class with {@code @IncludeEngines("cucumber")} (JUnit Platform Suite) or
+     * {@code @Cucumber}. Its features folder comes from {@code @SelectClasspathResource} or {@code @SelectPackages}, its
+     * glue from the {@code cucumber.glue} configuration parameter (or junit-platform.properties); both default to the
+     * suite's package. Null when there is no suite: gta then writes JUnit tests.
+     */
+    static ServiceProfile.Cucumber cucumber(JavaIndex test, Path testResources) {
+        for (JavaIndex.Unit u : test.units()) {
+            for (ClassOrInterfaceDeclaration c : u.cu().findAll(ClassOrInterfaceDeclaration.class)) {
+                boolean suite = c.getAnnotationByName("IncludeEngines")
+                                .map(a -> a.toString().contains("\"cucumber\""))
+                                .orElse(false)
+                        || c.getAnnotationByName("Cucumber").isPresent();
+                if (!suite) {
+                    continue;
+                }
+                String pkg = u.cu().getPackageDeclaration()
+                        .map(d -> d.getNameAsString())
+                        .orElse("");
+                ServiceProfile.Cucumber out = new ServiceProfile.Cucumber();
+                out.suite = c.getFullyQualifiedName().orElse(c.getNameAsString());
+                out.features = c.getAnnotationByName("SelectClasspathResource")
+                        .map(Profiler::pathsOf)
+                        .filter(v -> !v.isEmpty())
+                        .map(v -> v.get(0))
+                        .or(() -> c.getAnnotationByName("SelectPackages")
+                                .map(Profiler::pathsOf)
+                                .filter(v -> !v.isEmpty())
+                                .map(v -> v.get(0).replace('.', '/')))
+                        .orElse(pkg.replace('.', '/'))
+                        .replaceAll("^/+|/+$", "");
+                out.glue = c.getAnnotations().stream()
+                        .filter(a -> a.getNameAsString().equals("ConfigurationParameter")
+                                && (a.toString().contains("GLUE_PROPERTY_NAME")
+                                        || a.toString().contains("cucumber.glue")))
+                        .flatMap(a -> a.findAll(com.github.javaparser.ast.expr.MemberValuePair.class).stream())
+                        .filter(pair -> pair.getNameAsString().equals("value"))
+                        .map(pair -> pair.getValue())
+                        .filter(Expression::isStringLiteralExpr)
+                        .map(v ->
+                                v.asStringLiteralExpr().getValue().split(",")[0].strip())
+                        .findFirst()
+                        .or(() -> gluePropertyOf(testResources))
+                        .orElse(pkg);
+                return out;
+            }
+        }
+        return null;
+    }
+
+    private static java.util.Optional<String> gluePropertyOf(Path testResources) {
+        Path props = testResources.resolve("junit-platform.properties");
+        if (!Files.isRegularFile(props)) {
+            return java.util.Optional.empty();
+        }
+        java.util.Properties p = new java.util.Properties();
+        try (java.io.Reader r = Files.newBufferedReader(props)) {
+            p.load(r);
+        } catch (IOException e) {
+            return java.util.Optional.empty();
+        }
+        return java.util.Optional.ofNullable(p.getProperty("cucumber.glue")).map(g -> g.split(",")[0].strip());
     }
 
     static String applicationClass(JavaIndex main) {
@@ -206,6 +277,31 @@ public final class Profiler {
     }
 
     static List<ServiceProfile.EntryPoint> entrypoints(JavaIndex main) {
+        return entrypoints(main, Set.of());
+    }
+
+    /**
+     * Function beans are flows only in a service that binds them: with Spring Cloud Stream they are message handlers
+     * ({@code messaging}), with Spring Cloud Function alone they are functions ({@code cloud-function}, e.g. deployed
+     * as Cloud Run functions). Elsewhere a {@code @Bean Function} is an ordinary helper bean.
+     */
+    static String functionCapability(java.util.Collection<String> dependencies) {
+        if (dependencies.stream()
+                .anyMatch(d -> d.startsWith("spring-cloud-stream")
+                        || d.startsWith("spring-cloud-starter-stream")
+                        || d.equals("spring-cloud-gcp-pubsub-stream-binder"))) {
+            return "messaging";
+        }
+        if (dependencies.stream()
+                .anyMatch(
+                        d -> d.startsWith("spring-cloud-function") || d.startsWith("spring-cloud-starter-function"))) {
+            return "cloud-function";
+        }
+        return null;
+    }
+
+    static List<ServiceProfile.EntryPoint> entrypoints(JavaIndex main, java.util.Collection<String> dependencies) {
+        String functions = functionCapability(dependencies);
         Set<String> seenFlowIds = new LinkedHashSet<>();
         List<ServiceProfile.EntryPoint> out = new ArrayList<>();
         Map<String, Set<String>> workflowMethods = temporalWorkflowMethods(main);
@@ -337,6 +433,34 @@ public final class Profiler {
                         e.trigger = "Spring Batch job " + m.getNameAsString();
                         e.risk = 6;
                     }
+                    String beanType = m.getAnnotationByName("Bean").isPresent()
+                                    && m.getType().isClassOrInterfaceType()
+                            ? m.getType().asClassOrInterfaceType().getNameAsString()
+                            : "";
+                    if (functions != null && FUNCTION_TYPES.contains(beanType)) {
+                        // a function bean: Cloud Stream binds it to <name>-in-0 / <name>-out-0 destinations
+                        String bean = m.getNameAsString();
+                        e = base(c, fqcn, m, functions, "function");
+                        e.flowId = holderDomain(c, "Functions", e.flowId) + "." + Ids.kebab(bean);
+                        e.trigger = functions.equals("messaging")
+                                ? "Spring Cloud Stream "
+                                        + switch (beanType) {
+                                            case "Supplier" -> bean + "-out-0";
+                                            case "Consumer" -> bean + "-in-0";
+                                            default -> bean + "-in-0 -> " + bean + "-out-0";
+                                        }
+                                : "Spring Cloud Function " + bean;
+                        e.risk = beanType.equals("Supplier") ? 3 : 6;
+                    }
+                    if (INTEGRATION_FLOW_TYPES.contains(beanType)) {
+                        // a Spring Integration flow: tested by sending to its input channel (plan §7.5)
+                        String name = Ids.kebab(m.getNameAsString().replaceAll("(Integration)?Flow$", ""));
+                        e = base(c, fqcn, m, "integration", "integration-flow");
+                        String domain = holderDomain(c, "IntegrationConfig", e.flowId);
+                        e.flowId = domain + "." + (name.isEmpty() || name.equals(domain) ? "flow" : name);
+                        e.trigger = "Spring Integration flow " + m.getNameAsString();
+                        e.risk = 6;
+                    }
                     for (String listener : LISTENERS) {
                         if (m.getAnnotationByName(listener).isPresent()) {
                             e = base(c, fqcn, m, "messaging", "listener");
@@ -462,6 +586,19 @@ public final class Profiler {
                         .anyMatch(t -> workflowMethods
                                 .getOrDefault(t.getNameAsString(), Set.of())
                                 .contains(m.getNameAsString()));
+    }
+
+    /**
+     * The domain of a flow declared as a bean of a holder class ({@code RecallFunctions}, {@code
+     * FeeAccrualIntegrationConfig}): the class without the holder suffix. Only these flows drop it, so no other flow's
+     * derived name changes.
+     */
+    static String holderDomain(ClassOrInterfaceDeclaration c, String suffix, String flowId) {
+        String name = c.getNameAsString();
+        if (name.endsWith(suffix) && name.length() > suffix.length()) {
+            return Ids.kebab(name.substring(0, name.length() - suffix.length()));
+        }
+        return flowId.substring(0, flowId.indexOf('.'));
     }
 
     /** A composite Beam transform: extends {@code PTransform<InputT, OutputT>}. */

@@ -2,7 +2,7 @@
 
 **English** | [简体中文](plan.zh-CN.md)
 
-> Status: **P0 to P4 implemented**, P4 is the current phase (see the §15 roadmap) · Version: plan v12 · Date: 2026-11 · Code review and remediation record: [round-2-remediation.md](../reviews/round-2-remediation.md) · [round-3-plan.md](../reviews/round-3-plan.md)
+> Status: **P0 to P4 implemented**, P4 is the current phase (see the §15 roadmap) · Version: plan v13 · Date: 2026-11 · Code review and remediation record: [round-2-remediation.md](../reviews/round-2-remediation.md) · [round-3-plan.md](../reviews/round-3-plan.md)
 > Scope: a generic testing harness for Java services (mostly Spring)
 > Surfaces: **GitHub Copilot (VS Code, IntelliJ IDEA) and OpenCode**, supported equally: the same agents, command, guardrails and tests
 > Target environment: Maven; Spring Boot 4.1 mostly, a few 3.5; JUnit follows the Spring Boot parent; Java 17+; Windows developer machines; Oracle and BigQuery for data; Pub/Sub, Kafka and MQ for messaging; no containers locally; every dependency goes through the company Nexus proxy and the platform team can upload packages to Nexus; CI (alm-github) can be connected; most services have code but no specification documents. CODEOWNERS and branch protection are not enabled, and the Copilot preview policy is off
@@ -146,7 +146,7 @@
 - No Gliffy (proprietary format, cannot be diffed, hard for LLMs to produce reliably); Mermaid throughout.
 - No dependency on the OpenSpec CLI; no EvoMaster; jqwik is not a default (§7.9).
 - v1 uses no hooks, MCP, handoffs or plugins, and does not let the platform load skills automatically (see §4.0).
-- No plugin distribution, SARIF, vector store or dashboard. Postponed: reading OpenSpec/Spec Kit specs (P2), Cucumber, performance tests.
+- No plugin distribution, SARIF, vector store or dashboard. Postponed: performance tests (§15). Cucumber is supported where a service already runs it (§7.10).
 
 ---
 
@@ -354,8 +354,8 @@ From P4 replies get shorter (§5.10): `OK` takes every recommended answer, and o
 | **Prompt files / commands** | ✅ one, `/gta` | The only entry point; it selects the orchestrator automatically; not split into one command per mode |
 | **Instructions** (AGENTS.md) | ✅ one 3-line block | A single job: telling ordinary chats "use `/gta` for anything about tests and do not edit files under `.gta/` by hand". Each agent's rules live in its own body, not in global instructions, and are not repeated in `copilot-instructions.md` or `.instructions.md` |
 | **Skills (Agent Skills format)** | ⚠️ format only | Knowledge is organised as `SKILL.md` plus `references/` and loaded by path from the brief. **They are not put into the platform's skills folder**, so ordinary chats never trigger them |
-| **Hooks** | ❌ not in v1 | VS Code hooks are a preview feature and the preview policy is off, so they cannot be relied on in VS Code. The jobs a hook would do are covered elsewhere:<br>- out-of-scope edits: the change check of §5.8 reverts them;<br>- privileged commands: not on the terminal auto-approve list, so a person must click;<br>- tampering with expected values: the oracle lock plus the gate.<br>P5 may add them as an optional enhancement for earlier interception and for capturing human input |
-| **MCP** | ❌ not in v1 | Calling gtaw from the terminal is enough. An MCP server adds process, configuration and authentication handling, configured separately in each IDE. Only if terminal approval prompts become a real pain would P5 wrap gtaw as MCP tools to use IntelliJ's per-tool auto-approval |
+| **Hooks** | ❌ not in v1 | VS Code hooks are a preview feature and the preview policy is off, so they cannot be relied on in VS Code. The jobs a hook would do are covered elsewhere:<br>- out-of-scope edits: the change check of §5.8 reverts them;<br>- privileged commands: not on the terminal auto-approve list, so a person must click;<br>- tampering with expected values: the oracle lock plus the gate.<br>dropped in v11 (§15): the change check, terminal approval and the gate already do these jobs |
+| **MCP** | ❌ not in v1 | Calling gtaw from the terminal is enough. An MCP server adds process, configuration and authentication handling, configured separately in each IDE. Only if terminal approval prompts become a real pain would P7 wrap gtaw as MCP tools to use IntelliJ's per-tool auto-approval |
 | **Handoffs** | ❌ | VS Code only; human steps all happen in chat |
 | **Plugins / marketplace** | ❌ not planned | Installation is `gtaw init`, identical in both IDEs |
 | **Anthropic's methodology** | ✅ as design basis | Adopted: workflows first, monotonic state, one context per item, eval-driven. Not adopted: mechanisms that exist only in Claude Code |
@@ -515,7 +515,9 @@ capabilities:
     detect:
       buildDeps: [spring-kafka, spring-cloud-gcp-starter-pubsub, spring-cloud-stream, spring-jms,
                   spring-boot-starter-artemis, mq-jms-spring-boot-starter, spring-boot-starter-amqp,
-                  spring-cloud-aws-starter-sqs]
+                  spring-cloud-aws-starter-sqs, spring-cloud-stream-binder-kafka, spring-cloud-stream-binder-rabbit,
+                  spring-cloud-starter-stream-kafka, spring-cloud-starter-stream-rabbit,
+                  spring-cloud-gcp-pubsub-stream-binder]
       annotations: ["@KafkaListener", "@JmsListener", "@RabbitListener", "@SqsListener", "@ApplicationModuleListener",
                     "@TransactionalEventListener"]
     layers: [unit, component, contract]
@@ -544,6 +546,42 @@ capabilities:
     layers: [unit, component]
     diagrams: [sequence]
     skills: [gta-testing-streaming-endpoints]
+  - id: cloud-function        # Spring Cloud Function beans, e.g. deployed as Cloud Run functions
+    since: P4
+    detect:
+      buildDeps: [spring-cloud-function-context, spring-cloud-function-web, spring-cloud-function-adapter-gcp,
+                  spring-cloud-starter-function-web, spring-cloud-starter-function-webflux]
+    layers: [unit, component]
+    diagrams: [sequence]
+    skills: [gta-testing-cloud-functions]
+  - id: integration
+    since: P4
+    detect:
+      buildDeps: [spring-boot-starter-integration, spring-integration-core]
+      annotations: ["@EnableIntegration", "@MessagingGateway"]
+    layers: [unit, component]
+    diagrams: [flowchart]
+    skills: [gta-testing-integration-flows, gta-using-embedded-dependencies]
+  - id: resilience            # never produces flows; adds the resilience skill to the flows of a service that uses it
+    since: P4
+    dispatch: false
+    detect:
+      buildDeps: [resilience4j-spring-boot2, resilience4j-spring-boot3, resilience4j-spring-boot4,
+                  spring-cloud-starter-circuitbreaker-resilience4j, spring-retry]
+      annotations: ["@CircuitBreaker", "@Retry", "@RateLimiter", "@Bulkhead", "@TimeLimiter", "@Retryable"]
+    skills: [gta-testing-resilience]
+  - id: secret-manager        # never produces flows; tests must not read real secrets
+    since: P4
+    dispatch: false
+    detect:
+      buildDeps: [spring-cloud-gcp-starter-secretmanager, google-cloud-secretmanager]
+    skills: [gta-using-embedded-dependencies]
+  - id: cucumber              # never produces flows; a service with a Cucumber suite gets its component scenarios as features
+    since: P4
+    dispatch: false
+    detect:
+      buildDeps: [cucumber-java, cucumber-junit-platform-engine, cucumber-spring]
+    skills: [gta-writing-cucumber-scenarios]
   - id: security              # never produces flows; adds the security skill to the flows of a secured service
     since: P2
     dispatch: false
@@ -688,6 +726,7 @@ A working-state file that cannot be read is moved aside as `*.corrupt-<time>` an
      - fails with the same fingerprint: aborted, the build stays green;
      - passes: the build fails with "the defect is fixed, remove the annotation";
      - fails for another reason: the build fails.
+   - A Cucumber scenario is pinned with tags instead (§7.10), with the same three outcomes in gtaw's runs.
    - An `@KnownDefect` that no person confirmed is refused (`POLICY_UNCONFIRMED_KNOWN_DEFECT`).
    - A skipped test (`@Disabled`, an assumption that fails) verifies nothing and is refused (`POLICY_TEST_SKIPPED`).
 8. **Language adapters**: v1 supports tests written in Java only. Other languages plug in through a `LanguageAdapter` (entry-point detection, build and run, assertion fingerprint). Tests in a language without an adapter are never marked `passed`.
@@ -949,6 +988,7 @@ No containers run locally and every dependency comes through the company Nexus p
 | **MQ** (JMS) | embedded ActiveMQ Artemis as the JMS broker, testing JMS semantics: transactions, redelivery, DLQ, selectors | in-process fake (when the JMS API is not used) | JMS semantics medium; vendor-specific features (e.g. IBM MQ channels and queue manager configuration) are not covered by gta tests |
 | **GCS** | `LocalStorageHelper` from `google-cloud-nio` (in memory) | — | medium |
 | **Downstream HTTP** (including non-GCP services) | WireMock (in process) | — | high |
+| **Secret Manager** (`sm@` imports) | a fake client registered in the bootstrap registry from the test classpath (`META-INF/spring.factories`): placeholders resolve to test values, no GCP call | — | high for the code; the secrets themselves are never read |
 
 - Every test records its `fidelity` in the report. If a p0/p1 scenario only has low-fidelity tests, the gate raises a concern and suggests a shared-database test.
 - Connection details are always injected with `@DynamicPropertySource`.
@@ -967,14 +1007,19 @@ No containers run locally and every dependency comes through the company Nexus p
 |---|---|---|
 | unit | JUnit + AssertJ + Mockito | business rules, boundary values, money and time calculations |
 | slice | `@WebMvcTest` + `MockMvcTester` / `@WebFluxTest`; `@JsonTest` | validation, ProblemDetail, serialisation; **access matrix** (role × operation × ownership, including privilege escalation and cross-tenant negatives) |
-| component | `@SpringBootTest(RANDOM_PORT)` + embedded dependencies (§7.0) + WireMock + REST Assured | real dependencies; downstream timeouts, 5xx, retries, circuit breakers. **Do not use test-managed `@Transactional`**: it hides AFTER_COMMIT, outbox, flush constraints and lazy-loading problems |
+| component | `@SpringBootTest(RANDOM_PORT)` + embedded dependencies (§7.0) + WireMock + REST Assured | real dependencies; downstream timeouts, 5xx, retries, circuit breakers (Resilience4j, Spring Retry: the thresholds come from the configuration, registries are reset between tests, a fallback that hides an outage is a finding). **Do not use test-managed `@Transactional`**: it hides AFTER_COMMIT, outbox, flush constraints and lazy-loading problems |
 | contract | Pact (consumers in several languages) or Spring Cloud Contract (Spring only); oasdiff; Schemathesis | every operation × status code |
 | system | out of scope (§15) | deployed environments (SIT, UAT) are tested by the team, never by gta |
 
 - **Changes in Boot 4**:
   - `@MockBean` is removed in favour of `@MockitoBean`;
   - `@SpringBootTest` needs an explicit `@AutoConfigureMockMvc` or `@AutoConfigureTestRestTemplate`;
-  - test slices are split into separate modules per technology.
+  - test slices are split into separate modules per technology;
+  - `RestClient` uses the JDK HTTP client, which asks for HTTP/2 over plain HTTP: WireMock is built with
+    `http2PlainDisabled(true)`.
+- **Spring Cloud Function** (P4, `cloud-function`; Cloud Run functions through `spring-cloud-function-adapter-gcp`):
+  each `@Bean Function`/`Consumer`/`Supplier` is a flow, tested through the bean, the `FunctionCatalog` and the
+  `POST /<name>` endpoint of `spring-cloud-function-web`; a deployed function is never called.
 
 ### 7.2 Schedulers
 
@@ -1020,6 +1065,12 @@ No containers run locally and every dependency comes through the company Nexus p
 - The Pub/Sub emulator supports dead-lettering, filtering and ordered delivery; it **does not support** IAM, protobuf schemas or SMTs, and does not deliver to BigQuery subscriptions. Those cases are not covered by gta tests.
 - MQ (JMS) also needs: redelivery after a local transaction rolls back, the backout/DLQ queue after the redelivery limit, message selectors, persistent and non-persistent messages.
 - Schema compatibility checks; Microcks for AsyncAPI; verify the outbox.
+- **Spring Cloud Stream functions** (P4): a `@Bean Function`/`Consumer`/`Supplier` in a Cloud Stream service is a
+  messaging flow bound to `<name>-in-0`/`<name>-out-0`; the test binder's `InputDestination`/`OutputDestination`
+  replace Kafka, Rabbit or Pub/Sub in the JVM.
+- **Spring Integration** (P4, `integration`): each `@Bean IntegrationFlow` is a flow; the test sends to its input
+  channel and reads its output channel, with `@SpringIntegrationTest` holding inbound adapters back; one scenario per
+  filter, route and error path.
 
 ### 7.6 Workflows / orchestration
 
@@ -1038,7 +1089,7 @@ all: every run drops cloud credentials and the developer's Spring profile and co
 author's and reviewer's rules say tests run locally only. There is no list of hosts to maintain: an agent that sees
 `prod`, `sit` or `uat` in a URL or a profile file recognises it, and the environment isolation covers what it does not.
 External services are stubbed with WireMock, plus contract tests. Opt-in tests against SIT or UAT may come later
-(§15 P5). Their design is already decided:
+(§15 P7). Their design is already decided:
 - they run only in the team's deploy pipeline (`mvn verify -Dgroups=remote`); gtaw only checks locally that they
   compile and carry `@Tag("remote")`, never connects to SIT or UAT, and its local runs and gate exclude `remote`;
 - read-only by default; a write must be marked in the spec, use data with a fixed prefix (`gta-test-`) and clean up;
@@ -1063,12 +1114,47 @@ External services are stubbed with WireMock, plus contract tests. Opt-in tests a
 | data pipeline | unit + component | TestPipeline + PAssert + TestStream | expected data / differential |
 | asynchronous messages | component | EmbeddedKafka / Pub/Sub emulator / embedded Artemis + Awaitility | final state + DLQ + duplicate delivery |
 | orchestration | component + system | state-machine path tests | execution history + final state |
+| function (Cloud Run functions) | unit + component | the bean, `FunctionCatalog`, `POST /<name>` | the output value |
+| integration flow | component | input channel + `QueueChannel` + `@SpringIntegrationTest` | published messages + what filters drop |
+| resilience (cross-cutting) | component | WireMock faults + Resilience4j registries | breaker state + fallback result + attempts at the stub |
 | database migration | component | Flyway / Liquibase + the shared Oracle test database | N-1 compatibility + data preserved |
 | invariants | unit | `@ParameterizedTest` + inputs generated with Instancio + recorded seed | the invariant holds |
 | cross-service journeys | out of scope (SIT/UAT, by the team) | — | — |
 
 **jqwik is not a default**: since 1.10, jqwik attaches restrictive terms to use by coding agents (see the [release notes](https://jqwik.net/release-notes.html)). Where a repository already uses jqwik, pin a version before 1.10; gtaw only reads Surefire XML.
 
+
+### 7.10 Cucumber in services that already run it (P4)
+
+gta writes Cucumber scenarios only where the team already runs Cucumber; everywhere else it writes JUnit tests. The
+profile finds the team's suite (a test class with `@IncludeEngines("cucumber")` or `@Cucumber`), its features folder
+(`@SelectClasspathResource` or `@SelectPackages`) and its glue (`cucumber.glue`), all defaulting to the suite's package.
+
+- **What changes for an item**: a component-layer scenario becomes a `Scenario` in
+  `src/test/resources/<features>/<domain>/<flow name>.feature` with its step definitions in `<test class>Steps` (in the
+  glue). The item's test class is the team's suite, which gtaw runs with the scenario's tag; the suite, the
+  `@CucumberContextConfiguration` and other features are never the item's files. Seed tests, unit and slice tests stay
+  JUnit.
+- **Tags** (§9.5): the feature carries `@gta @<layer> @flow:<flowId>`, the scenario `@scenario:<id> @<intent>
+  @<priority>`; Cucumber passes them to the JUnit Platform, so `-Dgroups` selects scenarios as it selects methods.
+  gtaw's rule repair sets them before every run.
+- **Oracle** (§5.3): the Then steps of the tagged scenario are the assertions, and the values in them (quoted text,
+  numbers, constants, doc strings, table cells, an outline's examples) the tokens the expected-value check and the lock
+  read. The Background, the Given and When steps and every glue file are watched inputs. The step definitions must
+  assert their parameters; the reviewer checks that, as it checks Java assertions.
+- **Results**: gta-junit records every scenario that carries a `scenario:` tag, with its feature file; reports name a
+  scenario after itself, which is how gtaw matches the two.
+- **Pins** (§5.3 item 7): Cucumber cannot wrap a step, so a confirmed defect is pinned with the tags `@known-defect
+  @known-defect:<fingerprint>`. In a plain build (the team's `mvn verify`, the IDE) the glue's hook
+  `KnownDefects.abortPinnedOutsideGta` reports the scenario as aborted and the build stays green. gtaw sets
+  `-Dgta.run=true` on its own runs: the scenario runs, and it is a known defect only while it fails with the recorded
+  fingerprint; a pass or another failure fails the item. The seed item adds the hook (`<glue>.GtaCucumberHooks`); a pin
+  without it is refused. A plain build therefore does not notice a fixed defect: gtaw's runs, `gtaw verify` and the CI
+  gate's verify step do.
+- **Retiring** a scenario removes it from its feature file (the file goes when no scenario is left); the suite is never
+  touched.
+- Limits: English Gherkin keywords; one `@CucumberContextConfiguration` (the team's); Cucumber 7 on JUnit 5 (Boot 3.x),
+  Cucumber 8 on JUnit 6 (Boot 4).
 ---
 
 ## 8. Skills
@@ -1095,14 +1181,18 @@ External services are stubbed with WireMock, plus contract tests. Opt-in tests a
 | `gta-testing-spring-apis` | test-author | `slices.md`, `components.md`, `authz.md`, `grpc.md`, `graphql.md` |
 | `gta-stubbing-with-wiremock` | test-author | `fault-injection.md`, `external-services.md` |
 | `gta-testing-api-contracts` | test-author | `pact.md`, `spring-cloud-contract.md`, `oasdiff.md`, `schemathesis.md`, `specmatic.md` |
-| `gta-using-embedded-dependencies` | test-author | `oracle.md` (shared test database and H2 Oracle mode), `bigquery-fakes.md`, `pubsub-emulator.md`, `embedded-kafka.md`, `jms-artemis.md`, `in-memory-fakes.md`, `fidelity.md`, `windows.md` |
+| `gta-using-embedded-dependencies` | test-author | `oracle.md` (shared test database and H2 Oracle mode), `bigquery-fakes.md`, `pubsub-emulator.md`, `embedded-kafka.md`, `jms-artemis.md`, `in-memory-fakes.md`, `fidelity.md`, `windows.md`, `secret-manager.md` |
 | `gta-testing-scheduled-jobs` | test-author | `cron.md`, `shedlock.md`, `cloud-scheduler.md` |
 | `gta-testing-spring-batch-jobs` | test-author | `batch5-vs-batch6.md`, `restart.md` |
 | `gta-testing-beam-pipelines` | test-author | `test-stream.md`, `dataflow-runs.md` |
-| `gta-testing-event-flows` | test-author | `awaitility.md`, `pubsub-emulator-limits.md`, `kafka.md`, `jms.md`, `modulith-scenario.md` |
+| `gta-testing-event-flows` | test-author | `awaitility.md`, `pubsub-emulator-limits.md`, `kafka.md`, `jms.md`, `modulith-scenario.md`, `cloud-stream.md` |
 | `gta-testing-workflows` | test-author | `gcp-workflows.md`, `state-machines.md` |
 | `gta-testing-db-migrations` | test-author | `flyway.md`, `liquibase.md`, `oracle-ddl.md`, `n-minus-1.md` |
 | `gta-testing-streaming-endpoints` (P4) | test-author | `sse.md` |
+| `gta-testing-cloud-functions` (P4) | test-author | `function-definition.md` |
+| `gta-testing-integration-flows` (P4) | test-author | `outputs.md` |
+| `gta-testing-resilience` (P4) | test-author | `breaker-states.md` |
+| `gta-writing-cucumber-scenarios` (P4) | test-author | `state.md` |
 | `gta-reviewing-test-quality` | reviewer | `oracle-review.md`, `triage.md`, `catching-assessment.md`, `mutation.md` |
 
 ---
@@ -1183,6 +1273,8 @@ External services are stubbed with WireMock, plus contract tests. Opt-in tests a
 |---|---|---|---|
 | a controller, listener, job, gRPC service, Temporal workflow… method | the class name without its role suffix (`Controller`, `Listener`, `Consumer`, `Job`, `Scheduler`, `Task`, `Handler`, `Endpoint`, `Resource`, `Api`, `GrpcService`, `Workflow`, …), in kebab case | the method, in kebab case | `BorrowController#book` → `borrow.book`; `InventoryListener#onPositionUpdate` → `inventory.on-position-update`; `FeeAccrualJob#accrueDaily` → `fee-accrual.accrue-daily` |
 | a Spring Statemachine configuration / a Beam composite transform | the class | `transitions` / `transform` | `LoanStateMachineConfig` → `loan-state-machine.transitions` |
+| a `@Bean Function`/`Consumer`/`Supplier` (Cloud Stream or Spring Cloud Function) | the class (`Functions` dropped) | the bean | `RecallFunctions#recall` → `recall.recall` |
+| a `@Bean IntegrationFlow` | the class (`IntegrationConfig` dropped) | the bean without `Flow`; `flow` when that is the domain | `FeeAccrualIntegrationConfig#feeAccrualFlow` → `fee-accrual.flow` |
 | a Flyway or Liquibase script | `db` | the script's description | `V12__add_haircut.sql` → `db.add-haircut` |
 | a BPMN file | `process` | the file name | `settlement.bpmn` → `process.settlement` |
 
@@ -1201,7 +1293,7 @@ from the agent: gtaw's rule repair adds or corrects them before a run.
 | `flow:<flowId>`, `scenario:<scenarioId>` | method | the spec | gtaw runs one scenario; traceability |
 | the intent: exactly one of `characterization`, `hardening`, `reproducing`, `catching` | method | the scenario's source and `hint.intent` | `-Dgroups=hardening` runs the tests of confirmed behaviour |
 | the priority: `p0`, `p1`, `p2` | method | the scenario's `priority` (P1 when absent) | `mvn verify -Dgroups=p0` runs the must-pass set when packaging or deploying, without gta |
-| `known-defect` | method, automatic | `@KnownDefect` carries it (meta-annotation) | after a fix, `-Dgroups=known-defect` shows which pins to remove |
+| `known-defect` | method, automatic | `@KnownDefect` carries it (meta-annotation); a Cucumber pin's tags (§7.10) | after a fix, `-Dgroups=known-defect` shows which pins to remove |
 
 - One expression syntax everywhere, JUnit tag expressions: `gtaw run --tags "p0 & component"` replaces `--layer`
   (kept as an alias), and `gtaw impact` prints its regression scope as a ready `-Dgroups` expression (`groups`).
@@ -1209,7 +1301,7 @@ from the agent: gtaw's rule repair adds or corrects them before a run.
   their next run, and `impact` names scenarios, so its expression also selects them.
 - Not tags, on purpose: the capability (the flow's spec has it), fidelity and duration (the report has them, and a
   duration tag would churn), owners (CODEOWNERS), and anything that skips or quarantines a test (§5.3).
-- Reserved: `remote`, for opt-in SIT/UAT tests (§15 P5).
+- Reserved: `remote`, for opt-in SIT/UAT tests (§15 P7).
 
 ## 10. File contracts and schemas
 
@@ -1248,6 +1340,9 @@ from the agent: gtaw's rule repair adds or corrects them before a run.
   "scenarioRevision": "3f9c…"
 }
 ```
+
+A Cucumber item (§7.10) also has `feature` (its feature file) and `steps` (its step definitions class); its `testClass`
+is the team's Cucumber suite, which is never in `ownsFiles`.
 
 ### 10.3 State and enums
 
@@ -1610,10 +1705,18 @@ When an agent writes to these paths, the change check of §5.8 restores them. Ap
 | **P1 adoption: multi-module, events, schedules, PR mode** | multi-module Maven services (one module at a time, Maven with `-pl <module> -am`; implemented); `messaging` (Kafka, Pub/Sub, JMS/MQ, RabbitMQ, SQS; implemented); `scheduler` (`@Scheduled`, ShedLock, Quartz; implemented); PR mode: impact (methods, config, bean graph; implemented), the alm-github CI template `gta-gate.yml` (`gtaw init --ci`; implemented), `gtaw next --mode pr` (affected flows go stale and are worked through in one session, the PR description is documented intent; implemented), PR comments, analyzing-change-impact; OpenCode end to end | one pilot service per new capability, and one multi-module service, run end to end; behaviour change summaries on real PRs, the gate live (mutation advisory) |
 | **P2 data, security and quality** | `db-migration` (Flyway, Liquibase; implemented); `security` (Spring Security, OAuth2 resource servers, JWT: authenticated and forbidden paths, method security; implemented); `caching` (Spring Cache, Redis, Caffeine: hits, eviction, stale reads; implemented); `spring-batch` (implemented); `mutate` and the can-fail check (shared PIT integration; both implemented); learning loop (implemented); rules-before-LLM repair; `spec.source=openspec\|speckit` (implemented) | one pilot service per new capability; mutation switched to enforced after calibration on pilot repositories |
 | **P3 reactive, Gradle, other protocols, catching** | `webflux` (reactive endpoints and clients with `WebTestClient` and `StepVerifier`); Gradle builds (a second `TestRunner` and build-file reader next to Maven); `grpc-api` and `graphql-api`; `workflow` (Temporal, Camunda, Spring Statemachine); `beam-pipeline`; incident mode (`gtaw next --mode incident --target <flowId> --intent "<report>"`: the report is kept as `<flow>.incidents.md` next to the spec and cited by a `hint.intent=reproducing` scenario; implemented); catching tests and the assessor (`hint.intent=catching` scenarios in PR mode; a failing one is run on the PR's base, so `product-defect` is refused when it fails there too, then the reviewer assesses it and a human confirms; the report counts catching hits; implemented) | one pilot service per kind |
-| **P4 usability, production safety, streaming endpoints** | in this order:<br>- usability (§5.10, §9.5): the status block and `output.language` (`en`, `zh-CN`); questions with a recommended answer and `OK` replies; `--question` for authors; `/gta note`; service mode, which covers a whole service and does not stop on a waiting flow; the tag vocabulary;<br>- production safety: Spring profile and configuration removed from every run, and the author and reviewer rules (implemented);<br>- `websocket` (WebSocket, STOMP, SSE): local tests with `gta-testing-streaming-endpoints`.<br>Tests against deployed environments (`gtaw env`, Karate, Cloud Run/GKE/Dataflow runs, BigQuery temporary datasets) are out of scope: teams test SIT and UAT themselves (§7.7) | a developer new to gta covers one pilot service through `/gta` alone; measured: replies per flow, the share answered with `OK`, time to the first verified test |
-| **P5** | deferred until a team needs them: opt-in SIT/UAT tests (`@Tag("remote")`, `safety.remoteHosts`, off by default; production never), MCP wrapping, SARIF, performance tests, parallel authoring, adapters for other languages.<br>Not planned (decided in v11): hooks (early interception, a `verified` answer channel), plugin distribution, record-replay, native-image | on demand |
+| **P4 usability, production safety, streaming endpoints** | in this order:<br>- usability (§5.10, §9.5): the status block and `output.language` (`en`, `zh-CN`); questions with a recommended answer and `OK` replies; `--question` for authors; `/gta note`; service mode, which covers a whole service and does not stop on a waiting flow; the tag vocabulary;<br>- production safety: Spring profile and configuration removed from every run, and the author and reviewer rules (implemented);<br>- `websocket` (WebSocket, STOMP, SSE): local tests with `gta-testing-streaming-endpoints`;<br>- added in v13: Spring Cloud Function (Cloud Run functions), Spring Cloud Stream functions, Spring Integration flows, Resilience4j and Spring Retry, Secret Manager, and Cucumber in services that already run it (§7.10).<br>Tests against deployed environments (`gtaw env`, Karate, Cloud Run/GKE/Dataflow runs, BigQuery temporary datasets) are out of scope: teams test SIT and UAT themselves (§7.7) | a developer new to gta covers one pilot service through `/gta` alone; measured: replies per flow, the share answered with `OK`, time to the first verified test |
+| **P5** (next, on demand) | the closest to what gta covers, in this order: SOAP endpoints and clients (Spring WS, JAX-WS) for custody and settlement links; PostgreSQL and MySQL (Cloud SQL) as the database, embedded without containers; Cloud Tasks and Eventarc (CloudEvents) handlers; Spring Cloud Config and other external configuration; `CommandLineRunner` and one-off jobs; Actuator health and readiness | one pilot service per capability |
+| **P6** (on demand) | other data stores and edges: Firestore/Datastore and Bigtable (their emulators), Spanner (its emulator), MongoDB, Redis as the primary store (Memorystore), R2DBC, Elasticsearch, Cassandra, Neo4j, LDAP; Spring Cloud Gateway routes; JAX-RS resources; tests written in Kotlin for Kotlin services; metrics and traces (Micrometer, OpenTelemetry) as expected values | one pilot service per capability |
+| **P7** (on demand) | beyond functional tests in the IDE: opt-in SIT/UAT tests (`@Tag("remote")`, `safety.remoteHosts`, off by default; production never), performance tests, SARIF, MCP wrapping, parallel authoring, adapters for other languages | on demand |
+| **Not supported** | not a Spring or Java service, or not testable on a developer machine: Dataproc/Spark and Composer/Airflow jobs, Quarkus and Micronaut services.<br>Not planned (decided in v11): hooks (early interception, a `verified` answer channel), plugin distribution, record-replay, native-image | — |
 
 ### Capability order
+
+The future phases (P5 to P7) are ordered by how likely a Spring service on GCP in financial services needs them and how
+much of gta's machinery they reuse: P5 adds entry points and dependencies next to the ones gta already tests, P6 data
+stores that need their own emulator or embedded server, P7 work outside local functional tests. Each starts when a team
+asks for it, with its skill, registry entry, eval fixture and a pilot service.
 
 Every mainstream Spring service type is in scope. The phases follow how common each type is in Spring services, with
 one exception: multi-module support comes first, because it decides whether gta can be installed in a repository at
@@ -1665,6 +1768,15 @@ registry entry, an eval fixture and one pilot service.
 | 17 | Beam / Dataflow pipelines | P3 | tests written; each composite `PTransform` is a flow, run on the DirectRunner with `TestPipeline` and `PAssert` |
 | 18 | System tests on deployed environments (Karate, Kubernetes) | — | out of scope: teams test SIT and UAT themselves (§7.7) |
 | 19 | WebSocket, STOMP, SSE | P4 | tests written; STOMP handlers, `WebSocketHandler`s and event streams (`SseEmitter`, `ServerSentEvent`, `text/event-stream`) are flows |
+| 20 | Spring Cloud Function, Cloud Run functions | P4 | tests written; each function bean is a `cloud-function` flow (`gta-testing-cloud-functions`) |
+| 21 | Spring Cloud Stream functions | P4 | tests written; each function bean of a Cloud Stream service is a `messaging` flow, run on the test binder |
+| 22 | Spring Integration | P4 | tests written; each `@Bean IntegrationFlow` is an `integration` flow (`gta-testing-integration-flows`) |
+| 23 | Resilience4j, Spring Retry | P4 | tests written; the skill attaches to the flows of a service that uses them (`gta-testing-resilience`) |
+| 24 | Secret Manager | P4 | a dependency faked in the bootstrap registry; tests never read a real secret |
+| 25 | Cucumber | P4 | in a service with a Cucumber suite, component scenarios are feature files with Then steps locked (§7.10) |
+| 26 | SOAP, Cloud SQL (PostgreSQL, MySQL), Cloud Tasks, Eventarc, Spring Cloud Config, `CommandLineRunner`, Actuator | P5 | not yet: explain only when a flow needs them |
+| 27 | Firestore, Datastore, Bigtable, Spanner, MongoDB, Redis as a store, R2DBC, Elasticsearch, Cassandra, Neo4j, LDAP, Spring Cloud Gateway, JAX-RS, Kotlin tests, metrics and traces | P6 | not yet |
+| 28 | Dataproc/Spark, Composer/Airflow, Quarkus, Micronaut | — | not supported |
 
 Java: designed for services on Java 17 or newer, and a few on Java 8 or 11 are supported too. Tests are written at the
 service's own language level, with `javax.*` imports for Spring Boot 2.2 to 2.7. `gta-junit` is Java 8 bytecode, so an old
@@ -1725,4 +1837,5 @@ the matrix. `gtaw doctor` warns for Java 8 to 16 and fails anything older.
 | v9.1 | P0 implemented, two code reviews applied (see [round-2-remediation.md](../reviews/round-2-remediation.md)):<br>- exact approvals only, change requests, approval refused after edits;<br>- commit ledger instead of trailers, fail-closed shards and state, bounded spec loop, review tokens, counted timeouts;<br>- English documentation with Chinese copies of README and this design; diagrams rendered by `scripts/diagrams/render.py` in the style of diagram-design |
 | v10 | P0 to P3 implemented. P4 rescoped:<br>- tests against deployed environments are out of scope: teams test SIT and UAT themselves, gta never touches them and production above all (Spring profile isolation, the agents' rules);<br>- usability for newcomers: one status block for people in `en` or `zh-CN`, questions with a recommended answer and `OK` replies, `/gta note`, service mode, one tag vocabulary (§5.10, §9.5) |
 | v11 | P4 implemented and current. P5 trimmed: hooks, plugin distribution, record-replay and native-image are dropped; the rest stays deferred until a team needs it |
+| v13 | new P4 capabilities: Spring Cloud Function (Cloud Run functions), Spring Cloud Stream functions, Spring Integration flows, Resilience4j and Spring Retry, Secret Manager (§7.0, §7.1, §7.5); Cucumber in services that already run it, with Then steps locked and pins as tags (§7.10); the future phases P5 to P7 ordered and a not-supported list (§15); eval fixture `lending-service` |
 | v12 | newcomer naming: `/gta` subcommands in three tiers, `spec` as the name of explain mode, flows named by list number, class, file, endpoint or topic with ambiguity asked instead of guessed, repeated domain words dropped from derived flow names (§6, §9.4); the running example is a securities-lending service (`borrow.book`) |

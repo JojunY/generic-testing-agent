@@ -4,6 +4,18 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 
 ## [Unreleased]
 
+### Added
+- New capabilities, on by default (plan §7, §15 P4):
+  - `cloud-function`: Spring Cloud Function beans, including functions deployed as Cloud Run functions, tested through the bean, the `FunctionCatalog` and the HTTP endpoint (`gta-testing-cloud-functions`);
+  - Spring Cloud Stream functions: in a Cloud Stream service each `@Bean Function`/`Consumer`/`Supplier` is a `messaging` flow, tested on the test binder (`gta-testing-event-flows`, `references/cloud-stream.md`);
+  - `integration`: each `@Bean IntegrationFlow` is a flow (`gta-testing-integration-flows`);
+  - `resilience`: Resilience4j and Spring Retry add `gta-testing-resilience` to the service's flows;
+  - `secret-manager`: tests resolve `sm@` secrets through a fake client in the bootstrap registry, never GCP (`gta-using-embedded-dependencies`, `references/secret-manager.md`).
+- Cucumber in services that already run it (plan §7.10): component scenarios are written as feature files with step definitions; the Then steps are the oracle the expected-value check and the lock read; tags come from the plan; a confirmed defect is pinned with `@known-defect @known-defect:<fingerprint>`, which gta-junit's `KnownDefects` hook keeps green in a plain build while gtaw checks the fingerprint (`-Dgta.run=true`); `gta-writing-cucumber-scenarios`.
+- gta-junit records Cucumber scenarios that carry a `scenario:` tag, with their feature file.
+- Eval fixture `evals/fixtures/lending-service` and `evals/e2e/run-lending.sh` (seeded defects D19 to D21), in CI.
+- Future phases P5 to P7 in a stated order, and a list of what gta does not support (plan §15).
+
 ### Changed
 - Easier for newcomers (plan §6, §9.4):
   - the `/gta` subcommands are shown in three tiers: `/gta` and `OK` to start, `<flow>`, `status` and `note` every day, `spec`, `pr` and `incident` when needed; `/gta service` stays accepted and is the same as `/gta`;
@@ -13,6 +25,8 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- Retiring a scenario no longer deletes a test class that has no method of that scenario.
+- The scripted e2e adds gta-junit to the project's dependencies, not to its `<dependencyManagement>`.
 - Review round 4:
   - a negative expected value (`isEqualTo(-1)`) is one token, so it satisfies a THEN of `-1` and no longer a THEN of `1`;
   - lint refuses a requirement, scenario or invariant id used twice (plan items and the gate key on it);

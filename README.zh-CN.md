@@ -59,7 +59,7 @@ cd <service> && ./gtaw doctor       # Windows: .\gtaw.cmd doctor
 ## 当前支持（P0）
 
 - **环境：** Maven 和 Gradle 服务，Spring Boot 4.1 和 3.5（也支持 2.2 到 2.7），Java 17+（少数 Java 8 或 11 的服务也支持），Windows、macOS、Linux。gtaw 本身需要 JDK 17+。
-- **会写测试的能力：** REST API（含安全规则和缓存）、消息监听（Kafka、Pub/Sub、JMS/MQ、RabbitMQ、SQS）、定时任务（`@Scheduled`、Quartz）、Spring Batch 作业、Flyway/Liquibase 数据库迁移、WebFlux 端点、gRPC 服务、GraphQL handler、工作流（Temporal、Spring Statemachine、BPMN）和 Beam 转换。WebSocket、STOMP 和 SSE 端点（P4）。gta 只在本地运行测试：从不测试部署环境（SIT、UAT、生产环境），每次运行都会去掉你 shell 里的 Spring profile 和云凭证，agent 的规则也要求测试只用本地依赖（见设计文档 §7.7、§13）。
+- **会写测试的能力：** REST API（含安全规则和缓存）、消息监听（Kafka、Pub/Sub、JMS/MQ、RabbitMQ、SQS）、定时任务（`@Scheduled`、Quartz）、Spring Batch 作业、Flyway/Liquibase 数据库迁移、WebFlux 端点、gRPC 服务、GraphQL handler、工作流（Temporal、Spring Statemachine、BPMN）和 Beam 转换。WebSocket、STOMP 和 SSE 端点，Spring Cloud Function（包括 Cloud Run functions）、Spring Cloud Stream 函数、Spring Integration flow，并覆盖 Resilience4j 和 Spring Retry 的行为、用假客户端替代 Secret Manager（P4）。服务本来就在用 Cucumber 时，场景写成 feature 文件（设计文档 §7.10）。gta 只在本地运行测试：从不测试部署环境（SIT、UAT、生产环境），每次运行都会去掉你 shell 里的 Spring profile 和云凭证，agent 的规则也要求测试只用本地依赖（见设计文档 §7.7、§13）。
 - **不需要容器：**
   - Oracle 使用共享测试 schema，或 Oracle 模式的 H2；
   - BigQuery 和 GCS 使用替身；

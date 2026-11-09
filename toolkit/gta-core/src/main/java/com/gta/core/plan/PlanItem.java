@@ -17,6 +17,13 @@ public class PlanItem {
     public List<String> skills = new ArrayList<>();
     public Oracle oracle = new Oracle();
     public String testClass;
+    /**
+     * A Cucumber scenario's feature file (module-relative) and its step definitions class; null for a JUnit test. The
+     * test class is then the service's Cucumber suite, which runs the scenario (plan §7.10).
+     */
+    public String feature;
+
+    public String steps;
     public List<String> ownsFiles = new ArrayList<>();
     public List<String> dependsOn = new ArrayList<>();
     public String priority;

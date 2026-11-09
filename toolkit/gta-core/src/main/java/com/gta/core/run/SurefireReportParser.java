@@ -67,6 +67,13 @@ public final class SurefireReportParser {
                     c.method = n.path("method").asText(c.method);
                 }
             }
+            if (n == null) {
+                // a Cucumber scenario: reports name it after the scenario, under the suite's simple name or the feature
+                n = tagged.get(FEATURE_KEY + c.method);
+                if (n != null) {
+                    c.className = n.path("className").asText(c.className);
+                }
+            }
             if (n != null) {
                 n.path("tags").forEach(t -> c.tags.add(t.asText()));
                 c.displayName = n.path("displayName").asText(null);
@@ -74,6 +81,18 @@ public final class SurefireReportParser {
                 boolean failedInReport = "failed".equals(c.outcome) || "error".equals(c.outcome);
                 if ("known-defect".equals(n.path("outcome").asText()) && !failedInReport) {
                     c.outcome = "known-defect";
+                }
+                if (n.path("pinned").asBoolean(false)) {
+                    // a pinned scenario gta-junit ran and judged against its fingerprint (KnownDefects): its verdict
+                    // wins, a pass included (a fixed defect fails the item until the pin is removed)
+                    String verdict = n.path("outcome").asText();
+                    if (verdict.equals("known-defect") || verdict.equals("failed")) {
+                        c.outcome = verdict;
+                        c.message = n.path("message").asText(c.message);
+                        if (verdict.equals("failed") && c.failureType == null) {
+                            c.failureType = "java.lang.AssertionError";
+                        }
+                    }
                 }
             }
         }
@@ -153,6 +172,9 @@ public final class SurefireReportParser {
         return null;
     }
 
+    /** Key of a Cucumber scenario's result: its name, as the reports print it. */
+    static final String FEATURE_KEY = "feature|";
+
     static Map<String, JsonNode> readGtaResults(Path dir) {
         Map<String, JsonNode> out = new HashMap<>();
         if (dir == null || !Files.isDirectory(dir)) {
@@ -170,6 +192,9 @@ public final class SurefireReportParser {
                                 n.path("className").asText() + "#"
                                         + n.path("method").asText(),
                                 n);
+                        if (n.hasNonNull("feature")) {
+                            out.put(FEATURE_KEY + methodName(n.path("method").asText()), n);
+                        }
                         if (n.hasNonNull("displayName")) {
                             out.putIfAbsent(
                                     n.path("className").asText() + "|"

@@ -34,6 +34,23 @@ A reactive Spring Boot 4.1 catalog: a WebFlux endpoint, a GraphQL query, a gRPC 
 
 `e2e/run-catalog.sh` takes the five flows from spec to a pinned defect with no `phase` setting: their capabilities are on since P3.
 
+## Fixture: `fixtures/lending-service`
+
+A Spring Boot 4.1 securities-lending service that already runs Cucumber (`RunCucumberTest`,
+`CucumberSpringConfiguration`): a REST booking behind a Resilience4j circuit breaker, a Spring Cloud Stream recall
+function on the Pub/Sub binder, a Spring Integration fee-accrual flow, and an API key from Secret Manager. Each flow has
+a seeded defect that `docs/business-rules.md` contradicts.
+
+| Id | Where | Defect |
+|---|---|---|
+| D19 | `InventoryClient#inventoryDown` (rest-api, resilience) | the fallback fails open: an unreachable inventory books the borrow |
+| D20 | `RecallFunctions#recall` (messaging, Cloud Stream) | a recall larger than the borrow returns more shares than were borrowed |
+| D21 | `FeeAccrualIntegrationConfig#fee` (integration) | the daily fee divides by 365, not 360 |
+
+`e2e/run-lending.sh` checks the profile (capabilities, flows, the Cucumber suite), writes a seed test with a fake Secret
+Manager and the test binder, takes each flow from spec to a pinned defect as a feature file and its steps, and checks
+that a plain `mvn test` stays green with the three pinned scenarios reported as aborted.
+
 ## Fixture: `fixtures/invoice-service`
 
 A Spring Boot 4.1 MVC service built with Gradle (Kotlin DSL, no pom.xml), with one seeded defect that

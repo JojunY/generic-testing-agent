@@ -122,6 +122,8 @@ public class MavenRunner implements TestRunner {
                 "-Dsurefire.failIfNoSpecifiedTests=false",
                 "-DfailIfNoTests=false",
                 "-Djacoco.skip=true",
+                // a gtaw run: pinned Cucumber scenarios run and are checked against their fingerprint (gta-junit)
+                "-Dgta.run=true",
                 "-Dgta.results.dir=" + gtaResults));
         cmd.addAll(moduleArgs(paths.module()));
         if (options.testClass() != null) {

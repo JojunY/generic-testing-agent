@@ -196,7 +196,17 @@ public final class BriefWriter {
                 .append("` · Priority: `")
                 .append(item.priority)
                 .append("`\n");
-        b.append("- Test class: `").append(item.testClass).append("`\n\n");
+        if (item.feature != null) {
+            b.append("- Feature: `")
+                    .append(item.feature)
+                    .append("` · Steps: `")
+                    .append(item.steps)
+                    .append("` · Run by the Cucumber suite `")
+                    .append(item.testClass)
+                    .append("`\n\n");
+        } else {
+            b.append("- Test class: `").append(item.testClass).append("`\n\n");
+        }
 
         if (item.isFoundation()) {
             b.append("## Goal\n\nWrite the seed test `")
@@ -208,6 +218,15 @@ public final class BriefWriter {
                             "You may add test-scope dependencies to the build file (`pom.xml`, or `build.gradle(.kts)` for Gradle; versions managed by Spring Boot stay unversioned), ")
                     .append(
                             "shared test support classes and test resources. Make sure `com.gta:gta-junit` is a test dependency.\n\n");
+            if (profile.cucumber != null) {
+                b.append("The service runs Cucumber scenarios (suite `")
+                        .append(profile.cucumber.suite)
+                        .append(
+                                "`). Make sure its glue has the hook that keeps pinned scenarios green in a plain build, in `")
+                        .append(com.gta.core.plan.Planner.cucumberHooks(profile.cucumber))
+                        .append("`:\n\n```java\n@Before(order = 0)\npublic void knownDefects(Scenario scenario) {\n")
+                        .append("    KnownDefects.abortPinnedOutsideGta(scenario.getSourceTagNames());\n}\n```\n\n");
+            }
         } else {
             Spec.Scenario s = spec.scenario(item.ref).orElse(null);
             if ("known-defect".equals(state.intentOverride)) {
@@ -239,11 +258,21 @@ public final class BriefWriter {
                 clauses(b, "THEN", s.thens);
                 b.append('\n');
             }
-            b.append(
-                            "## Oracle (locked)\n\nEvery value below must appear in an assertion of a test method tagged `scenario:")
-                    .append(item.ref)
-                    .append("`. Once the test has reached the code under test, these assertions are locked: ")
-                    .append("you may add assertions, never change or remove these.\n\n");
+            if (item.feature != null) {
+                b.append(
+                                "## Oracle (locked)\n\nEvery value below must appear in a Then step of the scenario tagged `@scenario:")
+                        .append(item.ref)
+                        .append(
+                                "`, and its step definition must assert it. Once the scenario has reached the code under ")
+                        .append(
+                                "test, these Then steps are locked: you may add Then steps, never change or remove these.\n\n");
+            } else {
+                b.append(
+                                "## Oracle (locked)\n\nEvery value below must appear in an assertion of a test method tagged `scenario:")
+                        .append(item.ref)
+                        .append("`. Once the test has reached the code under test, these assertions are locked: ")
+                        .append("you may add assertions, never change or remove these.\n\n");
+            }
             if (item.oracle.reviewerChecked) {
                 b.append("- (checked by the reviewer — no literal values)\n");
             }
@@ -255,7 +284,24 @@ public final class BriefWriter {
         b.append(
                 "\nAnything else is reverted by `gtaw submit` (production code under `src/main` is never changed).\n\n");
         b.append("## Conventions\n\n");
-        if (!item.isFoundation()) {
+        if (item.feature != null) {
+            b.append("- `Scenario: [")
+                    .append(item.ref)
+                    .append("] …` tagged `@scenario:")
+                    .append(item.ref)
+                    .append(" @")
+                    .append(item.intent)
+                    .append(" @")
+                    .append(item.priority)
+                    .append("`; the feature (or the scenario) carries `@gta @")
+                    .append(item.layer)
+                    .append(" @flow:")
+                    .append(item.flowId)
+                    .append("` (gtaw corrects these tags before each run)\n");
+            b.append("- Step definitions go in `")
+                    .append(item.steps)
+                    .append("`; reuse the glue's existing steps (Cucumber refuses two definitions of one step)\n");
+        } else if (!item.isFoundation()) {
             b.append("- Method `should<Outcome>When<Condition>()` with `@DisplayName(\"[")
                     .append(item.ref)
                     .append("] …\")`\n");
@@ -290,7 +336,21 @@ public final class BriefWriter {
                     + " describes. Do not change production code, and do not add `@KnownDefect`: gtaw checks the failure"
                     + " and a human confirms the defect first.\n\n");
         }
-        if ("known-defect".equals(state.intentOverride)) {
+        if ("known-defect".equals(state.intentOverride) && item.feature != null) {
+            String fp = state.lastError == null || state.lastError.defectFingerprint == null
+                    ? ""
+                    : state.lastError.defectFingerprint;
+            b.append(
+                            "## Confirmed defect\n\nA human confirmed this failure is a product defect. Add the tags `@known-defect @known-defect:")
+                    .append(fp)
+                    .append("` to the scenario and submit (`failure = \"")
+                    .append(fp)
+                    .append(
+                            "\"`). Do not change its steps. A plain build then reports it as aborted through the glue's hook ")
+                    .append(
+                            "(`KnownDefects.abortPinnedOutsideGta`, see the seed test); gtaw keeps running it and checks it ")
+                    .append("still fails as recorded.\n\n");
+        } else if ("known-defect".equals(state.intentOverride)) {
             b.append(
                             "## Confirmed defect\n\nA human confirmed this failure is a product defect. Annotate the test method with ")
                     .append("`@KnownDefect(id = \"")
@@ -313,7 +373,7 @@ public final class BriefWriter {
         slice.forEach(ref ->
                 b.append("- `").append(ref).append("`").append(fileHint(ref)).append('\n'));
         b.append('\n');
-        List<String> siblings = siblingTests(item.testClass);
+        List<String> siblings = siblingTests(item.steps != null ? item.steps : item.testClass);
         if (!siblings.isEmpty()) {
             b.append("## Sibling tests (follow their style)\n\n");
             siblings.forEach(s -> b.append("- `").append(s).append("`\n"));

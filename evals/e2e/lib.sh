@@ -26,7 +26,8 @@ dep = """    <dependency>
       <scope>test</scope>
     </dependency>
   </dependencies>""" % version
-open(path, "w").write(s.replace("  </dependencies>", dep, 1))
+# the project's own dependencies: a line of exactly two spaces, never the ones of <dependencyManagement>
+open(path, "w").write(s.replace("\n  </dependencies>", "\n" + dep, 1))
 PY
 }
 

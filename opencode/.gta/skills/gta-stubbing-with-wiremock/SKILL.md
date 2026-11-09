@@ -37,6 +37,9 @@ void shouldRespond503WhenInventoryTimesOut() {
 - Stubs and fixtures are test inputs: changing them after an assertion failure is routed to the reviewer.
 - Never point tests at a real downstream; for third-party systems see `references/external-services.md`.
 - Dependency: `org.wiremock:wiremock-standalone` (test scope) through Nexus.
+- On Spring Boot 4 the `RestClient` uses the JDK HTTP client, which asks for HTTP/2 over plain HTTP; WireMock 3 cancels
+  that stream ("Received RST_STREAM") and the request never reaches the stub. Build the server with
+  `wireMockConfig().dynamicPort().http2PlainDisabled(true)`.
 
 ## References
 

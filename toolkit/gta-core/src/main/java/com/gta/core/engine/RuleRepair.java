@@ -1,5 +1,6 @@
 package com.gta.core.engine;
 
+import com.gta.core.oracle.FeatureScanner;
 import com.gta.core.plan.PlanItem;
 import com.gta.core.util.AtomicFiles;
 import java.io.IOException;
@@ -202,5 +203,86 @@ final class RuleRepair {
         done.add("set the tags of [" + item.ref + "] to " + item.intent + " and " + item.priority
                 + (present.isEmpty() ? "" : " (was " + String.join(" ", present) + ")"));
         return String.join("\n", out);
+    }
+
+    private static final Set<String> MANAGED_FEATURE_TAGS =
+            Set.of("characterization", "hardening", "reproducing", "catching", "p0", "p1", "p2", "p3");
+
+    /**
+     * The Cucumber version of {@link #normalizeTags} and {@link #addMissingScenarioTag} (plan §7.10, §9.5): the scenario
+     * tagged {@code @scenario:<id>}, or named {@code [<id>] ...} without the tag, carries the scenario, intent and
+     * priority tags of the plan and, unless its feature has them, {@code @gta}, the layer and the flow. Other tags (a
+     * pin's {@code @known-defect}) stay; steps are never touched.
+     */
+    static List<String> normalizeFeatureTags(Path feature, PlanItem item) {
+        if (item.isFoundation() || item.intent == null || item.priority == null || !Files.exists(feature)) {
+            return List.of();
+        }
+        try {
+            String text = Files.readString(feature, StandardCharsets.UTF_8);
+            List<String> done = new ArrayList<>();
+            String fixed = normalizeFeatureTags(text, item, done);
+            if (!done.isEmpty()) {
+                AtomicFiles.write(feature, fixed);
+            }
+            return done;
+        } catch (IOException e) {
+            return List.of();
+        }
+    }
+
+    static String normalizeFeatureTags(String text, PlanItem item, List<String> done) {
+        String scenarioTag = "scenario:" + item.ref;
+        FeatureScanner.Scenario target = null;
+        for (FeatureScanner.Scenario s : FeatureScanner.parse(text).scenarios()) {
+            if (s.tags().contains(scenarioTag)) {
+                target = s;
+                break;
+            }
+            if (target == null && s.name().startsWith("[" + item.ref + "]")) {
+                target = s;
+            }
+        }
+        if (target == null) {
+            return text;
+        }
+        List<String> lines = new ArrayList<>(List.of(text.split("\n", -1)));
+        int keyword = target.firstLine();
+        while (keyword < lines.size()
+                && FeatureScanner.keyword(lines.get(keyword).strip()) == null) {
+            keyword++;
+        }
+        Set<String> wanted = new LinkedHashSet<>();
+        for (String t : List.of("gta", item.layer, "flow:" + item.flowId)) {
+            if (!target.inherited().contains(t)) {
+                wanted.add(t);
+            }
+        }
+        wanted.add(scenarioTag);
+        wanted.add(item.intent);
+        wanted.add(item.priority);
+        for (String t : target.tags()) {
+            boolean managed = MANAGED_FEATURE_TAGS.contains(t)
+                    || t.startsWith("scenario:")
+                    || t.startsWith("flow:")
+                    || t.equals("gta")
+                    || t.equals(item.layer);
+            if (!managed) {
+                wanted.add(t);
+            }
+        }
+        if (Set.copyOf(target.tags()).equals(wanted)) {
+            return text;
+        }
+        String line = lines.get(keyword);
+        String indent = line.substring(0, line.length() - line.stripLeading().length());
+        StringBuilder tags = new StringBuilder(indent);
+        wanted.forEach(
+                t -> tags.append(tags.length() > indent.length() ? " @" : "@").append(t));
+        lines.subList(target.firstLine(), keyword).clear();
+        lines.add(target.firstLine(), tags.toString());
+        done.add((target.tags().contains(scenarioTag) ? "set the tags of [" : "added @" + scenarioTag + " to [")
+                + item.ref + "] to " + tags.toString().strip());
+        return String.join("\n", lines);
     }
 }

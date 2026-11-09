@@ -481,4 +481,149 @@ class ProfilerTest {
         assertEquals("method:com.acme.order.report.LowStockTransform#expand", transform.ref);
         assertTrue(flows.keySet().stream().noneMatch(f -> f.endsWith(".low")), "helpers are not flows");
     }
+
+    private void dependency(String artifactId) throws Exception {
+        Files.writeString(
+                root.resolve("pom.xml"),
+                Files.readString(root.resolve("pom.xml"))
+                        .replace(
+                                "</dependencies>",
+                                "<dependency><artifactId>" + artifactId + "</artifactId></dependency></dependencies>"));
+    }
+
+    private void functionBeans() throws Exception {
+        source("com/acme/order/stream/RecallFunctions.java", """
+                package com.acme.order.stream;
+                @Configuration
+                public class RecallFunctions {
+                    @Bean
+                    public Function<RecallNotice, ReturnInstruction> recall() { return null; }
+                    @Bean
+                    public Consumer<BorrowBooked> audit() { return null; }
+                    @Bean
+                    public Supplier<Heartbeat> heartbeat() { return null; }
+                    @Bean
+                    public Clock clock() { return null; }
+                }
+                """);
+    }
+
+    @Test
+    void shouldTurnFunctionBeansIntoFlowsOnlyInAServiceThatBindsThem() throws Exception {
+        functionBeans();
+
+        Map<String, ServiceProfile.EntryPoint> plain =
+                byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"));
+        assertTrue(
+                plain.values().stream().noneMatch(e -> "function".equals(e.kind)),
+                "a @Bean Function is a helper bean without Spring Cloud Function or Stream");
+
+        dependency("spring-cloud-function-adapter-gcp");
+        ServiceProfile functions = Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto");
+        ServiceProfile.EntryPoint recall = byFlowId(functions).get("recall.recall");
+        assertEquals(
+                "cloud-function",
+                recall.capability,
+                byFlowId(functions).keySet().toString());
+        assertEquals("Spring Cloud Function recall", recall.trigger);
+        assertTrue(functions.capabilities.contains("cloud-function"));
+
+        dependency("spring-cloud-stream-binder-kafka");
+        Map<String, ServiceProfile.EntryPoint> stream =
+                byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"));
+        assertEquals("messaging", stream.get("recall.recall").capability, "Cloud Stream binds the functions");
+        assertEquals("Spring Cloud Stream recall-in-0 -> recall-out-0", stream.get("recall.recall").trigger);
+        assertEquals("Spring Cloud Stream audit-in-0", stream.get("recall.audit").trigger);
+        assertEquals("Spring Cloud Stream heartbeat-out-0", stream.get("recall.heartbeat").trigger);
+        assertTrue(stream.keySet().stream().noneMatch(f -> f.endsWith(".clock")), "other beans are not flows");
+
+        source("com/acme/order/stream/PricingFunctions.java", """
+                package com.acme.order.stream;
+                public class PricingFunctions {
+                    @Scheduled(cron = "0 0 * * * *")
+                    public void refresh() {}
+                }
+                """);
+        assertTrue(
+                byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"))
+                        .containsKey("pricing-functions.refresh"),
+                "only function beans drop the Functions suffix: other flows keep their names");
+    }
+
+    @Test
+    void shouldTurnEachIntegrationFlowBeanIntoAFlow() throws Exception {
+        dependency("spring-boot-starter-integration");
+        source("com/acme/order/integration/FeeAccrualIntegrationConfig.java", """
+                package com.acme.order.integration;
+                @Configuration
+                public class FeeAccrualIntegrationConfig {
+                    @Bean
+                    public IntegrationFlow feeAccrualFlow() { return null; }
+                    @Bean
+                    public IntegrationFlow recallNoticeFlow() { return null; }
+                    @Bean
+                    public MessageChannel accruals() { return null; }
+                }
+                """);
+
+        ServiceProfile p = Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto");
+        Map<String, ServiceProfile.EntryPoint> flows = byFlowId(p);
+
+        ServiceProfile.EntryPoint accrual = flows.get("fee-accrual.flow");
+        assertEquals("integration", accrual.capability, flows.keySet().toString());
+        assertEquals("Spring Integration flow feeAccrualFlow", accrual.trigger);
+        assertEquals("method:com.acme.order.integration.FeeAccrualIntegrationConfig#feeAccrualFlow", accrual.ref);
+        assertEquals("integration", flows.get("fee-accrual.recall-notice").capability);
+        assertTrue(flows.keySet().stream().noneMatch(f -> f.endsWith(".accruals")), "channels are not flows");
+        assertTrue(p.capabilities.contains("integration"));
+    }
+
+    @Test
+    void shouldDetectResilienceAndSecretManagerAsCrossCuttingCapabilities() throws Exception {
+        dependency("resilience4j-spring-boot3");
+        dependency("spring-cloud-gcp-starter-secretmanager");
+
+        ServiceProfile p = Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto");
+
+        assertTrue(p.capabilities.containsAll(List.of("resilience", "secret-manager")), p.capabilities.toString());
+        assertTrue(p.entrypoints.stream()
+                .noneMatch(e -> "resilience".equals(e.capability) || "secret-manager".equals(e.capability)));
+    }
+
+    @Test
+    void shouldFindTheCucumberSuiteWithItsFeaturesAndGlue() throws Exception {
+        Path suite = root.resolve("src/test/java/com/acme/order/RunCucumberTest.java");
+        Files.createDirectories(suite.getParent());
+        Files.writeString(suite, """
+                package com.acme.order;
+                @Suite
+                @IncludeEngines("cucumber")
+                @SelectClasspathResource("acceptance/")
+                @ConfigurationParameter(key = GLUE_PROPERTY_NAME, value = "com.acme.order.steps")
+                public class RunCucumberTest {}
+                """);
+
+        ServiceProfile.Cucumber c = Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto").cucumber;
+
+        assertEquals("com.acme.order.RunCucumberTest", c.suite);
+        assertEquals("acceptance", c.features);
+        assertEquals("com.acme.order.steps", c.glue);
+
+        Files.writeString(suite, """
+                package com.acme.order;
+                @Suite
+                @IncludeEngines("cucumber")
+                public class RunCucumberTest {}
+                """);
+        Files.createDirectories(root.resolve("src/test/resources"));
+        Files.writeString(
+                root.resolve("src/test/resources/junit-platform.properties"), "cucumber.glue=com.acme.glue\n");
+        c = Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto").cucumber;
+        assertEquals("com/acme/order", c.features, "the suite's package by default");
+        assertEquals("com.acme.glue", c.glue);
+
+        Files.delete(suite);
+        assertEquals(
+                null, Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto").cucumber, "JUnit tests then");
+    }
 }

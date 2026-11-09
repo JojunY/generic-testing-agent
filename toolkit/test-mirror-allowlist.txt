@@ -14,3 +14,4 @@ com/gta/junit/KnownDefect.java | annotation; KnownDefectExtensionTest covers its
 # E3: tests with no single source
 com/gta/harness/RepositoryHarnessTest.java | the repository's layout, language and generated-folder sync
 com/gta/harness/MirroredTestNamesTest.java | this naming rule itself
+com/gta/junit/cucumber/PinnedSteps.java | Cucumber glue of KnownDefectsTest (step definitions and the pin hook a service adds)

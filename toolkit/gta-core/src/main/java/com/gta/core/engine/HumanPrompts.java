@@ -133,13 +133,12 @@ final class HumanPrompts {
     }
 
     /** Decision when the test class gta would write exists and is not a gta test (plan §9.3, rule E5). */
-    WorkState.Pending namingConflict(PlanItem item, String lastAuthor) {
+    WorkState.Pending namingConflict(PlanItem item, String file, String lastAuthor) {
         WorkState.Pending p = new WorkState.Pending();
         p.type = "naming-conflict";
         p.itemId = item.id;
         p.flowId = item.flowId;
         p.recommended = "A";
-        String file = paths.testSourceRel(item.testClass);
         p.prompt = m.t("naming.title", item.id) + "\n"
                 + m.t("naming.body", file, lastAuthor) + "\n"
                 + "  " + m.t("naming.a") + m.t("recommended.why", m.t("naming.why")) + "\n"

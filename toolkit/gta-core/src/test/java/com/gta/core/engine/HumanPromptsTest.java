@@ -64,7 +64,8 @@ class HumanPromptsTest {
         WorkState.Pending defect = prompts.humanDecision(s, item());
         s.reason = "repair attempts exhausted";
         WorkState.Pending escalation = prompts.humanDecision(s, item());
-        WorkState.Pending naming = prompts.namingConflict(item(), "Dana");
+        WorkState.Pending naming =
+                prompts.namingConflict(item(), "src/test/java/com/acme/order/OrderControllerIT.java", "Dana");
 
         assertEquals("defect", defect.type);
         assertTrue(
