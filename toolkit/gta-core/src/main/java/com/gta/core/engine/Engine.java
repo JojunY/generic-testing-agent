@@ -571,6 +571,9 @@ public final class Engine {
         }
         ServiceProfile p = Profiler.profile(
                 paths, registry, config.build.basePackage, CapabilityRegistry.effectivePhase(config.phase));
+        if ("off".equals(config.build.cucumber)) {
+            p.cucumber = null; // the team keeps Cucumber to itself: gta writes JUnit tests (plan §7.10)
+        }
         Json.writeAtomic(paths.profile(), p);
         Json.writeAtomic(paths.flowCatalog(), p.entrypoints);
         return p;

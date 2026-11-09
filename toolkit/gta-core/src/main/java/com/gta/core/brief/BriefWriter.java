@@ -132,6 +132,7 @@ public final class BriefWriter {
             b.append("\n- Suggested risk: ").append(entry.risk).append(" (probability 1-3 × impact 1-3)\n");
         }
         b.append("- Capability: `").append(capability).append("`\n\n");
+        appendExistingTests(b, entry);
         appendExistingSpecs(b);
         appendSkills(b, skills);
         if (!exists) {
@@ -152,6 +153,63 @@ public final class BriefWriter {
                 .append(
                         "` and reply with its one-line result. If it reports lint issues, fix them and submit again.\n");
         return write(seq, b.toString());
+    }
+
+    /** At most this many of the team's tests are listed in an analyst brief. */
+    static final int EXISTING_TESTS_IN_BRIEF = 10;
+
+    private static final java.util.regex.Pattern GTA_TAG = java.util.regex.Pattern.compile("@Tag\\(\\s*\"gta\"\\s*\\)");
+
+    /**
+     * The team's own tests (no {@code @Tag("gta")}) that name the flow's entry class: a service with tests gets new
+     * tests only where those cannot observe the behaviour, never a copy of them (plan §7.9).
+     */
+    private void appendExistingTests(StringBuilder b, ServiceProfile.EntryPoint entry) {
+        List<String> tests = existingTests(entry);
+        if (tests.isEmpty()) {
+            return;
+        }
+        b.append("## The team's tests of this flow\n\n")
+                .append("These tests, which gta did not write, name the flow's entry class. Read them before you write")
+                .append(
+                        " scenarios. For a behaviour one of them already asserts, write a scenario only for what it cannot")
+                .append(" observe at its layer (the HTTP status and body, the database row, the published message, the")
+                .append(" wiring and configuration), and give that scenario the layer that can; otherwise leave the")
+                .append(
+                        " behaviour out and name the test in the Boundary under `Existing tests:`. Never plan a test that")
+                .append(" repeats what one of these asserts.\n\n");
+        tests.forEach(t -> b.append("- `").append(t).append("`\n"));
+        b.append('\n');
+    }
+
+    List<String> existingTests(ServiceProfile.EntryPoint entry) {
+        if (entry == null || entry.ref == null || !entry.ref.startsWith("method:") || !entry.ref.contains("#")) {
+            return List.of();
+        }
+        String fqcn = entry.ref.substring("method:".length(), entry.ref.indexOf('#'));
+        java.util.regex.Pattern name = java.util.regex.Pattern.compile(
+                "\\b" + java.util.regex.Pattern.quote(fqcn.substring(fqcn.lastIndexOf('.') + 1)) + "\\b");
+        if (!Files.isDirectory(paths.testJava())) {
+            return List.of();
+        }
+        try (Stream<Path> files = Files.walk(paths.testJava())) {
+            return files.filter(f -> f.toString().endsWith(".java"))
+                    .sorted()
+                    .filter(f -> {
+                        try {
+                            String text = Files.readString(f, StandardCharsets.UTF_8);
+                            return name.matcher(text).find()
+                                    && !GTA_TAG.matcher(text).find();
+                        } catch (IOException e) {
+                            return false;
+                        }
+                    })
+                    .limit(EXISTING_TESTS_IN_BRIEF)
+                    .map(paths::rel)
+                    .toList();
+        } catch (IOException e) {
+            return List.of();
+        }
     }
 
     /** At most this much of {@code .gta/notes.md} goes into a brief: the newest notes, which are at the end. */

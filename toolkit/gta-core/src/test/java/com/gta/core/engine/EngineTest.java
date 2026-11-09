@@ -2,6 +2,7 @@ package com.gta.core.engine;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -12,6 +13,7 @@ import com.gta.core.error.GtaException;
 import com.gta.core.oracle.Lock;
 import com.gta.core.oracle.OracleShard;
 import com.gta.core.plan.PlanItem;
+import com.gta.core.profile.ServiceProfile;
 import com.gta.core.run.RunResult;
 import com.gta.core.run.TestOutcome;
 import com.gta.core.run.TestRunnerFake;
@@ -20,6 +22,7 @@ import com.gta.core.spec.SpecTestData;
 import com.gta.core.state.ItemStatus;
 import com.gta.core.state.StateStore;
 import com.gta.core.state.WorkState;
+import com.gta.core.util.Json;
 import com.gta.core.util.ProcessRunner;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -94,6 +97,24 @@ class EngineTest {
         item.ownsFiles.add(new GtaPaths(root).testSourceRel(item.testClass));
         item.oracle.source = "observed";
         store.savePlan(List.of(item));
+    }
+
+    @Test
+    void shouldWriteJUnitTestsWhenTheTeamKeepsCucumberToItself() throws Exception {
+        Path suite = paths.testJava().resolve("com/acme/RunCucumberTest.java");
+        Files.createDirectories(suite.getParent());
+        Files.writeString(
+                suite, "package com.acme;\n@Suite @IncludeEngines(\"cucumber\")\npublic class RunCucumberTest {}\n");
+        Files.createDirectories(root.resolve(".gta"));
+        Files.writeString(root.resolve(".gta/config.json"), "{ \"build\": { \"cucumber\": \"off\" } }");
+
+        try {
+            engine().next("service", null, null, false);
+        } catch (GtaException e) {
+            // a service without flows: only the profile matters here
+        }
+
+        assertNull(Json.read(paths.profile(), ServiceProfile.class).cucumber, "build.cucumber=off: no feature items");
     }
 
     private WorkState state(ItemStatus status) {

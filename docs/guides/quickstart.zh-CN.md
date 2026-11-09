@@ -174,6 +174,7 @@ mvn verify -Dgroups=known-defect        # 修复后：找出该删除的标注
 - `spec.source`：仓库自己维护规格时设为 `openspec` 或 `speckit`（`openspec/specs/`、`specs/`）。analyst 会把它们当作 documented 来源引用，绝不修改。
 - `build.module`：多模块仓库中服务所在的模块，例如 `"lending-api"`。`.gta/` 留在仓库根目录；测试写进该模块，Maven 以 `-pl <module> -am` 运行。未设置时 `gtaw doctor` 报失败。
 - `build.tool`：`auto`（默认）在服务有 `build.gradle(.kts)` 而没有 `pom.xml` 时用 Gradle 构建，否则用 Maven；设为 `maven` 或 `gradle` 可强制指定。`build.gradle` 指定 Gradle 可执行文件（默认：存在时用 `./gradlew`）。在 Gradle 构建中 gta-junit 也把结果写到 `target/gta-results/`：请把它加入 `.gitignore`。
+- `build.cucumber`：`auto`（默认）在服务已有 Cucumber suite 时把 component 场景写成 Cucumber feature；`off` 则继续写 JUnit，适合只把 Cucumber 用于自己验收测试的团队。
 - `build.javaHomeEnv`：如果服务的构建需要更旧的 JDK（例如 Java 8 加 Spring Boot 2），填写存放该 JDK 路径的环境变量名，例如 `"JAVA8_HOME"`。Maven 或 Gradle 会以该 `JAVA_HOME` 运行；gtaw 本身仍需要 JDK 17 或更新版本。
 
 ## 出问题时

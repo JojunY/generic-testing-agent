@@ -1,6 +1,7 @@
 package com.gta.core.brief;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.gta.core.config.GtaPaths;
@@ -204,5 +205,41 @@ class BriefWriterTest {
                 .review(10, state(), catching, spec(), "triage", "The test failed."));
 
         assertTrue(text.contains("`product-defect` — a catch"), text);
+    }
+
+    @Test
+    void shouldListTheTeamsTestsOfTheFlowSoTheAnalystDoesNotRepeatThem() throws Exception {
+        Path test = root.resolve("src/test/java/com/acme/lending");
+        Files.createDirectories(test);
+        Files.writeString(
+                test.resolve("BorrowControllerTest.java"), "class BorrowControllerTest { BorrowController c; }");
+        Files.writeString(test.resolve("BorrowServiceTest.java"), "class BorrowServiceTest { }");
+        Files.writeString(
+                test.resolve("BorrowControllerIT.java"),
+                "@Tag(\"gta\") class BorrowControllerIT { BorrowController c; }");
+        ServiceProfile.EntryPoint entry = new ServiceProfile.EntryPoint();
+        entry.ref = "method:com.acme.lending.BorrowController#book";
+
+        String analyze = Files.readString(new BriefWriter(new GtaPaths(root))
+                .analyze(13, "s1:0013", "borrow.book", entry, "rest-api", List.of(), List.of(), List.of(), false));
+
+        assertTrue(analyze.contains("## The team's tests of this flow"), analyze);
+        assertTrue(analyze.contains("`src/test/java/com/acme/lending/BorrowControllerTest.java`"));
+        assertFalse(analyze.contains("BorrowServiceTest"), "a test that does not name the entry class");
+        assertFalse(analyze.contains("BorrowControllerIT.java"), "gta's own tests are not the team's");
+        assertFalse(
+                Files.readString(new BriefWriter(new GtaPaths(root))
+                                .analyze(
+                                        14,
+                                        "s1:0014",
+                                        "borrow.book",
+                                        null,
+                                        "rest-api",
+                                        List.of(),
+                                        List.of(),
+                                        List.of(),
+                                        false))
+                        .contains("## The team's tests"),
+                "no entry point, no list");
     }
 }

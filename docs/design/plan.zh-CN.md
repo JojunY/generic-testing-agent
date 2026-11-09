@@ -1103,6 +1103,22 @@ gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 
 | 不变量 | unit | `@ParameterizedTest` + Instancio 生成输入 + 记录 seed | 不变量成立 |
 | 跨服务链路 | 不在范围内（SIT/UAT，由团队测试） | — | — |
 
+**选择测试层。** 每个场景都在能观察到其 THEN 的最低一层测试：计算出来的值用 unit；参数校验、序列化、错误映射和权限规则用
+slice；状态码再加上数据库行、发出的消息、下游调用、重试或配置，用 component（服务的集成测试：所有 bean 和配置都是真的，
+只把服务外部的东西在本地替换）。`hint.layer` 由 analyst 填写，人在批准 spec 时可以看到。回归测试不是单独一类测试：
+它就是所有被锁定的场景，按优先级选取（`-Dgroups=p0`），由门禁守住。
+
+- **没有任何测试的服务**：先写种子测试，再按风险从高到低处理各个 flow，以 component 测试为主。对没有测试的代码，
+  它们从外部锁住服务的行为，以后重构不会被它们卡住；复杂逻辑再补 unit 测试。
+- **已有测试的服务**（例如 unit 测试已达到覆盖率要求）：行覆盖率只说明代码被执行过，不说明行为被断言过；unit 测试
+  也看不到 bean 接线、配置、事务、序列化、安全过滤器、SQL 和消息。analyst 的 brief 会列出团队测试中提到该 flow
+  入口类的那些；它们已断言的场景不再重复，新场景放到能观察到它们看不到之处的那一层。gta 从不改写团队的测试。
+- **不用 Karate**：它从运行中的服务外部测试 HTTP，这正是 gta 交给团队自己做的部署环境测试（§7.7）。在本地，
+  `MockMvcTester` 或 `RestTestClient` 在 JVM 内就能检查同样的 API，还能断言数据库和消息，期望值写在 oracle 锁能读取的
+  Java 里；Karate 的 DSL 需要另写解析器，也没有带来 WireMock 加 component 测试之外的能力。
+- **Cucumber** 只在团队已经在用时使用（§7.10）：gta 的 spec 本身就是人阅读并批准的 Given/When/Then，feature 文件等于
+  多一份副本和一层 glue。团队只把 Cucumber 用于自己的验收测试时，`build.cucumber: "off"` 让 gta 继续写 JUnit。
+
 **jqwik 不作为默认**：从 1.10 起，jqwik 对 coding agent 的使用附加了限制性声明（见 [release notes](https://jqwik.net/release-notes.html)）。仓库已经在用 jqwik 时，锁定在 1.10 之前的版本；gtaw 只解析 Surefire XML。
 
 
@@ -1128,6 +1144,7 @@ gta 不测试部署环境，以后也不测（P4 中决定）。团队在本地 
   （`<glue>.GtaCucumberHooks`）；没有 hook 时拒绝标注。因此普通构建发现不了已修复的缺陷，由 gtaw 的运行、
   `gtaw verify` 和 CI 门禁的 verify 步骤发现。
 - **退役**一个场景时，从它的 feature 文件中删除（文件里没有场景了就删除文件）；从不改动 suite。
+- `build.cucumber: "off"`：即使有 suite 也写 JUnit。
 - 限制：只支持英文 Gherkin 关键字；只有一个 `@CucumberContextConfiguration`（团队的）；Boot 3.x 用 Cucumber 7（JUnit 5），
   Boot 4 用 Cucumber 8（JUnit 6）。
 ---
@@ -1370,7 +1387,7 @@ Cucumber suite，从不在 `ownsFiles` 里。
 {
   "$schema": "./schemas/config.v1.schema.json", "schemaVersion": "1.0",
   "phase": null,
-  "build": { "tool": "maven", "basePackage": "auto", "maven": "auto", "javaHomeEnv": null, "module": "" },
+  "build": { "tool": "maven", "basePackage": "auto", "maven": "auto", "javaHomeEnv": null, "module": "", "cucumber": "auto" },
   "dispatch": "subagent",
   "output": { "language": "en" },
   "spec": { "maxQuestionsPerRound": 5, "maxClarifyRounds": 2, "maxSubmitAttempts": 3, "source": "gta" },

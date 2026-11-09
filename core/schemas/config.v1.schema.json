@@ -32,6 +32,13 @@
           "type": "string",
           "description": "the module (or Gradle subproject) that holds the service in a multi-module repository"
         },
+        "cucumber": {
+          "enum": [
+            "auto",
+            "off"
+          ],
+          "description": "\"auto\" = component scenarios become Cucumber features when the service has a Cucumber suite; \"off\" = always JUnit"
+        },
         "javaHomeEnv": {
           "type": "string",
           "description": "name of an environment variable holding the JDK the service builds with"

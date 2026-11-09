@@ -1121,6 +1121,29 @@ External services are stubbed with WireMock, plus contract tests. Opt-in tests a
 | invariants | unit | `@ParameterizedTest` + inputs generated with Instancio + recorded seed | the invariant holds |
 | cross-service journeys | out of scope (SIT/UAT, by the team) | — | — |
 
+**Choosing the layer.** A scenario is tested at the lowest layer that can observe its THEN: a computed value at unit,
+validation, serialization, error mapping and access rules at slice, a status together with a database row, a message, a
+downstream call, a retry or configuration at component (the service's integration test: every bean and configuration
+real, only what lies outside the service replaced locally). The analyst sets `hint.layer`; people see it when they
+approve the spec. Regression tests are not a kind of their own: they are every locked scenario, selected by priority
+(`-Dgroups=p0`) and kept by the gate.
+
+- **A service without tests**: the seed test first, then the flows riskiest first, mostly component tests. On code
+  without tests they lock what the service does from the outside, so later refactoring does not break them; unit tests
+  follow for intricate logic.
+- **A service with tests** (unit tests at their coverage target, say): line coverage shows code that ran, not
+  behaviour that was asserted, and unit tests cannot see wiring, configuration, transactions, serialization, security
+  filters, SQL or messages. The analyst brief lists the team's tests that name the flow's entry class; scenarios they
+  already assert are not repeated, and the new ones go to the layer that can observe what they cannot. gta never
+  rewrites the team's tests.
+- **Not Karate**: it tests HTTP from outside a running service, which is the deployed-environment testing gta leaves to
+  the team (§7.7). Locally, `MockMvcTester` or `RestTestClient` checks the same API inside the JVM, can assert the
+  database and the messages too, and keeps the expected values in Java the oracle lock reads; Karate's DSL would need a
+  parser of its own and adds nothing WireMock and the component test do not already give.
+- **Cucumber** only where the team already runs it (§7.10): gta's spec already is the Given/When/Then that people
+  read and approve, so a feature file adds a second copy and a glue layer. `build.cucumber: "off"` keeps JUnit in a
+  service that uses Cucumber for its own acceptance tests only.
+
 **jqwik is not a default**: since 1.10, jqwik attaches restrictive terms to use by coding agents (see the [release notes](https://jqwik.net/release-notes.html)). Where a repository already uses jqwik, pin a version before 1.10; gtaw only reads Surefire XML.
 
 
@@ -1153,6 +1176,7 @@ profile finds the team's suite (a test class with `@IncludeEngines("cucumber")` 
   gate's verify step do.
 - **Retiring** a scenario removes it from its feature file (the file goes when no scenario is left); the suite is never
   touched.
+- `build.cucumber: "off"`: JUnit even when a suite exists.
 - Limits: English Gherkin keywords; one `@CucumberContextConfiguration` (the team's); Cucumber 7 on JUnit 5 (Boot 3.x),
   Cucumber 8 on JUnit 6 (Boot 4).
 ---
@@ -1395,7 +1419,7 @@ The state of each item in `.gta/work/state.json`:
 {
   "$schema": "./schemas/config.v1.schema.json", "schemaVersion": "1.0",
   "phase": null,
-  "build": { "tool": "maven", "basePackage": "auto", "maven": "auto", "javaHomeEnv": null, "module": "" },
+  "build": { "tool": "maven", "basePackage": "auto", "maven": "auto", "javaHomeEnv": null, "module": "", "cucumber": "auto" },
   "dispatch": "subagent",
   "output": { "language": "en" },
   "spec": { "maxQuestionsPerRound": 5, "maxClarifyRounds": 2, "maxSubmitAttempts": 3, "source": "gta" },
