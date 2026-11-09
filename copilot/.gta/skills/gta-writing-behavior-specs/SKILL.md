@@ -27,6 +27,13 @@ IF the inventory service does not respond within 3s, THEN THE lending service SH
 2. `## Access`: role × operation × ownership for every external entry point (`references/access-matrix.md`).
 3. Requirements in EARS (`references/ears.md`), each with refs (`references/refs.md`).
 4. Scenarios: derive them systematically (`references/test-design-techniques.md`), not by intuition. Each THEN names an observable result with the expected value in backticks; if no literal value exists, add `check=reviewer` to the scenario comment.
+   - Layer (`hint.layer`): the lowest layer that can observe the THEN. `unit` for a computed value (a fee, a date, a
+     rule); `slice` for validation, serialization, error mapping and access rules; `component` when the THEN is a
+     status together with a database row, a published message, a downstream call, a retry or circuit breaker, or
+     configuration; `contract` for the format of an API others call. Without it the capability's default applies.
+   - The team's tests (listed in the brief): do not repeat what they assert. Write a scenario only for what they cannot
+     observe at their layer, with the layer that can; leave the rest out and name those tests in the Boundary under
+     `Existing tests:`.
 5. Priority per scenario, for the test case ledger and regression scope: `priority=P0` core path (run every time), `P1` important branch, `P2` edge case. Without it gtaw uses P1.
 6. Intent (optional): `hint.intent=reproducing` for the scenario of an incident (its test must fail on the current
    code; incident briefs ask for it), `hint.intent=catching` for a risk a PR introduces. Without it the source decides.
@@ -43,7 +50,7 @@ IF the inventory service does not respond within 3s, THEN THE lending service SH
    Mark exactly one option per question `(recommended: <why>)`, the answer you would pick; `OK` takes it. Recommend
    what a document says over `= current code` when they disagree. Write questions in the language the brief names.
 9. Findings (`## Findings`): `doc-drift` (docs disagree with code) or `behavior-suspect` (code looks wrong).
-9. Submit with the command in the brief and fix lint issues.
+10. Submit with the command in the brief and fix lint issues.
 
 ## Rules
 

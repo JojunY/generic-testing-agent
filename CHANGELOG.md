@@ -5,6 +5,8 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 ## [Unreleased]
 
 ### Added
+- The analyst brief lists the team's own tests that name the flow's entry class: scenarios they already assert are not repeated, and new scenarios go to the layer that can observe what they cannot (plan §7.9).
+- `build.cucumber` (`auto` or `off`): `off` keeps JUnit in a service that uses Cucumber for its own acceptance tests only (plan §7.10).
 - New capabilities, on by default (plan §7, §15 P4):
   - `cloud-function`: Spring Cloud Function beans, including functions deployed as Cloud Run functions, tested through the bean, the `FunctionCatalog` and the HTTP endpoint (`gta-testing-cloud-functions`);
   - Spring Cloud Stream functions: in a Cloud Stream service each `@Bean Function`/`Consumer`/`Supplier` is a `messaging` flow, tested on the test binder (`gta-testing-event-flows`, `references/cloud-stream.md`);
@@ -17,6 +19,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - Future phases P5 to P7 in a stated order, and a list of what gta does not support (plan §15).
 
 ### Changed
+- Plan §7.9 states how gta chooses the layer, the strategy for services with and without tests, and why it does not use Karate.
 - Easier for newcomers (plan §6, §9.4):
   - the `/gta` subcommands are shown in three tiers: `/gta` and `OK` to start, `<flow>`, `status` and `note` every day, `spec`, `pr` and `incident` when needed; `/gta service` stays accepted and is the same as `/gta`;
   - `/gta spec <flow>` (`gtaw next --mode spec`) is the new name of explain mode, whose output is a spec; `explain` stays accepted;

@@ -51,6 +51,11 @@ public class GtaConfig {
          * a single-module repository. gta works in one module at a time (plan §15, P1).
          */
         public String module = "";
+        /**
+         * {@code auto}: component scenarios are written as Cucumber features when the service has a Cucumber suite;
+         * {@code off}: always JUnit, for a team that keeps Cucumber to its own acceptance tests (plan §7.10).
+         */
+        public String cucumber = "auto";
     }
 
     public static class Spec {
