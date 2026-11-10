@@ -46,27 +46,23 @@ Coverage is not the goal. Tests should check what the service is *supposed* to d
 
 [`docs/design/plan.md`](docs/design/plan.md) has the full design ([简体中文](docs/design/plan.zh-CN.md)).
 
-## Quick start
+## Install
 
-See [docs/guides/quickstart.md](docs/guides/quickstart.md). In short:
+There is one gta; you choose where its jar comes from. Both ways install the same harness into your own service.
+
+| | On your machine (no Nexus) | For a team |
+|---|---|---|
+| For | one developer evaluating or using gta | everyone who works on the service, and CI |
+| The jar comes from | this checkout, built locally | a shared URL (Nexus, or a GitHub Release) |
+| How | `scripts/install-local.sh <service> [copilot\|opencode]` | [docs/guides/quickstart.md](docs/guides/quickstart.md), steps 1 to 3 |
 
 ```bash
-mvn -B install                      # in this repo: builds and tests the toolkit
-java -jar toolkit/gta-cli/target/gta-cli.jar --root <service> init --platform copilot   # or opencode
-cd <service> && ./gtaw doctor       # Windows: .\gtaw.cmd doctor
+scripts/install-local.sh path/to/your-service          # builds gta once, installs it, runs ./gtaw doctor
 ```
 
 Then open the service in VS Code, IntelliJ or OpenCode and type `/gta`.
 
-## Try it in five minutes
-
-No Nexus and no service of your own needed: this builds gta, copies the sample service (a small Spring Boot service with seeded defects) to `~/gta-try/order-service` and installs the harness there.
-
-```bash
-scripts/try.sh                       # or: scripts/try.sh <folder> opencode
-```
-
-Open that folder in VS Code, IntelliJ or OpenCode, type `/gta` and reply `OK`.
+A local install pins the wrapper to a path on your machine and takes `gta-junit` from your `~/.m2`, so teammates and CI cannot use it. To move to the team install, run `init` again with the shared URL (quickstart, step 2): nothing else changes.
 
 ## Supported now
 
@@ -87,7 +83,7 @@ copilot/     GENERATED from core/ + platforms/copilot (committed so teams can pi
 opencode/    GENERATED from core/ + platforms/opencode (committed so teams can pick it): never edit by hand
 toolkit/     Java sources: gta-core, gta-cli, gta-junit, gta-harness-gen (Maven reactor; pom.xml holds the version)
 wrapper/     files installed into services: gtaw, gtaw.cmd, gtaw-download.ps1 (pinned jar from Nexus, sha256-verified)
-scripts/     try.sh (the five-minute trial), generate.sh (platform folders), diagrams/render.py (docs/diagrams)
+scripts/     install-local.sh (install into a service without Nexus), generate.sh (platform folders), diagrams/render.py (docs/diagrams)
 evals/       order-service fixture with seeded defects and a scripted end-to-end run
 docs/        guides/ (quickstart, pilot, CI integration, test naming, diagram style, adding a capability), design/ (overview: start here; plan: the full design), archive/ (past review records), diagrams/; README.md is the index
 ```

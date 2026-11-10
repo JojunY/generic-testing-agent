@@ -46,27 +46,23 @@ gta 是一个面向 Java/Spring 服务、"先写规格再写测试"的测试 har
 
 完整设计见 [`docs/design/plan.zh-CN.md`](docs/design/plan.zh-CN.md)（[English](docs/design/plan.md)）。
 
-## 快速开始
+## 安装
 
-详见 [docs/guides/quickstart.zh-CN.md](docs/guides/quickstart.zh-CN.md)（[English](docs/guides/quickstart.md)）。简要步骤：
+gta 只有一个版本，区别只在 jar 从哪里来。两种方式装进你自己服务的是同一套 harness。
+
+| | 本地安装（不需要 Nexus） | 团队安装 |
+|---|---|---|
+| 适合 | 一个开发者评估或使用 gta | 所有参与该服务的人，以及 CI |
+| jar 的来源 | 本仓库，在本地构建 | 共享地址（Nexus，或 GitHub Release） |
+| 做法 | `scripts/install-local.sh <service> [copilot\|opencode]` | [docs/guides/quickstart.zh-CN.md](docs/guides/quickstart.zh-CN.md) 第 1 到 3 步 |
 
 ```bash
-mvn -B install                      # 在本仓库：构建并测试 toolkit
-java -jar toolkit/gta-cli/target/gta-cli.jar --root <service> init --platform copilot   # 或 opencode
-cd <service> && ./gtaw doctor       # Windows: .\gtaw.cmd doctor
+scripts/install-local.sh path/to/your-service          # 构建一次 gta，安装，并运行 ./gtaw doctor
 ```
 
 然后在 VS Code、IntelliJ 或 OpenCode 中打开服务，输入 `/gta`。
 
-## 五分钟试用
-
-不需要 Nexus，也不需要自己的服务：下面的脚本会构建 gta，把示例服务（一个预埋了缺陷的小型 Spring Boot 服务）复制到 `~/gta-try/order-service`，并在那里安装 harness。
-
-```bash
-scripts/try.sh                       # 或：scripts/try.sh <目录> opencode
-```
-
-用 VS Code、IntelliJ 或 OpenCode 打开该目录，输入 `/gta`，回复 `OK`。
+本地安装把 wrapper 固定到你机器上的路径，`gta-junit` 也只在你的 `~/.m2` 里，所以同事和 CI 用不了。要改成团队安装，用共享地址再运行一次 `init`（快速开始第 2 步）即可，其他都不用变。
 
 ## 当前支持
 
@@ -87,7 +83,7 @@ copilot/     由 core/ + platforms/copilot 生成（已提交，供团队选用�
 opencode/    由 core/ + platforms/opencode 生成（已提交，供团队选用），不要手改
 toolkit/     Java 源码：gta-core、gta-cli、gta-junit、gta-harness-gen（Maven 多模块；版本号以 pom.xml 为准）
 wrapper/     安装到服务中的文件：gtaw、gtaw.cmd、gtaw-download.ps1（从 Nexus 下载锁定版本的 jar 并校验 sha256）
-scripts/     try.sh（五分钟试用）、generate.sh（平台文件夹）、diagrams/render.py（docs/diagrams）
+scripts/     install-local.sh（不经 Nexus 安装到服务）、generate.sh（平台文件夹）、diagrams/render.py（docs/diagrams）
 evals/       带预埋缺陷的 order-service 样例和脚本化端到端测试
 docs/        guides/（快速开始、试点、CI 接入、测试命名、图表风格、新增能力）、design/（overview：从这里开始；plan：完整设计）、archive/（历史评审记录）、diagrams/
 ```

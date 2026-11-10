@@ -58,7 +58,7 @@ are defaults, not requirements:
 | Assumption in the plan | If yours differs |
 |---|---|
 | No containers on developer machines; embedded or faked dependencies | gtaw does not care how a dependency starts, but the skills and briefs say "no containers": a Testcontainers reference would have to be added to `gta-using-embedded-dependencies` |
-| Everything through a Nexus proxy; the wrapper downloads the jar from Nexus | any URL works, a `file://` path included (`scripts/try.sh`), as long as its sha256 is pinned |
+| Everything through a Nexus proxy; the wrapper downloads the jar from Nexus | any URL works, a `file://` path included (`scripts/install-local.sh`), as long as its sha256 is pinned |
 | Windows machines, Oracle, BigQuery, Pub/Sub, Kafka, MQ | other stores and brokers are on the roadmap (plan §15, P5 and P6) |
 | Copilot and OpenCode | another platform is a `platforms/<name>/mapping.yaml` and its templates |
 
@@ -76,8 +76,8 @@ are defaults, not requirements:
 
 | You want to | Read |
 |---|---|
-| try it on the sample service | README, "Try it in five minutes" |
-| install it in a service | [quickstart.md](../guides/quickstart.md) |
+| install it on your machine, without Nexus | README, "Install" (`scripts/install-local.sh`) |
+| install it for a team | [quickstart.md](../guides/quickstart.md) |
 | run the first real pilot | [pilot.md](../guides/pilot.md) |
 | know why a mechanism exists | plan §3 (spec), §5 (state, lock, triage), §10 (files and the gate) |
 | know how one kind of service is tested | plan §7 |

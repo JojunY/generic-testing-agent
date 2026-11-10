@@ -5,7 +5,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 ## [Unreleased]
 
 ### Added
-- `scripts/try.sh`: a five-minute trial on the sample service, with the wrapper pinned to the locally built jar (no Nexus).
+- `scripts/install-local.sh`: installs gta into a service on one machine without Nexus (the wrapper pinned to the locally built jar and its sha256); the README's Install section replaces its Quick start snippet, which left the wrapper unpinned.
 - `docs/design/overview.md` (gta in ten minutes: what it is and is not, what is proven, what is specific to the first adopter, known limits) and `docs/guides/pilot.md` (the first run with a real model: checklist, what to record, what decides the outcome).
 - `.github/workflows/release.yml`: a pushed tag publishes a GitHub Release with the jars and their sha256 values.
 - The analyst brief lists the team's own tests that name the flow's entry class: scenarios they already assert are not repeated, and new scenarios go to the layer that can observe what they cannot (plan §7.9).

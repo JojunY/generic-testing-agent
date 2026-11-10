@@ -6,7 +6,7 @@ Pick the row that fits you; you do not need the rest.
 
 | Read | For |
 |---|---|
-| [../README.md](../README.md) ([简体中文](../README.zh-CN.md)) | what gta does, and the five-minute trial on the sample service |
+| [../README.md](../README.md) ([简体中文](../README.zh-CN.md)) | what gta does, and the two ways to install it (on your machine without Nexus, or for a team) |
 | [guides/quickstart.md](guides/quickstart.md) ([简体中文](guides/quickstart.zh-CN.md)) | installing gta in a service, the `/gta` commands, the configuration, what to do when something goes wrong |
 | [guides/pilot.md](guides/pilot.md) | the first run with a real model on a real service: checklist, what to record |
 | [guides/ci-integration.md](guides/ci-integration.md) | running the quality gate on pull requests |
