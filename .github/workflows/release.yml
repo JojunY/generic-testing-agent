@@ -1,0 +1,36 @@
+name: release
+
+# A pushed tag v<version> builds that commit and publishes a GitHub Release with the two jars services need and their
+# sha256 values (docs/guides/releasing.md). Nexus publishing stays a manual step of the platform team.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with: { distribution: temurin, java-version: "21", cache: maven }
+      - name: The tag must match the version in pom.xml
+        run: |
+          VERSION=$(sed -n 's|^  <version>\(.*\)</version>|\1|p' pom.xml | head -1)
+          [ "v$VERSION" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME does not match pom version $VERSION"; exit 1; }
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: Build and test
+        run: ./mvnw -B install
+      - name: Collect the jars and their checksums
+        run: |
+          mkdir dist
+          cp toolkit/gta-cli/target/gta-cli.jar "dist/gta-cli-$VERSION.jar"
+          cp "toolkit/gta-junit/target/gta-junit-$VERSION.jar" dist/
+          (cd dist && sha256sum ./*.jar > SHA256SUMS)
+          cat dist/SHA256SUMS
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --title "gta $VERSION" --notes "See CHANGELOG.md. sha256 values are in SHA256SUMS."

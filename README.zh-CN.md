@@ -4,6 +4,8 @@
 
 gta 是一个面向 Java/Spring 服务、"先写规格再写测试"的测试 harness，运行在 **GitHub Copilot**（VS Code、IntelliJ）或 **OpenCode** 中。
 
+> **现状：** 确定性的部分 `gtaw` 有单元测试和六个脚本化的端到端运行覆盖，其中由脚本扮演 agent。目前还没有用真实模型在真实服务上运行的记录：请先看[试点指南](docs/guides/pilot.md)。第一次接触？先读[十分钟了解 gta](docs/design/overview.md)（英文）。
+
 输入 `/gta` 后，它按以下循环工作：
 
 1. 读取一个 flow（一个 REST 接口、一个定时任务等）的代码。
@@ -33,7 +35,7 @@ gta 是一个面向 Java/Spring 服务、"先写规格再写测试"的测试 har
 |---|---|
 | `gtaw`（Java CLI，`toolkit/gta-cli`） | 完成所有确定性步骤：状态、计划、测试运行、失败分流、期望值锁定、改动检查、提交、门禁、报告。只有 `gtaw` 能判定测试通过。 |
 | 4 个 agent（`core/agents`） | `gta-orchestrator`（入口）、`gta-analyst`（写规格）、`gta-test-author`（每份 brief 写一个测试）、`gta-reviewer`（只读：期望值评审与分流）。 |
-| 17 个 skill（`core/skills`） | 测试知识，按路径从 `.gta/skills/` 加载：Spring API、WireMock、不用容器的依赖替身（Oracle、BigQuery、Pub/Sub、Kafka、JMS/MQ）、Batch、定时任务、Beam 等。 |
+| 24 个 skill（`core/skills`） | 测试知识，按路径从 `.gta/skills/` 加载：Spring API、WireMock、不用容器的依赖替身（Oracle、BigQuery、Pub/Sub、Kafka、JMS/MQ）、Batch、定时任务、Beam 等。 |
 | `gta-junit`（`toolkit/gta-junit`） | `@KnownDefect`（严格的预期失败）和把测试结果对应到场景的 listener。 |
 | `copilot/`、`opencode/` | 可直接安装的 harness 文件夹，由 `gta-harness-gen` 从 `core/` + `platforms/` 生成。 |
 
@@ -56,7 +58,17 @@ cd <service> && ./gtaw doctor       # Windows: .\gtaw.cmd doctor
 
 然后在 VS Code、IntelliJ 或 OpenCode 中打开服务，输入 `/gta`。
 
-## 当前支持（P0）
+## 五分钟试用
+
+不需要 Nexus，也不需要自己的服务：下面的脚本会构建 gta，把示例服务（一个预埋了缺陷的小型 Spring Boot 服务）复制到 `~/gta-try/order-service`，并在那里安装 harness。
+
+```bash
+scripts/try.sh                       # 或：scripts/try.sh <目录> opencode
+```
+
+用 VS Code、IntelliJ 或 OpenCode 打开该目录，输入 `/gta`，回复 `OK`。
+
+## 当前支持
 
 - **环境：** Maven 和 Gradle 服务，Spring Boot 4.1 和 3.5（也支持 2.2 到 2.7），Java 17+（少数 Java 8 或 11 的服务也支持），Windows、macOS、Linux。gtaw 本身需要 JDK 17+。
 - **会写测试的能力：** REST API（含安全规则和缓存）、消息监听（Kafka、Pub/Sub、JMS/MQ、RabbitMQ、SQS）、定时任务（`@Scheduled`、Quartz）、Spring Batch 作业、Flyway/Liquibase 数据库迁移、WebFlux 端点、gRPC 服务、GraphQL handler、工作流（Temporal、Spring Statemachine、BPMN）和 Beam 转换。WebSocket、STOMP 和 SSE 端点，Spring Cloud Function（包括 Cloud Run functions）、Spring Cloud Stream 函数、Spring Integration flow，并覆盖 Resilience4j 和 Spring Retry 的行为、用假客户端替代 Secret Manager（P4）。服务本来就在用 Cucumber 时，场景写成 feature 文件（设计文档 §7.10）。gta 只在本地运行测试：从不测试部署环境（SIT、UAT、生产环境），每次运行都会去掉你 shell 里的 Spring profile 和云凭证，agent 的规则也要求测试只用本地依赖（见设计文档 §7.7、§13）。
@@ -75,9 +87,9 @@ copilot/     由 core/ + platforms/copilot 生成（已提交，供团队选用�
 opencode/    由 core/ + platforms/opencode 生成（已提交，供团队选用），不要手改
 toolkit/     Java 源码：gta-core、gta-cli、gta-junit、gta-harness-gen（Maven 多模块；版本号以 pom.xml 为准）
 wrapper/     安装到服务中的文件：gtaw、gtaw.cmd、gtaw-download.ps1（从 Nexus 下载锁定版本的 jar 并校验 sha256）
-scripts/     维护脚本：generate.sh（平台文件夹）、diagrams/render.py（docs/diagrams）
+scripts/     try.sh（五分钟试用）、generate.sh（平台文件夹）、diagrams/render.py（docs/diagrams）
 evals/       带预埋缺陷的 order-service 样例和脚本化端到端测试
-docs/        guides/（快速开始、CI 接入、测试命名、图表风格、新增能力）、design/（设计）、reviews/（评审记录）、diagrams/
+docs/        guides/（快速开始、试点、CI 接入、测试命名、图表风格、新增能力）、design/（overview：从这里开始；plan：完整设计）、reviews/（评审记录）、diagrams/
 ```
 
 ## 开发

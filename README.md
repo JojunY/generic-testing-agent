@@ -4,6 +4,8 @@
 
 gta is a spec-first testing harness for Java/Spring services. It runs inside **GitHub Copilot** (VS Code, IntelliJ) or **OpenCode**.
 
+> **Status:** `gtaw`, the deterministic part, is covered by unit tests and six scripted end-to-end runs in which a script plays the agents. A run with a real model on a real service is not recorded here yet: start with the [pilot guide](docs/guides/pilot.md). New here? Read [gta in ten minutes](docs/design/overview.md).
+
 You type `/gta` and it runs this loop:
 
 1. It reads the code of one flow (a REST endpoint, a scheduled job and so on).
@@ -33,7 +35,7 @@ Coverage is not the goal. Tests should check what the service is *supposed* to d
 |---|---|
 | `gtaw` (Java CLI, `toolkit/gta-cli`) | Does every deterministic step: state, planning, test runs, failure triage, oracle lock, change check, commits, gate, report. Only `gtaw` decides that a test passed. |
 | 4 agents (`core/agents`) | `gta-orchestrator` (entry point), `gta-analyst` (specs), `gta-test-author` (one test per brief), `gta-reviewer` (read-only oracle review and triage). |
-| 17 skills (`core/skills`) | Testing know-how loaded by path from `.gta/skills/`: Spring APIs, WireMock, embedded dependencies without containers (Oracle, BigQuery, Pub/Sub, Kafka, JMS/MQ), Batch, schedulers, Beam and more. |
+| 24 skills (`core/skills`) | Testing know-how loaded by path from `.gta/skills/`: Spring APIs, WireMock, embedded dependencies without containers (Oracle, BigQuery, Pub/Sub, Kafka, JMS/MQ), Batch, schedulers, Beam and more. |
 | `gta-junit` (`toolkit/gta-junit`) | `@KnownDefect` (strict expected-failure) and a listener that maps test results to scenarios. |
 | `copilot/`, `opencode/` | Ready-to-install harness folders, generated from `core/` + `platforms/` by `gta-harness-gen`. |
 
@@ -56,7 +58,17 @@ cd <service> && ./gtaw doctor       # Windows: .\gtaw.cmd doctor
 
 Then open the service in VS Code, IntelliJ or OpenCode and type `/gta`.
 
-## Supported now (P0)
+## Try it in five minutes
+
+No Nexus and no service of your own needed: this builds gta, copies the sample service (a small Spring Boot service with seeded defects) to `~/gta-try/order-service` and installs the harness there.
+
+```bash
+scripts/try.sh                       # or: scripts/try.sh <folder> opencode
+```
+
+Open that folder in VS Code, IntelliJ or OpenCode, type `/gta` and reply `OK`.
+
+## Supported now
 
 - **Supported:** Maven and Gradle services on Spring Boot 4.1 and 3.5 (2.2 to 2.7 too), Java 17+ (a few on Java 8 or 11 too), on Windows, macOS and Linux. gtaw itself needs JDK 17+.
 - **Writes tests for:** REST APIs (with security rules and caches), message listeners (Kafka, Pub/Sub, JMS/MQ, RabbitMQ, SQS), scheduled jobs (`@Scheduled`, Quartz), Spring Batch jobs, Flyway/Liquibase migrations, WebFlux endpoints, gRPC services, GraphQL handlers, workflows (Temporal, Spring Statemachine, BPMN) and Beam transforms. WebSocket, STOMP and SSE endpoints, Spring Cloud Functions (including Cloud Run functions), Spring Cloud Stream functions, Spring Integration flows, with Resilience4j and Spring Retry behaviour and Secret Manager faked (P4). In a service that already runs Cucumber, scenarios are written as feature files (plan §7.10). gta only runs tests locally: it never tests deployed environments (SIT, UAT, production), every run drops your shell's Spring profile and cloud credentials, and the agents' rules say tests use local dependencies only (plan §7.7, §13).
@@ -75,9 +87,9 @@ copilot/     GENERATED from core/ + platforms/copilot (committed so teams can pi
 opencode/    GENERATED from core/ + platforms/opencode (committed so teams can pick it): never edit by hand
 toolkit/     Java sources: gta-core, gta-cli, gta-junit, gta-harness-gen (Maven reactor; pom.xml holds the version)
 wrapper/     files installed into services: gtaw, gtaw.cmd, gtaw-download.ps1 (pinned jar from Nexus, sha256-verified)
-scripts/     maintainer scripts: generate.sh (platform folders), diagrams/render.py (docs/diagrams)
+scripts/     try.sh (the five-minute trial), generate.sh (platform folders), diagrams/render.py (docs/diagrams)
 evals/       order-service fixture with seeded defects and a scripted end-to-end run
-docs/        guides/ (quickstart, CI integration, test naming, diagram style, adding a capability), design/ (the design), reviews/ (review records), diagrams/
+docs/        guides/ (quickstart, pilot, CI integration, test naming, diagram style, adding a capability), design/ (overview: start here; plan: the full design), reviews/ (review records), diagrams/
 ```
 
 ## Development
