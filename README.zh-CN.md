@@ -4,7 +4,7 @@
 
 gta 是一个面向 Java/Spring 服务、"先写规格再写测试"的测试 harness，运行在 **GitHub Copilot**（VS Code、IntelliJ）或 **OpenCode** 中。
 
-> **现状：** 确定性的部分 `gtaw` 有单元测试和六个脚本化的端到端运行覆盖，其中由脚本扮演 agent。目前还没有用真实模型在真实服务上运行的记录：请先看[试点指南](docs/guides/pilot.md)。第一次接触？先读[十分钟了解 gta](docs/design/overview.md)（英文）。
+> **现状：** 确定性的部分 `gtaw` 有单元测试和六个脚本化的端到端运行覆盖，其中由脚本扮演 agent。目前还没有用真实模型在真实服务上运行的记录：请先看[试点指南](docs/guides/pilot.md)。第一次接触？先读[十分钟了解 gta](docs/design/overview.md)（英文）；[docs/README.md](docs/README.md) 说明每份文档给谁看。
 
 输入 `/gta` 后，它按以下循环工作：
 
@@ -89,7 +89,7 @@ toolkit/     Java 源码：gta-core、gta-cli、gta-junit、gta-harness-gen（Ma
 wrapper/     安装到服务中的文件：gtaw、gtaw.cmd、gtaw-download.ps1（从 Nexus 下载锁定版本的 jar 并校验 sha256）
 scripts/     try.sh（五分钟试用）、generate.sh（平台文件夹）、diagrams/render.py（docs/diagrams）
 evals/       带预埋缺陷的 order-service 样例和脚本化端到端测试
-docs/        guides/（快速开始、试点、CI 接入、测试命名、图表风格、新增能力）、design/（overview：从这里开始；plan：完整设计）、reviews/（评审记录）、diagrams/
+docs/        guides/（快速开始、试点、CI 接入、测试命名、图表风格、新增能力）、design/（overview：从这里开始；plan：完整设计）、archive/（历史评审记录）、diagrams/
 ```
 
 ## 开发

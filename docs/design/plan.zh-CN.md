@@ -2,7 +2,7 @@
 
 [English](plan.md) | **简体中文**
 
-> 状态：**P0 到 P4 已实现**，当前阶段为 P4（见 §15 路线图）· 版本：plan v13 · 日期：2026-11 · 代码审查与修复记录见 [round-2-remediation.md](../reviews/round-2-remediation.md) · [round-3-plan.md](../reviews/round-3-plan.md)
+> 状态：**P0 到 P4 已实现**，当前阶段为 P4（见 §15 路线图）· 版本：plan v13 · 日期：2026-11 · 代码审查与修复记录见 [round-2-remediation.md](../archive/reviews/round-2-remediation.md) · [round-3-plan.md](../archive/reviews/round-3-plan.md)
 > 范围：面向 Java（以 Spring 为主）服务的通用测试 harness
 > 使用面：**GitHub Copilot（VS Code、IntelliJ IDEA）和 OpenCode**，两者同等支持：相同的 agent、命令、护栏和测试
 > 目标环境：Maven；Spring Boot 4.1 为主，少量 3.5；JUnit 跟随 Spring Boot parent；Java 17+；开发机为 Windows；数据存储为 Oracle 和 BigQuery；消息为 Pub/Sub、Kafka、MQ；本地不能使用任何容器；所有依赖都经过公司 Nexus 代理，平台团队可以向 Nexus 上传包；CI（alm-github）可以接入；多数服务只有代码，没有规范文档。不启用 CODEOWNERS 和分支保护，不开启 Copilot preview policy
@@ -1525,7 +1525,7 @@ generic-testing-agent/
 ├── opencode/                # ★ 用户选择 OpenCode 时使用的完整文件夹（生成物，已提交）：.opencode/… · opencode.json · .gta/skills/…
 ├── evals/   fixtures/（带缺陷的样例服务） · e2e/（脚本化端到端；模型评测任务 P0a 加入）
 ├── scripts/ generate.sh · diagrams/render.py   # 维护脚本
-├── docs/    guides/（quickstart、ci-integration、test-naming、diagram-style、adding-a-capability）· design/（plan.md、plan.zh-CN.md 本文档）· reviews/ · diagrams/
+├── docs/    README.md（索引）· guides/（quickstart、pilot、ci-integration、test-naming、diagram-style、adding-a-capability、releasing）· design/（overview.md、plan.md、plan.zh-CN.md 本文档）· archive/reviews/ · diagrams/
 └── .github/workflows/ci.yml
 ```
 
@@ -1789,7 +1789,7 @@ Java：以 Java 17 及以上的服务为主进行设计，少数 Java 8 或 11 �
 | v7 | 根据已确认的环境调整：<br>- 只支持 Maven，Boot 4.1 和 3.5 双基线，Java 17+；<br>- 新增 §4.0 原语选型：v1 不用 hooks 和 MCP，护栏改为 gtaw 改动检查加终端批准；<br>- 回答渠道简化为 `chat` 和 `editor`；<br>- 没有 CODEOWNERS 时，以 PR review 加上 PR 评论清单为准；<br>- 更新待确认问题 |
 | v8 | 按 Anthropic 的原语定义重新审计：<br>- 新增 agent / skill / workflow 的判定准则；<br>- 删去 system-tester（改为 test-author + skill），最终只有 4 个 agent；<br>- 不使用容器：新增 §7.0 依赖保真度策略；<br>- 门禁在本地运行，CI 可选；characterization 测试也受门禁保护；<br>- 根目录提供 `copilot/` 和 `opencode/` 两个文件夹；<br>- 增加模型映射；<br>- 针对只有代码、没有文档的现实做了调整 |
 | v9（最终版） | 按确认的环境定稿：<br>- Windows 开发机；<br>- Oracle（共享测试库 / H2 兼容模式）、BigQuery（fake，SQL 部分在 P4 测）；<br>- Pub/Sub 模拟器从 Nexus 分发、EmbeddedKafka、嵌入式 Artemis（MQ/JMS）；<br>- 所有依赖经 Nexus 代理，工具放在 Nexus 的 raw 仓库；<br>- P1 接入 alm-github CI 模板；<br>- 待确认问题清零 |
-| v9.1 | P0 已实现，完成两轮代码审查（见 [round-2-remediation.md](../reviews/round-2-remediation.md)）：<br>- 只有精确的批准才算批准，其他回复作为修改意见，展示后被改动的规格不予批准；<br>- 用提交账本代替 trailer，分片和状态失败即关闭，规格循环有上限，review 带 token，超时计入次数；<br>- 文档统一为英文，README 和本设计另有中文版；示意图由 `scripts/diagrams/render.py` 按 diagram-design 风格生成 |
+| v9.1 | P0 已实现，完成两轮代码审查（见 [round-2-remediation.md](../archive/reviews/round-2-remediation.md)）：<br>- 只有精确的批准才算批准，其他回复作为修改意见，展示后被改动的规格不予批准；<br>- 用提交账本代替 trailer，分片和状态失败即关闭，规格循环有上限，review 带 token，超时计入次数；<br>- 文档统一为英文，README 和本设计另有中文版；示意图由 `scripts/diagrams/render.py` 按 diagram-design 风格生成 |
 | v10 | P0 到 P3 已实现。P4 重新划定范围：<br>- 部署环境上的测试不在范围内：团队自行测试 SIT 和 UAT，gta 绝不触碰这些环境，尤其是生产环境（Spring profile 隔离、agent 规则）；<br>- 新手易用性：给人的统一状态块（`en` 或 `zh-CN`）、带推荐答案的问题和 `OK` 回复、`/gta note`、service 模式、统一的 tag 词汇（§5.10、§9.5） |
 | v11 | P4 已实现并成为当前阶段。P5 精简：去掉 hooks、插件分发、record-replay 和 native-image；其余暂缓，等有团队需要时再做 |
 | v13 | P4 新增能力：Spring Cloud Function（Cloud Run functions）、Spring Cloud Stream 函数、Spring Integration flow、Resilience4j 和 Spring Retry、Secret Manager（§7.0、§7.1、§7.5）；服务本来就在用 Cucumber 时支持 Cucumber，Then 步骤被锁定、缺陷用标签标注（§7.10）；后续阶段 P5 到 P7 排定顺序，并列出不支持的内容（§15）；评测 fixture `lending-service` |

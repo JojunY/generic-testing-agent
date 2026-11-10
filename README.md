@@ -4,7 +4,7 @@
 
 gta is a spec-first testing harness for Java/Spring services. It runs inside **GitHub Copilot** (VS Code, IntelliJ) or **OpenCode**.
 
-> **Status:** `gtaw`, the deterministic part, is covered by unit tests and six scripted end-to-end runs in which a script plays the agents. A run with a real model on a real service is not recorded here yet: start with the [pilot guide](docs/guides/pilot.md). New here? Read [gta in ten minutes](docs/design/overview.md).
+> **Status:** `gtaw`, the deterministic part, is covered by unit tests and six scripted end-to-end runs in which a script plays the agents. A run with a real model on a real service is not recorded here yet: start with the [pilot guide](docs/guides/pilot.md). New here? Read [gta in ten minutes](docs/design/overview.md); [docs/README.md](docs/README.md) says which document is for whom.
 
 You type `/gta` and it runs this loop:
 
@@ -89,7 +89,7 @@ toolkit/     Java sources: gta-core, gta-cli, gta-junit, gta-harness-gen (Maven 
 wrapper/     files installed into services: gtaw, gtaw.cmd, gtaw-download.ps1 (pinned jar from Nexus, sha256-verified)
 scripts/     try.sh (the five-minute trial), generate.sh (platform folders), diagrams/render.py (docs/diagrams)
 evals/       order-service fixture with seeded defects and a scripted end-to-end run
-docs/        guides/ (quickstart, pilot, CI integration, test naming, diagram style, adding a capability), design/ (overview: start here; plan: the full design), reviews/ (review records), diagrams/
+docs/        guides/ (quickstart, pilot, CI integration, test naming, diagram style, adding a capability), design/ (overview: start here; plan: the full design), archive/ (past review records), diagrams/; README.md is the index
 ```
 
 ## Development
