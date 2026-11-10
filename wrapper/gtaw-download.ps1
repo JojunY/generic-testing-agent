@@ -3,7 +3,12 @@
 param([Parameter(Mandatory = $true)][string]$Root)
 $ErrorActionPreference = 'Stop'
 $props = @{}
-Get-Content (Join-Path $Root '.gta\wrapper\gta-wrapper.properties') | ForEach-Object {
+$propsFile = Join-Path $Root '.gta\wrapper\gta-wrapper.properties'
+if (-not (Test-Path $propsFile)) {
+    Write-Output '{"error":{"code":"CONFIG_NOT_INITIALIZED","category":"config","message":"missing .gta/wrapper/gta-wrapper.properties","hint":"run gta-cli init --platform copilot|opencode","retryable":false}}'
+    exit 0
+}
+Get-Content $propsFile | ForEach-Object {
     if ($_ -match '^\s*([^#=]+)=(.*)$') { $props[$matches[1].Trim()] = $matches[2].Trim() }
 }
 $version = $props['version']
@@ -11,7 +16,7 @@ $url = $props['distributionUrl']
 $sha = $props['distributionSha256Sum']
 # fail closed: never download or run a jar whose checksum is not pinned
 if (-not $sha -or -not $url) {
-    Write-Output '{"error":{"code":"CONFIG_NOT_INITIALIZED","category":"config","message":"distributionUrl and distributionSha256Sum must be set in .gta/wrapper/gta-wrapper.properties","hint":"set both to the Nexus gta-cli jar and its sha256 (or GTA_CLI_JAR to a local jar for development)","retryable":false}'
+    Write-Output '{"error":{"code":"CONFIG_NOT_INITIALIZED","category":"config","message":"distributionUrl and distributionSha256Sum must be set in .gta/wrapper/gta-wrapper.properties","hint":"set both to the Nexus gta-cli jar and its sha256 (or GTA_CLI_JAR to a local jar for development)","retryable":false}}'
     exit 0
 }
 $gtaHome = if ($env:GTA_HOME) { $env:GTA_HOME } else { Join-Path $env:USERPROFILE '.gta' }

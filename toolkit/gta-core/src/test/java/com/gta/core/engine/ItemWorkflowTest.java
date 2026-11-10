@@ -87,6 +87,18 @@ class ItemWorkflowTest {
     }
 
     @Test
+    void shouldTakeTheScopeBaselineOfARepairWhenItIsFirstDispatched() {
+        s.status = ItemStatus.REPAIRING; // a committed item sent back by the session end has no baseline
+
+        dispatch();
+        com.gta.core.change.Baseline taken = s.baseline;
+
+        org.junit.jupiter.api.Assertions.assertNotNull(taken, "changes made before the repair are not the agent's");
+        dispatch();
+        org.junit.jupiter.api.Assertions.assertSame(taken, s.baseline, "a re-issued brief keeps the baseline");
+    }
+
+    @Test
     void shouldStopChecksAtTheBudgetAndRefuseTheWrongState() {
         s.status = ItemStatus.AUTHORING;
         s.token = "t";

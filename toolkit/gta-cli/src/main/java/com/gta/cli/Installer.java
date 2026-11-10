@@ -343,7 +343,9 @@ public final class Installer {
                         ErrorCode.CONFIG_INVALID, target + " is not a JSON object", "Fix the file and re-run init");
             }
             ObjectNode merged = baseObject.deepCopy();
-            merge(merged, add);
+            if (!merge(merged, add)) {
+                return new JsonMerge(null, add); // the team's value has another shape: a person merges it
+            }
             if (merged.equals(baseObject)) {
                 return new JsonMerge(null, null);
             }
@@ -356,13 +358,23 @@ public final class Installer {
         }
     }
 
-    static void merge(ObjectNode base, JsonNode add) {
+    /**
+     * Merges {@code add} into {@code base}; false when a team value has another shape than gta's object or list (e.g.
+     * {@code "bash": "ask"} in opencode.json), which is never replaced: that would silently change what it allows.
+     */
+    static boolean merge(ObjectNode base, JsonNode add) {
+        boolean ok = true;
         Iterator<Map.Entry<String, JsonNode>> it = add.fields();
         while (it.hasNext()) {
             Map.Entry<String, JsonNode> e = it.next();
             JsonNode existing = base.get(e.getKey());
             if (existing instanceof ObjectNode o && e.getValue().isObject()) {
-                merge(o, e.getValue());
+                ok &= merge(o, e.getValue());
+            } else if (existing != null
+                    && !existing.isNull()
+                    && (e.getValue().isContainerNode() || existing.isContainerNode())
+                    && existing.getNodeType() != e.getValue().getNodeType()) {
+                ok = false;
             } else if (existing instanceof ArrayNode a && e.getValue().isArray()) {
                 for (JsonNode v : e.getValue()) {
                     boolean present = false;
@@ -377,6 +389,7 @@ public final class Installer {
                 base.set(e.getKey(), e.getValue());
             }
         }
+        return ok;
     }
 
     private Optional<String> gitignoreUpdate() {

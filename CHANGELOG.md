@@ -34,6 +34,18 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 ### Fixed
 - Retiring a scenario no longer deletes a test class that has no method of that scenario.
 - The scripted e2e adds gta-junit to the project's dependencies, not to its `<dependencyManagement>`.
+- Review round 5:
+  - a THEN value first asserted after the lock was taken is locked too; before, only the values the first run asserted were committed to the shard and checked by the gate;
+  - an oracle-review `accept` refuses a test that changed (or a HEAD that moved) after it ran and went to review, instead of committing it unrun;
+  - a committed item that the session end sends back (can-fail, unstable) takes its scope baseline when its repair is dispatched, so a developer's commits and edits made in between are no longer reported as foreign or reverted;
+  - a paused service run asks the oldest parked decision instead of escalating with nothing to answer; the interrupted flow resumes after it;
+  - an agent can no longer run `./gtaw next --takeover` without a person: Copilot's auto-approve and OpenCode's rules leave it out;
+  - `init` no longer replaces a team's `opencode.json` value of another shape (`"bash": "ask"`), which turned "ask for every command" into "allow every unlisted command"; it is reported under `mergeManually`;
+  - `@Sql("classpath:...")` scripts are watched as inputs; a new question ticked by the analyst is refused as an owned field; question ids used twice are refused; a scenario without an id is a lint issue, not a crash;
+  - after `abort`, approving an unchanged in-review spec whose committed version is the baseline no longer bounces back to the analyst;
+  - numbered migration file names (`001-create-orders.yaml`, `V3__2fa_secrets.sql`) and BPMN names give valid flowIds; Gradle's `includeBuild` is not a module; `file:` refs ignore CRLF line endings;
+  - an answer containing `-->` no longer ends its record comment early;
+  - wrapper: Nexus passwords with `\` or `"` reach curl intact, the sha256 check works on a cache path with a backslash, `gtaw.cmd` never runs an inherited `GTA_JAR` and reports a missing pin as JSON (the pin-missing error was also invalid JSON); `install-local.sh` works from a path with a space and shows an `init` error.
 - Review round 4:
   - a negative expected value (`isEqualTo(-1)`) is one token, so it satisfies a THEN of `-1` and no longer a THEN of `1`;
   - lint refuses a requirement, scenario or invariant id used twice (plan items and the gate key on it);

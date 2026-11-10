@@ -106,6 +106,9 @@ public class WorkState {
         public int checks;
         public String token;
         public Baseline baseline;
+        /** The working tree when the item went to oracle review: an accept commits only the test that was reviewed. */
+        public Baseline reviewed;
+
         public Lock lock;
         public LastError lastError;
         public String evidenceRunId;

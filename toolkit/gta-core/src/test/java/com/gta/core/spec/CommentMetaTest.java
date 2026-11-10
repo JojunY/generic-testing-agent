@@ -50,4 +50,15 @@ class CommentMetaTest {
                 .format()
                 .contains("text=\"a b\""));
     }
+
+    @Test
+    void shouldKeepAValueWithACommentEndInsideTheComment() {
+        String formatted =
+                new CommentMeta("answer", List.of(new CommentMeta.Entry("text", "2: PENDING --> PAID"))).format();
+
+        assertEquals(
+                Optional.of("2: PENDING -> PAID"),
+                CommentMeta.parse(formatted).orElseThrow().get("text"),
+                "the whole answer stays in the comment");
+    }
 }

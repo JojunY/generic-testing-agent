@@ -102,6 +102,10 @@ final class ItemWorkflow {
                     // brief must invalidate the previous one
                     st.seq++;
                     s.token = BriefWriter.token(st.session.id, st.seq);
+                    if (s.baseline == null) {
+                        // a committed item sent back to repair: what changed since its commit is not the agent's
+                        s.baseline = new ChangeChecker(paths).capture();
+                    }
                     Path brief = briefs.author(st.seq, s, item, spec, profile);
                     return Dispatch.of(authorNode(item, s, brief));
                 }
@@ -523,6 +527,7 @@ final class ItemWorkflow {
                         "Locked expected values were changed or removed: " + lockCheck.missingTokens()
                                 + ". Restore them; only a human can relock.");
             }
+            OracleLock.extend(s.lock, oracle, item.oracle.then);
             s.structuralOracleChange = lockCheck.verdict() == OracleLock.Verdict.STRUCTURAL_CHANGE;
             if (s.lock != null
                     && s.lastError != null
@@ -604,6 +609,7 @@ final class ItemWorkflow {
                         "A reproducing test must fail for the reported reason, but it passed");
             }
             if (config.qualityGates.oracleReview && !item.isFoundation()) {
+                s.reviewed = new ChangeChecker(paths).capture();
                 st.move(s, ItemStatus.REVIEWING);
                 return result(
                         "passed run " + runId + "; waiting for the reviewer's oracle review", Map.of("runId", runId));
@@ -653,7 +659,15 @@ final class ItemWorkflow {
             PlanItem item = store.planItem(itemId);
             Map<String, Object> out;
             if (s.status == ItemStatus.REVIEWING) {
-                if ("accept".equals(verdict)) {
+                if ("accept".equals(verdict) && changedDuringReview(item, s)) {
+                    out = fail(
+                            st,
+                            item,
+                            s,
+                            ErrorCode.TEST_CODE_ERROR,
+                            "The test changed during the oracle review; only the test that ran and was reviewed is"
+                                    + " committed. Submit it again");
+                } else if ("accept".equals(verdict)) {
                     st.event(true, "chk.reviewer", item.ref);
                     out = markPassed(st, item, s, s.evidenceRunId);
                 } else if ("reject".equals(verdict)) {
@@ -684,6 +698,16 @@ final class ItemWorkflow {
             store.save(st);
             return out;
         }
+    }
+
+    /** True when the item's own files or HEAD changed since it went to review (fail closed without a record). */
+    private boolean changedDuringReview(PlanItem item, WorkState.ItemState s) {
+        if (s.reviewed == null) {
+            return true;
+        }
+        ChangeChecker cc = new ChangeChecker(paths);
+        return !Objects.equals(s.reviewed.head, git.head())
+                || cc.changedSince(s.reviewed).stream().anyMatch(f -> ChangeChecker.matchesAny(f, item.ownsFiles));
     }
 
     Map<String, Object> fail(WorkState st, PlanItem item, WorkState.ItemState s, ErrorCode code, String message) {

@@ -169,6 +169,7 @@ final class SessionEnd {
                                 + " test computes itself");
                 s.reason = "can-fail: " + result.detail()
                         + "; assert what the code under test does, not a value the test computes itself";
+                s.baseline = null; // committed: the repair takes its scope baseline when it is dispatched
                 st.move(s, ItemStatus.REPAIRING);
             }
         }
@@ -201,6 +202,7 @@ final class SessionEnd {
                                 "unstable under pass^k / " + MavenRunner.stabilityVariantLabel(config.qualityGates)
                                         + " / random order");
                         s.verdict = "flaky";
+                        s.baseline = null; // committed: a repair takes its scope baseline when it is dispatched
                         st.move(s, ItemStatus.TRIAGING);
                     }
                     break;

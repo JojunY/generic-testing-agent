@@ -270,6 +270,8 @@ class ProfilerTest {
         Path changelog = root.resolve("src/main/resources/db/changelog");
         Files.createDirectories(changelog);
         Files.writeString(changelog.resolve("add-orders.yaml"), "databaseChangeLog: []");
+        Files.writeString(changelog.resolve("001-create-invoices.yaml"), "databaseChangeLog: []");
+        Files.writeString(migrations.resolve("V3__2fa_secrets.sql"), "create table secret (id int);");
 
         Map<String, ServiceProfile.EntryPoint> flows =
                 byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"));
@@ -281,6 +283,11 @@ class ProfilerTest {
         assertEquals("db-migration", flows.get("db.add-orders").capability, "Liquibase changelogs too");
         assertTrue(flows.containsKey("db.customers"));
         assertTrue(flows.keySet().stream().noneMatch(f -> f.contains("notes")));
+        assertTrue(
+                flows.keySet().stream()
+                        .allMatch(f -> com.gta.core.util.Ids.FLOW_ID.matcher(f).matches()),
+                "numbered file names still give valid flowIds: " + flows.keySet());
+        assertTrue(flows.containsKey("db.create-invoices"), flows.keySet().toString());
     }
 
     @Test

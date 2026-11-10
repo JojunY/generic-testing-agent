@@ -84,6 +84,17 @@ class RefResolverTest {
                         .hash("file:src/main/resources/db/migration/V2__tier.sql")
                         .orElseThrow(),
                 "a changed migration makes its spec stale");
+        java.nio.file.Files.writeString(sql, "update customer\nset tier = 'SILVER';\n");
+        String lf = RefResolver.of(module)
+                .hash("file:src/main/resources/db/migration/V2__tier.sql")
+                .orElseThrow();
+        java.nio.file.Files.writeString(sql, "update customer\r\nset tier = 'SILVER';\r\n");
+        org.junit.jupiter.api.Assertions.assertEquals(
+                lf,
+                RefResolver.of(module)
+                        .hash("file:src/main/resources/db/migration/V2__tier.sql")
+                        .orElseThrow(),
+                "a checkout with CRLF line endings does not make the ref stale");
         org.junit.jupiter.api.Assertions.assertTrue(
                 refs.hash("file:../outside.sql").isEmpty(), "never outside the module");
         org.junit.jupiter.api.Assertions.assertTrue(

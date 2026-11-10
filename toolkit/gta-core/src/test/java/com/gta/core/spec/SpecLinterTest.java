@@ -283,4 +283,21 @@ class SpecLinterTest {
                 issues.stream().anyMatch(i -> i.contains("order.create/s01") && i.contains("twice")),
                 issues.toString());
     }
+
+    @Test
+    void shouldRejectTwoQuestionsWithTheSameId() throws Exception {
+        String question = """
+                <!-- gta: id=order.create/q01 impact=high affects=order.create/s02 -->
+                2. [high impact] Should a returning customer get the discount?
+                   - [ ] A) No (= current code)
+                   - [ ] B) Yes (recommended)
+                """;
+        String twice = SpecTestData.CREATE_ORDER.replace("## Findings", question + "\n## Findings");
+
+        List<String> issues = lint(twice);
+
+        assertTrue(
+                issues.stream().anyMatch(i -> i.contains("order.create/q01") && i.contains("twice")),
+                issues.toString());
+    }
 }

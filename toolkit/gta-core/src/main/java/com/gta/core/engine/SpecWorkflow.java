@@ -521,14 +521,16 @@ final class SpecWorkflow {
             }
         }
         for (Spec.Question q : now.questions) {
-            before.questions.stream()
-                    .filter(bq -> bq.id() != null && bq.id().equals(q.id()))
-                    .findFirst()
-                    .ifPresent(bq -> {
-                        if (!bq.chosen().map(o -> o.letter).equals(q.chosen().map(o -> o.letter))) {
-                            v.add("tick on question " + q.number);
-                        }
-                    });
+            Optional<Spec.Question> bq = before.questions.stream()
+                    .filter(b -> b.id() != null && b.id().equals(q.id()))
+                    .findFirst();
+            // a new question is the person's to answer: only gtaw ticks it
+            boolean changed = bq.isPresent()
+                    ? !bq.get().chosen().map(o -> o.letter).equals(q.chosen().map(o -> o.letter))
+                    : q.answered();
+            if (changed) {
+                v.add("tick on question " + q.number);
+            }
         }
         return v;
     }
@@ -581,6 +583,17 @@ final class SpecWorkflow {
 
     private Path snapshotPath(String flowId) {
         return paths.snapshots().resolve(flowId + ".spec.md");
+    }
+
+    /**
+     * After {@code abort} the snapshots are gone: the in-review spec shown to the person becomes the baseline again, so
+     * the approval matches it, unless it breaks the owned-field check against the committed version.
+     */
+    void snapshotIfMissing(String flowId, Spec spec) {
+        if (!Files.exists(snapshotPath(flowId))
+                && ownedFieldViolations(flowId, spec).isEmpty()) {
+            snapshot(flowId);
+        }
     }
 
     private void snapshot(String flowId) {

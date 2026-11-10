@@ -118,7 +118,8 @@ public final class CommentMeta {
         }
         for (Entry e : entries) {
             sb.append(' ').append(e.key()).append('=');
-            String v = e.value();
+            // "-->" would end the comment early and leave the rest of the value visible in the markdown
+            String v = e.value().replace("-->", "->");
             if (v.isEmpty() || v.matches(".*[\\s\"].*")) {
                 sb.append('"').append(v.replace("\"", "\\\"")).append('"');
             } else {

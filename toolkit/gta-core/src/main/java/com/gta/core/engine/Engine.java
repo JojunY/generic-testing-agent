@@ -209,9 +209,15 @@ public final class Engine {
      * on (plan §6), so a person's time goes to the questions only once gta cannot go on without them.
      */
     private Map<String, Object> step(WorkState st, ServiceProfile profile, String base) {
+        // a paused run (too many items in a row needed a person) goes on only through a person: ask, do not park
+        boolean paused = st.consecutiveFailures >= config.budgets.maxConsecutiveFailures;
         Map<String, Object> out = flowStep(st, profile, base);
-        while ("answer".equals(out.get("node")) && ServiceMode.park(st)) {
+        while ("answer".equals(out.get("node")) && !paused && ServiceMode.park(st)) {
             out = flowStep(st, profile, base);
+            paused = st.consecutiveFailures >= config.budgets.maxConsecutiveFailures;
+        }
+        if (paused && "escalate".equals(out.get("node")) && ServiceMode.askParkedNow(st)) {
+            return answerNode(st.pending);
         }
         return out;
     }
@@ -284,6 +290,7 @@ public final class Engine {
                     st, sw, flowId, entry, capability, List.of("spec is stale: production code it references changed"));
         }
         if ("in-review".equals(spec.status())) {
+            ctx.specs.snapshotIfMissing(flowId, spec);
             WorkState.Pending p = new WorkState.Pending();
             p.flowId = flowId;
             if (!spec.openQuestions().isEmpty()) {

@@ -23,6 +23,9 @@ permission:
     ".\\gtaw submit*": allow
     ".\\gtaw answer*": allow
     ".\\gtaw status*": allow
+    "./gtaw next*--takeover*": ask
+    ".\\gtaw.cmd next*--takeover*": ask
+    ".\\gtaw next*--takeover*": ask
   task:
     "*": deny
     "gta-*": allow

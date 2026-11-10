@@ -132,6 +132,21 @@ class AssertionScannerTest {
     }
 
     @Test
+    void shouldWatchAClasspathSqlScript() throws Exception {
+        Files.createDirectories(dir.resolve("resources"));
+        Files.writeString(dir.resolve("resources/s01.data.sql"), "insert into orders values (1);");
+        String body = """
+                    @Test @Tag("scenario:order.create/s01") @Sql("classpath:/s01.data.sql")
+                    void shouldCreate() { assertThat(status).isEqualTo(201); }
+                """;
+        String before = scanSource(body).watchedHash();
+
+        Files.writeString(dir.resolve("resources/s01.data.sql"), "insert into orders values (2);");
+
+        assertFalse(before.equals(scanSource(body).watchedHash()), "a changed classpath: script changes the inputs");
+    }
+
+    @Test
     void shouldFindNothingInAMissingOrBrokenFile() throws Exception {
         assertFalse(AssertionScanner.scan(dir.resolve("None.java"), "order.create/s01", null)
                 .found());

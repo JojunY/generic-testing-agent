@@ -2,6 +2,8 @@
 rem gtaw.cmd - gta wrapper for Windows (like mvnw.cmd). Downloads the pinned gta-cli jar from the company Nexus,
 rem verifies its sha256 before every run, then runs it. Managed by gta: do not edit (gtaw upgrade rewrites it).
 setlocal
+rem an inherited GTA_JAR must never stand in for the verified jar
+set "GTA_JAR="
 set "GTA_DIR=%~dp0"
 if "%GTA_DIR:~-1%"=="\" set "GTA_DIR=%GTA_DIR:~0,-1%"
 if defined GTA_CLI_JAR (

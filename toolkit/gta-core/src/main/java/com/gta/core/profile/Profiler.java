@@ -511,11 +511,12 @@ public final class Profiler {
                     } else {
                         continue;
                     }
+                    String flow = flowName(flowName);
+                    if (flow.isEmpty()) {
+                        continue;
+                    }
                     ServiceProfile.EntryPoint e = new ServiceProfile.EntryPoint();
-                    e.flowId = "db."
-                            + flowName.toLowerCase(java.util.Locale.ROOT)
-                                    .replaceAll("[^a-z0-9]+", "-")
-                                    .replaceAll("^-|-$", "");
+                    e.flowId = "db." + flow;
                     e.capability = "db-migration";
                     e.kind = "migration";
                     e.ref = "file:" + GtaPaths.MAIN_RESOURCES + "/" + dir + "/" + name;
@@ -531,6 +532,16 @@ public final class Profiler {
     }
 
     /**
+     * A file name as a flow name ({@code Ids.FLOW_ID}): kebab case, starting with a letter, so numbered file names such
+     * as {@code 001-create-orders} give {@code create-orders}; empty when no letter is left.
+     */
+    static String flowName(String fileName) {
+        return fileName.toLowerCase(java.util.Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^[^a-z]+|-$", "");
+    }
+
+    /**
      * Camunda/BPMN process definitions as flows (workflow): each {@code *.bpmn} under the main resources is
      * {@code process.<name>}, cited with {@code ref=file:}; its delegates are tested through the process.
      */
@@ -543,8 +554,12 @@ public final class Profiler {
             for (Path f :
                     files.filter(x -> x.toString().endsWith(".bpmn")).sorted().toList()) {
                 String name = String.valueOf(f.getFileName());
+                String flow = flowName(Ids.kebab(name.substring(0, name.length() - ".bpmn".length())));
+                if (flow.isEmpty()) {
+                    continue;
+                }
                 ServiceProfile.EntryPoint e = new ServiceProfile.EntryPoint();
-                e.flowId = "process." + Ids.kebab(name.substring(0, name.length() - ".bpmn".length()));
+                e.flowId = "process." + flow;
                 e.capability = "workflow";
                 e.kind = "process";
                 e.ref = "file:" + GtaPaths.MAIN_RESOURCES + "/"

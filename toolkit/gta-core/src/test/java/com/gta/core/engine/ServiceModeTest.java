@@ -82,4 +82,21 @@ class ServiceModeTest {
         st.mode = "pr";
         assertFalse(ServiceMode.unpark(st));
     }
+
+    @Test
+    void shouldAskAParkedDecisionNowWhenTheRunIsPausedAndResumeTheActiveFlowLater() {
+        WorkState st = new WorkState();
+        st.mode = ServiceMode.MODE;
+        st.activeFlow = "order.get";
+        st.queue.add("order.refund");
+        st.parked.addAll(List.of(pending("order.create"), pending("order.cancel")));
+
+        assertTrue(ServiceMode.askParkedNow(st));
+
+        assertEquals("order.create", st.pending.flowId, "the oldest decision");
+        assertEquals("order.create", st.activeFlow);
+        assertEquals(List.of("order.get", "order.refund"), st.queue, "the interrupted flow is not lost");
+        st.mode = "flow";
+        assertFalse(ServiceMode.askParkedNow(st), "only service mode parks");
+    }
 }

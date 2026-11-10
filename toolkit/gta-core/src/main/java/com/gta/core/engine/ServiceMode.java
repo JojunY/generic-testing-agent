@@ -56,6 +56,20 @@ final class ServiceMode {
         return true;
     }
 
+    /**
+     * A paused run goes on only through a person: the oldest parked decision is asked now, and the active flow goes back
+     * to the front of the queue, so it resumes once that flow is done; false when none is parked.
+     */
+    static boolean askParkedNow(WorkState st) {
+        if (!MODE.equals(st.mode) || st.parked.isEmpty()) {
+            return false;
+        }
+        if (st.activeFlow != null) {
+            st.queue.add(0, st.activeFlow);
+        }
+        return unpark(st);
+    }
+
     /** The flows of the parked decisions, for the status block. */
     static List<String> waitingFlows(WorkState st) {
         return MODE.equals(st.mode)

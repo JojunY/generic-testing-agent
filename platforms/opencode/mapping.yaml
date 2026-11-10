@@ -37,6 +37,9 @@ profiles:
         ".\\gtaw submit*": allow
         ".\\gtaw answer*": allow
         ".\\gtaw status*": allow
+        "./gtaw next*--takeover*": ask   # takeover is for people only (plan §4.5); the last matching rule wins
+        ".\\gtaw.cmd next*--takeover*": ask
+        ".\\gtaw next*--takeover*": ask
       task: { "*": deny, "gta-*": allow }
   spec-writer:
     mode: subagent

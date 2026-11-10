@@ -118,6 +118,69 @@ class SpecWorkflowTest {
                 e.code().name());
     }
 
+    /** Answers round R1 and sends R2 back with a change request: the analyst revises a spec gtaw has written. */
+    private String revisionRound() throws Exception {
+        Files.writeString(paths.spec(FLOW), scripted());
+        engine().submitSpec(FLOW, token);
+        engine().next(null, null, null, false);
+        engine().answer("R1: 1A");
+        engine().next(null, null, null, false);
+        engine().answer("not yet: s04 should also cover a negative subtotal");
+        token = String.valueOf(engine().next(null, null, null, false).get("token"));
+        return Files.readString(paths.spec(FLOW));
+    }
+
+    @Test
+    void shouldRefuseANewQuestionTheAnalystTicked() throws Exception {
+        String spec = revisionRound();
+        String ticked = """
+                <!-- gta: id=order.create/q09 impact=normal affects=order.create/s03 -->
+                9. Should a negative subtotal be refused?
+                   - [x] A) Yes (= current code)
+                   - [ ] B) No
+
+                ## Findings""";
+
+        GtaException e = submitFails(spec.replace("## Findings", ticked));
+
+        assertEquals(ErrorCode.POLICY_GTA_OWNED_FIELD, e.code(), "only the person answers a new question");
+        assertTrue(e.getMessage().contains("tick on question 9"), e.getMessage());
+    }
+
+    @Test
+    void shouldReportAScenarioWithoutAnIdInARevision() throws Exception {
+        String spec = revisionRound();
+        String noId = """
+                ## Invariants
+
+                ### Scenario: negative subtotal
+                <!-- gta: source=observed -->
+                - **WHEN** customer `c-1` posts subtotal `-1.00`
+                - **THEN** the response is `400`
+                """;
+
+        GtaException e = submitFails(spec.replaceFirst("## Invariants\n", noId));
+
+        assertEquals(ErrorCode.POLICY_SPEC_INVALID, e.code(), "a lint issue, not a crash");
+    }
+
+    @Test
+    void shouldAcceptTheApprovalOfAnUnchangedCommittedSpecAfterAbort() throws Exception {
+        Files.writeString(paths.spec(FLOW), scripted());
+        engine().submitSpec(FLOW, token);
+        engine().next(null, null, null, false);
+        engine().answer("R1: 1A");
+        git("add", "-A");
+        git("commit", "-qm", "spec in review"); // the committed version is the trusted baseline after abort
+        engine().abort(null);
+
+        Map<String, Object> approval = engine().next("flow", FLOW, null, false);
+        assertEquals("approve", approval.get("type"), approval.toString());
+        Map<String, Object> out = engine().answer("approve " + FLOW + "@R2");
+
+        assertTrue(Files.readString(paths.spec(FLOW)).contains("status=approved"), out.toString());
+    }
+
     @Test
     void shouldReturnLintIssuesAndEscalateAfterTheSubmissionBudget() throws Exception {
         String broken = scripted().replace("SHALL store it", "stores it");

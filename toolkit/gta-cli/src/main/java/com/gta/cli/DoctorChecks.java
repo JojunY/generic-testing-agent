@@ -205,7 +205,7 @@ public final class DoctorChecks {
                         "ide-auto-approve",
                         "info",
                         "VS Code: .vscode/settings.json auto-approves ./gtaw " + AUTO_APPROVED,
-                        "IntelliJ: Settings > GitHub Copilot > Chat > Auto Approve → add rules for ./gtaw and .\\gtaw.cmd (same subcommands)");
+                        "IntelliJ: Settings > GitHub Copilot > Chat > Auto Approve → add rules for ./gtaw and .\\gtaw.cmd (same subcommands, but not next --takeover)");
             } else if ("opencode".equals(m.get("platform"))) {
                 add(
                         "ide-auto-approve",

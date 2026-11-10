@@ -26,6 +26,26 @@ class OracleLockTest {
     }
 
     @Test
+    void shouldAlsoLockAThenValueAssertedAfterTheLockWasTaken() {
+        Lock lock = OracleLock.create(FIRST, List.of("201", "50.00", "CREATED"), "r1");
+
+        OracleLock.extend(
+                lock,
+                oracle(
+                        List.of("isEqualTo(201)", "isEqualTo(\"50.00\")", "isEqualTo(\"CREATED\")"),
+                        Set.of("201", "50.00", "CREATED")),
+                List.of("201", "50.00", "CREATED"));
+
+        assertEquals(List.of("201", "50.00", "CREATED"), lock.tokens);
+        assertEquals(
+                OracleLock.Verdict.MODIFIED,
+                OracleLock.check(lock, FIRST).verdict(),
+                "removing the later CREATED assertion is a change to a locked value");
+        OracleLock.extend(lock, FIRST, List.of("201", "50.00", "CREATED"));
+        assertEquals(List.of("201", "50.00", "CREATED"), lock.tokens, "a locked value is never dropped");
+    }
+
+    @Test
     void shouldDetectAChangedValueARestructuredAssertionAndAcceptAnAddedOne() {
         Lock lock = OracleLock.create(FIRST, List.of("201", "50.00"), "r1");
 

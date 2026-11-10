@@ -228,15 +228,34 @@ class EngineTest {
     }
 
     @Test
+    void shouldNotCommitATestChangedDuringTheOracleReview() throws Exception {
+        WorkState st = state(ItemStatus.REVIEWING);
+        st.items.get(ITEM).evidenceRunId = "r1";
+        Path test = root.resolve(new GtaPaths(root).testSourceRel("com.acme.OrderCreateIT"));
+        Files.createDirectories(test.getParent());
+        Files.writeString(test, "class OrderCreateIT { int status = 201; }\n");
+        st.items.get(ITEM).reviewed = new ChangeChecker(paths).capture();
+        store.save(st);
+        Files.writeString(test, "class OrderCreateIT { int status = 200; }\n");
+
+        engine().submitReview(ITEM, TOKEN, "accept", "matches the spec");
+
+        assertEquals(ItemStatus.REPAIRING, item().status, "the edited test goes back to be submitted again");
+        assertEquals("TEST_CODE_ERROR", item().lastError.code);
+        assertTrue(git("status", "--porcelain", "-uall").output().contains("OrderCreateIT"), "nothing was committed");
+    }
+
+    @Test
     void shouldLeaveNoShardBehindWhenTheCommitFails() throws Exception {
         WorkState st = state(ItemStatus.REVIEWING);
         st.items.get(ITEM).lock = new Lock();
         st.items.get(ITEM).lock.tokens.add("201");
         st.items.get(ITEM).evidenceRunId = "r1";
-        store.save(st);
         Path test = root.resolve(new GtaPaths(root).testSourceRel("com.acme.OrderCreateIT"));
         Files.createDirectories(test.getParent());
         Files.writeString(test, "class OrderCreateIT {}\n");
+        st.items.get(ITEM).reviewed = new ChangeChecker(paths).capture();
+        store.save(st);
         git("config", "commit.gpgsign", "true");
         git("config", "gpg.format", "openpgp");
         git("config", "gpg.program", "false-gpg-that-does-not-exist");

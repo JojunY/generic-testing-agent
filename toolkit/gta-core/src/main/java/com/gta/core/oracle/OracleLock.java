@@ -40,6 +40,20 @@ public final class OracleLock {
         return lock;
     }
 
+    /**
+     * Adds the THEN values the test asserts now but did not when the lock was taken (a value asserted after the first
+     * run that reached the code is locked too); locked values are never dropped.
+     */
+    public static void extend(Lock lock, AssertionScanner.ScenarioOracle oracle, List<String> thenLiterals) {
+        if (lock == null) {
+            return;
+        }
+        Lock now = create(oracle, thenLiterals, lock.reachedInRun);
+        now.tokens.stream().filter(t -> !lock.tokens.contains(t)).forEach(lock.tokens::add);
+        now.statements.stream().filter(x -> !lock.statements.contains(x)).forEach(lock.statements::add);
+        lock.fingerprint = fingerprint(lock.statements);
+    }
+
     public static Check check(Lock lock, AssertionScanner.ScenarioOracle current) {
         if (lock == null) {
             return new Check(Verdict.OK, List.of());
