@@ -5,6 +5,9 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 ## [Unreleased]
 
 ### Added
+- `scripts/install-local.sh`: installs gta into a service on one machine without Nexus (the wrapper pinned to the locally built jar and its sha256); the README's Install section replaces its Quick start snippet, which left the wrapper unpinned.
+- `docs/design/overview.md` (gta in ten minutes: what it is and is not, what is proven, what is specific to the first adopter, known limits) and `docs/guides/pilot.md` (the first run with a real model: checklist, what to record, what decides the outcome).
+- `.github/workflows/release.yml`: a pushed tag publishes a GitHub Release with the jars and their sha256 values.
 - The analyst brief lists the team's own tests that name the flow's entry class: scenarios they already assert are not repeated, and new scenarios go to the layer that can observe what they cannot (plan §7.9).
 - `build.cucumber` (`auto` or `off`): `off` keeps JUnit in a service that uses Cucumber for its own acceptance tests only (plan §7.10).
 - New capabilities, on by default (plan §7, §15 P4):
@@ -19,6 +22,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - Future phases P5 to P7 in a stated order, and a list of what gta does not support (plan §15).
 
 ### Changed
+- `docs/README.md` is the index of the documentation, by reader; past review records moved to `docs/archive/reviews/`.
 - Plan §7.9 states how gta chooses the layer, the strategy for services with and without tests, and why it does not use Karate.
 - Easier for newcomers (plan §6, §9.4):
   - the `/gta` subcommands are shown in three tiers: `/gta` and `OK` to start, `<flow>`, `status` and `note` every day, `spec`, `pr` and `incident` when needed; `/gta service` stays accepted and is the same as `/gta`;
@@ -105,7 +109,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 
 The first release. Other capabilities are explain-only until their phase (see the capability registry). Findings from the P0a platform validation go into 0.1.1.
 
-### Fixed (code review, round 3; see docs/reviews/round-3-plan.md §6.3)
+### Fixed (code review, round 3; see docs/archive/reviews/round-3-plan.md §6.3)
 - Git failures (dubious ownership, a stale `index.lock`, an unknown base) fail closed instead of reading as "nothing changed"; git always runs with `LC_ALL=C`.
 - A failed item commit unstages its files and undoes gtaw's own shard write.
 - Parameterized and repeated tests keep their scenario tags; unreadable Surefire reports fail the run.
@@ -114,7 +118,7 @@ The first release. Other capabilities are explain-only until their phase (see th
 - Oracle shard keys are validated; error codes from older state files no longer crash.
 - The wrapper never puts Nexus credentials on a command line, and reports download failures as JSON.
 
-### Fixed (round 4; see docs/reviews/round-4-plan.md)
+### Fixed (round 4; see docs/archive/reviews/round-4-plan.md)
 - `init` and `upgrade` refuse an `AGENTS.md` whose gta block is damaged (a lone, reversed or duplicated marker) instead of replacing the text between mismatched markers.
 
 ### Added (round 3)
@@ -143,7 +147,7 @@ The first release. Other capabilities are explain-only until their phase (see th
 - The explanatory diagrams (architecture, loop, item states, spec lifecycle) are rendered by `scripts/diagrams/render.py` into light and dark SVGs in the style of cathrynlavery/diagram-design; CI checks they are current.
 - A repository test keeps Chinese out of every file except the `*.zh-CN.md` copies, the alias parser and tests.
 
-### Fixed (code review, round 2; see docs/reviews/round-2-remediation.md)
+### Fixed (code review, round 2; see docs/archive/reviews/round-2-remediation.md)
 - Only an exact "approve <flow>@<rev>" (or its Chinese alias) approves. Negated or conditional replies become change requests.
 - A spec edited after it was shown for approval is not approved; it returns as a new revision.
 - Timed-out test runs count against the item's budgets and reach a human.

@@ -4,7 +4,7 @@
 
 Who does what:
 
-- **Tech lead, once per service:** steps 1–3.
+- **Tech lead, once per service:** steps 1–3. On one machine without Nexus, `scripts/install-local.sh <service>` does steps 1 to 3 with a locally built jar; it is the same gta, but teammates and CI cannot use that install.
 - **Every developer:** step 4.
 
 ## 1. Publish gta to Nexus (platform team, once per release)

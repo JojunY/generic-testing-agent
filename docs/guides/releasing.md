@@ -42,8 +42,9 @@ Download the jar back from Nexus and compare its sha256: the pinned value must b
 git tag -a v<version> -m "gta <version>" && git push origin v<version>
 ```
 
-Create a GitHub Release from the tag: paste the changelog section, attach `gta-cli.jar` and `gta-junit.jar` with
-their sha256 values. Publish to services the line they need:
+Pushing the tag runs `.github/workflows/release.yml`: it checks that the tag matches the pom version, builds and tests
+that commit, and creates the GitHub Release with `gta-cli-<version>.jar`, `gta-junit-<version>.jar` and `SHA256SUMS`.
+Paste the changelog section into the release notes. Publish to services the line they need:
 
 ```bash
 java -jar gta-cli-<version>.jar --root path/to/service init --platform copilot \
