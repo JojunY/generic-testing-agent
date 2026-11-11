@@ -52,6 +52,21 @@ class OracleLockTest {
     }
 
     @Test
+    void shouldLockTheAssertionOfAThenValueWithSpaces() {
+        // the scanner strips whitespace from statements, while the THEN value keeps its spaces
+        AssertionScanner.ScenarioOracle first =
+                oracle(List.of("isEqualTo(\"Ordernotfound\")"), Set.of("Order not found"));
+        Lock lock = OracleLock.create(first, List.of("Order not found"), "r1");
+
+        assertEquals(List.of("isEqualTo(\"Ordernotfound\")"), lock.statements);
+        assertEquals(
+                OracleLock.Verdict.STRUCTURAL_CHANGE,
+                OracleLock.check(lock, oracle(List.of("isNotEqualTo(\"Ordernotfound\")"), Set.of("Order not found")))
+                        .verdict(),
+                "a weakened assertion of the locked value is caught");
+    }
+
+    @Test
     void shouldFingerprintStatementsIndependentlyOfOrder() {
         assertEquals(OracleLock.fingerprint(List.of("a", "b")), OracleLock.fingerprint(List.of("b", "a")));
     }

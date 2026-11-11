@@ -399,7 +399,8 @@ public final class AssertionScanner {
     }
 
     private static void hashResource(String value, Path testResources, StringBuilder watched) {
-        if (testResources == null || !value.matches("[\\w./-]+\\.(json|sql|ya?ml|xml|txt|csv|properties)")) {
+        if (testResources == null
+                || !value.matches("(?:classpath:)?[\\w./-]+\\.(json|sql|ya?ml|xml|txt|csv|properties)")) {
             return;
         }
         String rel = value.startsWith("classpath:") ? value.substring(10) : value;

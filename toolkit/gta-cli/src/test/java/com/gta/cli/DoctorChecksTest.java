@@ -56,6 +56,19 @@ class DoctorChecksTest {
     }
 
     @Test
+    void shouldAcceptANestedModule(@TempDir Path root) throws Exception {
+        pom(root, "<modules><module>services</module></modules>");
+        Files.createDirectories(root.resolve("services/order-api"));
+        Files.writeString(root.resolve("services/pom.xml"), "<project><artifactId>services</artifactId></project>");
+        Files.writeString(
+                root.resolve("services/order-api/pom.xml"), "<project><artifactId>order-api</artifactId></project>");
+        Files.createDirectories(root.resolve(".gta"));
+        Files.writeString(root.resolve(".gta/config.json"), "{\"build\":{\"module\":\"services/order-api\"}}");
+
+        assertEquals("ok", status(root, "modules"));
+    }
+
+    @Test
     void shouldAcceptASingleModuleService(@TempDir Path root) throws Exception {
         assertEquals("ok", check(pom(root, ""), "modules").get("status"));
     }

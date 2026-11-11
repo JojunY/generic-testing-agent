@@ -159,7 +159,7 @@ public final class PomInfo {
     private static final java.util.regex.Pattern JAVA_LEVEL = java.util.regex.Pattern.compile(
             "JavaLanguageVersion\\.of\\(\\s*(\\d+)\\s*\\)|(?:source|target)Compatibility\\s*=\\s*(?:JavaVersion\\.VERSION_(?:1_)?(\\d+)|[\"']?(?:1\\.)?(\\d+)[\"']?)");
     private static final java.util.regex.Pattern INCLUDE =
-            java.util.regex.Pattern.compile("(?m)^\\s*include\\s*\\(?([^)\\n]+)\\)?");
+            java.util.regex.Pattern.compile("(?m)^\\s*include(?:\\s+|\\s*\\()([^)\\n]+)\\)?");
 
     /**
      * The parts of a Gradle build gta needs, read from the build script text (Groovy or Kotlin DSL): the Spring Boot

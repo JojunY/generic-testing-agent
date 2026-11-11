@@ -76,6 +76,22 @@ class GitTest {
     }
 
     @Test
+    void shouldListNonAsciiPathsVerbatim() throws Exception {
+        String name = "下单.feature";
+        // a JVM under the C locale cannot even create the file
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                java.nio.charset.Charset.forName(System.getProperty("sun.jnu.encoding", "UTF-8"))
+                        .newEncoder()
+                        .canEncode(name));
+        commitFile("a.txt", "a\n");
+        String baseline = git.head();
+        commitFile(name, "Feature: x\n");
+
+        assertEquals(List.of(name), git.commitsSince(baseline).get(0).files());
+        assertEquals(List.of(name), git.changedFiles(baseline));
+    }
+
+    @Test
     void shouldCountEveryCommitWhenTheBaselineHadNoCommit() throws Exception {
         commitFile("a.txt", "a\n");
 

@@ -6,6 +6,8 @@ DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROPS="$DIR/.gta/wrapper/gta-wrapper.properties"
 
 prop() { sed -n "s/^$1=//p" "$PROPS" 2>/dev/null | tail -n 1; }
+# a value inside a quoted curl config string: escape backslashes and double quotes
+curl_quote() { printf '%s' "$1" | sed 's/[\\"]/\\&/g'; }
 
 if [ -n "$GTA_CLI_JAR" ]; then
   JAR="$GTA_CLI_JAR"
@@ -27,7 +29,7 @@ else
     # credentials never appear on a command line (visible in ps): curl reads them from stdin, wget from the environment
     if command -v curl >/dev/null 2>&1; then
       if [ -n "$GTA_NEXUS_USER" ]; then
-        printf 'user = "%s:%s"\n' "$GTA_NEXUS_USER" "$GTA_NEXUS_PASSWORD" | curl -fsSL -K - -o "$TMP" "$URL" && OK=1 || OK=0
+        printf 'user = "%s:%s"\n' "$(curl_quote "$GTA_NEXUS_USER")" "$(curl_quote "$GTA_NEXUS_PASSWORD")" | curl -fsSL -K - -o "$TMP" "$URL" && OK=1 || OK=0
       else
         curl -fsSL -o "$TMP" "$URL" && OK=1 || OK=0
       fi

@@ -31,7 +31,7 @@ public final class Lessons {
         }
         Path file = paths.lessons();
         String current = read(file);
-        if (current.contains("[" + kind + "] ") && current.contains(": " + clean + "\n")) {
+        if (current.lines().anyMatch(l -> l.startsWith("- [" + kind + "] ") && l.endsWith(": " + clean))) {
             return;
         }
         String body = current.isEmpty() ? HEADER : current.endsWith("\n") ? current : current + "\n";

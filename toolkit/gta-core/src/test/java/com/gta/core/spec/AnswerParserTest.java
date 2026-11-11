@@ -100,6 +100,23 @@ class AnswerParserTest {
     }
 
     @Test
+    void shouldReadColonPicksOnOneLineAsPicks() {
+        AnswerParser.Answers a = (AnswerParser.Answers) AnswerParser.parse("R3: 1: A 2: B");
+        assertEquals(java.util.Map.of("1", "A", "2", "B"), a.picks());
+        assertTrue(a.ownAnswers().isEmpty(), a.ownAnswers().toString());
+
+        AnswerParser.Answers rest = (AnswerParser.Answers) AnswerParser.parse("2: B rest default");
+        assertEquals(java.util.Map.of("2", "B"), rest.picks());
+        assertTrue(rest.restDefault());
+        assertTrue(rest.ownAnswers().isEmpty(), rest.ownAnswers().toString());
+
+        assertEquals(
+                java.util.Map.of("2", "A manager signs off"),
+                ((AnswerParser.Answers) AnswerParser.parse("2: A manager signs off")).ownAnswers(),
+                "a sentence that starts with a one-letter word is still an own answer");
+    }
+
+    @Test
     void shouldReadAnOwnAnswerAfterACommaAndLetItSayApprove() {
         AnswerParser.Answers inline = (AnswerParser.Answers) AnswerParser.parse("OK, 2: a manager signs off");
         assertEquals(java.util.Map.of("2", "a manager signs off"), inline.ownAnswers());

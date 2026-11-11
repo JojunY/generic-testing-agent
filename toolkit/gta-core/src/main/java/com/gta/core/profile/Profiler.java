@@ -338,7 +338,7 @@ public final class Profiler {
                                 List<String> paths = pathsOf(a);
                                 e.path = (paths.isEmpty() ? List.of("") : paths)
                                         .stream()
-                                                .map(p -> (classPath + p).replaceAll("//+", "/"))
+                                                .map(p -> httpPath(classPath, p))
                                                 .collect(Collectors.joining(" | "));
                                 e.risk = verb.equals("GET") ? 2 : 6;
                             }
@@ -484,6 +484,12 @@ public final class Profiler {
 
     private static final java.util.regex.Pattern FLYWAY = java.util.regex.Pattern.compile("V([0-9._]+)__(.+)\\.sql");
 
+    /** Spring joins the class and method mappings with a slash ("/api/orders" + "{id}" is "/api/orders/{id}"). */
+    static String httpPath(String classPath, String methodPath) {
+        String joined = ("/" + classPath + "/" + methodPath).replaceAll("//+", "/");
+        return joined.length() > 1 && joined.endsWith("/") ? joined.substring(0, joined.length() - 1) : joined;
+    }
+
     /**
      * Schema migrations as flows (db-migration): each Flyway {@code db/migration/V<version>__<name>.sql} and each
      * Liquibase changelog under {@code db/changelog/}. The flow is {@code db.<name>}; the spec cites the file with
@@ -491,6 +497,7 @@ public final class Profiler {
      */
     static List<ServiceProfile.EntryPoint> migrations(Path mainResources) {
         List<ServiceProfile.EntryPoint> out = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
         for (String dir : List.of("db/migration", "db/changelog")) {
             Path folder = mainResources.resolve(dir);
             if (!Files.isDirectory(folder)) {
@@ -512,10 +519,15 @@ public final class Profiler {
                         continue;
                     }
                     ServiceProfile.EntryPoint e = new ServiceProfile.EntryPoint();
-                    e.flowId = "db."
-                            + flowName.toLowerCase(java.util.Locale.ROOT)
-                                    .replaceAll("[^a-z0-9]+", "-")
-                                    .replaceAll("^-|-$", "");
+                    String name0 = flowName.toLowerCase(java.util.Locale.ROOT)
+                            .replaceAll("[^a-z0-9]+", "-")
+                            .replaceAll("^-|-$", "");
+                    // a flow name starts with a letter (Ids.FLOW_ID): "001-init" becomes "m001-init"
+                    String id = "db." + (name0.matches("[a-z].*") ? name0 : "m" + name0);
+                    e.flowId = id;
+                    for (int n = 2; !seen.add(e.flowId); n++) {
+                        e.flowId = id + "-" + n; // V3__add_index and V7__add_index are two flows
+                    }
                     e.capability = "db-migration";
                     e.kind = "migration";
                     e.ref = "file:" + GtaPaths.MAIN_RESOURCES + "/" + dir + "/" + name;

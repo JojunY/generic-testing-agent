@@ -2,6 +2,7 @@ package com.gta.core.engine;
 
 import static com.gta.core.engine.NodeResults.done;
 
+import com.gta.core.change.ChangeChecker;
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
@@ -169,6 +170,7 @@ final class SessionEnd {
                                 + " test computes itself");
                 s.reason = "can-fail: " + result.detail()
                         + "; assert what the code under test does, not a value the test computes itself";
+                s.baseline = new ChangeChecker(paths).capture(); // the item's own commit is behind it now
                 st.move(s, ItemStatus.REPAIRING);
             }
         }
@@ -201,6 +203,7 @@ final class SessionEnd {
                                 "unstable under pass^k / " + MavenRunner.stabilityVariantLabel(config.qualityGates)
                                         + " / random order");
                         s.verdict = "flaky";
+                        s.baseline = new ChangeChecker(paths).capture(); // the item's own commit is behind it now
                         st.move(s, ItemStatus.TRIAGING);
                     }
                     break;

@@ -56,6 +56,20 @@ final class ServiceMode {
         return true;
     }
 
+    /**
+     * The run is paused because too many items in a row needed a person: the parked decisions are asked now, and the
+     * active flow goes back to the front of the queue to resume after them. False when none is parked.
+     */
+    static boolean unparkForPause(WorkState st) {
+        if (!MODE.equals(st.mode) || st.parked.isEmpty()) {
+            return false;
+        }
+        if (st.activeFlow != null && !st.queue.contains(st.activeFlow)) {
+            st.queue.add(0, st.activeFlow);
+        }
+        return unpark(st);
+    }
+
     /** The flows of the parked decisions, for the status block. */
     static List<String> waitingFlows(WorkState st) {
         return MODE.equals(st.mode)

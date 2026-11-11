@@ -32,6 +32,20 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- Review round 5:
+  - the oracle lock now locks the assertion of a THEN value that contains spaces (`Order not found`), so weakening it is caught;
+  - a `classpath:` fixture (`@Sql("classpath:/s01.data.sql")`) is a watched input;
+  - a reviewer's changes are checked like every node's (plan §5.8): a review that changed files is not committed, the author submits again;
+  - in service mode a run paused for too many failures asks the parked decisions instead of stopping with nothing to answer;
+  - the observation auto-correction commits the corrected spec, so the committed spec and the shard name the same revision;
+  - a new session invalidates the old session's review tokens; an item reopened by verify gets a fresh scope baseline;
+  - `gtaw gate`, `gtaw run` and `gtaw mutate` take the work lock;
+  - answers like `1: A 2: B` or `2: B rest default` are picks, not an own answer;
+  - git paths with non-ASCII characters are read verbatim (`core.quotePath=false`);
+  - Gradle `includeBuild(...)` is not read as a subproject; `@GetMapping("{id}")` under `/api/orders` is `/api/orders/{id}`;
+  - migration flow ids are valid and unique (`001-init.yaml` is `db.m001-init`; two `add_index` migrations are two flows);
+  - a file touched by an agent commit is reported unrestorable even when it is also dirty; lessons are deduplicated per kind;
+  - `gtaw` quotes Nexus credentials for curl; the Windows download script prints valid JSON for a missing pin.
 - Retiring a scenario no longer deletes a test class that has no method of that scenario.
 - The scripted e2e adds gta-junit to the project's dependencies, not to its `<dependencyManagement>`.
 - Review round 4:

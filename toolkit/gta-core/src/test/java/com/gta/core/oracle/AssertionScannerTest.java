@@ -127,6 +127,9 @@ class AssertionScannerTest {
         Files.writeString(dir.resolve("resources/s01.request.json"), "{\"subtotal\": 51}");
 
         assertFalse(before.equals(scanSource(body).watchedHash()), "a changed fixture changes the watched inputs");
+        String beforeSql = scanSource(body).watchedHash();
+        Files.writeString(dir.resolve("resources/s01.data.sql"), "insert into orders values (1)");
+        assertFalse(beforeSql.equals(scanSource(body).watchedHash()), "so does a classpath: fixture");
         assertFalse(
                 before.equals(scanSource(body.replace("order()", "order(2)")).watchedHash()), "so does the setup");
     }

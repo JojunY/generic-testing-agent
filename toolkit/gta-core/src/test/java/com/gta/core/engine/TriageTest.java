@@ -175,6 +175,9 @@ class TriageTest {
         assertEquals(ItemStatus.REPAIRING, s.status);
         assertTrue(st.pendingReview.get(0).contains("`50.00` → `55.00`"), "listed for re-confirmation");
         assertTrue(String.valueOf(out.get("result")).contains("order.create@R3"), out.toString());
+        assertTrue(
+                ctx.git.dirtyPaths().stream().noneMatch(p -> p.startsWith(".gta/specs/")),
+                "gtaw commits its own spec correction, so the shard and the committed spec agree");
     }
 
     @Test

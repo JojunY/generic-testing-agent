@@ -155,6 +155,40 @@ class EngineTest {
     }
 
     @Test
+    void shouldNotCommitATestTheReviewerChanged() throws Exception {
+        Path test = root.resolve(new GtaPaths(root).testSourceRel("com.acme.OrderCreateIT"));
+        Files.createDirectories(test.getParent());
+        Files.writeString(test, "class OrderCreateIT { void t() { assertThat(status).isEqualTo(201); } }\n");
+        WorkState st = state(ItemStatus.REVIEWING);
+        st.items.get(ITEM).reviewBaseline = new ChangeChecker(paths).capture(); // the review round is issued
+        store.save(st);
+        Files.writeString(test, "class OrderCreateIT { void t() { assertThat(status).isNotNull(); } }\n");
+
+        engine().submitReview(ITEM, TOKEN, "accept", "looks right");
+
+        assertEquals(ItemStatus.REPAIRING, item().status, "a review may change nothing: the author submits again");
+        assertEquals(ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE.name(), item().lastError.code);
+        assertNull(item().commit, "nothing was committed");
+    }
+
+    @Test
+    void shouldGiveAnUnstableItemAFreshScopeBaseline() throws Exception {
+        WorkState st = state(ItemStatus.PASSED);
+        store.save(st);
+        Files.writeString(paths.mainJava().resolve("App.java"), "class App { int feature; }\n");
+        git("commit", "-qam", "the developer's own work"); // not gtaw's: foreign to the old baseline
+        runner.then(outcome("failed"));
+
+        engine().verify(false, ITEM);
+
+        assertEquals(ItemStatus.TRIAGING, item().status);
+        assertEquals(
+                git("rev-parse", "HEAD").output().strip(),
+                item().baseline.head,
+                "the repair is checked against today's HEAD, not the commit before the item passed");
+    }
+
+    @Test
     void shouldRefuseAReviewVerdictWithoutTheCurrentToken() {
         store.save(state(ItemStatus.REVIEWING));
 

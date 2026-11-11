@@ -29,8 +29,11 @@ public final class OracleLock {
                 lock.tokens.add(lit);
             }
         }
+        // statements are whitespace-free (AssertionScanner.normalize): compare the tokens in the same form
+        List<String> bare =
+                lock.tokens.stream().map(t -> t.replaceAll("\\s+", "")).toList();
         for (String stmt : oracle.assertionStatements()) {
-            if (lock.tokens.stream().anyMatch(stmt::contains)) {
+            if (bare.stream().anyMatch(stmt::contains)) {
                 lock.statements.add(stmt);
             }
         }

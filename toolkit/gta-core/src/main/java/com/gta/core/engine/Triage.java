@@ -232,6 +232,10 @@ final class Triage {
             }
         }
         store.savePlan(plan);
+        // gtaw's own write, committed like every other (plan §5.2): the item's shard entry cites the new revision
+        ctx.commit(
+                List.of(paths.rel(specPath)),
+                "docs(spec): " + item.flowId + " " + newRev + " observed THEN corrected\n\nGta-Item: " + item.id);
         if (s.lock != null) {
             String exp = expected;
             s.lock.tokens.removeIf(exp::equals);
