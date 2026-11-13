@@ -32,6 +32,25 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- Review round 5:
+  - the oracle lock covers the assertion of an expected value with spaces (`` `Order not found` ``): statements are compared without whitespace, and so are the locked values now, so deleting that assertion changes the fingerprint and the gate reports it. Shards locked before this change hold an empty fingerprint for such a value, and the gate reports them once; relock them (`./gtaw relock`);
+  - a `classpath:` fixture (`@Sql("classpath:fixtures/orders.sql")`) is watched as an input of its scenario;
+  - Gradle stack frames (`at app//com.acme.OrderService.create(`) are read, so a production exception in a Gradle run is triaged instead of being taken as a setup error;
+  - the Gradle init script turns the build cache off for the Test task, so pass^k and stability repeats run the tests instead of restoring a cached result;
+  - service mode no longer stalls when the run pauses after too many items in a row needed a person: the parked decisions are asked, and the paused flow goes on after them;
+  - a reproducing test that confirms the reported defect no longer counts toward `budgets.maxConsecutiveFailures`;
+  - an item sent back by the session-end can-fail or stability check gets a fresh scope baseline, so the developer's later commits and edits are not taken as out of scope (or reverted);
+  - gtaw no longer commits the developer's uncommitted edits in a test class it shares with them (naming conflict answered A);
+  - a person's reply with `-->` or `\` is stored intact in the spec's answer and approval records;
+  - the Spring Boot version of an imported `spring-boot-dependencies` BOM is resolved from its `${…}` property;
+  - Flyway, Liquibase and BPMN files whose names do not start with a letter (`V1__2fa.sql`, a description in Chinese) get a valid flow id;
+  - files gtaw writes keep their permissions (a new file is `rw-r--r--`, not owner-only);
+  - git paths with non-ASCII characters are read as they are (`core.quotePath=false`), as `status -z` gives them;
+  - `answer --file` accepts a file saved with a UTF-8 BOM (Notepad, PowerShell 5.1), which made an approval read as a change request;
+  - the usage-error hint names the command that failed (`./gtaw status --help`), not `--root`;
+  - `init`/`upgrade` keep a team setting whose shape differs from gta's (`"bash": "ask"` in `opencode.json`) and list gta's keys to add by hand instead of replacing it;
+  - `doctor` and `upgrade` ignore line ends, so a Windows checkout (`core.autocrlf`) is not a local edit of every managed file;
+  - `gtaw` escapes `\` and `"` in the Nexus credentials it passes to curl; `gtaw-download.ps1` prints valid JSON when the wrapper is not configured; `scripts/install-local.sh` works from a path with spaces.
 - Retiring a scenario no longer deletes a test class that has no method of that scenario.
 - The scripted e2e adds gta-junit to the project's dependencies, not to its `<dependencyManagement>`.
 - Review round 4:

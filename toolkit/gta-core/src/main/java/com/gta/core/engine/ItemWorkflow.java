@@ -635,7 +635,9 @@ final class ItemWorkflow {
         }
         if ("reproducing".equals(item.intent) && consistent == 2 && code == ErrorCode.TEST_ASSERTION_FAILED) {
             s.reason = "defect: reproducing test fails for the reported reason";
-            return needsHuman(st, item, s, s.reason);
+            Map<String, Object> out = needsHuman(st, item, s, s.reason);
+            st.consecutiveFailures = 0; // the reported defect is confirmed: a finding, not an authoring failure
+            return out;
         }
         st.event(false, "ev.test.failed", item.ref, firstLines(message, 1));
         st.event(true, consistent == 2 ? "chk.reruns" : "chk.flaky", item.ref);

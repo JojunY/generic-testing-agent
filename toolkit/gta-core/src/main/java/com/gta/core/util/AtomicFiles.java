@@ -7,6 +7,7 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.PosixFilePermissions;
 
 /**
  * The only way gtaw writes files (state, specs, reports, escalations, installed harness files): write a temp file next to
@@ -42,10 +43,25 @@ public final class AtomicFiles {
     }
 
     private static void move(Path tmp, Path target) throws IOException {
+        keepPermissions(tmp, target);
         try {
             Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (AtomicMoveNotSupportedException e) {
             Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    /**
+     * A temp file is owner-only (rw-------): the target keeps its own permissions, and a new file gets rw-r--r--, as
+     * other tools create it, so the work tree stays readable for CI users and containers.
+     */
+    private static void keepPermissions(Path tmp, Path target) throws IOException {
+        if (tmp.getFileSystem().supportedFileAttributeViews().contains("posix")) {
+            Files.setPosixFilePermissions(
+                    tmp,
+                    Files.exists(target)
+                            ? Files.getPosixFilePermissions(target)
+                            : PosixFilePermissions.fromString("rw-r--r--"));
         }
     }
 

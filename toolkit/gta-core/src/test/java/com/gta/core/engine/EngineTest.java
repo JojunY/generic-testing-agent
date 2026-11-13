@@ -606,6 +606,7 @@ class EngineTest {
                 c.outcome = outcomes.getOrDefault(sc, "passed");
                 c.tags = new ArrayList<>(List.of("gta", "scenario:" + sc));
                 if ("failed".equals(c.outcome)) {
+                    c.code = ErrorCode.TEST_ASSERTION_FAILED.name(); // what the runner's classification gives
                     c.failureType = "java.lang.AssertionError";
                     c.message = "JSON path \"$.discount\" expected:<10.0> but was:<0.0>";
                     c.code = ErrorCode.TEST_ASSERTION_FAILED.name();
@@ -989,6 +990,53 @@ class EngineTest {
         assertEquals("answer", next.get("node"), "the person is asked before the run pauses");
         e.answer("B");
         assertEquals(0, store.load().consecutiveFailures, "the person has settled it");
+    }
+
+    @Test
+    void shouldAskTheParkedDecisionsWhenTheRunPausesInServiceMode() throws Exception {
+        Path dir = Files.createTempDirectory(root, "parked");
+        StateStore store = new StateStore(OrderServiceTestData.create(dir));
+        TestRunnerFake runner = new TestRunnerFake();
+        new Engine(dir, runner).next(null, "order.create", null, false);
+        WorkState st = store.load();
+        st.mode = "service";
+        st.consecutiveFailures = 3; // three flows each parked a decision
+        WorkState.Pending parked = new WorkState.Pending();
+        parked.type = "approve";
+        parked.flowId = "order.cancel";
+        parked.prompt = "approve?";
+        st.parked.add(parked);
+        store.save(st);
+
+        Map<String, Object> next = new Engine(dir, runner).next(null, null, null, false);
+
+        assertEquals("answer", next.get("node"), "a paused run asks the parked decisions, never stalls: " + next);
+        assertEquals("order.cancel", next.get("flowId"));
+        assertEquals(List.of("order.create"), store.load().queue, "the paused flow goes on after them");
+    }
+
+    @Test
+    void shouldNotCountAConfirmedReportedDefectAsAnAuthoringFailure() {
+        PlanItem reproducing = store.planItem(ITEM);
+        reproducing.intent = "reproducing";
+        store.savePlan(List.of(reproducing));
+        WorkState st = state(ItemStatus.AUTHORING);
+        st.consecutiveFailures = 2;
+        store.save(st);
+        RunResult failed = outcome("failed");
+        TestOutcome c = failed.cases.get(0);
+        c.code = ErrorCode.TEST_ASSERTION_FAILED.name(); // what the runner's classification gives
+        c.failureType = "java.lang.AssertionError";
+        c.message = "expected 1 order but was 2";
+        c.stack =
+                "java.lang.AssertionError: expected 1 order but was 2\n\tat com.acme.OrderCreateIT.shouldCreate(OrderCreateIT.java:10)";
+        runner.then(failed);
+
+        Map<String, Object> out = engine().submitItem(ITEM, TOKEN);
+
+        assertEquals(ItemStatus.NEEDS_HUMAN, item().status, out.toString());
+        assertTrue(item().reason.startsWith("defect:"), item().reason);
+        assertEquals(0, store.load().consecutiveFailures, "a confirmed defect is a finding (plan §5.4 budgets)");
     }
 
     @Test

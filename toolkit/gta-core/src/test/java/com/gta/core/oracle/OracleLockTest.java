@@ -55,4 +55,16 @@ class OracleLockTest {
     void shouldFingerprintStatementsIndependentlyOfOrder() {
         assertEquals(OracleLock.fingerprint(List.of("a", "b")), OracleLock.fingerprint(List.of("b", "a")));
     }
+
+    @Test
+    void shouldLockTheAssertionOfAValueWithSpaces() {
+        // statements are compared without whitespace: the assertion of `Order not found` reads
+        // hasMessage("Ordernotfound")
+        Lock lock = OracleLock.create(
+                oracle(List.of("hasMessage(\"Ordernotfound\")", "isNotNull()"), Set.of("Order not found")),
+                List.of("Order not found"),
+                "r1");
+
+        assertEquals(List.of("hasMessage(\"Ordernotfound\")"), lock.statements, "deleting it changes the fingerprint");
+    }
 }

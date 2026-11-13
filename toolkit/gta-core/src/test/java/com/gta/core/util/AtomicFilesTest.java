@@ -47,4 +47,22 @@ class AtomicFilesTest {
 
         assertThrows(IllegalArgumentException.class, () -> AtomicFiles.write(root, "x"));
     }
+
+    @Test
+    void shouldKeepTheTargetsPermissionsAndMakeNewFilesReadable() throws Exception {
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                dir.getFileSystem().supportedFileAttributeViews().contains("posix"));
+        Path script = dir.resolve("gtaw");
+        AtomicFiles.write(script, "#!/bin/sh\n");
+        assertEquals("rw-r--r--", perms(script), "not the temp file's owner-only rw-------");
+
+        Files.setPosixFilePermissions(script, java.nio.file.attribute.PosixFilePermissions.fromString("rwxr-xr-x"));
+        AtomicFiles.write(script, "#!/bin/sh\necho\n");
+
+        assertEquals("rwxr-xr-x", perms(script), "a rewrite keeps the file's permissions");
+    }
+
+    private static String perms(Path f) throws Exception {
+        return java.nio.file.attribute.PosixFilePermissions.toString(Files.getPosixFilePermissions(f));
+    }
 }

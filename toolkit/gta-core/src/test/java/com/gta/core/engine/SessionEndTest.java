@@ -3,8 +3,12 @@ package com.gta.core.engine;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.gta.core.change.ChangeChecker;
 import com.gta.core.config.GtaPaths;
+import com.gta.core.run.RunResult;
 import com.gta.core.run.TestRunnerFake;
+import com.gta.core.state.ItemStatus;
+import com.gta.core.state.WorkState;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -47,6 +51,30 @@ class SessionEndTest {
                 reports.resolve("TEST-x.xml"), "<testsuite><testcase classname=\"x\" name=\"y()\"/></testsuite>");
 
         assertEquals("pass", sessionEnd().gate(null, List.of(reports)).decision, "nothing was locked on the base yet");
+    }
+
+    @Test
+    void shouldGiveAnUnstableItemAFreshScopeBaseline() throws Exception {
+        OrderServiceTestData.plan(paths, OrderServiceTestData.item());
+        WorkState st = new WorkState();
+        WorkState.ItemState s = new WorkState.ItemState();
+        s.id = OrderServiceTestData.ITEM;
+        s.status = ItemStatus.PASSED;
+        s.baseline = new ChangeChecker(paths).capture();
+        st.items.put(s.id, s);
+        Files.writeString(root.resolve("README.md"), "the developer's commit after the item passed\n");
+        OrderServiceTestData.git(root, "add", "-A");
+        OrderServiceTestData.git(root, "commit", "-qm", "developer");
+        RunResult failed = new RunResult();
+        failed.timedOut = true;
+
+        new EngineContext(root, new TestRunnerFake().then(failed)).sessionEnd.verifyInternal(st, List.of(s.id));
+
+        assertEquals(ItemStatus.TRIAGING, s.status);
+        assertEquals(
+                new ChangeChecker(paths).capture().head,
+                s.baseline.head,
+                "its repair is checked from now: the developer's later commit is not out of scope");
     }
 
     @Test

@@ -198,4 +198,21 @@ class GitTest {
         org.junit.jupiter.api.Assertions.assertEquals(
                 java.util.Set.of(3, 11, 12), Git.hunkLines(diff), "a pure deletion adds no new line");
     }
+
+    @Test
+    void shouldGiveNonAsciiPathsAsTheyAre() throws Exception {
+        commitFile("a.txt", "a\n");
+        String base = git.head();
+        try {
+            root.resolve("bestellung-\u00e4nderung.txt");
+        } catch (java.nio.file.InvalidPathException e) {
+            org.junit.jupiter.api.Assumptions.abort("the JVM's file name encoding is not UTF-8 here");
+        }
+        commitFile("bestellung-\u00e4nderung.txt", "b\n");
+
+        assertEquals(List.of("bestellung-\u00e4nderung.txt"), git.changedFiles(base), "not quoted and octal-escaped");
+        assertEquals(
+                List.of("bestellung-\u00e4nderung.txt"),
+                git.commitsSince(base).get(0).files());
+    }
 }

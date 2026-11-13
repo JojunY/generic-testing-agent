@@ -101,7 +101,10 @@ public final class PomInfo {
                 if (md != null) {
                     for (Element d : children(md, "dependency")) {
                         if ("spring-boot-dependencies".equals(child(d, "artifactId"))) {
-                            info.bootVersion = child(d, "version");
+                            // usually ${spring-boot.version}; unresolved, the parent's version applies
+                            Element props = childElement(project, "properties");
+                            String v = props == null ? child(d, "version") : resolve(child(d, "version"), props);
+                            info.bootVersion = v == null || v.startsWith("$") ? null : v;
                         }
                     }
                 }

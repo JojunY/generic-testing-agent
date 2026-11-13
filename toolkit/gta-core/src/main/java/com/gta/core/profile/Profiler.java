@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -491,6 +492,7 @@ public final class Profiler {
      */
     static List<ServiceProfile.EntryPoint> migrations(Path mainResources) {
         List<ServiceProfile.EntryPoint> out = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
         for (String dir : List.of("db/migration", "db/changelog")) {
             Path folder = mainResources.resolve(dir);
             if (!Files.isDirectory(folder)) {
@@ -512,10 +514,13 @@ public final class Profiler {
                         continue;
                     }
                     ServiceProfile.EntryPoint e = new ServiceProfile.EntryPoint();
-                    e.flowId = "db."
-                            + flowName.toLowerCase(java.util.Locale.ROOT)
+                    e.flowId = fileFlowId(
+                            "db",
+                            flowName.toLowerCase(java.util.Locale.ROOT)
                                     .replaceAll("[^a-z0-9]+", "-")
-                                    .replaceAll("^-|-$", "");
+                                    .replaceAll("^-|-$", ""),
+                            "migration",
+                            seen);
                     e.capability = "db-migration";
                     e.kind = "migration";
                     e.ref = "file:" + GtaPaths.MAIN_RESOURCES + "/" + dir + "/" + name;
@@ -539,12 +544,14 @@ public final class Profiler {
         if (!Files.isDirectory(mainResources)) {
             return out;
         }
+        Set<String> seen = new HashSet<>();
         try (Stream<Path> files = Files.walk(mainResources, 6)) {
             for (Path f :
                     files.filter(x -> x.toString().endsWith(".bpmn")).sorted().toList()) {
                 String name = String.valueOf(f.getFileName());
                 ServiceProfile.EntryPoint e = new ServiceProfile.EntryPoint();
-                e.flowId = "process." + Ids.kebab(name.substring(0, name.length() - ".bpmn".length()));
+                e.flowId = fileFlowId(
+                        "process", Ids.kebab(name.substring(0, name.length() - ".bpmn".length())), "process", seen);
                 e.capability = "workflow";
                 e.kind = "process";
                 e.ref = "file:" + GtaPaths.MAIN_RESOURCES + "/"
@@ -557,6 +564,19 @@ public final class Profiler {
             // unreadable resources: no process flows
         }
         return out;
+    }
+
+    /**
+     * {@code <domain>.<name>} for a flow named after a file: a name {@link Ids#FLOW_ID} accepts (it starts with a
+     * letter; {@code V1__2fa.sql} or a description in Chinese would not) and unique among the files already seen.
+     */
+    static String fileFlowId(String domain, String name, String fallback, Set<String> seen) {
+        String n = name.isEmpty() ? fallback : name.matches("[a-z].*") ? name : fallback + "-" + name;
+        String id = domain + "." + n;
+        for (int i = 2; !seen.add(id); i++) {
+            id = domain + "." + n + "-" + i;
+        }
+        return id;
     }
 
     /** Simple names of Temporal {@code @WorkflowInterface}s and their {@code @WorkflowMethod}s. */

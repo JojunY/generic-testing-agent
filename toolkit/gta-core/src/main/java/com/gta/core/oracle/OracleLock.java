@@ -30,7 +30,7 @@ public final class OracleLock {
             }
         }
         for (String stmt : oracle.assertionStatements()) {
-            if (lock.tokens.stream().anyMatch(stmt::contains)) {
+            if (carries(stmt, lock.tokens)) {
                 lock.statements.add(stmt);
             }
         }
@@ -57,6 +57,14 @@ public final class OracleLock {
         Set<String> now = Set.copyOf(current.assertionStatements());
         boolean allStatementsKept = now.containsAll(lock.statements);
         return new Check(allStatementsKept ? Verdict.OK : Verdict.STRUCTURAL_CHANGE, List.of());
+    }
+
+    /**
+     * Whether an assertion statement carries one of the locked values. Statements are compared without whitespace
+     * ({@link AssertionScanner}), so a value is too: {@code `Order not found`} is in {@code hasMessage("Order not found")}.
+     */
+    public static boolean carries(String statement, List<String> tokens) {
+        return tokens.stream().anyMatch(t -> statement.contains(t.replaceAll("\\s+", "")));
     }
 
     public static String fingerprint(List<String> statements) {

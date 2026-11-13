@@ -50,4 +50,19 @@ class CommentMetaTest {
                 .format()
                 .contains("text=\"a b\""));
     }
+
+    @Test
+    void shouldKeepAReplyThatLooksLikeTheEndOfTheCommentOrAnEscape() {
+        String text = "2: retry --> then fail, files in C:\\data\\ and \"quoted\"";
+        CommentMeta meta = new CommentMeta("answer", List.of(new CommentMeta.Entry("text", text)));
+
+        String formatted = meta.format();
+
+        assertEquals(1, formatted.split("-->", -1).length - 1, "only the comment's own end: " + formatted);
+        assertEquals(
+                Optional.of(text),
+                CommentMeta.parse("before " + formatted + " after")
+                        .orElseThrow()
+                        .get("text"));
+    }
 }

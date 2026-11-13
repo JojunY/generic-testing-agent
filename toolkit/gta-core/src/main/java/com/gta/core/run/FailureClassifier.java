@@ -12,7 +12,10 @@ import java.util.regex.Pattern;
  * the failure came from production code (triage), from test code (repair) or happened before the SUT was reached.
  */
 public final class FailureClassifier {
-    private static final Pattern FRAME = Pattern.compile("^\\s*at\\s+([\\w$.]+)\\.([\\w$<>]+)\\(", Pattern.MULTILINE);
+    /** A stack frame; Gradle's XML keeps the class loader or module in front of it ({@code at app//com.acme.X.m(}). */
+    private static final Pattern FRAME =
+            Pattern.compile("^\\s*at\\s+(?:[^\\s(/]*/+)?([\\w$.]+)\\.([\\w$<>]+)\\(", Pattern.MULTILINE);
+
     private static final List<String> FRAMEWORK = List.of(
             "java.",
             "javax.",

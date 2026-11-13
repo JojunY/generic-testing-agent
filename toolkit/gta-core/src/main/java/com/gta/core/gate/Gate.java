@@ -146,7 +146,7 @@ public final class Gate {
                     AssertionScanner.ScenarioOracle now =
                             AssertionScanner.scan(file, scenarioId, paths.testResources());
                     List<String> stmts = now.assertionStatements().stream()
-                            .filter(s -> e.getValue().tokens.stream().anyMatch(s::contains))
+                            .filter(s -> OracleLock.carries(s, e.getValue().tokens))
                             .toList();
                     String fp = OracleLock.fingerprint(stmts);
                     OracleShard.Entry cur = currentShard.get(itemId);

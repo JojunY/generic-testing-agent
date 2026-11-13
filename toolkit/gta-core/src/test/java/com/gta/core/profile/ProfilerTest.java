@@ -284,6 +284,27 @@ class ProfilerTest {
     }
 
     @Test
+    void shouldNameEveryMigrationWithAValidFlowId() throws Exception {
+        Path migrations = root.resolve("src/main/resources/db/migration");
+        Files.createDirectories(migrations);
+        Files.writeString(migrations.resolve("V1__2fa_secret.sql"), "alter table users add secret text;");
+        // names with no letter or digit left, as a Chinese description gives (a migration named in Chinese)
+        Files.writeString(migrations.resolve("V2__---.sql"), "create table a (id int);");
+        Files.writeString(migrations.resolve("V3__+++.sql"), "create index i on a (id);");
+
+        List<String> ids = Profiler.migrations(root.resolve("src/main/resources")).stream()
+                .map(e -> e.flowId)
+                .toList();
+
+        assertEquals(List.of("db.migration-2fa-secret", "db.migration", "db.migration-2"), ids);
+        assertTrue(
+                ids.stream()
+                        .allMatch(
+                                id -> com.gta.core.util.Ids.FLOW_ID.matcher(id).matches()),
+                ids.toString());
+    }
+
+    @Test
     void shouldTellReactiveEndpointsAndGraphqlHandlersApart() throws Exception {
         source("com/acme/order/api/StockController.java", """
                 package com.acme.order.api;
