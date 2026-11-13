@@ -34,6 +34,16 @@ class CommentMetaTest {
     }
 
     @Test
+    void shouldReadBackAnyValueItWrites() {
+        for (String v : List.of("1: on timeout --> answer 503", "say \\\"hi\\\" now", "ends with \\", "a>b")) {
+            String text = new CommentMeta("answer", List.of(new CommentMeta.Entry("text", v))).format() + " visible";
+
+            assertEquals(Optional.of(v), CommentMeta.parse(text).orElseThrow().get("text"), v);
+            assertTrue(text.endsWith("--> visible"), "the comment ends where format ended it: " + text);
+        }
+    }
+
+    @Test
     void shouldEditAndFormatRoundTrip() {
         CommentMeta m =
                 CommentMeta.parse("<!-- gta: id=s01 source=observed -->").orElseThrow();

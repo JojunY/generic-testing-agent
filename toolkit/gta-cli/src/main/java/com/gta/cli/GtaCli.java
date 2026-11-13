@@ -96,7 +96,8 @@ public final class GtaCli implements Callable<Integer> {
             GtaException ge = new GtaException(
                     ErrorCode.USAGE_INVALID_ARGUMENT,
                     ex.getMessage(),
-                    "Run ./gtaw " + String.join(" ", args2.length > 0 ? args2[0] : "") + " --help");
+                    // the command that failed ("gtaw gate waive"), not args2[0]: the wrapper always passes --root first
+                    "Run ./" + ex.getCommandLine().getCommandSpec().qualifiedName() + " --help");
             System.out.println(Json.write(ge.toErrorObject()));
             return ErrorCode.USAGE_INVALID_ARGUMENT.exitCode();
         });

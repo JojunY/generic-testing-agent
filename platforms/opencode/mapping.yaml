@@ -37,6 +37,7 @@ profiles:
         ".\\gtaw submit*": allow
         ".\\gtaw answer*": allow
         ".\\gtaw status*": allow
+        "*--takeover*": ask    # last match wins: next --takeover is for people only (plan §5.2)
       task: { "*": deny, "gta-*": allow }
   spec-writer:
     mode: subagent

@@ -102,6 +102,10 @@ final class ItemWorkflow {
                     // brief must invalidate the previous one
                     st.seq++;
                     s.token = BriefWriter.token(st.session.id, st.seq);
+                    if (s.baseline == null) {
+                        // reopened after its commit (session-end verify): changes made since are not the author's
+                        s.baseline = new ChangeChecker(paths).capture();
+                    }
                     Path brief = briefs.author(st.seq, s, item, spec, profile);
                     return Dispatch.of(authorNode(item, s, brief));
                 }

@@ -213,6 +213,9 @@ public final class Engine {
         while ("answer".equals(out.get("node")) && ServiceMode.park(st)) {
             out = flowStep(st, profile, base);
         }
+        if ("escalate".equals(out.get("node")) && ServiceMode.unparkBefore(st)) {
+            return answerNode(st.pending); // nothing goes on without a person: ask the parked decisions first
+        }
         return out;
     }
 

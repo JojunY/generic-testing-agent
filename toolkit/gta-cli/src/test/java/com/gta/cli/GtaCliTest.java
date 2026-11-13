@@ -78,6 +78,9 @@ class GtaCliTest {
         assertTrue(notARepo.compact().contains("\"code\":\"ENV_NOT_A_GIT_REPO\""), notARepo.out());
         assertEquals(20, badOption.exit());
         assertTrue(badOption.compact().contains("\"code\":\"USAGE_INVALID_ARGUMENT\""), badOption.out());
+        assertTrue(
+                badOption.compact().contains("Run./gtawstatus--help"),
+                "the hint names the failed command even though the wrapper passes --root first: " + badOption.out());
         assertEquals(20, unavailable.exit(), "a later phase");
         assertEquals(20, noIds.exit(), "deleting tests needs explicit ids or --all");
     }

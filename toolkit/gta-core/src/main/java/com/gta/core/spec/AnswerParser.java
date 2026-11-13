@@ -46,10 +46,10 @@ public final class AnswerParser {
             Pattern.compile("^\\s*(?:ok|okay|好的|好|确认|確認|同意)[\\s,，;；。.!！]*$", Pattern.CASE_INSENSITIVE);
     /**
      * "2: retry twice" at the start of a line or after a comma ("OK, 2: retry twice"), running to the end of the line;
-     * "2: B" (a letter alone) is a pick, not an own answer.
+     * "2: B" (a letter alone, also before the next pick as in "1: B 2: C") is a pick, not an own answer.
      */
-    private static final Pattern OWN_ANSWER =
-            Pattern.compile("(?m)(?:^|[,，;；])\\s*(\\d{1,2})\\s*[:：]\\s*(?![A-Za-z]\\s*(?:$|[,，;；]))(\\S.*?)\\s*$");
+    private static final Pattern OWN_ANSWER = Pattern.compile(
+            "(?m)(?:^|[,，;；])\\s*(\\d{1,2})\\s*[:：]\\s*(?![A-Za-z]\\s*(?:$|[,，;；]|\\d{1,2}\\s*[:：]?\\s*[A-Za-z](?![A-Za-z])))(\\S.*?)\\s*$");
 
     public sealed interface Parsed permits Answers, Approval, Choice {}
 

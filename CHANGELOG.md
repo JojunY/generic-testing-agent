@@ -32,6 +32,18 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- Review round 5:
+  - OpenCode: the analyst and the test author get the gtaw permission list (the YAML alias in `mapping.yaml` was written as the text `gtaw-bash`);
+  - `next --takeover` is no longer auto-approved in Copilot or OpenCode: a person confirms it (plan §5.2);
+  - service mode no longer stays paused for good when the decisions it waits for were parked for other flows: they are asked first;
+  - an item reopened by the session-end verify takes a fresh scope baseline, so the developer's later commits and edits are not charged to its author;
+  - the observation auto-correction commits the corrected spec, so the base holds the scenario revision the oracle shard records;
+  - a naming-conflict item that adds its test to the developer's own class does not commit the developer's uncommitted edits of that class;
+  - `1: B 2: C` is read as two picks, not as an own answer to question 1;
+  - an answer record whose text contains `-->`, a quote or a backslash reads back as written;
+  - Gradle: `includeBuild(...)` is not a module, and a multi-line `include(...)` is read; a Maven Boot version imported as `${spring-boot.version}` is resolved;
+  - the usage hint names the failed command (`./gtaw status --help`), not `--root`; the Windows wrapper prints valid JSON when the pin is missing;
+  - the orchestrator passes a person's words in single quotes, so the shell cannot change them.
 - Retiring a scenario no longer deletes a test class that has no method of that scenario.
 - The scripted e2e adds gta-junit to the project's dependencies, not to its `<dependencyManagement>`.
 - Review round 4:

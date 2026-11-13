@@ -69,6 +69,21 @@ class ServiceModeTest {
     }
 
     @Test
+    void shouldPutTheActiveFlowBackInTheQueueWhenAParkedDecisionIsAskedBeforeIt() {
+        WorkState st = new WorkState();
+        st.mode = ServiceMode.MODE;
+        st.activeFlow = "order.get";
+        st.queue.add("order.refund");
+        assertFalse(ServiceMode.unparkBefore(st), "nothing parked");
+        st.parked.add(pending("order.create"));
+
+        assertTrue(ServiceMode.unparkBefore(st));
+
+        assertEquals("order.create", st.activeFlow);
+        assertEquals(List.of("order.get", "order.refund"), st.queue);
+    }
+
+    @Test
     void shouldAskTheOldestParkedDecisionFirst() {
         WorkState st = new WorkState();
         st.mode = ServiceMode.MODE;

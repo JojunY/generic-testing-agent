@@ -95,18 +95,19 @@ public final class PomInfo {
                     info.dependencies.add(child(d, "artifactId"));
                 }
             }
+            Element props = childElement(project, "properties");
             Element mgmt = childElement(project, "dependencyManagement");
             if (mgmt != null && info.bootVersion == null) {
                 Element md = childElement(mgmt, "dependencies");
                 if (md != null) {
                     for (Element d : children(md, "dependency")) {
                         if ("spring-boot-dependencies".equals(child(d, "artifactId"))) {
-                            info.bootVersion = child(d, "version");
+                            String v = child(d, "version");
+                            info.bootVersion = props == null ? v : resolve(v, props); // usually ${spring-boot.version}
                         }
                     }
                 }
             }
-            Element props = childElement(project, "properties");
             if (props != null) {
                 for (String key : List.of(
                         "maven.compiler.release", "java.version", "maven.compiler.target", "maven.compiler.source")) {
@@ -158,8 +159,11 @@ public final class PomInfo {
                     + "\\s*\\(?\\s*[\"']([^:\"']+):([^:\"']+)(?::[^\"']*)?[\"']");
     private static final java.util.regex.Pattern JAVA_LEVEL = java.util.regex.Pattern.compile(
             "JavaLanguageVersion\\.of\\(\\s*(\\d+)\\s*\\)|(?:source|target)Compatibility\\s*=\\s*(?:JavaVersion\\.VERSION_(?:1_)?(\\d+)|[\"']?(?:1\\.)?(\\d+)[\"']?)");
+    /** {@code include ':a', ':b'} or {@code include(":a",\n ":b")}; not {@code includeBuild(...)}. */
     private static final java.util.regex.Pattern INCLUDE =
-            java.util.regex.Pattern.compile("(?m)^\\s*include\\s*\\(?([^)\\n]+)\\)?");
+            java.util.regex.Pattern.compile("(?m)^\\s*include\\b\\s*\\(?((?:\\s*[\"'][^\"'\\n]+[\"']\\s*,?)+)");
+
+    private static final java.util.regex.Pattern QUOTED = java.util.regex.Pattern.compile("[\"']([^\"']+)[\"']");
 
     /**
      * The parts of a Gradle build gta needs, read from the build script text (Groovy or Kotlin DSL): the Spring Boot
@@ -196,11 +200,10 @@ public final class PomInfo {
                     String text = Files.readString(settings, java.nio.charset.StandardCharsets.UTF_8);
                     java.util.regex.Matcher m = INCLUDE.matcher(text);
                     while (m.find()) {
-                        for (String part : m.group(1).split(",")) {
-                            String module = part.strip()
-                                    .replaceAll("^[\"']|[\"']$", "")
-                                    .replaceAll("^:", "")
-                                    .replace(':', '/');
+                        java.util.regex.Matcher q = QUOTED.matcher(m.group(1));
+                        while (q.find()) {
+                            String module =
+                                    q.group(1).strip().replaceAll("^:", "").replace(':', '/');
                             if (!module.isEmpty()) {
                                 info.modules.add(module);
                             }

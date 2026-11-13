@@ -992,6 +992,29 @@ class EngineTest {
     }
 
     @Test
+    void shouldAskTheDecisionsParkedForOtherFlowsWhenTheRunPauses() throws Exception {
+        Path dir = Files.createTempDirectory(root, "pause-parked");
+        StateStore store = new StateStore(OrderServiceTestData.create(dir));
+        TestRunnerFake runner = new TestRunnerFake();
+        new Engine(dir, runner).next(null, "order.create", null, false);
+        WorkState st = store.load();
+        st.mode = ServiceMode.MODE;
+        st.consecutiveFailures = 3; // three other flows each parked a decision
+        WorkState.Pending parked = new WorkState.Pending();
+        parked.type = "approve";
+        parked.flowId = "order.cancel";
+        parked.prompt = "approve?";
+        st.parked.add(parked);
+        store.save(st);
+
+        Map<String, Object> next = new Engine(dir, runner).next(null, null, null, false);
+
+        assertEquals("answer", next.get("node"), "a paused run asks what waits for the person: " + next);
+        assertEquals("order.cancel", next.get("flowId"));
+        assertEquals(List.of("order.create"), store.load().queue, "the paused flow goes on after the decisions");
+    }
+
+    @Test
     void shouldKeepTheAutoCorrectedSpecThroughTheNextSubmit() throws Exception {
         Path dir = Files.createTempDirectory(root, "autocorrect");
         GtaPaths p = OrderServiceTestData.create(dir);

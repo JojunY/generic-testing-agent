@@ -44,9 +44,10 @@ final class ItemCommitter {
             }
             boolean testCode = changed.startsWith(paths.inModule(GtaPaths.TEST_JAVA + "/"))
                     || changed.startsWith(paths.inModule(GtaPaths.TEST_RESOURCES + "/"));
-            if (baseline.dirty.containsKey(changed) && !testCode) {
+            if (baseline.dirty.containsKey(changed) && (!testCode || s.sharesDeveloperFile)) {
                 // e.g. pom.xml with the developer's own uncommitted edits: never commit those on their behalf.
-                // Test classes are shared by the items of a flow, so earlier items' uncommitted work is gta's own.
+                // Test classes are shared by the items of a flow, so earlier items' uncommitted work is gta's own,
+                // unless the class is the developer's (naming conflict, answer A).
                 mixed.add(changed);
             } else {
                 files.add(changed);

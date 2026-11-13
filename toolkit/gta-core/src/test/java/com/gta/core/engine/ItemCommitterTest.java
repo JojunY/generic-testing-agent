@@ -60,6 +60,27 @@ class ItemCommitterTest {
     }
 
     @Test
+    void shouldNotCommitTheDevelopersOwnEditsOfATestClassTheyShareWithGta() throws Exception {
+        Path testClass = root.resolve("src/test/java/com/acme/order/OrderControllerIT.java");
+        AtomicFiles.write(testClass, "class OrderControllerIT { /* developer's half-done test */ }\n");
+        WorkState.ItemState s = new WorkState.ItemState();
+        s.id = OrderServiceTestData.ITEM;
+        s.status = ItemStatus.PASSED;
+        s.sharesDeveloperFile = true; // naming conflict, answer A: gta adds its test to the developer's class
+        s.baseline = new ChangeChecker(paths).capture();
+        s.lock = new Lock();
+        s.lock.tokens.add("201");
+        AtomicFiles.write(testClass, "class OrderControllerIT { /* developer's half-done test */ /* gta's test */ }\n");
+
+        ctx.committer.commitItem(new WorkState(), OrderServiceTestData.item(), s, "r1", "valid order");
+
+        String committed = OrderServiceTestData.git(root, "show", "--name-only", "--format=", "HEAD")
+                .output();
+        assertFalse(committed.contains("OrderControllerIT.java"), "the developer's edit stays theirs: " + committed);
+        assertTrue(s.reason.contains("OrderControllerIT.java"), s.reason);
+    }
+
+    @Test
     void shouldTrustOnlyACommittedDefectRecord() throws Exception {
         Path record = paths.escalations().resolve("order.create__s01__component-01.md");
         AtomicFiles.write(record, EscalationWriter.DEFECT_FOUND_MARKER + "\n");

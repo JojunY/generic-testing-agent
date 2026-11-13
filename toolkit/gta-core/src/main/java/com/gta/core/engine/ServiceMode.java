@@ -56,6 +56,22 @@ final class ServiceMode {
         return true;
     }
 
+    /**
+     * The active flow cannot go on without a person (e.g. the run is paused after failures in a row): the oldest parked
+     * decision becomes the pending one, and the active flow goes back to the front of the queue; false when none is
+     * parked.
+     */
+    static boolean unparkBefore(WorkState st) {
+        String active = st.activeFlow;
+        if (!unpark(st)) {
+            return false;
+        }
+        if (active != null && !active.equals(st.activeFlow) && !st.queue.contains(active)) {
+            st.queue.add(0, active);
+        }
+        return true;
+    }
+
     /** The flows of the parked decisions, for the status block. */
     static List<String> waitingFlows(WorkState st) {
         return MODE.equals(st.mode)

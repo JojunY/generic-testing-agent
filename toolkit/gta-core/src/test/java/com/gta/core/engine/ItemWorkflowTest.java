@@ -87,6 +87,19 @@ class ItemWorkflowTest {
     }
 
     @Test
+    void shouldTakeAFreshBaselineOnlyForAnItemReopenedAfterItsCommit() {
+        s.status = ItemStatus.REPAIRING;
+        s.baseline = null; // reopened by the session-end verify
+
+        dispatch();
+
+        com.gta.core.change.Baseline fresh = s.baseline;
+        org.junit.jupiter.api.Assertions.assertNotNull(fresh, "changes made since its commit are not the author's");
+        dispatch();
+        org.junit.jupiter.api.Assertions.assertSame(fresh, s.baseline, "a repair keeps the baseline of its item");
+    }
+
+    @Test
     void shouldStopChecksAtTheBudgetAndRefuseTheWrongState() {
         s.status = ItemStatus.AUTHORING;
         s.token = "t";
