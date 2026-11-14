@@ -248,12 +248,16 @@ public final class Profiler {
         return sb.toString();
     }
 
+    private static final Set<String> NOT_SERVICE_FILES = Set.of(".git", ".github", "target");
+
     private static boolean anyFileMatches(Path root, String glob) {
         PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + glob);
         try (Stream<Path> files = Files.walk(root, 8)) {
-            return files.filter(f ->
-                            !f.toString().contains("/.git/") && !f.toString().contains("/target/"))
-                    .anyMatch(f -> m.matches(root.relativize(f)));
+            // by path segment, so it holds on Windows too; .github is CI (gta's own gate workflow), not the service
+            return files.map(root::relativize)
+                    .filter(rel -> java.util.stream.StreamSupport.stream(rel.spliterator(), false)
+                            .noneMatch(part -> NOT_SERVICE_FILES.contains(part.toString())))
+                    .anyMatch(m::matches);
         } catch (IOException e) {
             return false;
         }

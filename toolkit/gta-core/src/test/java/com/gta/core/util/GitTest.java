@@ -168,6 +168,30 @@ class GitTest {
     }
 
     @Test
+    void shouldNameANonAsciiPathAsItIsNotQuoted() throws Exception {
+        commitFile("a.txt", "a\n");
+        String base = git.head();
+        String name = "\u00dcbersicht.java"; // git quotes it as "\303\234bersicht.java" by default
+        // added through the index: the JVM of a POSIX-locale CI cannot create the file itself
+        Files.writeString(root.resolve("x.txt"), "class X {}\n");
+        String blob = run("hash-object", "-w", "x.txt").output().strip();
+        ProcessRunner.run(
+                root,
+                Duration.ofSeconds(30),
+                Map.of(),
+                List.of(
+                        "sh",
+                        "-c",
+                        "printf '100644 " + blob
+                                + "\\t\"\\303\\234bersicht.java\"\\n' | git update-index --index-info"));
+        run("commit", "-qm", "add " + name);
+
+        assertEquals(List.of(name), git.changedFiles(base));
+        assertEquals(List.of(name), git.commitsSince(base).get(0).files());
+        assertTrue(git.listFiles("HEAD", ".").contains(name));
+    }
+
+    @Test
     void shouldReadFilesOfARevisionAndTheChangesSinceIt() throws Exception {
         commitFile("a.txt", "a\n");
         String base = git.head();

@@ -6,6 +6,7 @@ import com.gta.core.change.ChangeChecker;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.oracle.AssertionScanner;
 import com.gta.core.oracle.Lock;
+import com.gta.core.oracle.OracleLock;
 import com.gta.core.oracle.OracleShard;
 import com.gta.core.plan.PlanItem;
 import com.gta.core.plan.Planner;
@@ -98,9 +99,7 @@ final class PlanSync {
                 Lock lock = new Lock();
                 lock.tokens = new ArrayList<>(shard.get(i.id).tokens);
                 AssertionScanner.ScenarioOracle o = ctx.runs.scanOracle(i);
-                lock.statements = o.assertionStatements().stream()
-                        .filter(x -> lock.tokens.stream().anyMatch(x::contains))
-                        .toList();
+                lock.statements = OracleLock.lockedStatements(o.assertionStatements(), lock.tokens);
                 lock.watched = o.watchedHash();
                 lock.fingerprint = shard.get(i.id).fingerprint;
                 s.lock = lock;

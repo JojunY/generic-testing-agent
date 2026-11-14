@@ -363,7 +363,7 @@ public final class GtaCli implements Callable<Integer> {
         public Integer call() throws IOException {
             String reply;
             if (file != null) {
-                reply = Files.readString(file, StandardCharsets.UTF_8).strip();
+                reply = replyFromFile(file);
             } else if (words != null && !words.isEmpty()) {
                 reply = String.join(" ", words);
             } else {
@@ -373,6 +373,12 @@ public final class GtaCli implements Callable<Integer> {
                         "Run ./gtaw answer \"<reply>\" or ./gtaw answer --file <path>");
             }
             return print(parent, engine(parent).answer(reply));
+        }
+
+        /** The reply in a UTF-8 file; the BOM Windows PowerShell 5.1 writes is not part of it. */
+        static String replyFromFile(Path file) throws IOException {
+            String text = Files.readString(file, StandardCharsets.UTF_8);
+            return (text.startsWith("\uFEFF") ? text.substring(1) : text).strip();
         }
     }
 

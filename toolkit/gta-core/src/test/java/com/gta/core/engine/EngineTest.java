@@ -398,6 +398,21 @@ class EngineTest {
     }
 
     @Test
+    void shouldNotTakeTheDevelopersCommitsBetweenSessionsForAnAgentsWork() throws Exception {
+        WorkState st = state(ItemStatus.REPAIRING); // e.g. sent back by the session end's can-fail check
+        st.sessionEnded = true;
+        Files.writeString(paths.mainJava().resolve("App.java"), "class App { int feature; }\n");
+        git("commit", "-qam", "the developer's own work");
+        new EngineContext(root, runner).sessions.touchSession(st, false);
+        store.save(st);
+        runner.then(outcome("passed"));
+
+        engine().submitItem(ITEM, TOKEN);
+
+        assertEquals(ItemStatus.REVIEWING, item().status, String.valueOf(item().reason));
+    }
+
+    @Test
     void shouldResetOnlyEditingItemsOnTakeover() {
         WorkState st = state(ItemStatus.AUTHORING);
         WorkState.ItemState review = new WorkState.ItemState();

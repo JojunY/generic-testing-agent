@@ -48,6 +48,14 @@ class GtaCliTest {
     }
 
     @Test
+    void shouldReadAReplyFileWithoutTheBomWindowsPowerShellWrites() throws Exception {
+        Path reply = root.resolve("reply.txt");
+        Files.writeString(reply, "\uFEFFapprove order.create@R2\r\n", StandardCharsets.UTF_8);
+
+        assertEquals("approve order.create@R2", GtaCli.Answer.replyFromFile(reply));
+    }
+
+    @Test
     void shouldPrintItsVersionAndUsage() {
         assertEquals(0, gtaw("--version").exit());
         assertTrue(gtaw().out().contains("Usage: gtaw"), "no command prints the usage");

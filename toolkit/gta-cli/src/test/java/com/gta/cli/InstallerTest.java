@@ -118,6 +118,18 @@ class InstallerTest {
     }
 
     @Test
+    void shouldNotTakeACrlfCheckoutForALocalEdit() throws Exception {
+        new Installer(root).install("opencode", null, null, false);
+        Path agent = root.resolve(".opencode/agents/gta-test-author.md");
+        // what Git for Windows checks out with core.autocrlf=true
+        Files.writeString(agent, Files.readString(agent).replace("\n", "\r\n"));
+
+        Map<String, Object> out = new Installer(root).install("opencode", null, null, true);
+
+        assertEquals(null, out.get("conflicts"), "line endings are not an edit: the file is upgraded");
+    }
+
+    @Test
     void shouldRemoveUntouchedFilesANewVersionNoLongerShipsAndKeepEditedOnes() throws Exception {
         new Installer(root).install("copilot", null, null, false);
         Path managed = root.resolve(".gta/managed-files.json");

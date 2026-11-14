@@ -1,6 +1,7 @@
 package com.gta.core.profile;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.gta.core.registry.CapabilityRegistry;
@@ -234,6 +235,16 @@ class ProfilerTest {
                 p.entrypoints.stream()
                         .noneMatch(e -> "security".equals(e.capability) || "caching".equals(e.capability)),
                 "cross-cutting capabilities add skills to flows, they are never flows themselves");
+    }
+
+    @Test
+    void shouldNotTakeTheCiWorkflowsOfTheRepositoryForAWorkflowEngine() throws Exception {
+        Files.createDirectories(root.resolve(".github/workflows"));
+        Files.writeString(root.resolve(".github/workflows/gta-gate.yml"), "name: gta gate\n");
+
+        ServiceProfile p = Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto");
+
+        assertFalse(p.capabilities.contains("workflow"), p.capabilities.toString());
     }
 
     @Test

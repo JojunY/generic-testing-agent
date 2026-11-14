@@ -29,11 +29,7 @@ public final class OracleLock {
                 lock.tokens.add(lit);
             }
         }
-        for (String stmt : oracle.assertionStatements()) {
-            if (lock.tokens.stream().anyMatch(stmt::contains)) {
-                lock.statements.add(stmt);
-            }
-        }
+        lock.statements.addAll(lockedStatements(oracle.assertionStatements(), lock.tokens));
         lock.fingerprint = fingerprint(lock.statements);
         lock.watched = oracle.watchedHash();
         lock.reachedInRun = runId;
@@ -57,6 +53,21 @@ public final class OracleLock {
         Set<String> now = Set.copyOf(current.assertionStatements());
         boolean allStatementsKept = now.containsAll(lock.statements);
         return new Check(allStatementsKept ? Verdict.OK : Verdict.STRUCTURAL_CHANGE, List.of());
+    }
+
+    /**
+     * The assertion statements that carry a locked value. Statements are stored without whitespace (see
+     * {@link AssertionScanner}), so a value is compared without it too: {@code `Order not found`} locks
+     * {@code isEqualTo("Order not found")}.
+     */
+    public static List<String> lockedStatements(List<String> statements, List<String> tokens) {
+        List<String> values = tokens.stream()
+                .map(t -> t.replaceAll("\\s+", ""))
+                .filter(t -> !t.isEmpty())
+                .toList();
+        return statements.stream()
+                .filter(stmt -> values.stream().anyMatch(stmt::contains))
+                .toList();
     }
 
     public static String fingerprint(List<String> statements) {

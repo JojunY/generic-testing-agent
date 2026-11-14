@@ -52,6 +52,22 @@ class OracleLockTest {
     }
 
     @Test
+    void shouldLockAnAssertionOfAValueWithSpaces() {
+        // the scanner stores statements without whitespace, string literals included
+        Lock lock = OracleLock.create(
+                oracle(List.of("isEqualTo(\"Ordernotfound\")"), Set.of("Order not found")),
+                List.of("Order not found"),
+                "r1");
+
+        assertEquals(List.of("isEqualTo(\"Ordernotfound\")"), lock.statements);
+        assertEquals(
+                OracleLock.Verdict.STRUCTURAL_CHANGE,
+                OracleLock.check(lock, oracle(List.of("contains(\"Ordernotfound\")"), Set.of("Order not found")))
+                        .verdict(),
+                "a weakened assertion of the locked value is not OK");
+    }
+
+    @Test
     void shouldFingerprintStatementsIndependentlyOfOrder() {
         assertEquals(OracleLock.fingerprint(List.of("a", "b")), OracleLock.fingerprint(List.of("b", "a")));
     }

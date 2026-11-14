@@ -32,6 +32,16 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- Review round 5:
+  - an item sent back after a clean session end (can-fail, an unstable test) is no longer stopped as "commits made outside gtaw" because the developer committed or pulled between sessions: a new session gives open items a fresh scope baseline;
+  - the oracle lock and the gate fingerprint now cover assertions of a locked value with spaces (`` `Order not found` ``), so weakening them is reported;
+  - a fixture named `classpath:…` (`@Sql("classpath:orders.sql")`) is watched as an input;
+  - the Spring Boot version of an imported `spring-boot-dependencies` BOM is read through `${spring-boot.version}`, so a Boot 2 service gets its `javax.*` brief and a Boot 4 service JUnit 6;
+  - git paths with non-ASCII characters are read as they are, not quoted, so the gate sees such a production change;
+  - `gtaw answer --file` ignores the BOM Windows PowerShell 5.1 writes;
+  - `gtaw upgrade` and `doctor` ignore line endings of managed files, so a CRLF checkout (Git for Windows) is no longer a local edit;
+  - the Windows wrapper prints valid JSON when the wrapper is not configured, also when its properties file is missing;
+  - the repository's own `.github/workflows` no longer make a service look like a workflow engine, and the `.git`/`target` exclusions of file detection hold on Windows.
 - Retiring a scenario no longer deletes a test class that has no method of that scenario.
 - The scripted e2e adds gta-junit to the project's dependencies, not to its `<dependencyManagement>`.
 - Review round 4:

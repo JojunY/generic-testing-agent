@@ -36,6 +36,22 @@ class PomInfoTest {
     }
 
     @Test
+    void shouldResolveTheBootVersionOfAnImportedBomFromTheProperties() throws Exception {
+        Files.writeString(root.resolve("pom.xml"), """
+                <project>
+                  <artifactId>legacy</artifactId>
+                  <properties><spring-boot.version>2.7.18</spring-boot.version></properties>
+                  <dependencyManagement><dependencies><dependency>
+                    <groupId>org.springframework.boot</groupId><artifactId>spring-boot-dependencies</artifactId>
+                    <version>${spring-boot.version}</version><type>pom</type><scope>import</scope>
+                  </dependency></dependencies></dependencyManagement>
+                </project>
+                """);
+
+        assertEquals(2, PomInfo.read(root).bootMajor());
+    }
+
+    @Test
     void shouldTreatAProjectWithoutBootAsBootZero() throws Exception {
         Files.writeString(root.resolve("pom.xml"), "<project><artifactId>lib</artifactId></project>");
 

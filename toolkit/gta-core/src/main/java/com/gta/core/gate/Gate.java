@@ -145,9 +145,7 @@ public final class Gate {
                     Path file = testFile(e.getValue().testClass);
                     AssertionScanner.ScenarioOracle now =
                             AssertionScanner.scan(file, scenarioId, paths.testResources());
-                    List<String> stmts = now.assertionStatements().stream()
-                            .filter(s -> e.getValue().tokens.stream().anyMatch(s::contains))
-                            .toList();
+                    List<String> stmts = OracleLock.lockedStatements(now.assertionStatements(), e.getValue().tokens);
                     String fp = OracleLock.fingerprint(stmts);
                     OracleShard.Entry cur = currentShard.get(itemId);
                     // a relock in this PR is a new relock record (by, reason, time) whose fingerprint matches the test

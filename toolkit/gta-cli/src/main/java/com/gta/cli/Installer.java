@@ -122,9 +122,9 @@ public final class Installer {
                 }
                 default -> {
                     Path target = root.resolve(rel);
-                    String newHash = Hashes.sha256(content);
+                    String newHash = managedHash(content);
                     if (Files.exists(target)) {
-                        String current = Hashes.sha256(target);
+                        String current = managedHash(target);
                         String recorded = previous.get(rel);
                         if (!current.equals(newHash) && recorded != null && !recorded.equals(current)) {
                             conflicts.add(rel);
@@ -149,11 +149,11 @@ public final class Installer {
         for (String w : List.of("gtaw", "gtaw.cmd")) {
             String content = resource("gta/wrapper/" + w);
             writes.put(root.resolve(w), content);
-            files.put(w, Hashes.sha256(content));
+            files.put(w, managedHash(content));
         }
         String ps1 = resource("gta/wrapper/gtaw-download.ps1");
         writes.put(paths.gta().resolve("wrapper/gtaw-download.ps1"), ps1);
-        files.put(".gta/wrapper/gtaw-download.ps1", Hashes.sha256(ps1));
+        files.put(".gta/wrapper/gtaw-download.ps1", managedHash(ps1));
         writes.put(paths.wrapperProperties(), wrapperProperties(distributionUrl, distributionSha));
 
         // managed files the new version no longer ships: remove them if untouched, report them if edited locally
@@ -165,7 +165,7 @@ public final class Installer {
             if (files.containsKey(old.getKey()) || !Files.exists(target)) {
                 continue;
             }
-            if (Hashes.sha256(target).equals(old.getValue())) {
+            if (managedHash(target).equals(old.getValue())) {
                 removals.add(target);
                 removed.add(old.getKey());
             } else {
@@ -406,6 +406,22 @@ public final class Installer {
                         "Rebuild gta-cli after generating copilot/ and opencode/");
             }
             return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * The hash of a managed file, line endings ignored: Git for Windows checks text files out with CRLF
+     * ({@code core.autocrlf=true}), which must not read as a local edit.
+     */
+    static String managedHash(String content) {
+        return Hashes.sha256(content.replace("\r\n", "\n"));
+    }
+
+    static String managedHash(Path file) {
+        try {
+            return managedHash(Files.readString(file, StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

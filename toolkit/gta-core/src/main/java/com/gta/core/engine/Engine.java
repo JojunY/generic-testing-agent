@@ -550,9 +550,7 @@ public final class Engine {
                                 + " (or change the spec first), then relock");
             }
             e.tokens = new ArrayList<>(then);
-            e.fingerprint = OracleLock.fingerprint(oracle.assertionStatements().stream()
-                    .filter(x -> e.tokens.stream().anyMatch(x::contains))
-                    .toList());
+            e.fingerprint = OracleLock.fingerprint(OracleLock.lockedStatements(oracle.assertionStatements(), e.tokens));
             e.scenarioRevision = scenario.revision();
             e.relockedBy = by;
             e.reason = reason;

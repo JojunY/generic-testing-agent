@@ -33,7 +33,8 @@ final class SessionManager {
     /**
      * Starts a session when there is none, when the previous one ended cleanly, on an explicit takeover, or when the
      * previous one went idle. Only items an agent was editing (AUTHORING, REPAIRING) are reset, and only when the previous
-     * session was interrupted (takeover or idle): items waiting for triage or review keep their state.
+     * session was interrupted (takeover or idle): items waiting for triage or review keep their state. After a clean end
+     * the open items get a fresh scope baseline.
      */
     Map<String, Object> touchSession(WorkState st, boolean takeover) {
         Map<String, Object> recovered = new LinkedHashMap<>();
@@ -62,6 +63,15 @@ final class SessionManager {
                         }
                         st.move(s, ItemStatus.PENDING);
                         recovered.put(s.id, "reset to pending; files backed up to " + paths.rel(backup));
+                    }
+                }
+            } else if (st.session != null) {
+                // the previous session ended cleanly: every agent change was checked and committed, so what changed
+                // since (the developer's commits, a pull) is not an agent's work and must not fail the next scope check
+                ChangeChecker cc = new ChangeChecker(paths);
+                for (WorkState.ItemState s : st.items.values()) {
+                    if (!s.status.terminal() && s.baseline != null) {
+                        s.baseline = cc.capture();
                     }
                 }
             }

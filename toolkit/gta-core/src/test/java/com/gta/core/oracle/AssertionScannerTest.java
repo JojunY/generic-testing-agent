@@ -132,6 +132,21 @@ class AssertionScannerTest {
     }
 
     @Test
+    void shouldWatchAFixtureNamedWithTheClasspathPrefix() throws Exception {
+        Files.createDirectories(dir.resolve("resources"));
+        Files.writeString(dir.resolve("resources/orders.sql"), "insert into orders values (1);");
+        String body = """
+                    @Test @Tag("scenario:order.create/s01") @Sql("classpath:orders.sql")
+                    void shouldCreate() { assertThat(status).isEqualTo(201); }
+                """;
+        String before = scanSource(body).watchedHash();
+
+        Files.writeString(dir.resolve("resources/orders.sql"), "insert into orders values (2);");
+
+        assertFalse(before.equals(scanSource(body).watchedHash()), "@Sql(\"classpath:...\") is an input too");
+    }
+
+    @Test
     void shouldFindNothingInAMissingOrBrokenFile() throws Exception {
         assertFalse(AssertionScanner.scan(dir.resolve("None.java"), "order.create/s01", null)
                 .found());

@@ -5,7 +5,6 @@ import com.gta.core.config.GtaPaths;
 import com.gta.core.error.GtaException;
 import com.gta.core.profile.PomInfo;
 import com.gta.core.util.Git;
-import com.gta.core.util.Hashes;
 import com.gta.core.util.Json;
 import com.gta.core.util.ProcessRunner;
 import java.io.IOException;
@@ -189,7 +188,7 @@ public final class DoctorChecks {
             if (files instanceof Map<?, ?> fm) {
                 fm.forEach((k, v) -> {
                     Path f = root.resolve(String.valueOf(k));
-                    if (!Files.exists(f) || !Hashes.sha256(f).equals(v)) {
+                    if (!Files.exists(f) || !Installer.managedHash(f).equals(v)) {
                         modified.add(String.valueOf(k));
                     }
                 });

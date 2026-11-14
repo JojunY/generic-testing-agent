@@ -66,9 +66,8 @@ final class ItemCommitter {
             Map<String, OracleShard.Entry> shard = OracleShard.read(shardPath);
             OracleShard.Entry e = new OracleShard.Entry();
             e.scenarioRevision = item.scenarioRevision;
-            e.fingerprint = OracleLock.fingerprint(ctx.runs.scanOracle(item).assertionStatements().stream()
-                    .filter(x -> s.lock.tokens.stream().anyMatch(x::contains))
-                    .toList());
+            e.fingerprint = OracleLock.fingerprint(
+                    OracleLock.lockedStatements(ctx.runs.scanOracle(item).assertionStatements(), s.lock.tokens));
             e.tokens = s.lock.tokens;
             e.testClass = item.testClass;
             e.intent = item.intent;
