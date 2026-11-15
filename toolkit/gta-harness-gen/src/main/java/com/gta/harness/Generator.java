@@ -1,7 +1,6 @@
 package com.gta.harness;
 
 import com.gta.core.util.Json;
-import com.gta.core.util.Yaml;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -235,12 +234,14 @@ public class Generator {
         }
     }
 
+    /** Reads a mapping; SnakeYAML resolves anchors and aliases ({@code bash: *gtaw-bash}), which Jackson reads as text. */
     @SuppressWarnings("unchecked")
     static Map<String, Object> yaml(Path p) {
-        try {
-            return Yaml.MAPPER.readValue(p.toFile(), LinkedHashMap.class);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Cannot read " + p + ": " + e.getMessage(), e);
+        try (java.io.Reader r = Files.newBufferedReader(p, StandardCharsets.UTF_8)) {
+            Object loaded = new org.yaml.snakeyaml.Yaml().load(r);
+            return loaded == null ? new LinkedHashMap<>() : (Map<String, Object>) loaded;
+        } catch (IOException | org.yaml.snakeyaml.error.YAMLException e) {
+            throw new UncheckedIOException("Cannot read " + p + ": " + e.getMessage(), new IOException(e));
         }
     }
 

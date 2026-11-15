@@ -31,6 +31,17 @@ class GeneratorTest {
     }
 
     @Test
+    void shouldGiveEveryOpenCodeProfileThatSharesTheGtawPolicyTheWholePolicy() {
+        Map<String, String> files = new Generator(REPO).render("opencode");
+
+        for (String agent : List.of("gta-orchestrator", "gta-analyst", "gta-test-author")) {
+            String text = files.get(".opencode/agents/" + agent + ".md");
+            assertTrue(text.contains("\"./gtaw submit*\": allow"), agent + " gets the YAML alias resolved:\n" + text);
+            assertTrue(text.contains("\"*--takeover*\": ask"), agent + ": --takeover is for people only");
+        }
+    }
+
+    @Test
     void shouldReportStaleExtraAndMissingFilesAndRemoveObsoleteOnes(@TempDir Path out) throws Exception {
         Generator gen = new Generator(REPO);
         Map<String, String> files = gen.render("opencode");

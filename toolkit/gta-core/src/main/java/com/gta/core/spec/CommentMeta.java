@@ -119,10 +119,11 @@ public final class CommentMeta {
         for (Entry e : entries) {
             sb.append(' ').append(e.key()).append('=');
             String v = e.value();
-            if (v.isEmpty() || v.matches("(?s).*[\\s\"].*") || v.contains("-->")) {
-                // escaped so that a person's reply can neither close the quote nor the comment
+            if (v.isEmpty() || v.matches("(?s).*[\\s\"\\\\>].*")) {
+                // escaped so that the value reads back as written: a quote or backslash, and '>' so "-->" cannot end
+                // the comment
                 sb.append('"')
-                        .append(v.replace("\\", "\\\\").replace("\"", "\\\"").replace("-->", "--\\>"))
+                        .append(v.replace("\\", "\\\\").replace("\"", "\\\"").replace(">", "\\>"))
                         .append('"');
             } else {
                 sb.append(v);

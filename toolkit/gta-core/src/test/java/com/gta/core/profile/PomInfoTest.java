@@ -133,6 +133,27 @@ class PomInfoTest {
     }
 
     @Test
+    void shouldReadMultiLineIncludesAndIgnoreIncludedBuilds() throws Exception {
+        Files.writeString(root.resolve("settings.gradle.kts"), """
+                pluginManagement { includeBuild("build-logic") }
+                rootProject.name = "lending"
+                include(
+                    ":api",
+                    ":core"
+                )
+                """);
+        Files.writeString(root.resolve("build.gradle.kts"), "plugins { java }\n");
+
+        assertEquals(java.util.List.of("api", "core"), PomInfo.read(root).modules);
+
+        Files.writeString(root.resolve("settings.gradle.kts"), """
+                pluginManagement { includeBuild("build-logic") }
+                rootProject.name = "lending"
+                """);
+        assertTrue(PomInfo.read(root).modules.isEmpty(), "an included build is not a module");
+    }
+
+    @Test
     void shouldReadAGroovyGradleBuildWithAToolchain() throws Exception {
         Files.writeString(root.resolve("build.gradle"), """
                 plugins {

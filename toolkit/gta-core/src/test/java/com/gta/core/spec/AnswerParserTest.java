@@ -100,6 +100,16 @@ class AnswerParserTest {
     }
 
     @Test
+    void shouldReadSeveralColonPicksOnOneLineAsPicks() {
+        for (String reply : List.of("1: B 2: C", "1:B 2:C")) {
+            AnswerParser.Answers a = (AnswerParser.Answers) AnswerParser.parse(reply);
+
+            assertEquals(Map.of("1", "B", "2", "C"), a.picks(), reply);
+            assertTrue(a.ownAnswers().isEmpty(), reply + " has no own answer: " + a.ownAnswers());
+        }
+    }
+
+    @Test
     void shouldReadAnOwnAnswerAfterACommaAndLetItSayApprove() {
         AnswerParser.Answers inline = (AnswerParser.Answers) AnswerParser.parse("OK, 2: a manager signs off");
         assertEquals(java.util.Map.of("2", "a manager signs off"), inline.ownAnswers());

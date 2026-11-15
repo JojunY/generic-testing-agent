@@ -220,6 +220,11 @@ final class Triage {
                         .replaceThenLiteral(item.ref, expected, actual)
                         .setHeader("rev", newRev)
                         .text());
+        // committed with the item's lock in mind: the shard records the corrected revision, so the base must hold it
+        ctx.commit(
+                List.of(paths.rel(specPath)),
+                "docs(spec): " + item.flowId + " " + newRev + " THEN of " + item.ref
+                        + " corrected from the actual value" + "\n\nGta-Item: " + item.id);
         List<PlanItem> plan = store.loadPlan();
         for (PlanItem p : plan) {
             if (p.id.equals(item.id)) {

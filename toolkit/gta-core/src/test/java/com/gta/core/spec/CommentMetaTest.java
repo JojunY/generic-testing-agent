@@ -34,6 +34,16 @@ class CommentMetaTest {
     }
 
     @Test
+    void shouldReadBackAnyValueItWrites() {
+        for (String v : List.of("1: on timeout --> answer 503", "say \\\"hi\\\" now", "ends with \\", "a>b")) {
+            String text = new CommentMeta("answer", List.of(new CommentMeta.Entry("text", v))).format() + " visible";
+
+            assertEquals(Optional.of(v), CommentMeta.parse(text).orElseThrow().get("text"), v);
+            assertTrue(text.endsWith("--> visible"), "the comment ends where format ended it: " + text);
+        }
+    }
+
+    @Test
     void shouldEditAndFormatRoundTrip() {
         CommentMeta m =
                 CommentMeta.parse("<!-- gta: id=s01 source=observed -->").orElseThrow();
@@ -49,20 +59,5 @@ class CommentMetaTest {
         assertTrue(new CommentMeta("approval", List.of(new CommentMeta.Entry("text", "a b")))
                 .format()
                 .contains("text=\"a b\""));
-    }
-
-    @Test
-    void shouldKeepAReplyThatLooksLikeTheEndOfTheCommentOrAnEscape() {
-        String text = "2: retry --> then fail, files in C:\\data\\ and \"quoted\"";
-        CommentMeta meta = new CommentMeta("answer", List.of(new CommentMeta.Entry("text", text)));
-
-        String formatted = meta.format();
-
-        assertEquals(1, formatted.split("-->", -1).length - 1, "only the comment's own end: " + formatted);
-        assertEquals(
-                Optional.of(text),
-                CommentMeta.parse("before " + formatted + " after")
-                        .orElseThrow()
-                        .get("text"));
     }
 }
