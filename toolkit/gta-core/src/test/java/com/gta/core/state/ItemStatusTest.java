@@ -17,6 +17,18 @@ class ItemStatusTest {
     }
 
     @Test
+    void shouldWriteAndReadTheSameIdsWhateverTheDefaultLocale() {
+        java.util.Locale before = java.util.Locale.getDefault();
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("tr-TR")); // dotless ı in "pending"
+            assertEquals("pending", ItemStatus.PENDING.id());
+            assertEquals(ItemStatus.NEEDS_HUMAN, ItemStatus.of("needs-human"));
+        } finally {
+            java.util.Locale.setDefault(before);
+        }
+    }
+
+    @Test
     void shouldTreatPassedDefectAndCancelledAsTerminal() {
         assertTrue(ItemStatus.PASSED.terminal());
         assertTrue(ItemStatus.DEFECT_FOUND.terminal());

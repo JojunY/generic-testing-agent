@@ -32,6 +32,28 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- Review round 6:
+  - oracle lock and gate:
+    - `assertTrue(x)` and `assertFalse(x)` with an argument are locked (only `isTrue()` was), and deleting one of two identical locked assertions is a change;
+    - a Cucumber Scenario Outline's Examples cells are part of the fingerprint, so a changed expected value in them is reported by the gate (outline shards locked before report it once; relock them);
+    - the scope check no longer ignores source files in a package named `target` (`com/acme/target/…`);
+    - an unreadable shard of a flow whose spec changed is reported as `GATE_SHARD_UNREADABLE` instead of stopping the gate;
+  - engine:
+    - answers given in a partial reply (`2B rest default` while a high-impact question stays open) reach the analyst once the round is complete, instead of being lost and their scenarios marked confirmed;
+    - an item sent back to the author (a retry, an auto-correction) still commits its own uncommitted test work from before;
+    - a retried item, a confirmed defect or a reset item gets an author brief instead of re-adopting its old test; only an item new to the state (a lost work dir) adopts one;
+    - a failed pin attempt keeps the confirmed defect's fingerprint, so the brief no longer asks for `@KnownDefect(failure = "")`, which accepts any failure;
+  - runs:
+    - `gtaw run` no longer exits 0 when the build failed or timed out without a failing test (a killed test JVM, a dependency that did not resolve); it prints `exitCode` and `timedOut`;
+    - on Gradle, a pinned defect whose exception has no message matches its fingerprint;
+    - `gtaw mutate` clears its PIT jars first, so jars of an earlier PIT or JUnit version never join the classpath;
+  - specs, profiling and install:
+    - a shortened flow id always starts with a letter (`search.search-2` is no longer `search.2`, which no spec could be written for);
+    - a new question round no longer rewrites the round of an answer record;
+    - specs, item states, briefs and tokens are read and written the same under any default locale (Turkish `ı`, Arabic digits);
+    - a root project with sources of its own and an included module (common with Gradle) is profiled and passes `doctor` instead of being refused as an aggregator;
+    - `gtaw` reads `gta-wrapper.properties` with CRLF line endings;
+    - plan §10.4 shows the `build.tool` default (`auto`) and `build.gradle`.
 - Review round 5, follow-up:
   - the can-fail check and `gtaw mutate` count only mutants a test ran against: `NON_VIABLE`, `RUN_ERROR` and `NOT_STARTED` mutants no longer read as survivors, which made a good test look like one that passes whatever the code does;
   - an assertion of a test-class constant (`isEqualTo(MSG)`) is locked by the constant's value, so weakening it or changing the constant is reported (shards locked before report it once; relock them);

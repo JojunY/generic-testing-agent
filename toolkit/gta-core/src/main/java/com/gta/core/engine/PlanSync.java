@@ -20,9 +20,11 @@ import com.gta.core.util.Git;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** Keeps the plan in step with the approved spec and adopts tests that already exist (plan §5.2). */
 final class PlanSync {
@@ -52,6 +54,7 @@ final class PlanSync {
         Map<String, PlanItem> existing = new LinkedHashMap<>();
         plan.stream().filter(i -> i.flowId.equals(spec.flowId())).forEach(i -> existing.put(i.id, i));
         List<PlanItem> result = new ArrayList<>();
+        Set<String> created = new HashSet<>();
         for (PlanItem f : fresh) {
             PlanItem old = existing.remove(f.id);
             WorkState.ItemState s = st.items.get(f.id);
@@ -64,6 +67,7 @@ final class PlanSync {
             WorkState.ItemState ns = new WorkState.ItemState();
             ns.id = f.id;
             st.items.put(f.id, ns);
+            created.add(f.id);
             result.add(f);
         }
         for (PlanItem gone : existing.values()) {
@@ -76,9 +80,13 @@ final class PlanSync {
         plan.removeIf(i -> i.flowId.equals(spec.flowId()));
         plan.addAll(result);
         store.savePlan(plan);
-        // rebuild: tests that already exist for a fresh pending item are verified first
+        // rebuild: tests that already exist for an item new to the state (a lost work dir) are verified first; an item
+        // the state already knows (a retry, a confirmed defect, a reset) gets its brief
         Map<String, OracleShard.Entry> shard = OracleShard.read(paths.oracleShard(spec.flowId()));
         for (PlanItem i : result) {
+            if (!created.contains(i.id)) {
+                continue;
+            }
             WorkState.ItemState s = st.items.get(i.id);
             Path test = paths.testSource(i.testClass);
             if (i.isFoundation()

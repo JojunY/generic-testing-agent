@@ -171,6 +171,18 @@ class ProfilerTest {
     }
 
     @Test
+    void shouldProfileARootProjectWithSourcesOfItsOwnAndAnIncludedModule() throws Exception {
+        Files.writeString(
+                root.resolve("pom.xml"),
+                Files.readString(root.resolve("pom.xml"))
+                        .replace("</project>", "<modules><module>api-client</module></modules></project>"));
+
+        ServiceProfile p = Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto");
+
+        assertEquals("com.acme.order", p.basePackage);
+    }
+
+    @Test
     void shouldProfileTheConfiguredModuleOfAMultiModuleRepository() throws Exception {
         Path repo = root.resolve("repo");
         Path module = repo.resolve("order-api");

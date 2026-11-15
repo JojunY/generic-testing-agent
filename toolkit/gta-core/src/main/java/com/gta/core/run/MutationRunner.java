@@ -221,6 +221,8 @@ public final class MutationRunner {
     private List<Mutant> run(Path work, Set<String> classes, List<String> targetTests) {
         Path lib = work.resolve("lib");
         Path report = work.resolve("report");
+        // jars of an earlier PIT or JUnit version would stay on the classpath next to the new ones
+        MavenRunner.deleteDir(lib);
         try {
             Files.createDirectories(lib);
         } catch (IOException e) {

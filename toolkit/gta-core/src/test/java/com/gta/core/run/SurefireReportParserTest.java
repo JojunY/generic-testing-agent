@@ -173,6 +173,11 @@ class SurefireReportParserTest {
                 SurefireReportParser.withoutTypePrefix(
                         "java.lang.IllegalStateException: boom", "java.lang.IllegalStateException"));
         assertEquals("boom", SurefireReportParser.withoutTypePrefix("boom", "java.lang.IllegalStateException"));
+        assertEquals(
+                "",
+                SurefireReportParser.withoutTypePrefix(
+                        "java.lang.IllegalStateException", "java.lang.IllegalStateException"),
+                "Gradle writes an exception without a message as its type: the fingerprint uses an empty message");
         assertNull(SurefireReportParser.withoutTypePrefix(null, "x.Y"));
     }
 

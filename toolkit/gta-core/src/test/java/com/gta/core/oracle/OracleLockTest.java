@@ -115,6 +115,28 @@ class OracleLockTest {
     }
 
     @Test
+    void shouldLockAJUnitBooleanAssertionWithItsArgument() {
+        assertEquals(
+                List.of("assertTrue(order.isPaid())", "assertFalse(order.isCancelled())"),
+                OracleLock.lockedStatements(
+                        List.of("assertTrue(order.isPaid())", "assertFalse(order.isCancelled())", "isNotNull()"),
+                        List.of("true", "false")));
+    }
+
+    @Test
+    void shouldReportTheDeletionOfOneOfTwoIdenticalLockedAssertions() {
+        AssertionScanner.ScenarioOracle twice = oracle(List.of("isEqualTo(404)", "isEqualTo(404)"), Set.of("404"));
+        Lock lock = OracleLock.create(twice, List.of("404"), "r1");
+
+        assertEquals(OracleLock.Verdict.OK, OracleLock.check(lock, twice).verdict());
+        assertEquals(
+                OracleLock.Verdict.STRUCTURAL_CHANGE,
+                OracleLock.check(lock, oracle(List.of("isEqualTo(404)"), Set.of("404")))
+                        .verdict(),
+                "the second response's status is no longer asserted");
+    }
+
+    @Test
     void shouldFingerprintStatementsIndependentlyOfOrder() {
         assertEquals(OracleLock.fingerprint(List.of("a", "b")), OracleLock.fingerprint(List.of("b", "a")));
     }

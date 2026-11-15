@@ -48,6 +48,20 @@ class GtaCliTest {
     }
 
     @Test
+    void shouldNotExitZeroForARunThatFailedWithoutAFailingTest() {
+        com.gta.core.run.RunResult r = new com.gta.core.run.RunResult();
+        com.gta.core.run.TestOutcome passed = new com.gta.core.run.TestOutcome();
+        passed.outcome = "passed";
+        r.cases.add(passed);
+        assertEquals(0, GtaCli.Run.exitCode(r));
+
+        r.exitCode = 1; // e.g. the forked test JVM was killed, or a dependency did not resolve
+        assertEquals(com.gta.core.error.ErrorCode.TEST_ASSERTION_FAILED.exitCode(), GtaCli.Run.exitCode(r));
+        r.timedOut = true;
+        assertEquals(com.gta.core.error.ErrorCode.TEST_TIMEOUT.exitCode(), GtaCli.Run.exitCode(r));
+    }
+
+    @Test
     void shouldPrintItsVersionAndUsage() {
         assertEquals(0, gtaw("--version").exit());
         assertTrue(gtaw().out().contains("Usage: gtaw"), "no command prints the usage");

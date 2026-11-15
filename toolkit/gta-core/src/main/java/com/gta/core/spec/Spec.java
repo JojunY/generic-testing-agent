@@ -4,6 +4,7 @@ import com.gta.core.util.Hashes;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -193,7 +194,7 @@ public final class Spec {
         public boolean checked;
 
         public boolean isCurrentCode() {
-            return text.toLowerCase().contains("= current code")
+            return text.toLowerCase(Locale.ROOT).contains("= current code")
                     || text.contains("= 代码现状"); // the Chinese marker is an accepted alias
         }
 

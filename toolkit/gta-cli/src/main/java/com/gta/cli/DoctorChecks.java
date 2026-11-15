@@ -93,7 +93,9 @@ public final class DoctorChecks {
                             ? "If this build needs an older JDK than the one gtaw runs on, set build.javaHomeEnv in"
                                     + " .gta/config.json to the name of a variable holding that JDK"
                             : "gta supports services on Java 8 or newer");
-            boolean multiModule = !repositoryPom.modules.isEmpty();
+            // a root project with sources of its own is the service, whatever modules it includes
+            boolean multiModule = !repositoryPom.modules.isEmpty()
+                    && !(module.isEmpty() && Files.isDirectory(root.resolve(GtaPaths.MAIN_JAVA)));
             // a nested module ("services/order-api" under the listed "services") is fine: it was read above
             boolean listed =
                     repositoryPom.modules.stream().anyMatch(m -> module.equals(m) || module.startsWith(m + "/"));

@@ -463,9 +463,20 @@ public final class GtaCli implements Callable<Integer> {
             out.put("tests", r.cases.size());
             out.put("failed", r.failures().size());
             out.put("compileError", r.compileError);
+            out.put("timedOut", r.timedOut);
+            out.put("exitCode", r.exitCode);
             out.put("log", r.logFile);
             print(parent, out);
-            return r.compileError || !r.failures().isEmpty() ? ErrorCode.TEST_ASSERTION_FAILED.exitCode() : 0;
+            return exitCode(r);
+        }
+
+        /** A build that failed without a failing test (a dependency, a killed test JVM, a timeout) is no pass. */
+        static int exitCode(RunResult r) {
+            boolean failed = r.compileError
+                    || r.timedOut
+                    || r.exitCode != 0
+                    || !r.failures().isEmpty();
+            return failed ? (r.timedOut ? ErrorCode.TEST_TIMEOUT : ErrorCode.TEST_ASSERTION_FAILED).exitCode() : 0;
         }
     }
 

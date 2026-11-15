@@ -85,10 +85,29 @@ public final class ChangeChecker {
         Baseline b = new Baseline();
         b.head = git.head();
         for (String p : git.dirtyPaths()) {
-            if (!matchesAny(p, IGNORED)) {
+            if (!ignored(p)) {
                 b.dirty.put(p, contentHash(p));
             }
         }
+        return b;
+    }
+
+    /**
+     * A new baseline for an item that already had one (a retry, an auto-correction): its own files keep what the
+     * earlier baseline recorded, so the item's uncommitted work from before is still its change and goes into its
+     * commit.
+     */
+    public Baseline recapture(Baseline previous, List<String> ownsFiles) {
+        Baseline b = capture();
+        if (previous == null) {
+            return b;
+        }
+        b.dirty.keySet().removeIf(p -> matchesAny(p, ownsFiles) && !previous.dirty.containsKey(p));
+        previous.dirty.forEach((p, hash) -> {
+            if (b.dirty.containsKey(p) && matchesAny(p, ownsFiles)) {
+                b.dirty.put(p, hash);
+            }
+        });
         return b;
     }
 
@@ -97,7 +116,7 @@ public final class ChangeChecker {
         Set<String> changed = new LinkedHashSet<>();
         Set<String> dirtyNow = git.dirtyPaths();
         for (String p : dirtyNow) {
-            if (matchesAny(p, IGNORED)) {
+            if (ignored(p)) {
                 continue;
             }
             String before = baseline.dirty.get(p);
@@ -133,7 +152,7 @@ public final class ChangeChecker {
             }
             foreign.add(c.sha().substring(0, Math.min(12, c.sha().length())));
             for (String f : c.files()) {
-                if (matchesAny(f, IGNORED)) {
+                if (ignored(f)) {
                     continue;
                 }
                 // also when the file is dirty: restoring it to HEAD would keep the foreign commit's version
@@ -220,6 +239,11 @@ public final class ChangeChecker {
     private String contentHash(String rel) {
         Path f = paths.root().resolve(rel);
         return Files.isRegularFile(f) ? Hashes.sha256(f) : "<deleted>";
+    }
+
+    /** Build output and gtaw's own work files; a source package named {@code target} is not build output. */
+    static boolean ignored(String rel) {
+        return matchesAny(rel, IGNORED) && !(rel.startsWith("src/") || rel.contains("/src/"));
     }
 
     public static boolean matchesAny(String rel, List<String> globs) {

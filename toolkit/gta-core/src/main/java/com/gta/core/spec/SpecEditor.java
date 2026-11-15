@@ -146,7 +146,11 @@ public final class SpecEditor {
     }
 
     public SpecEditor setRound(String round) {
-        if (!rewriteComment(m -> m.get("round").isPresent() && m.get("id").isEmpty(), m -> m.with("round", round))) {
+        if (!rewriteComment(
+                m -> m.kind() == null
+                        && m.get("round").isPresent()
+                        && m.get("id").isEmpty(),
+                m -> m.with("round", round))) {
             text = text.replaceFirst(
                     "(?m)^## Open questions\\s*$", "## Open questions\n<!-- gta: round=" + round + " -->");
         }

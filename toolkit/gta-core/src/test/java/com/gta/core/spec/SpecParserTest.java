@@ -23,6 +23,21 @@ class SpecParserTest {
     }
 
     @Test
+    void shouldReadTheSectionsWhateverTheDefaultLocale() {
+        java.util.Locale before = java.util.Locale.getDefault();
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("tr-TR")); // "Invariants" → "ınvariants"
+            Spec spec = SpecParser.parseText(SpecTestData.CREATE_ORDER.replace(
+                    "## Invariants\n",
+                    "## Invariants\n- totals are never negative <!-- gta: id=order.create/i01 source=assumed -->\n"));
+            assertEquals(1, spec.invariants.size(), "the invariants section is read");
+            assertEquals(1, spec.openQuestions().size());
+        } finally {
+            java.util.Locale.setDefault(before);
+        }
+    }
+
+    @Test
     void shouldExtractBacktickThenLiteralsOnly() {
         Spec.Scenario s01 = SpecParser.parseText(SpecTestData.CREATE_ORDER)
                 .scenario("order.create/s01")

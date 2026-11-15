@@ -53,6 +53,20 @@ class ItemWorkflowTest {
     }
 
     @Test
+    void shouldKeepTheConfirmedDefectsFingerprintWhenAPinAttemptFails() {
+        s.lastError = ItemWorkflow.lastError(s, ErrorCode.TEST_ASSERTION_FAILED, "expected 201 but was 500");
+        s.lastError.defectFingerprint = "a1b2c3d4e5f6";
+        s.intentOverride = "known-defect";
+
+        s.lastError = ItemWorkflow.lastError(s, ErrorCode.TEST_CODE_ERROR, "cannot find symbol KnownDefect");
+
+        assertEquals(
+                "a1b2c3d4e5f6",
+                s.lastError.defectFingerprint,
+                "the repair brief still names the failure @KnownDefect pins");
+    }
+
+    @Test
     void shouldPauseAfterTooManyItemsInARowNeededAHuman() {
         st.consecutiveFailures = 3;
 

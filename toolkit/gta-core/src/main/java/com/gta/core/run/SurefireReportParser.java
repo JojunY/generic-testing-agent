@@ -139,20 +139,25 @@ public final class SurefireReportParser {
     }
 
     /**
-     * The plain method name of a reported test case. Surefire appends the parameter types and, for parameterized or
-     * repeated tests, the invocation index ({@code shouldX(String)[2]}); gta-junit reports the plain name.
-     */
-    /**
      * The exception's own message. Gradle's report puts "type: " in front of it, Surefire's does not; fingerprints are
-     * computed from the bare message on both sides.
+     * computed from the bare message on both sides. Gradle writes an exception without a message as its bare type.
      */
     static String withoutTypePrefix(String message, String type) {
-        if (message != null && type != null && !type.isEmpty() && message.startsWith(type + ": ")) {
-            return message.substring(type.length() + 2);
+        if (message != null && type != null && !type.isEmpty()) {
+            if (message.startsWith(type + ": ")) {
+                return message.substring(type.length() + 2);
+            }
+            if (message.equals(type)) {
+                return "";
+            }
         }
         return message;
     }
 
+    /**
+     * The plain method name of a reported test case. Surefire appends the parameter types and, for parameterized or
+     * repeated tests, the invocation index ({@code shouldX(String)[2]}); gta-junit reports the plain name.
+     */
     static String methodName(String reported) {
         int cut = reported.length();
         for (char c : new char[] {'(', '['}) {

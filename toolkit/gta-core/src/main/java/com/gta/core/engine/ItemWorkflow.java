@@ -35,6 +35,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -149,7 +150,7 @@ final class ItemWorkflow {
             }
             st.seq++;
             s.token = BriefWriter.token(st.session.id, st.seq);
-            s.baseline = new ChangeChecker(paths).capture();
+            s.baseline = new ChangeChecker(paths).recapture(s.baseline, item.ownsFiles);
             st.move(s, ItemStatus.AUTHORING);
             Path brief = briefs.author(st.seq, s, item, spec, profile);
             return Dispatch.of(authorNode(item, s, brief));
@@ -333,7 +334,7 @@ final class ItemWorkflow {
                 out.put("oracleLocked", s.lock.tokens);
             } else if (s.lock != null) {
                 OracleLock.Check c = OracleLock.check(s.lock, oracle);
-                out.put("oracleLock", c.verdict().name().toLowerCase());
+                out.put("oracleLock", c.verdict().name().toLowerCase(Locale.ROOT));
                 if (!c.missingTokens().isEmpty()) {
                     out.put("lockedValuesMissing", c.missingTokens());
                 }
@@ -767,6 +768,8 @@ final class ItemWorkflow {
         e.message = message;
         e.fingerprint = FailureClassifier.fingerprint(code.name(), message);
         e.repeats = s.lastError != null && e.fingerprint.equals(s.lastError.fingerprint) ? s.lastError.repeats + 1 : 1;
+        // the confirmed defect's failure: a failed pin attempt must not lose what @KnownDefect(failure) names
+        e.defectFingerprint = s.lastError == null ? null : s.lastError.defectFingerprint;
         return e;
     }
 

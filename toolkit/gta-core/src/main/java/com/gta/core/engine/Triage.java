@@ -245,7 +245,7 @@ final class Triage {
             s.lock.statements.removeAll(OracleLock.lockedStatements(s.lock.statements, List.of(exp)));
         }
         // the corrected spec is gtaw's own write: without a fresh baseline the next scope check would revert it
-        s.baseline = new ChangeChecker(paths).capture();
+        s.baseline = new ChangeChecker(paths).recapture(s.baseline, item.ownsFiles);
         st.move(s, ItemStatus.REPAIRING);
         s.reason = "spec corrected from the actual behaviour: `" + expected + "` → `" + actual
                 + "`; update the assertion to the new expected value";

@@ -60,6 +60,29 @@ class ChangeCheckerTest {
     }
 
     @Test
+    void shouldIgnoreBuildOutputButNotASourcePackageNamedTarget() {
+        assertTrue(ChangeChecker.ignored("target/classes/App.class"));
+        assertTrue(ChangeChecker.ignored("order-api/target/surefire-reports/TEST-x.xml"));
+        assertFalse(ChangeChecker.ignored("src/main/java/com/acme/target/TargetService.java"));
+        assertFalse(ChangeChecker.ignored("order-api/src/test/java/com/acme/target/TargetIT.java"));
+    }
+
+    @Test
+    void shouldKeepAnItemsOwnUncommittedWorkAsItsChangeOnANewBaseline() throws Exception {
+        Baseline first = checker.capture();
+        Files.writeString(root.resolve("src/test/java/AppIT.java"), "class AppIT {}\n"); // the item's test
+        Files.writeString(root.resolve("pom.xml"), "<project><!-- developer --></project>\n");
+
+        Baseline retry = checker.recapture(first, List.of("src/test/java/AppIT.java"));
+
+        assertEquals(
+                List.of("src/test/java/AppIT.java"),
+                checker.changedSince(retry),
+                "the test written before the retry is still the item's to commit; the pom is not");
+        assertEquals(List.of(), checker.changedSince(checker.capture()));
+    }
+
+    @Test
     void shouldIgnoreFilesThatWereAlreadyDirty() throws Exception {
         Files.writeString(root.resolve("pom.xml"), "<project><!-- local edit --></project>\n");
         Baseline baseline = checker.capture();

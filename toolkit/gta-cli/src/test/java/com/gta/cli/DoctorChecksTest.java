@@ -56,6 +56,14 @@ class DoctorChecksTest {
     }
 
     @Test
+    void shouldAcceptARootProjectWithSourcesOfItsOwn(@TempDir Path root) throws Exception {
+        pom(root, "<modules><module>api-client</module></modules>");
+        Files.createDirectories(root.resolve("src/main/java"));
+
+        assertEquals("ok", status(root, "modules"), "the root is the service; api-client is a library it builds");
+    }
+
+    @Test
     void shouldAcceptANestedModule(@TempDir Path root) throws Exception {
         pom(root, "<modules><module>services</module></modules>");
         Files.createDirectories(root.resolve("services/order-api"));

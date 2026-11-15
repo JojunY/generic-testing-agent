@@ -99,5 +99,11 @@ class PlanSyncTest {
         assertEquals(ItemStatus.VERIFYING, s01.status);
         assertEquals(List.of("201"), s01.lock.tokens, "the lock comes from the committed shard");
         assertTrue(s01.baseline != null);
+
+        // a person's retry or a confirmed defect sends the item back to pending: it gets a brief, not the old test
+        s01.status = ItemStatus.PENDING;
+        s01.attempts = 0;
+        new EngineContext(root, new TestRunnerFake()).planSync.syncPlan(st, spec(), profile);
+        assertEquals(ItemStatus.PENDING, s01.status, "only an item new to the state adopts a test");
     }
 }

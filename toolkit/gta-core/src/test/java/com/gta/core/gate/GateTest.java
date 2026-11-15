@@ -161,6 +161,14 @@ class GateTest {
     }
 
     @Test
+    void shouldReportAnUnreadableShardOfAFlowWhoseSpecChangedInsteadOfFailing() throws Exception {
+        Files.writeString(paths.oracleShard("order.create"), "{ <<<<<<< conflict");
+        Files.writeString(paths.spec("order.create"), Files.readString(paths.spec("order.create")) + "\nedited\n");
+
+        assertTrue(failedWith(gate(), ErrorCode.GATE_SHARD_UNREADABLE));
+    }
+
+    @Test
     void shouldRaiseAConcernWhenASpecWithLockedScenariosIsDeleted() throws Exception {
         Files.delete(paths.spec("order.create"));
 

@@ -203,6 +203,11 @@ final class SpecWorkflow {
         st.newConfirmations.add(p.flowId + " " + p.round + ": \"" + text + "\"");
         st.event(false, "ev.answers", p.flowId, p.round);
         Spec after = SpecParser.parse(specPath);
+        // a reply may answer part of the round: its changes wait for the analyst with the rest of the round's
+        WorkState.SpecWork sw = st.specWork.computeIfAbsent(p.flowId, k -> new WorkState.SpecWork());
+        List<String> pendingChanges = new ArrayList<>(sw.answersToApply);
+        pendingChanges.addAll(toApply);
+        sw.answersToApply = pendingChanges;
         if (!after.openQuestions().isEmpty()) {
             p.prompt = ctx.prompts.renderQuestions(after, p.round);
             return result(
@@ -211,10 +216,8 @@ final class SpecWorkflow {
                             + (unansweredHigh.isEmpty() ? "" : " (high impact needs an explicit answer)"),
                     Map.of("prompt", p.prompt));
         }
-        WorkState.SpecWork sw = st.specWork.computeIfAbsent(p.flowId, k -> new WorkState.SpecWork());
-        if (!toApply.isEmpty()) {
+        if (!pendingChanges.isEmpty()) {
             sw.needsRevision = true;
-            sw.answersToApply = toApply;
             st.pending = null;
             return result(
                     "answers recorded; the analyst will now rewrite the affected THEN clauses (run ./gtaw next)", null);

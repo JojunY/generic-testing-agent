@@ -106,6 +106,24 @@ class FeatureScannerTest {
     }
 
     @Test
+    void shouldFingerprintTheExpectedValueInAnOutlinesExamples(@TempDir Path test) throws Exception {
+        Path resources = test.resolve("resources");
+        Files.createDirectories(resources.resolve("features"));
+        Files.writeString(resources.resolve("features/book.feature"), FEATURE);
+        AssertionScanner.ScenarioOracle before = FeatureScanner.scan(resources, "borrow.book/s03");
+        Files.writeString(
+                resources.resolve("features/book.feature"),
+                FEATURE.replace("| 10000    | 3.47 |", "| 10000    | 9.99 |"));
+        AssertionScanner.ScenarioOracle after = FeatureScanner.scan(resources, "borrow.book/s03");
+
+        List<String> locked = List.of("3.47");
+        assertNotEquals(
+                OracleLock.fingerprint(OracleLock.lockedStatements(before.assertionStatements(), locked)),
+                OracleLock.fingerprint(OracleLock.lockedStatements(after.assertionStatements(), locked)),
+                "the gate sees a changed fee in the examples");
+    }
+
+    @Test
     void shouldFindAScenarioNoTestMethodCarriesInTheFeatures(@TempDir Path test) throws Exception {
         Path resources = test.resolve("resources");
         Files.createDirectories(resources.resolve("features"));

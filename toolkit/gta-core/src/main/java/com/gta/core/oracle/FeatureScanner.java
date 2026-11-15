@@ -248,8 +248,9 @@ public final class FeatureScanner {
     }
 
     /**
-     * The oracle of the scenarios tagged {@code @scenario:<id>}: their Then steps are the assertion statements, the
-     * values in them (quoted text, numbers, constants, doc strings, table cells, an outline's examples) the tokens.
+     * The oracle of the scenarios tagged {@code @scenario:<id>}: their Then steps and an outline's examples cells are
+     * the assertion statements, the values in them (quoted text, numbers, constants, doc strings, table cells) the
+     * tokens.
      */
     public static AssertionScanner.ScenarioOracle scan(Path testResources, String scenarioId) {
         String tag = "scenario:" + scenarioId;
@@ -278,7 +279,12 @@ public final class FeatureScanner {
                     }
                     fixtures(step, testResources, watched);
                 }
-                s.examples().forEach(cell -> tokens(cell, tokens));
+                s.examples().forEach(cell -> {
+                    // an outline's Then steps name a column (<fee>): its cells carry the expected values, so a cell
+                    // is a statement too and a changed value changes the fingerprint
+                    statements.add("examples:" + cell.replaceAll("\\s+", ""));
+                    tokens(cell, tokens);
+                });
             }
         }
         if (scenarios > 0) {
