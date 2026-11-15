@@ -37,7 +37,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
   - an assertion of a test-class constant (`isEqualTo(MSG)`) is locked by the constant's value, so weakening it or changing the constant is reported (shards locked before report it once; relock them);
   - a review verdict on a round issued without a record of the reviewed files is refused instead of being taken unchecked; `./gtaw next` issues the round again;
   - the gate's `GATE_SCENARIOS_UNLOCKED` concern says what it checks: the unchanged locked scenarios of a spec that is not approved are still checked;
-  - the Windows CI job runs `gtaw.cmd` without a wrapper configuration and checks its JSON error and exit code 21.
+  - `gtaw.cmd` returned exit code 0 for every wrapper error (not configured, download failed, checksum mismatch), so a caller took the failure for success; it now returns the category's code (config 21, environment 30), and the Windows CI job checks it.
 - Review round 5 (four review passes, merged):
   - oracle lock and gate:
     - the lock covers assertions of a value with spaces (`` `Order not found` ``) and of a value written by a name (`status().isNotFound()`, `HttpStatus.SERVICE_UNAVAILABLE`, `isTrue()`), so weakening or deleting them changes the fingerprint and the gate reports it. Shards locked before hold a fingerprint without those assertions: the gate reports them once; relock them (`./gtaw relock`);
