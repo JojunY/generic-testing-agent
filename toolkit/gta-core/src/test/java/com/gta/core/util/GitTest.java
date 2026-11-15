@@ -175,7 +175,8 @@ class GitTest {
         String name = "\u00dcbersicht.java"; // git quotes it as "\303\234bersicht.java" by default
         // added through the index: a JVM under the C locale cannot create the file itself
         Files.writeString(root.resolve("x.txt"), "class X {}\n");
-        String blob = run("hash-object", "-w", "x.txt").output().strip();
+        // the hash is the last line: git on Windows may warn about line endings first (stderr is merged)
+        String blob = run("hash-object", "-w", "x.txt").output().strip().replaceAll("(?s).*\\R", "");
         // the path in git's C-quoted form is plain ASCII: no shell and no file name encoding involved
         Process p = new ProcessBuilder("git", "update-index", "--index-info")
                 .directory(root.toFile())
