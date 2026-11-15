@@ -179,6 +179,9 @@ class TriageTest {
                 ctx.git.show("HEAD", paths.rel(paths.spec("order.create"))).orElseThrow(),
                 "committed, so the base holds the revision the item's oracle shard records");
         assertTrue(String.valueOf(out.get("result")).contains("order.create@R3"), out.toString());
+        assertTrue(
+                ctx.git.dirtyPaths().stream().noneMatch(p -> p.startsWith(".gta/specs/")),
+                "gtaw commits its own spec correction, so the shard and the committed spec agree");
     }
 
     @Test

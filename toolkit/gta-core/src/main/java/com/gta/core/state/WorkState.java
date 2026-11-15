@@ -106,6 +106,9 @@ public class WorkState {
         public int checks;
         public String token;
         public Baseline baseline;
+        /** The workspace when the current review round was issued: a reviewer may change nothing (plan §5.8). */
+        public Baseline reviewBaseline;
+
         public Lock lock;
         public LastError lastError;
         public String evidenceRunId;

@@ -100,13 +100,20 @@ class AnswerParserTest {
     }
 
     @Test
-    void shouldReadSeveralColonPicksOnOneLineAsPicks() {
-        for (String reply : List.of("1: B 2: C", "1:B 2:C")) {
-            AnswerParser.Answers a = (AnswerParser.Answers) AnswerParser.parse(reply);
+    void shouldReadColonPicksOnOneLineAsPicks() {
+        AnswerParser.Answers a = (AnswerParser.Answers) AnswerParser.parse("R3: 1: A 2: B");
+        assertEquals(java.util.Map.of("1", "A", "2", "B"), a.picks());
+        assertTrue(a.ownAnswers().isEmpty(), a.ownAnswers().toString());
 
-            assertEquals(Map.of("1", "B", "2", "C"), a.picks(), reply);
-            assertTrue(a.ownAnswers().isEmpty(), reply + " has no own answer: " + a.ownAnswers());
-        }
+        AnswerParser.Answers rest = (AnswerParser.Answers) AnswerParser.parse("2: B rest default");
+        assertEquals(java.util.Map.of("2", "B"), rest.picks());
+        assertTrue(rest.restDefault());
+        assertTrue(rest.ownAnswers().isEmpty(), rest.ownAnswers().toString());
+
+        assertEquals(
+                java.util.Map.of("2", "A manager signs off"),
+                ((AnswerParser.Answers) AnswerParser.parse("2: A manager signs off")).ownAnswers(),
+                "a sentence that starts with a one-letter word is still an own answer");
     }
 
     @Test

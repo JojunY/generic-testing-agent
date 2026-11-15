@@ -343,7 +343,7 @@ public final class Profiler {
                                 List<String> paths = pathsOf(a);
                                 e.path = (paths.isEmpty() ? List.of("") : paths)
                                         .stream()
-                                                .map(p -> (classPath + p).replaceAll("//+", "/"))
+                                                .map(p -> httpPath(classPath, p))
                                                 .collect(Collectors.joining(" | "));
                                 e.risk = verb.equals("GET") ? 2 : 6;
                             }
@@ -488,6 +488,12 @@ public final class Profiler {
     }
 
     private static final java.util.regex.Pattern FLYWAY = java.util.regex.Pattern.compile("V([0-9._]+)__(.+)\\.sql");
+
+    /** Spring joins the class and method mappings with a slash ("/api/orders" + "{id}" is "/api/orders/{id}"). */
+    static String httpPath(String classPath, String methodPath) {
+        String joined = ("/" + classPath + "/" + methodPath).replaceAll("//+", "/");
+        return joined.length() > 1 && joined.endsWith("/") ? joined.substring(0, joined.length() - 1) : joined;
+    }
 
     /**
      * Schema migrations as flows (db-migration): each Flyway {@code db/migration/V<version>__<name>.sql} and each

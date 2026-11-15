@@ -94,9 +94,12 @@ public final class DoctorChecks {
                                     + " .gta/config.json to the name of a variable holding that JDK"
                             : "gta supports services on Java 8 or newer");
             boolean multiModule = !repositoryPom.modules.isEmpty();
+            // a nested module ("services/order-api" under the listed "services") is fine: it was read above
+            boolean listed =
+                    repositoryPom.modules.stream().anyMatch(m -> module.equals(m) || module.startsWith(m + "/"));
             add(
                     "modules",
-                    !multiModule || repositoryPom.modules.contains(module) ? "ok" : "fail",
+                    !multiModule || listed ? "ok" : "fail",
                     !multiModule
                             ? "single module"
                             : module.isEmpty()

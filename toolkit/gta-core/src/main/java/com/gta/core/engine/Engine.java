@@ -743,12 +743,17 @@ public final class Engine {
     /** {@code gtaw mutate --changed}: PIT on the classes changed since {@code base}, counted on the changed lines. */
     public Map<String, Object> mutateChanged(String base) {
         git.requireRepo();
-        return new com.gta.core.run.MutationRunner(ctx.paths, ctx.config)
-                .changed(base == null ? ctx.sessionEnd.defaultBase() : base);
+        try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
+            return new com.gta.core.run.MutationRunner(ctx.paths, ctx.config)
+                    .changed(base == null ? ctx.sessionEnd.defaultBase() : base);
+        }
     }
 
+    /** Runs the tests and writes .gta/work: under the work lock like every run (plan §5.8). */
     public Gate.Result gate(String base, List<Path> reportDirs) {
-        return ctx.sessionEnd.gate(base, reportDirs);
+        try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
+            return ctx.sessionEnd.gate(base, reportDirs);
+        }
     }
 
     public String report(String format) {
@@ -757,6 +762,8 @@ public final class Engine {
 
     /** {@code gtaw run}: the seed tests (smoke) or the gta tests a tag expression selects (plan §9.5). */
     public RunResult runTests(boolean smoke, String tags) {
-        return ctx.runs.runTests(smoke, tags);
+        try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
+            return ctx.runs.runTests(smoke, tags);
+        }
     }
 }

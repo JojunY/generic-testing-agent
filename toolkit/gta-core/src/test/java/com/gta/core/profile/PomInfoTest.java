@@ -107,6 +107,9 @@ class PomInfoTest {
     @Test
     void shouldReadAKotlinGradleBuildWhenThereIsNoPom() throws Exception {
         Files.writeString(root.resolve("settings.gradle.kts"), """
+                pluginManagement {
+                    includeBuild("build-logic")
+                }
                 rootProject.name = "invoice"
                 include("invoice-api", ":tools:cli")
                 """);
@@ -129,7 +132,8 @@ class PomInfoTest {
         assertEquals(3, build.bootMajor());
         assertEquals(21, build.javaMajor());
         assertEquals(java.util.List.of("spring-boot-starter-webmvc", "gta-junit"), build.dependencies);
-        assertEquals(java.util.List.of("invoice-api", "tools/cli"), build.modules);
+        assertEquals(
+                java.util.List.of("invoice-api", "tools/cli"), build.modules, "an includeBuild is not a subproject");
     }
 
     @Test

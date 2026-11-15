@@ -114,6 +114,13 @@ class ProfilerTest {
     }
 
     @Test
+    void shouldJoinTheClassAndMethodMappingsWithASlash() {
+        assertEquals("/api/orders/{id}", Profiler.httpPath("/api/orders", "{id}"));
+        assertEquals("/api/orders", Profiler.httpPath("/api/orders/", ""));
+        assertEquals("/", Profiler.httpPath("", ""));
+    }
+
+    @Test
     void shouldKeepEveryPathOfAMapping() {
         ServiceProfile.EntryPoint find = byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"))
                 .get("order.find");
@@ -281,6 +288,9 @@ class ProfilerTest {
         Path changelog = root.resolve("src/main/resources/db/changelog");
         Files.createDirectories(changelog);
         Files.writeString(changelog.resolve("add-orders.yaml"), "databaseChangeLog: []");
+        Files.writeString(changelog.resolve("001-init.yaml"), "databaseChangeLog: []");
+        Files.writeString(migrations.resolve("V3__add_index.sql"), "create index a on customer (id);");
+        Files.writeString(migrations.resolve("V7__add_index.sql"), "create index b on customer (tier);");
 
         Map<String, ServiceProfile.EntryPoint> flows =
                 byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"));
@@ -292,6 +302,9 @@ class ProfilerTest {
         assertEquals("db-migration", flows.get("db.add-orders").capability, "Liquibase changelogs too");
         assertTrue(flows.containsKey("db.customers"));
         assertTrue(flows.keySet().stream().noneMatch(f -> f.contains("notes")));
+        assertTrue(flows.containsKey("db.migration-001-init"), "a flow name starts with a letter: " + flows.keySet());
+        assertTrue(
+                flows.containsKey("db.add-index") && flows.containsKey("db.add-index-2"), "each migration is a flow");
     }
 
     @Test

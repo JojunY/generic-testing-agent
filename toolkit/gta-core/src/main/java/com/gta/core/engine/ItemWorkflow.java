@@ -258,6 +258,7 @@ final class ItemWorkflow {
         // the verdict must come back with this token: it binds the verdict to this review round
         st.seq++;
         s.token = BriefWriter.token(st.session.id, st.seq);
+        s.reviewBaseline = new ChangeChecker(paths).capture();
         String details;
         if (kind.equals("oracle-review")) {
             details = "The test passed. Check that it asserts exactly what the THEN clauses say, on the right object, "
@@ -653,7 +654,12 @@ final class ItemWorkflow {
             WorkState st = store.load();
             WorkState.ItemState s = requireToken(st, itemId, token, ItemStatus.REVIEWING, ItemStatus.TRIAGING);
             PlanItem item = store.planItem(itemId);
-            Map<String, Object> out;
+            Map<String, Object> out = reviewerChanges(st, item, s);
+            if (out != null) {
+                s.token = null;
+                store.save(st);
+                return out;
+            }
             if (s.status == ItemStatus.REVIEWING) {
                 if ("accept".equals(verdict)) {
                     st.event(true, "chk.reviewer", item.ref);
@@ -686,6 +692,41 @@ final class ItemWorkflow {
             store.save(st);
             return out;
         }
+    }
+
+    /**
+     * The change check of a review round (plan §5.8): the reviewer may change nothing. Its changes are reverted where
+     * they can be and the verdict is not used: the author's next submit runs and checks the test again.
+     */
+    private Map<String, Object> reviewerChanges(WorkState st, PlanItem item, WorkState.ItemState s) {
+        if (s.reviewBaseline == null) {
+            return null;
+        }
+        ChangeChecker.Result scope = new ChangeChecker(paths)
+                .check(
+                        s.reviewBaseline,
+                        List.of(),
+                        paths.recover().resolve(Ids.itemKey(item.id) + "-review-" + st.seq),
+                        true);
+        if (scope.ok()) {
+            return null;
+        }
+        s.lastError = lastError(s, ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE, "the reviewer changed " + scope.outOfScope());
+        if (!scope.foreignCommits().isEmpty()) {
+            return needsHuman(
+                    st,
+                    item,
+                    s,
+                    "commits made outside gtaw during the review (" + String.join(", ", scope.foreignCommits())
+                            + "). Agents must not run git; revert or keep them yourself, then answer A to retry");
+        }
+        return fail(
+                st,
+                item,
+                s,
+                ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE,
+                "A review may change nothing; the reviewer changed " + scope.outOfScope() + " (reverted: "
+                        + scope.restored() + ")");
     }
 
     Map<String, Object> fail(WorkState st, PlanItem item, WorkState.ItemState s, ErrorCode code, String message) {
