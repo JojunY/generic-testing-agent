@@ -12,12 +12,17 @@ if defined GTA_CLI_JAR (
 )
 for /f "usebackq delims=" %%J in (`powershell -NoProfile -ExecutionPolicy Bypass -File "%GTA_DIR%\.gta\wrapper\gtaw-download.ps1" -Root "%GTA_DIR%"`) do set "GTA_JAR=%%J"
 if not defined GTA_JAR exit /b 30
-if "%GTA_JAR:~0,1%"=="{" (
-  echo %GTA_JAR%
-  rem the exit code of the error category, as ./gtaw gives it: config 21, environment 30
-  echo %GTA_JAR%| find "CONFIG_NOT_INITIALIZED" >nul && exit /b 21
-  exit /b 30
-)
+if "%GTA_JAR:~0,1%"=="{" goto failed
 :run
 java %GTA_JAVA_OPTS% -jar "%GTA_JAR%" --root "%GTA_DIR%" %*
 exit /b %ERRORLEVEL%
+
+:failed
+rem the JSON error of gtaw-download.ps1, with the exit code of its category as ./gtaw gives it: config 21,
+rem environment 30. Delayed expansion keeps the JSON's quotes intact; it is enabled only here, since it would
+rem eat a "!" in the arguments passed on to gtaw above. exit /b runs outside any ( ) block, as in mvnw.cmd.
+setlocal EnableDelayedExpansion
+echo !GTA_JAR!
+set "GTA_CODE=30"
+if not "!GTA_JAR:CONFIG_NOT_INITIALIZED=!"=="!GTA_JAR!" set "GTA_CODE=21"
+exit /b !GTA_CODE!
