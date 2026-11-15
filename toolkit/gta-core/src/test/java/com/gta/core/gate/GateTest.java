@@ -172,6 +172,20 @@ class GateTest {
     }
 
     @Test
+    void shouldStillCheckTheUnchangedLockedScenariosOfASpecThatIsNotApproved() throws Exception {
+        Files.writeString(
+                paths.spec("order.create"),
+                SpecTestData.CREATE_ORDER.replace("status=draft", "status=in-review rev=R3"));
+
+        Gate.Result r = new Gate(paths, new GtaConfig()).evaluate("main", List.of(), List.of());
+
+        assertTrue(failedWith(r, ErrorCode.GATE_SCENARIO_UNVERIFIED), "in review is no exemption: " + r.failures);
+        assertTrue(
+                r.concerns.stream().anyMatch(c -> c.code.equals(ErrorCode.GATE_SCENARIOS_UNLOCKED.name())),
+                r.concerns.toString());
+    }
+
+    @Test
     void shouldRefuseABaseThatDoesNotExist() {
         GtaException e = assertThrows(
                 GtaException.class,

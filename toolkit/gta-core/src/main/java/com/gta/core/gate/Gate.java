@@ -110,7 +110,7 @@ public final class Gate {
                 continue;
             }
             if (spec == null || !"approved".equals(spec.status())) {
-                // the locked scenarios of this flow are exempt below: make the reason visible in the PR
+                // below, the scenarios this spec changed or withdrew go unchecked: make the reason visible in the PR
                 r.concerns.add(new Condition(
                         ErrorCode.GATE_SCENARIOS_UNLOCKED.name(),
                         flowId,
@@ -118,7 +118,8 @@ public final class Gate {
                                 ? "the spec was deleted: its "
                                         + shard.getValue().size() + " locked scenario(s) are no longer checked"
                                 : "the spec is " + spec.status()
-                                        + ": its locked scenarios are checked again once it is approved"));
+                                        + ": the locked scenarios it changes are checked once it is approved;"
+                                        + " the unchanged ones still are"));
             }
             for (Map.Entry<String, OracleShard.Entry> e : shard.getValue().entrySet()) {
                 String itemId = e.getKey();

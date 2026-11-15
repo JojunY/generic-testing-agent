@@ -206,6 +206,7 @@ public final class AssertionScanner {
         }
         CompilationUnit cu = parsed.getResult().get();
         Map<String, String> constants = constants(cu);
+        Map<String, Expression> constantLiterals = constantLiterals(cu);
         List<String> statements = new ArrayList<>();
         Set<String> tokens = new LinkedHashSet<>();
         StringBuilder watched = new StringBuilder();
@@ -227,7 +228,14 @@ public final class AssertionScanner {
                                         .reduce((a, b) -> a + "," + b)
                                         .orElse("")
                                 + ")";
-                        statements.add(f);
+                        // a constant of the test class is locked by its value: isEqualTo(MSG) is
+                        // isEqualTo("Order not found"), so changing the constant changes the assertion
+                        statements.add(fragment.getNameAsString() + "("
+                                + fragment.getArguments().stream()
+                                        .map(arg -> normalize(withConstantValues(arg, constantLiterals)))
+                                        .reduce((a, b) -> a + "," + b)
+                                        .orElse("")
+                                + ")");
                         rest = rest.replace(f, "");
                     }
                     watched.append(rest);
@@ -403,6 +411,36 @@ public final class AssertionScanner {
     }
 
     /** static final fields with a literal initialiser, resolved by simple name. */
+    /** The literal initializers of the class's {@code static final} fields, by name. */
+    private static Map<String, Expression> constantLiterals(CompilationUnit cu) {
+        Map<String, Expression> out = new HashMap<>();
+        for (FieldDeclaration f : cu.findAll(FieldDeclaration.class)) {
+            if (f.hasModifier(Modifier.Keyword.STATIC) && f.hasModifier(Modifier.Keyword.FINAL)) {
+                for (VariableDeclarator v : f.getVariables()) {
+                    v.getInitializer()
+                            .filter(Expression::isLiteralExpr)
+                            .ifPresent(init -> out.put(v.getNameAsString(), init));
+                }
+            }
+        }
+        return out;
+    }
+
+    /** A copy of the expression with each name of a class constant replaced by the constant's literal. */
+    private static Expression withConstantValues(Expression e, Map<String, Expression> literals) {
+        if (e instanceof NameExpr n && literals.containsKey(n.getNameAsString())) {
+            return literals.get(n.getNameAsString()).clone();
+        }
+        Expression copy = e.clone();
+        for (NameExpr n : copy.findAll(NameExpr.class)) {
+            Expression literal = literals.get(n.getNameAsString());
+            if (literal != null && n.getParentNode().isPresent()) {
+                n.replace(literal.clone());
+            }
+        }
+        return copy;
+    }
+
     static Map<String, String> constants(CompilationUnit cu) {
         Map<String, String> out = new HashMap<>();
         for (FieldDeclaration f : cu.findAll(FieldDeclaration.class)) {

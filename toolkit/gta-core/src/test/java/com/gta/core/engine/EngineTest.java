@@ -143,7 +143,9 @@ class EngineTest {
 
     @Test
     void shouldSendARejectedOracleBackToTheAuthor() {
-        store.save(state(ItemStatus.REVIEWING));
+        WorkState st = state(ItemStatus.REVIEWING);
+        st.items.get(ITEM).reviewBaseline = new ChangeChecker(paths).capture(); // the review round is issued
+        store.save(st);
 
         engine().submitReview(ITEM, TOKEN, "reject", "asserts the wrong field");
 
@@ -152,6 +154,18 @@ class EngineTest {
         assertTrue(
                 com.gta.core.state.Lessons.recent(paths, 10).stream().anyMatch(l -> l.startsWith("- [reviewer] ")),
                 "the reject is a lesson for the next author");
+    }
+
+    @Test
+    void shouldIssueAgainAReviewRoundThatHasNoRecordOfTheReviewedFiles() {
+        store.save(state(ItemStatus.REVIEWING)); // a round from before gtaw recorded the reviewed tree
+
+        GtaException e =
+                assertThrows(GtaException.class, () -> engine().submitReview(ITEM, TOKEN, "accept", "looks right"));
+
+        assertEquals(ErrorCode.STATE_STALE_SESSION, e.code(), "never accepted unchecked");
+        assertEquals(ItemStatus.REVIEWING, item().status, "nothing is held against the item");
+        assertNull(item().token, "the next ./gtaw next issues a new round");
     }
 
     @Test
@@ -253,6 +267,7 @@ class EngineTest {
         Path test = root.resolve(new GtaPaths(root).testSourceRel("com.acme.OrderCreateIT"));
         Files.createDirectories(test.getParent());
         Files.writeString(test, "class OrderCreateIT {}\n");
+        st.items.get(ITEM).reviewBaseline = new ChangeChecker(paths).capture(); // the tree that ran
         store.save(st);
         git("config", "commit.gpgsign", "true");
         git("config", "gpg.format", "openpgp");
@@ -1092,6 +1107,7 @@ class EngineTest {
         s.status = ItemStatus.TRIAGING;
         s.token = "t";
         s.baseline = new ChangeChecker(p).capture();
+        s.reviewBaseline = s.baseline;
         WorkState.LastError le = new WorkState.LastError();
         le.code = "TEST_ASSERTION_FAILED";
         le.message = "expected: <" + target.oracle.then.get(0) + "> but was: <999>";
