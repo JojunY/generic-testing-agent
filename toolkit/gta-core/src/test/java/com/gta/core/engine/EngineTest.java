@@ -155,6 +155,23 @@ class EngineTest {
     }
 
     @Test
+    void shouldNotCommitATestTheReviewerChanged() throws Exception {
+        Path test = root.resolve(new GtaPaths(root).testSourceRel("com.acme.OrderCreateIT"));
+        Files.createDirectories(test.getParent());
+        Files.writeString(test, "class OrderCreateIT { void t() { assertThat(status).isEqualTo(201); } }\n");
+        WorkState st = state(ItemStatus.REVIEWING);
+        st.items.get(ITEM).reviewBaseline = new ChangeChecker(paths).capture(); // the review round is issued
+        store.save(st);
+        Files.writeString(test, "class OrderCreateIT { void t() { assertThat(status).isNotNull(); } }\n");
+
+        engine().submitReview(ITEM, TOKEN, "accept", "looks right");
+
+        assertEquals(ItemStatus.REPAIRING, item().status, "a review may change nothing: the author submits again");
+        assertEquals(ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE.name(), item().lastError.code);
+        assertNull(item().commit, "nothing was committed");
+    }
+
+    @Test
     void shouldRefuseAReviewVerdictWithoutTheCurrentToken() {
         store.save(state(ItemStatus.REVIEWING));
 
@@ -233,10 +250,10 @@ class EngineTest {
         st.items.get(ITEM).lock = new Lock();
         st.items.get(ITEM).lock.tokens.add("201");
         st.items.get(ITEM).evidenceRunId = "r1";
-        store.save(st);
         Path test = root.resolve(new GtaPaths(root).testSourceRel("com.acme.OrderCreateIT"));
         Files.createDirectories(test.getParent());
         Files.writeString(test, "class OrderCreateIT {}\n");
+        store.save(st);
         git("config", "commit.gpgsign", "true");
         git("config", "gpg.format", "openpgp");
         git("config", "gpg.program", "false-gpg-that-does-not-exist");
@@ -395,6 +412,22 @@ class EngineTest {
 
         assertEquals(ItemStatus.TRIAGING, st.items.get(ITEM).status);
         assertFalse(st.sessionEnded);
+    }
+
+    @Test
+    void shouldNotTakeTheDevelopersCommitsBetweenSessionsForAnAgentsWork() throws Exception {
+        WorkState st = state(ItemStatus.REPAIRING); // e.g. sent back by the session end's can-fail check
+        st.sessionEnded = true;
+        Files.writeString(paths.mainJava().resolve("App.java"), "class App { int feature; }\n");
+        git("commit", "-qam", "the developer's own work");
+        new EngineContext(root, runner).sessions.touchSession(st, false);
+        st.items.get(ITEM).token = TOKEN; // the brief the new session issues
+        store.save(st);
+        runner.then(outcome("passed"));
+
+        engine().submitItem(ITEM, TOKEN);
+
+        assertEquals(ItemStatus.REVIEWING, item().status, String.valueOf(item().reason));
     }
 
     @Test
@@ -606,6 +639,7 @@ class EngineTest {
                 c.outcome = outcomes.getOrDefault(sc, "passed");
                 c.tags = new ArrayList<>(List.of("gta", "scenario:" + sc));
                 if ("failed".equals(c.outcome)) {
+                    c.code = ErrorCode.TEST_ASSERTION_FAILED.name(); // what the runner's classification gives
                     c.failureType = "java.lang.AssertionError";
                     c.message = "JSON path \"$.discount\" expected:<10.0> but was:<0.0>";
                     c.code = ErrorCode.TEST_ASSERTION_FAILED.name();
@@ -989,6 +1023,53 @@ class EngineTest {
         assertEquals("answer", next.get("node"), "the person is asked before the run pauses");
         e.answer("B");
         assertEquals(0, store.load().consecutiveFailures, "the person has settled it");
+    }
+
+    @Test
+    void shouldAskTheParkedDecisionsWhenTheRunPausesInServiceMode() throws Exception {
+        Path dir = Files.createTempDirectory(root, "parked");
+        StateStore store = new StateStore(OrderServiceTestData.create(dir));
+        TestRunnerFake runner = new TestRunnerFake();
+        new Engine(dir, runner).next(null, "order.create", null, false);
+        WorkState st = store.load();
+        st.mode = "service";
+        st.consecutiveFailures = 3; // three flows each parked a decision
+        WorkState.Pending parked = new WorkState.Pending();
+        parked.type = "approve";
+        parked.flowId = "order.cancel";
+        parked.prompt = "approve?";
+        st.parked.add(parked);
+        store.save(st);
+
+        Map<String, Object> next = new Engine(dir, runner).next(null, null, null, false);
+
+        assertEquals("answer", next.get("node"), "a paused run asks the parked decisions, never stalls: " + next);
+        assertEquals("order.cancel", next.get("flowId"));
+        assertEquals(List.of("order.create"), store.load().queue, "the paused flow goes on after them");
+    }
+
+    @Test
+    void shouldNotCountAConfirmedReportedDefectAsAnAuthoringFailure() {
+        PlanItem reproducing = store.planItem(ITEM);
+        reproducing.intent = "reproducing";
+        store.savePlan(List.of(reproducing));
+        WorkState st = state(ItemStatus.AUTHORING);
+        st.consecutiveFailures = 2;
+        store.save(st);
+        RunResult failed = outcome("failed");
+        TestOutcome c = failed.cases.get(0);
+        c.code = ErrorCode.TEST_ASSERTION_FAILED.name(); // what the runner's classification gives
+        c.failureType = "java.lang.AssertionError";
+        c.message = "expected 1 order but was 2";
+        c.stack =
+                "java.lang.AssertionError: expected 1 order but was 2\n\tat com.acme.OrderCreateIT.shouldCreate(OrderCreateIT.java:10)";
+        runner.then(failed);
+
+        Map<String, Object> out = engine().submitItem(ITEM, TOKEN);
+
+        assertEquals(ItemStatus.NEEDS_HUMAN, item().status, out.toString());
+        assertTrue(item().reason.startsWith("defect:"), item().reason);
+        assertEquals(0, store.load().consecutiveFailures, "a confirmed defect is a finding (plan §5.4 budgets)");
     }
 
     @Test

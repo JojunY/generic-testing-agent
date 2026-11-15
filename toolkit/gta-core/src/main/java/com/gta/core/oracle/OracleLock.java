@@ -4,6 +4,7 @@ import com.gta.core.util.Hashes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Monotonic oracle lock (plan §5.3 item 3): once the THEN-derived expected values are locked, the assertions carrying
@@ -29,15 +30,25 @@ public final class OracleLock {
                 lock.tokens.add(lit);
             }
         }
-        for (String stmt : oracle.assertionStatements()) {
-            if (lock.tokens.stream().anyMatch(stmt::contains)) {
-                lock.statements.add(stmt);
-            }
-        }
+        lock.statements.addAll(lockedStatements(oracle.assertionStatements(), lock.tokens));
         lock.fingerprint = fingerprint(lock.statements);
         lock.watched = oracle.watchedHash();
         lock.reachedInRun = runId;
         return lock;
+    }
+
+    /**
+     * Adds the THEN values the test asserts now but did not when the lock was taken (a value asserted after the first
+     * run that reached the code is locked too); locked values are never dropped.
+     */
+    public static void extend(Lock lock, AssertionScanner.ScenarioOracle oracle, List<String> thenLiterals) {
+        if (lock == null) {
+            return;
+        }
+        Lock now = create(oracle, thenLiterals, lock.reachedInRun);
+        now.tokens.stream().filter(t -> !lock.tokens.contains(t)).forEach(lock.tokens::add);
+        now.statements.stream().filter(x -> !lock.statements.contains(x)).forEach(lock.statements::add);
+        lock.fingerprint = fingerprint(lock.statements);
     }
 
     public static Check check(Lock lock, AssertionScanner.ScenarioOracle current) {
@@ -57,6 +68,27 @@ public final class OracleLock {
         Set<String> now = Set.copyOf(current.assertionStatements());
         boolean allStatementsKept = now.containsAll(lock.statements);
         return new Check(allStatementsKept ? Verdict.OK : Verdict.STRUCTURAL_CHANGE, List.of());
+    }
+
+    /**
+     * The assertion statements that carry a locked value. Statements are stored without whitespace (see
+     * {@link AssertionScanner}), so a value is compared without it too: {@code `Order not found`} locks
+     * {@code isEqualTo("Order not found")}. A value may also be written by a name ({@code isNotFound()} or
+     * {@code HttpStatus.NOT_FOUND} for {@code 404}), matched as a whole word.
+     */
+    public static List<String> lockedStatements(List<String> statements, List<String> tokens) {
+        List<String> values = tokens.stream()
+                .map(t -> t.replaceAll("\\s+", ""))
+                .filter(t -> !t.isEmpty())
+                .toList();
+        List<Pattern> names = tokens.stream()
+                .flatMap(t -> AssertionScanner.namesOf(t).stream())
+                .map(n -> Pattern.compile("(?<![A-Za-z0-9_])" + Pattern.quote(n) + "(?![A-Za-z0-9_])"))
+                .toList();
+        return statements.stream()
+                .filter(stmt -> values.stream().anyMatch(stmt::contains)
+                        || names.stream().anyMatch(n -> n.matcher(stmt).find()))
+                .toList();
     }
 
     public static String fingerprint(List<String> statements) {

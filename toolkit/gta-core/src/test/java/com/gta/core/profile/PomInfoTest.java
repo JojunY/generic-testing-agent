@@ -107,6 +107,9 @@ class PomInfoTest {
     @Test
     void shouldReadAKotlinGradleBuildWhenThereIsNoPom() throws Exception {
         Files.writeString(root.resolve("settings.gradle.kts"), """
+                pluginManagement {
+                    includeBuild("build-logic")
+                }
                 rootProject.name = "invoice"
                 include("invoice-api", ":tools:cli")
                 """);
@@ -129,7 +132,29 @@ class PomInfoTest {
         assertEquals(3, build.bootMajor());
         assertEquals(21, build.javaMajor());
         assertEquals(java.util.List.of("spring-boot-starter-webmvc", "gta-junit"), build.dependencies);
-        assertEquals(java.util.List.of("invoice-api", "tools/cli"), build.modules);
+        assertEquals(
+                java.util.List.of("invoice-api", "tools/cli"), build.modules, "an includeBuild is not a subproject");
+    }
+
+    @Test
+    void shouldReadMultiLineIncludesAndIgnoreIncludedBuilds() throws Exception {
+        Files.writeString(root.resolve("settings.gradle.kts"), """
+                pluginManagement { includeBuild("build-logic") }
+                rootProject.name = "lending"
+                include(
+                    ":api",
+                    ":core"
+                )
+                """);
+        Files.writeString(root.resolve("build.gradle.kts"), "plugins { java }\n");
+
+        assertEquals(java.util.List.of("api", "core"), PomInfo.read(root).modules);
+
+        Files.writeString(root.resolve("settings.gradle.kts"), """
+                pluginManagement { includeBuild("build-logic") }
+                rootProject.name = "lending"
+                """);
+        assertTrue(PomInfo.read(root).modules.isEmpty(), "an included build is not a module");
     }
 
     @Test
@@ -151,5 +176,20 @@ class PomInfoTest {
         assertEquals(java.util.List.of("spring-boot-starter-web"), build.dependencies);
         assertTrue(build.modules.isEmpty());
         assertEquals(java.util.Optional.of(root.resolve("build.gradle")), PomInfo.gradleBuildFile(root));
+    }
+
+    @Test
+    void shouldResolveTheBootVersionOfABomImportFromAProperty() throws Exception {
+        Files.writeString(root.resolve("pom.xml"), """
+                <project>
+                  <properties><spring-boot.version>2.7.18</spring-boot.version></properties>
+                  <dependencyManagement><dependencies><dependency>
+                    <groupId>org.springframework.boot</groupId><artifactId>spring-boot-dependencies</artifactId>
+                    <version>${spring-boot.version}</version><type>pom</type><scope>import</scope>
+                  </dependency></dependencies></dependencyManagement>
+                </project>
+                """);
+
+        assertEquals(2, PomInfo.read(root).bootMajor(), "a corporate parent with the Boot BOM imported");
     }
 }

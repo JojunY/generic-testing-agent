@@ -258,6 +258,9 @@ final class ItemWorkflow {
         // the verdict must come back with this token: it binds the verdict to this review round
         st.seq++;
         s.token = BriefWriter.token(st.session.id, st.seq);
+        if (s.reviewBaseline == null) {
+            s.reviewBaseline = new ChangeChecker(paths).capture(); // e.g. reopened by the session-end verify
+        }
         String details;
         if (kind.equals("oracle-review")) {
             details = "The test passed. Check that it asserts exactly what the THEN clauses say, on the right object, "
@@ -523,6 +526,7 @@ final class ItemWorkflow {
                         "Locked expected values were changed or removed: " + lockCheck.missingTokens()
                                 + ". Restore them; only a human can relock.");
             }
+            OracleLock.extend(s.lock, oracle, item.oracle.then);
             s.structuralOracleChange = lockCheck.verdict() == OracleLock.Verdict.STRUCTURAL_CHANGE;
             if (s.lock != null
                     && s.lastError != null
@@ -604,6 +608,7 @@ final class ItemWorkflow {
                         "A reproducing test must fail for the reported reason, but it passed");
             }
             if (config.qualityGates.oracleReview && !item.isFoundation()) {
+                s.reviewBaseline = new ChangeChecker(paths).capture(); // the tree that ran is the one reviewed
                 st.move(s, ItemStatus.REVIEWING);
                 return result(
                         "passed run " + runId + "; waiting for the reviewer's oracle review", Map.of("runId", runId));
@@ -635,10 +640,13 @@ final class ItemWorkflow {
         }
         if ("reproducing".equals(item.intent) && consistent == 2 && code == ErrorCode.TEST_ASSERTION_FAILED) {
             s.reason = "defect: reproducing test fails for the reported reason";
-            return needsHuman(st, item, s, s.reason);
+            Map<String, Object> out = needsHuman(st, item, s, s.reason);
+            st.consecutiveFailures = 0; // the reported defect is confirmed: a finding, not an authoring failure
+            return out;
         }
         st.event(false, "ev.test.failed", item.ref, firstLines(message, 1));
         st.event(true, consistent == 2 ? "chk.reruns" : "chk.flaky", item.ref);
+        s.reviewBaseline = new ChangeChecker(paths).capture(); // the tree that ran is the one triaged
         st.move(s, ItemStatus.TRIAGING);
         return result(
                 code.name() + " (" + (consistent == 2 ? "reproducible" : "flaky: " + consistent + "/2 re-runs failed")
@@ -651,7 +659,13 @@ final class ItemWorkflow {
             WorkState st = store.load();
             WorkState.ItemState s = requireToken(st, itemId, token, ItemStatus.REVIEWING, ItemStatus.TRIAGING);
             PlanItem item = store.planItem(itemId);
-            Map<String, Object> out;
+            Map<String, Object> out = reviewerChanges(st, item, s);
+            if (out != null) {
+                s.token = null;
+                s.reviewBaseline = null;
+                store.save(st);
+                return out;
+            }
             if (s.status == ItemStatus.REVIEWING) {
                 if ("accept".equals(verdict)) {
                     st.event(true, "chk.reviewer", item.ref);
@@ -681,9 +695,46 @@ final class ItemWorkflow {
                         "Run ./gtaw next");
             }
             s.token = null; // one verdict per review round
+            s.reviewBaseline = null;
             store.save(st);
             return out;
         }
+    }
+
+    /**
+     * The change check of a review round (plan §5.8): nothing may change between the run that is reviewed and the
+     * verdict, neither by the reviewer nor by the author, so an accept commits exactly the test that ran. Changes are
+     * reverted where they can be and the verdict is not used: the author's next submit runs and checks the test again.
+     */
+    private Map<String, Object> reviewerChanges(WorkState st, PlanItem item, WorkState.ItemState s) {
+        if (s.reviewBaseline == null) {
+            return null;
+        }
+        ChangeChecker.Result scope = new ChangeChecker(paths)
+                .check(
+                        s.reviewBaseline,
+                        List.of(),
+                        paths.recover().resolve(Ids.itemKey(item.id) + "-review-" + st.seq),
+                        true);
+        if (scope.ok()) {
+            return null;
+        }
+        s.lastError = lastError(s, ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE, "the reviewer changed " + scope.outOfScope());
+        if (!scope.foreignCommits().isEmpty()) {
+            return needsHuman(
+                    st,
+                    item,
+                    s,
+                    "commits made outside gtaw during the review (" + String.join(", ", scope.foreignCommits())
+                            + "). Agents must not run git; revert or keep them yourself, then answer A to retry");
+        }
+        return fail(
+                st,
+                item,
+                s,
+                ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE,
+                "A review may change nothing; the reviewer changed " + scope.outOfScope() + " (reverted: "
+                        + scope.restored() + ")");
     }
 
     Map<String, Object> fail(WorkState st, PlanItem item, WorkState.ItemState s, ErrorCode code, String message) {

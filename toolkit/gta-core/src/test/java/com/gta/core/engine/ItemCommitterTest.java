@@ -60,6 +60,31 @@ class ItemCommitterTest {
     }
 
     @Test
+    void shouldNotCommitTheDevelopersOwnEditsInATestClassGtaShares() throws Exception {
+        Path test = root.resolve("src/test/java/com/acme/order/OrderControllerIT.java");
+        AtomicFiles.write(test, "class OrderControllerIT {}\n");
+        OrderServiceTestData.git(root, "add", "-A");
+        OrderServiceTestData.git(root, "commit", "-qm", "developer's test class");
+        AtomicFiles.write(test, "class OrderControllerIT { /* developer's work in progress */ }\n");
+        WorkState.ItemState s = new WorkState.ItemState();
+        s.id = OrderServiceTestData.ITEM;
+        s.status = ItemStatus.PASSED;
+        s.sharesDeveloperFile = true; // naming conflict answered "add gta's tests to it"
+        s.baseline = new ChangeChecker(paths).capture();
+        AtomicFiles.write(test, "class OrderControllerIT { /* developer's work in progress */ void gtaTest() {} }\n");
+
+        ctx.committer.commitItem(new WorkState(), OrderServiceTestData.item(), s, "r1", "valid order");
+
+        assertTrue(Files.readString(test).contains("work in progress"), "the file is left as it is");
+        assertTrue(s.reason.contains("OrderControllerIT.java"), "the person commits it: " + s.reason);
+        assertFalse(
+                OrderServiceTestData.git(root, "status", "--porcelain", "--", "src/test")
+                        .output()
+                        .isBlank(),
+                "never committed on the developer's behalf");
+    }
+
+    @Test
     void shouldTrustOnlyACommittedDefectRecord() throws Exception {
         Path record = paths.escalations().resolve("order.create__s01__component-01.md");
         AtomicFiles.write(record, EscalationWriter.DEFECT_FOUND_MARKER + "\n");

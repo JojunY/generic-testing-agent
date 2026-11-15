@@ -19,7 +19,8 @@
       ".\\gtaw check*": "allow",
       ".\\gtaw submit*": "allow",
       ".\\gtaw answer*": "allow",
-      ".\\gtaw status*": "allow"
+      ".\\gtaw status*": "allow",
+      "*--takeover*": "ask"
     }
   }
 }

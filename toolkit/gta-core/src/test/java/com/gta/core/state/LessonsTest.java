@@ -36,6 +36,17 @@ class LessonsTest {
     }
 
     @Test
+    void shouldKeepTheSameTextUnderAnotherKind() {
+        GtaPaths paths = new GtaPaths(root);
+        Lessons.record(paths, "reviewer", "a", "assert the stored row");
+        Lessons.record(paths, "can-fail", "b", "assert what the code does");
+
+        Lessons.record(paths, "can-fail", "c", "assert the stored row");
+
+        assertEquals(3, Lessons.recent(paths, 10).size(), "a lesson is a duplicate only within its own kind");
+    }
+
+    @Test
     void shouldHaveNoLessonsBeforeTheFirstRun() {
         assertEquals(List.of(), Lessons.recent(new GtaPaths(root), 10));
     }

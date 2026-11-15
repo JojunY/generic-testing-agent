@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -165,6 +166,31 @@ class GitTest {
     @Test
     void shouldFailWhenAFileCannotBeRestored() {
         assertThrows(GtaException.class, () -> git.restoreFromHead("missing.txt"));
+    }
+
+    @Test
+    void shouldNameANonAsciiPathAsItIsNotQuoted() throws Exception {
+        commitFile("a.txt", "a\n");
+        String base = git.head();
+        String name = "\u00dcbersicht.java"; // git quotes it as "\303\234bersicht.java" by default
+        // added through the index: a JVM under the C locale cannot create the file itself
+        Files.writeString(root.resolve("x.txt"), "class X {}\n");
+        // the hash is the last line: git on Windows may warn about line endings first (stderr is merged)
+        String blob = run("hash-object", "-w", "x.txt").output().strip().replaceAll("(?s).*\\R", "");
+        // the path in git's C-quoted form is plain ASCII: no shell and no file name encoding involved
+        Process p = new ProcessBuilder("git", "update-index", "--index-info")
+                .directory(root.toFile())
+                .redirectErrorStream(true)
+                .start();
+        try (var in = p.getOutputStream()) {
+            in.write(("100644 " + blob + "\t\"\\303\\234bersicht.java\"\n").getBytes(StandardCharsets.US_ASCII));
+        }
+        assertEquals(0, p.waitFor(), new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+        run("commit", "-qm", "add " + name);
+
+        assertEquals(List.of(name), git.changedFiles(base));
+        assertEquals(List.of(name), git.commitsSince(base).get(0).files());
+        assertTrue(git.listFiles("HEAD", ".").contains(name));
     }
 
     @Test

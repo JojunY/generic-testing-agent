@@ -247,7 +247,8 @@ public final class Git {
     }
 
     private ProcessRunner.Result git(String... args) {
-        List<String> cmd = ProcessRunner.cmd("git");
+        // paths as they are: without it git prints a non-ASCII path quoted and octal-escaped ("\346\226\207.java")
+        List<String> cmd = ProcessRunner.cmd("git", "-c", "core.quotePath=false");
         cmd.addAll(List.of(args));
         return ProcessRunner.run(root, TIMEOUT, ENV, cmd);
     }

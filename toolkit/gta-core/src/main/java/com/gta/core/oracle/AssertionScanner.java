@@ -108,6 +108,30 @@ public final class AssertionScanner {
     private static final Map<String, String> BOOLEAN_MATCHERS =
             Map.of("isTrue", "true", "assertTrue", "true", "isFalse", "false", "assertFalse", "false");
 
+    /**
+     * The names an assertion statement may use for a THEN value instead of the value itself: {@code NOT_FOUND} and
+     * {@code isNotFound(} for {@code 404}, {@code isTrue(} for {@code true}.
+     */
+    static List<String> namesOf(String value) {
+        List<String> out = new ArrayList<>();
+        STATUS_NAMES.forEach((name, code) -> {
+            if (code.equals(value)) {
+                out.add(name);
+            }
+        });
+        STATUS_MATCHERS.forEach((matcher, code) -> {
+            if (code.equals(value)) {
+                out.add(matcher + "(");
+            }
+        });
+        BOOLEAN_MATCHERS.forEach((matcher, bool) -> {
+            if (bool.equals(value)) {
+                out.add(matcher + "(");
+            }
+        });
+        return out;
+    }
+
     private static final Set<String> STIMULUS_CALLS = Set.of(
             "perform",
             "post",
@@ -399,10 +423,10 @@ public final class AssertionScanner {
     }
 
     private static void hashResource(String value, Path testResources, StringBuilder watched) {
-        if (testResources == null || !value.matches("[\\w./-]+\\.(json|sql|ya?ml|xml|txt|csv|properties)")) {
+        String rel = value.startsWith("classpath:") ? value.substring(10) : value;
+        if (testResources == null || !rel.matches("[\\w./-]+\\.(json|sql|ya?ml|xml|txt|csv|properties)")) {
             return;
         }
-        String rel = value.startsWith("classpath:") ? value.substring(10) : value;
         Path file = testResources.resolve(rel.startsWith("/") ? rel.substring(1) : rel);
         if (Files.isRegularFile(file)) {
             watched.append(rel).append('=').append(Hashes.sha256(file));

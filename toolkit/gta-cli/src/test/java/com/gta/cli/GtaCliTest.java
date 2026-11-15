@@ -78,7 +78,18 @@ class GtaCliTest {
         assertTrue(notARepo.compact().contains("\"code\":\"ENV_NOT_A_GIT_REPO\""), notARepo.out());
         assertEquals(20, badOption.exit());
         assertTrue(badOption.compact().contains("\"code\":\"USAGE_INVALID_ARGUMENT\""), badOption.out());
+        assertTrue(
+                badOption.out().contains("./gtaw status --help"),
+                "the failing command, not --root: " + badOption.out());
         assertEquals(20, unavailable.exit(), "a later phase");
         assertEquals(20, noIds.exit(), "deleting tests needs explicit ids or --all");
+    }
+
+    @Test
+    void shouldReadAReplyFileSavedWithAByteOrderMark() throws Exception {
+        Path reply = root.resolve("reply.txt");
+        Files.writeString(reply, "\uFEFFapprove order.create@R4\r\n", StandardCharsets.UTF_8);
+
+        assertEquals("approve order.create@R4", GtaCli.Answer.replyFile(reply), "Notepad's BOM is not part of it");
     }
 }

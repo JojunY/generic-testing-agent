@@ -83,6 +83,20 @@ class ChangeCheckerTest {
     }
 
     @Test
+    void shouldNotCallAFileRestoredWhenAnAgentCommitAlsoTouchedIt() throws Exception {
+        Baseline baseline = checker.capture();
+        Files.writeString(root.resolve("src/main/java/App.java"), "class App { int hacked; }\n");
+        git("commit", "-qam", "make the test pass");
+        Files.writeString(root.resolve("src/main/java/App.java"), "class App { int hackedAgain; }\n");
+
+        ChangeChecker.Result r = checker.check(baseline, List.of("src/test/java/**"), root.resolve("backup"), true);
+
+        assertFalse(r.ok());
+        assertEquals(List.of("src/main/java/App.java"), r.unrestorable(), "HEAD still has the agent's commit");
+        assertEquals(List.of(), r.restored());
+    }
+
+    @Test
     void shouldIgnoreCommitsInGtawsLedger() throws Exception {
         Baseline baseline = checker.capture();
         Files.writeString(root.resolve("src/test/java/AppIT.java"), "class AppIT {}\n");

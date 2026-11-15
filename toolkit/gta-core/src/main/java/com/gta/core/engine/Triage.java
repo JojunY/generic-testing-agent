@@ -7,6 +7,7 @@ import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
+import com.gta.core.oracle.OracleLock;
 import com.gta.core.plan.PlanItem;
 import com.gta.core.spec.AnswerParser;
 import com.gta.core.spec.Spec;
@@ -219,6 +220,11 @@ final class Triage {
                         .replaceThenLiteral(item.ref, expected, actual)
                         .setHeader("rev", newRev)
                         .text());
+        // committed with the item's lock in mind: the shard records the corrected revision, so the base must hold it
+        ctx.commit(
+                List.of(paths.rel(specPath)),
+                "docs(spec): " + item.flowId + " " + newRev + " THEN of " + item.ref
+                        + " corrected from the actual value" + "\n\nGta-Item: " + item.id);
         List<PlanItem> plan = store.loadPlan();
         for (PlanItem p : plan) {
             if (p.id.equals(item.id)) {
@@ -236,7 +242,7 @@ final class Triage {
             String exp = expected;
             s.lock.tokens.removeIf(exp::equals);
             s.lock.tokens.add(actual);
-            s.lock.statements.removeIf(stmt -> stmt.contains(exp));
+            s.lock.statements.removeAll(OracleLock.lockedStatements(s.lock.statements, List.of(exp)));
         }
         // the corrected spec is gtaw's own write: without a fresh baseline the next scope check would revert it
         s.baseline = new ChangeChecker(paths).capture();

@@ -58,7 +58,7 @@ public final class Spec {
     }
 
     public Optional<Scenario> scenario(String id) {
-        return scenarios().stream().filter(s -> id.equals(s.id())).findFirst();
+        return scenarios().stream().filter(s -> id != null && id.equals(s.id())).findFirst();
     }
 
     public Optional<Requirement> requirementOf(Scenario scenario) {

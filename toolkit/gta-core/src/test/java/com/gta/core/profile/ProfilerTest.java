@@ -1,6 +1,7 @@
 package com.gta.core.profile;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.gta.core.registry.CapabilityRegistry;
@@ -110,6 +111,13 @@ class ProfilerTest {
         ServiceProfile.EntryPoint e = new ServiceProfile.EntryPoint();
         e.flowId = flowId;
         return e;
+    }
+
+    @Test
+    void shouldJoinTheClassAndMethodMappingsWithASlash() {
+        assertEquals("/api/orders/{id}", Profiler.httpPath("/api/orders", "{id}"));
+        assertEquals("/api/orders", Profiler.httpPath("/api/orders/", ""));
+        assertEquals("/", Profiler.httpPath("", ""));
     }
 
     @Test
@@ -237,6 +245,16 @@ class ProfilerTest {
     }
 
     @Test
+    void shouldNotTakeTheCiWorkflowsOfTheRepositoryForAWorkflowEngine() throws Exception {
+        Files.createDirectories(root.resolve(".github/workflows"));
+        Files.writeString(root.resolve(".github/workflows/gta-gate.yml"), "name: gta gate\n");
+
+        ServiceProfile p = Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto");
+
+        assertFalse(p.capabilities.contains("workflow"), p.capabilities.toString());
+    }
+
+    @Test
     void shouldFindSpringBatchJobBeans() throws Exception {
         source("com/acme/order/batch/ImportConfig.java", """
                 package com.acme.order.batch;
@@ -270,6 +288,9 @@ class ProfilerTest {
         Path changelog = root.resolve("src/main/resources/db/changelog");
         Files.createDirectories(changelog);
         Files.writeString(changelog.resolve("add-orders.yaml"), "databaseChangeLog: []");
+        Files.writeString(changelog.resolve("001-init.yaml"), "databaseChangeLog: []");
+        Files.writeString(migrations.resolve("V3__add_index.sql"), "create index a on customer (id);");
+        Files.writeString(migrations.resolve("V7__add_index.sql"), "create index b on customer (tier);");
 
         Map<String, ServiceProfile.EntryPoint> flows =
                 byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"));
@@ -281,6 +302,30 @@ class ProfilerTest {
         assertEquals("db-migration", flows.get("db.add-orders").capability, "Liquibase changelogs too");
         assertTrue(flows.containsKey("db.customers"));
         assertTrue(flows.keySet().stream().noneMatch(f -> f.contains("notes")));
+        assertTrue(flows.containsKey("db.migration-001-init"), "a flow name starts with a letter: " + flows.keySet());
+        assertTrue(
+                flows.containsKey("db.add-index") && flows.containsKey("db.add-index-2"), "each migration is a flow");
+    }
+
+    @Test
+    void shouldNameEveryMigrationWithAValidFlowId() throws Exception {
+        Path migrations = root.resolve("src/main/resources/db/migration");
+        Files.createDirectories(migrations);
+        Files.writeString(migrations.resolve("V1__2fa_secret.sql"), "alter table users add secret text;");
+        // names with no letter or digit left, as a Chinese description gives (a migration named in Chinese)
+        Files.writeString(migrations.resolve("V2__---.sql"), "create table a (id int);");
+        Files.writeString(migrations.resolve("V3__+++.sql"), "create index i on a (id);");
+
+        List<String> ids = Profiler.migrations(root.resolve("src/main/resources")).stream()
+                .map(e -> e.flowId)
+                .toList();
+
+        assertEquals(List.of("db.migration-2fa-secret", "db.migration", "db.migration-2"), ids);
+        assertTrue(
+                ids.stream()
+                        .allMatch(
+                                id -> com.gta.core.util.Ids.FLOW_ID.matcher(id).matches()),
+                ids.toString());
     }
 
     @Test

@@ -133,8 +133,14 @@ public final class ChangeChecker {
             }
             foreign.add(c.sha().substring(0, Math.min(12, c.sha().length())));
             for (String f : c.files()) {
-                if (!matchesAny(f, IGNORED) && !out.contains(f)) {
+                if (matchesAny(f, IGNORED)) {
+                    continue;
+                }
+                // also when the file is dirty: restoring it to HEAD would keep the foreign commit's version
+                if (!out.contains(f)) {
                     out.add(f);
+                }
+                if (!unrestorable.contains(f)) {
                     unrestorable.add(f);
                 }
             }

@@ -53,7 +53,7 @@ public final class CommentMeta {
         List<Entry> entries = new ArrayList<>();
         Matcher m = PAIR.matcher(inner);
         while (m.find()) {
-            String value = m.group(3) != null ? m.group(3).replace("\\\"", "\"") : m.group(2);
+            String value = m.group(3) != null ? m.group(3).replaceAll("(?s)\\\\(.)", "$1") : m.group(2);
             entries.add(new Entry(m.group(1), value));
         }
         return new CommentMeta(kind, entries);
@@ -119,8 +119,12 @@ public final class CommentMeta {
         for (Entry e : entries) {
             sb.append(' ').append(e.key()).append('=');
             String v = e.value();
-            if (v.isEmpty() || v.matches(".*[\\s\"].*")) {
-                sb.append('"').append(v.replace("\"", "\\\"")).append('"');
+            if (v.isEmpty() || v.matches("(?s).*[\\s\"\\\\>].*")) {
+                // escaped so that the value reads back as written: a quote or backslash, and '>' so "-->" cannot end
+                // the comment
+                sb.append('"')
+                        .append(v.replace("\\", "\\\\").replace("\"", "\\\"").replace(">", "\\>"))
+                        .append('"');
             } else {
                 sb.append(v);
             }

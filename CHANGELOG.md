@@ -32,6 +32,40 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- Review round 5 (four review passes, merged):
+  - oracle lock and gate:
+    - the lock covers assertions of a value with spaces (`` `Order not found` ``) and of a value written by a name (`status().isNotFound()`, `HttpStatus.SERVICE_UNAVAILABLE`, `isTrue()`), so weakening or deleting them changes the fingerprint and the gate reports it. Shards locked before hold a fingerprint without those assertions: the gate reports them once; relock them (`./gtaw relock`);
+    - a THEN value first asserted after the lock was taken is locked too;
+    - a `classpath:` fixture (`@Sql("classpath:fixtures/orders.sql")`) is watched as an input of its scenario;
+    - nothing may change between the run under triage or oracle review and the verdict: an accept commits exactly the test that ran, and a reviewer's own edits are reverted and the verdict is not used;
+    - a file an agent's commit touched is reported unrestorable even when it is also dirty;
+  - engine:
+    - a new session after a clean end gives open items a fresh scope baseline, and so does the session end when it sends an item back (can-fail, unstable), so the developer's commits, pulls and edits are not stopped as "commits made outside gtaw" or reverted;
+    - a new session clears the briefs and review rounds of the old one (their tokens);
+    - service mode no longer stalls when the run pauses after too many items in a row needed a person: the parked decisions are asked, and the paused flow goes on after them;
+    - a reproducing test that confirms the reported defect no longer counts toward `budgets.maxConsecutiveFailures`;
+    - the observation auto-correction commits the corrected spec, so the shard and the committed spec agree;
+    - gtaw no longer commits the developer's uncommitted edits in a test class it shares with them (naming conflict answered A);
+    - after `abort`, approving an unchanged in-review spec no longer bounces back to the analyst;
+    - `gtaw gate`, `run` and `mutate --changed` take the work lock; lessons are recorded once per kind;
+  - specs and answers:
+    - "1: B 2: C" and "2: B rest default" are picks, not own answers;
+    - a person's reply with `-->`, `\` or `"` is stored intact in the spec's answer and approval records;
+    - a new question ticked by the analyst is refused as an owned field; question ids used twice are refused; a scenario without an id is a lint issue, not a crash;
+  - runs and profiling:
+    - Gradle stack frames (`at app//com.acme.OrderService.create(`) are read, and the Gradle Test task never loads from the build cache, so stability repeats really run;
+    - two Cucumber scenarios with the same name are no longer matched by guesswork: a report case that could be either is left untagged instead of giving one scenario's result to the other;
+    - the Spring Boot version of an imported `spring-boot-dependencies` BOM is resolved from its `${…}` property;
+    - Flyway, Liquibase and BPMN files whose names do not start with a letter (`V1__2fa.sql`, a description in Chinese) get a valid, unique flow id;
+    - class and method request mappings are joined with a slash (`/api/orders` + `{id}`); Gradle's `includeBuild` and multi-line `include(...)` are read right; `doctor` accepts a nested Maven module;
+    - the repository's own `.github/workflows` no longer make a service look like a workflow engine, and file detection skips `.git` and `target` on Windows too;
+    - git paths with non-ASCII characters are read as they are (`core.quotePath=false`); `file:` refs and managed files ignore CRLF line endings, so a Windows checkout (`core.autocrlf`) is neither a stale ref nor a local edit;
+    - files gtaw writes keep their permissions (a new file is `rw-r--r--`, not owner-only);
+  - CLI, install and wrapper:
+    - an agent can no longer run `./gtaw next --takeover` without a person (Copilot auto-approve, OpenCode rules); OpenCode agents get the whole gtaw permission list (the YAML alias in `mapping.yaml` is resolved); the orchestrator passes a person's words in single quotes;
+    - `answer --file` accepts a UTF-8 BOM (Notepad, PowerShell 5.1); the usage-error hint names the command that failed, not `--root`;
+    - `init`/`upgrade` keep a team setting whose shape differs from gta's (`"bash": "ask"` in `opencode.json`) and list gta's keys to add by hand;
+    - `gtaw` escapes `\` and `"` in the Nexus credentials it passes to curl and reads the jar's sha256 from stdin; `gtaw.cmd` never runs an inherited `GTA_JAR` and exits 21 for a configuration error like `gtaw`; `gtaw-download.ps1` prints valid JSON when the wrapper is not configured or its properties file is missing; `scripts/install-local.sh` works from a path with a space, `#` or `%` and shows an `init` error.
 - Retiring a scenario no longer deletes a test class that has no method of that scenario.
 - The scripted e2e adds gta-junit to the project's dependencies, not to its `<dependencyManagement>`.
 - Review round 4:

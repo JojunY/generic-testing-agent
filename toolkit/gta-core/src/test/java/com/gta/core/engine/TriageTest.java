@@ -174,7 +174,14 @@ class TriageTest {
                 "the plan follows the corrected scenario, so a plan sync does not see it as changed");
         assertEquals(ItemStatus.REPAIRING, s.status);
         assertTrue(st.pendingReview.get(0).contains("`50.00` → `55.00`"), "listed for re-confirmation");
+        assertEquals(
+                spec,
+                ctx.git.show("HEAD", paths.rel(paths.spec("order.create"))).orElseThrow(),
+                "committed, so the base holds the revision the item's oracle shard records");
         assertTrue(String.valueOf(out.get("result")).contains("order.create@R3"), out.toString());
+        assertTrue(
+                ctx.git.dirtyPaths().stream().noneMatch(p -> p.startsWith(".gta/specs/")),
+                "gtaw commits its own spec correction, so the shard and the committed spec agree");
     }
 
     @Test

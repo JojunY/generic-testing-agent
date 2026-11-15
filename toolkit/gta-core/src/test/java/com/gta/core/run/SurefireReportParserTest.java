@@ -3,6 +3,7 @@ package com.gta.core.run;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
@@ -189,6 +190,25 @@ class SurefireReportParserTest {
 
         assertEquals("failed", cases.get(0).outcome);
         assertEquals("known-defect", cases.get(1).outcome);
+    }
+
+    @Test
+    void shouldNotGuessWhichOfTwoSameNamedCucumberScenariosAReportCaseIs() throws Exception {
+        report("com.acme.RunCucumberTest", """
+                <testcase classname="Orders" name="Happy path"/>
+                <testcase classname="Refunds" name="Happy path"><failure type="java.lang.AssertionError" message="no">stack</failure></testcase>
+                """);
+        tags("""
+                {"className":"com.acme.RunCucumberTest","method":"Happy path","tags":["scenario:order.create/s01"],"outcome":"passed","feature":"features/orders.feature"}
+                {"className":"com.acme.RunCucumberTest","method":"Happy path","tags":["scenario:refund.create/s01"],"outcome":"failed","feature":"features/refunds.feature"}
+                """);
+
+        List<TestOutcome> cases = SurefireReportParser.parse(List.of(reports), gtaResults);
+
+        assertTrue(
+                cases.stream().allMatch(c -> c.scenarioId() == null),
+                "neither result is given to the other scenario: "
+                        + cases.stream().map(TestOutcome::scenarioId).toList());
     }
 
     @Test

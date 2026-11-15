@@ -210,7 +210,10 @@ public final class Engine {
      */
     private Map<String, Object> step(WorkState st, ServiceProfile profile, String base) {
         Map<String, Object> out = flowStep(st, profile, base);
-        while ("answer".equals(out.get("node")) && ServiceMode.park(st)) {
+        // a paused run parks nothing: the person is asked now
+        while ("answer".equals(out.get("node"))
+                && st.consecutiveFailures < config.budgets.maxConsecutiveFailures
+                && ServiceMode.park(st)) {
             out = flowStep(st, profile, base);
         }
         return out;
@@ -284,6 +287,7 @@ public final class Engine {
                     st, sw, flowId, entry, capability, List.of("spec is stale: production code it references changed"));
         }
         if ("in-review".equals(spec.status())) {
+            ctx.specs.snapshotIfMissing(flowId, spec);
             WorkState.Pending p = new WorkState.Pending();
             p.flowId = flowId;
             if (!spec.openQuestions().isEmpty()) {
@@ -322,6 +326,12 @@ public final class Engine {
         List<PlanItem> flowItems = ctx.planSync.syncPlan(st, spec, profile);
         ItemWorkflow.Dispatch next = ctx.items.dispatch(st, spec, profile, flowItems);
         if (next.node() != null) {
+            if ("escalate".equals(next.node().get("node")) && !st.parked.isEmpty()) {
+                // the run is paused for the decisions parked in service mode: ask them now, this flow goes on after
+                st.queue.add(0, flowId);
+                ServiceMode.unpark(st);
+                return answerNode(st.pending);
+            }
             return next.node();
         }
         boolean flowDone = next.end() == ItemWorkflow.Dispatch.End.FLOW_DONE
@@ -550,9 +560,7 @@ public final class Engine {
                                 + " (or change the spec first), then relock");
             }
             e.tokens = new ArrayList<>(then);
-            e.fingerprint = OracleLock.fingerprint(oracle.assertionStatements().stream()
-                    .filter(x -> e.tokens.stream().anyMatch(x::contains))
-                    .toList());
+            e.fingerprint = OracleLock.fingerprint(OracleLock.lockedStatements(oracle.assertionStatements(), e.tokens));
             e.scenarioRevision = scenario.revision();
             e.relockedBy = by;
             e.reason = reason;
@@ -736,12 +744,17 @@ public final class Engine {
     /** {@code gtaw mutate --changed}: PIT on the classes changed since {@code base}, counted on the changed lines. */
     public Map<String, Object> mutateChanged(String base) {
         git.requireRepo();
-        return new com.gta.core.run.MutationRunner(ctx.paths, ctx.config)
-                .changed(base == null ? ctx.sessionEnd.defaultBase() : base);
+        try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
+            return new com.gta.core.run.MutationRunner(ctx.paths, ctx.config)
+                    .changed(base == null ? ctx.sessionEnd.defaultBase() : base);
+        }
     }
 
+    /** Runs the tests and writes .gta/work: under the work lock like every run (plan §5.8). */
     public Gate.Result gate(String base, List<Path> reportDirs) {
-        return ctx.sessionEnd.gate(base, reportDirs);
+        try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
+            return ctx.sessionEnd.gate(base, reportDirs);
+        }
     }
 
     public String report(String format) {
@@ -750,6 +763,8 @@ public final class Engine {
 
     /** {@code gtaw run}: the seed tests (smoke) or the gta tests a tag expression selects (plan §9.5). */
     public RunResult runTests(boolean smoke, String tags) {
-        return ctx.runs.runTests(smoke, tags);
+        try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
+            return ctx.runs.runTests(smoke, tags);
+        }
     }
 }

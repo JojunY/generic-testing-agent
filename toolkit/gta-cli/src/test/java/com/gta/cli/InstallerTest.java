@@ -66,6 +66,18 @@ class InstallerTest {
     }
 
     @Test
+    void shouldNeverReplaceATeamValueOfAnotherShape() throws Exception {
+        String team = "{\n  \"permission\": { \"bash\": \"ask\" }\n}\n";
+        Files.writeString(root.resolve("opencode.json"), team);
+
+        Map<String, Object> out = new Installer(root).install("opencode", null, null, false);
+
+        assertEquals(
+                team, Files.readString(root.resolve("opencode.json")), "\"bash\": \"ask\" keeps asking for everything");
+        assertTrue(((Map<?, ?>) out.get("mergeManually")).containsKey("opencode.json"), out.toString());
+    }
+
+    @Test
     void shouldWriteNothingWhenAnInputCannotBeParsed() throws Exception {
         Files.writeString(root.resolve(".vscode/settings.json"), "{ \"broken\": ");
 
@@ -196,5 +208,27 @@ class InstallerTest {
                 GtaException.class, () -> new Installer(root).install("copilot", null, null, false, false));
 
         assertTrue(e.getMessage().contains("build.gradle"), e.getMessage());
+    }
+
+    @Test
+    void shouldKeepATeamSettingOfAnotherShapeAndReportTheKeysToAdd() throws Exception {
+        String team = "{ \"permission\": { \"bash\": \"ask\" } }\n";
+        Files.writeString(root.resolve("opencode.json"), team);
+
+        Map<String, Object> out = new Installer(root).install("opencode", null, null, false);
+
+        assertEquals(team, Files.readString(root.resolve("opencode.json")), "\"ask\" for every command stays");
+        assertTrue(((Map<?, ?>) out.get("mergeManually")).containsKey("opencode.json"), out.toString());
+    }
+
+    @Test
+    void shouldNotTakeAWindowsCheckoutForALocalEdit() throws Exception {
+        new Installer(root).install("opencode", null, null, false);
+        Path agent = root.resolve(".opencode/agents/gta-test-author.md");
+        Files.writeString(agent, Files.readString(agent).replace("\n", "\r\n")); // git with core.autocrlf=true
+
+        Map<String, Object> out = new Installer(root).install("opencode", null, null, true);
+
+        assertEquals(null, out.get("conflicts"), "line ends are not an edit: " + out);
     }
 }

@@ -77,6 +77,9 @@ class GradleRunnerTest {
         assertTrue(args.contains("-Pgta.groups=scenario:quote/s02"), args);
         assertTrue(args.endsWith("test --tests com.acme.QuoteIT"), args);
         assertTrue(Files.readString(init).contains("includeTags"), "the init script selects the scenario tag");
+        assertTrue(
+                Files.readString(init).contains("cacheIf { false }"),
+                "every run really runs: a build-cache hit would make pass^k repeats meaningless");
         assertEquals(2, r.cases.size());
         TestOutcome failed = r.failures().get(0);
         assertEquals("TEST_ASSERTION_FAILED", failed.code);

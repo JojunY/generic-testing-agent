@@ -132,6 +132,21 @@ class AssertionScannerTest {
     }
 
     @Test
+    void shouldWatchAClasspathSqlScript() throws Exception {
+        Files.createDirectories(dir.resolve("resources"));
+        Files.writeString(dir.resolve("resources/s01.data.sql"), "insert into orders values (1);");
+        String body = """
+                    @Test @Tag("scenario:order.create/s01") @Sql("classpath:/s01.data.sql")
+                    void shouldCreate() { assertThat(status).isEqualTo(201); }
+                """;
+        String before = scanSource(body).watchedHash();
+
+        Files.writeString(dir.resolve("resources/s01.data.sql"), "insert into orders values (2);");
+
+        assertFalse(before.equals(scanSource(body).watchedHash()), "a changed classpath: script changes the inputs");
+    }
+
+    @Test
     void shouldFindNothingInAMissingOrBrokenFile() throws Exception {
         assertFalse(AssertionScanner.scan(dir.resolve("None.java"), "order.create/s01", null)
                 .found());
@@ -287,5 +302,20 @@ class AssertionScannerTest {
 
         assertEquals(List.of(), AssertionScanner.missingThenLiterals(List.of("-1", "-2.5"), o.tokens()));
         assertEquals(List.of("1"), AssertionScanner.missingThenLiterals(List.of("1"), o.tokens()));
+    }
+
+    @Test
+    void shouldWatchAClasspathFixture() throws Exception {
+        Files.createDirectories(dir.resolve("resources/fixtures"));
+        Files.writeString(dir.resolve("resources/fixtures/orders.sql"), "insert into orders values (1);");
+        String body = """
+                    @Test @Tag("scenario:order.create/s01") @Sql("classpath:fixtures/orders.sql")
+                    void shouldCreate() { assertThat(status).isEqualTo(201); }
+                """;
+        String before = scanSource(body).watchedHash();
+
+        Files.writeString(dir.resolve("resources/fixtures/orders.sql"), "insert into orders values (2);");
+
+        assertFalse(before.equals(scanSource(body).watchedHash()), "the usual Spring form of @Sql is an input too");
     }
 }

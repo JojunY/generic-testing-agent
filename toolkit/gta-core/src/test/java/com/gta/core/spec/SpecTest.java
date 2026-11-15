@@ -28,6 +28,7 @@ class SpecTest {
         assertEquals(List.of("201", "50.00"), s01.thenLiterals(), "the expected values in backticks");
         assertFalse(s01.reviewerChecked());
         assertTrue(spec.scenario("order.create/s99").isEmpty());
+        assertTrue(spec.scenario(null).isEmpty(), "a scenario written without an id is looked up as none");
     }
 
     @Test

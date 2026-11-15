@@ -5,7 +5,6 @@ import com.gta.core.config.GtaPaths;
 import com.gta.core.error.GtaException;
 import com.gta.core.profile.PomInfo;
 import com.gta.core.util.Git;
-import com.gta.core.util.Hashes;
 import com.gta.core.util.Json;
 import com.gta.core.util.ProcessRunner;
 import java.io.IOException;
@@ -95,9 +94,12 @@ public final class DoctorChecks {
                                     + " .gta/config.json to the name of a variable holding that JDK"
                             : "gta supports services on Java 8 or newer");
             boolean multiModule = !repositoryPom.modules.isEmpty();
+            // a nested module ("services/order-api" under the listed "services") is fine: it was read above
+            boolean listed =
+                    repositoryPom.modules.stream().anyMatch(m -> module.equals(m) || module.startsWith(m + "/"));
             add(
                     "modules",
-                    !multiModule || repositoryPom.modules.contains(module) ? "ok" : "fail",
+                    !multiModule || listed ? "ok" : "fail",
                     !multiModule
                             ? "single module"
                             : module.isEmpty()
@@ -189,7 +191,7 @@ public final class DoctorChecks {
             if (files instanceof Map<?, ?> fm) {
                 fm.forEach((k, v) -> {
                     Path f = root.resolve(String.valueOf(k));
-                    if (!Files.exists(f) || !Hashes.sha256(f).equals(v)) {
+                    if (!Files.exists(f) || !Installer.textHash(f).equals(v)) {
                         modified.add(String.valueOf(k));
                     }
                 });
@@ -205,7 +207,7 @@ public final class DoctorChecks {
                         "ide-auto-approve",
                         "info",
                         "VS Code: .vscode/settings.json auto-approves ./gtaw " + AUTO_APPROVED,
-                        "IntelliJ: Settings > GitHub Copilot > Chat > Auto Approve → add rules for ./gtaw and .\\gtaw.cmd (same subcommands)");
+                        "IntelliJ: Settings > GitHub Copilot > Chat > Auto Approve → add rules for ./gtaw and .\\gtaw.cmd (same subcommands, but not next --takeover)");
             } else if ("opencode".equals(m.get("platform"))) {
                 add(
                         "ide-auto-approve",

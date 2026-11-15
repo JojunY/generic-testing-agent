@@ -6,6 +6,7 @@ import com.gta.core.util.Hashes;
 import com.gta.core.util.Yaml;
 import java.io.IOException;
 import java.io.Reader;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -60,10 +61,22 @@ public final class RefResolver {
         if (ref.startsWith("file:") && moduleRoot != null) {
             Path file = moduleRoot.resolve(ref.substring("file:".length())).normalize();
             if (file.startsWith(moduleRoot) && Files.isRegularFile(file)) {
-                return Optional.of(Hashes.sha256(file).substring(0, 12));
+                // line endings do not count: a checkout with core.autocrlf must not make the ref stale
+                return Optional.of(fileHash(file));
             }
         }
         return Optional.empty();
+    }
+
+    /** The first 12 hex chars of the file's sha256 with CRLF read as LF (a file with LF endings hashes as before). */
+    static String fileHash(Path file) {
+        try {
+            String bytes = new String(Files.readAllBytes(file), StandardCharsets.ISO_8859_1);
+            return Hashes.sha256(bytes.replace("\r\n", "\n").getBytes(StandardCharsets.ISO_8859_1))
+                    .substring(0, 12);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     public static Map<String, String> loadConfig(Path resources) {

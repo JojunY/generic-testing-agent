@@ -106,6 +106,9 @@ public class WorkState {
         public int checks;
         public String token;
         public Baseline baseline;
+        /** The workspace of the run under triage or oracle review: nothing may change until the verdict (plan §5.8). */
+        public Baseline reviewBaseline;
+
         public Lock lock;
         public LastError lastError;
         public String evidenceRunId;
