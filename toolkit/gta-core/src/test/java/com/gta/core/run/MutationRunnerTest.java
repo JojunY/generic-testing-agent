@@ -73,6 +73,30 @@ class MutationRunnerTest {
     }
 
     @Test
+    void shouldLeaveMutantsThatNeverRanOutOfTheStrengthAndTheCanFailVerdict() {
+        List<MutationRunner.Mutant> mutants = List.of(
+                new MutationRunner.Mutant("P.java", "a.P", "discount", 20, "x.MathMutator", "KILLED"),
+                new MutationRunner.Mutant("P.java", "a.P", "discount", 21, "x.MathMutator", "NON_VIABLE"),
+                new MutationRunner.Mutant("P.java", "a.P", "discount", 22, "x.MathMutator", "RUN_ERROR"));
+
+        Map<String, Object> out = MutationRunner.summary(new LinkedHashMap<>(), mutants);
+
+        assertEquals(1L, out.get("covered"));
+        assertEquals("100%", out.get("strength"), "a mutant PIT could not run is no survivor");
+        assertEquals(List.of(), out.get("survived"));
+        assertEquals(List.of(), out.get("notCovered"), "nor is it uncovered code");
+        assertEquals(
+                MutationRunner.CanFail.NOT_APPLICABLE,
+                MutationRunner.verdict(
+                                mutants.subList(1, 3).stream()
+                                        .filter(MutationRunner.Mutant::covered)
+                                        .toList(),
+                                "a.PTest")
+                        .verdict(),
+                "a test is not called weak for mutants that never ran");
+    }
+
+    @Test
     void shouldSayWhenNoUnitOrSliceTestCoversTheChange() {
         Map<String, Object> out = MutationRunner.summary(
                 new LinkedHashMap<>(),

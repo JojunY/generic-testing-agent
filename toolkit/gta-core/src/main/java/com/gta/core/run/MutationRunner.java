@@ -82,8 +82,12 @@ public final class MutationRunner {
     /** One PIT mutant. */
     public record Mutant(
             String sourceFile, String mutatedClass, String method, int line, String mutator, String status) {
+        /**
+         * A test ran against the mutant and gave a verdict. {@code NON_VIABLE}, {@code RUN_ERROR} and
+         * {@code NOT_STARTED} mutants never ran: counting them as survivors would make a test look weak.
+         */
         boolean covered() {
-            return !"NO_COVERAGE".equals(status);
+            return killed() || "SURVIVED".equals(status);
         }
 
         boolean killed() {
@@ -125,7 +129,7 @@ public final class MutationRunner {
         out.put(
                 "notCovered",
                 mutants.stream()
-                        .filter(m -> !m.covered())
+                        .filter(m -> "NO_COVERAGE".equals(m.status()))
                         .map(m -> m.mutatedClass() + ":" + m.line())
                         .distinct()
                         .toList());

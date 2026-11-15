@@ -78,3 +78,22 @@ jobs:
           set GTA_CLI_JAR=%CD%\toolkit\gta-cli\target\gta-cli.jar
           copy wrapper\gtaw.cmd evals\fixtures\order-service\gtaw.cmd
           cd evals\fixtures\order-service && gtaw.cmd --version
+      - name: gtaw.cmd reports an unconfigured wrapper as JSON with the config exit code
+        shell: pwsh
+        run: |
+          Remove-Item Env:GTA_CLI_JAR -ErrorAction SilentlyContinue
+          $svc = Join-Path $env:RUNNER_TEMP 'gtaw-unconfigured'
+          New-Item -ItemType Directory -Force -Path (Join-Path $svc '.gta\wrapper') | Out-Null
+          Copy-Item wrapper\gtaw.cmd (Join-Path $svc 'gtaw.cmd')
+          Copy-Item wrapper\gtaw-download.ps1 (Join-Path $svc '.gta\wrapper\gtaw-download.ps1')
+          $props = Join-Path $svc '.gta\wrapper\gta-wrapper.properties'
+          # no properties file, then a file without the pinned jar: both are configuration errors
+          foreach ($case in @('missing', 'unpinned')) {
+            if ($case -eq 'unpinned') { Set-Content -Path $props -Value 'version=0.0.0' }
+            $out = & (Join-Path $svc 'gtaw.cmd') --version | Out-String
+            $code = $LASTEXITCODE
+            Write-Output "$case -> exit $code : $out"
+            if ($code -ne 21) { throw "${case}: expected exit 21, got $code" }
+            if ((ConvertFrom-Json $out).error.code -ne 'CONFIG_NOT_INITIALIZED') { throw "${case}: not the JSON error" }
+          }
+          exit 0 # the expected 21 above is the last native exit code; the step itself passed

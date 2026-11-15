@@ -91,6 +91,24 @@ class AssertionScannerTest {
     }
 
     @Test
+    void shouldLockAnAssertionOfAClassConstantByItsValue() throws Exception {
+        String body = """
+                    private static final String MSG = "Order not found";
+                    @Test @Tag("scenario:order.create/s01")
+                    void shouldRefuse() { assertThat(error.message()).isEqualTo(MSG); }
+                """;
+        AssertionScanner.ScenarioOracle first = scanSource(body);
+        Lock lock = OracleLock.create(first, List.of("Order not found"), "r1");
+
+        assertEquals(List.of("isEqualTo(\"Ordernotfound\")"), lock.statements, "the constant is locked by its value");
+        assertEquals(
+                OracleLock.Verdict.STRUCTURAL_CHANGE,
+                OracleLock.check(lock, scanSource(body.replace("isEqualTo(MSG)", "contains(MSG)")))
+                        .verdict(),
+                "a weakened assertion of the constant is caught");
+    }
+
+    @Test
     void shouldResolveConstantsStatusNamesAndMatchers() throws Exception {
         AssertionScanner.ScenarioOracle o = scanSource("""
                     static final String TOTAL = "50.00";

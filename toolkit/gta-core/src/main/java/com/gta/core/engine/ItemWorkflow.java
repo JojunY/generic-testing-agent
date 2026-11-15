@@ -659,6 +659,15 @@ final class ItemWorkflow {
             WorkState st = store.load();
             WorkState.ItemState s = requireToken(st, itemId, token, ItemStatus.REVIEWING, ItemStatus.TRIAGING);
             PlanItem item = store.planItem(itemId);
+            if (s.reviewBaseline == null) {
+                // a round issued before gtaw recorded the reviewed tree: never judge it unchecked, issue it again
+                s.token = null;
+                store.save(st);
+                throw new GtaException(
+                        ErrorCode.STATE_STALE_SESSION,
+                        "This review round of " + itemId + " was issued without a record of the reviewed files",
+                        "Run ./gtaw next to get a new review round and token");
+            }
             Map<String, Object> out = reviewerChanges(st, item, s);
             if (out != null) {
                 s.token = null;
@@ -707,9 +716,6 @@ final class ItemWorkflow {
      * reverted where they can be and the verdict is not used: the author's next submit runs and checks the test again.
      */
     private Map<String, Object> reviewerChanges(WorkState st, PlanItem item, WorkState.ItemState s) {
-        if (s.reviewBaseline == null) {
-            return null;
-        }
         ChangeChecker.Result scope = new ChangeChecker(paths)
                 .check(
                         s.reviewBaseline,
