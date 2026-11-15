@@ -66,6 +66,18 @@ class InstallerTest {
     }
 
     @Test
+    void shouldNeverReplaceATeamValueOfAnotherShape() throws Exception {
+        String team = "{\n  \"permission\": { \"bash\": \"ask\" }\n}\n";
+        Files.writeString(root.resolve("opencode.json"), team);
+
+        Map<String, Object> out = new Installer(root).install("opencode", null, null, false);
+
+        assertEquals(
+                team, Files.readString(root.resolve("opencode.json")), "\"bash\": \"ask\" keeps asking for everything");
+        assertTrue(((Map<?, ?>) out.get("mergeManually")).containsKey("opencode.json"), out.toString());
+    }
+
+    @Test
     void shouldWriteNothingWhenAnInputCannotBeParsed() throws Exception {
         Files.writeString(root.resolve(".vscode/settings.json"), "{ \"broken\": ");
 

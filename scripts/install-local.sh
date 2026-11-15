@@ -25,7 +25,10 @@ fi
 if command -v sha256sum >/dev/null 2>&1; then SHA=$(sha256sum "$JAR" | cut -d' ' -f1); else SHA=$(shasum -a 256 "$JAR" | cut -d' ' -f1); fi
 
 echo "== installing the $PLATFORM harness into $SERVICE (wrapper pinned to $JAR)"
-java -jar "$JAR" --root "$SERVICE" init --platform "$PLATFORM" --distribution-url "file://${JAR// /%20}" --distribution-sha256 "$SHA" >/dev/null
+# a file:// URL: a space, # or % in the checkout path must be percent-encoded, or curl rejects it
+URL="file://$(printf '%s' "$JAR" | sed 's/%/%25/g; s/ /%20/g; s/#/%23/g')"
+OUT=$(java -jar "$JAR" --root "$SERVICE" init --platform "$PLATFORM" --distribution-url "$URL" --distribution-sha256 "$SHA") \
+  || { echo "$OUT" >&2; exit 1; }
 
 echo "== ./gtaw doctor"
 (cd "$SERVICE" && ./gtaw --format human doctor) || true

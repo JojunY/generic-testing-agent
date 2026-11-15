@@ -46,7 +46,7 @@ else
     fi
     mv "$TMP" "$JAR"
   fi
-  if command -v sha256sum >/dev/null 2>&1; then ACTUAL=$(sha256sum "$JAR" | cut -d' ' -f1); else ACTUAL=$(shasum -a 256 "$JAR" | cut -d' ' -f1); fi
+  if command -v sha256sum >/dev/null 2>&1; then ACTUAL=$(sha256sum < "$JAR" | cut -d' ' -f1); else ACTUAL=$(shasum -a 256 < "$JAR" | cut -d' ' -f1); fi
   if [ "$ACTUAL" != "$SHA" ]; then
     rm -f "$JAR"
     echo '{"error":{"code":"ENV_WRAPPER_CHECKSUM_MISMATCH","category":"environment","message":"gta-cli jar checksum mismatch","hint":"check distributionUrl/distributionSha256Sum in .gta/wrapper/gta-wrapper.properties","retryable":false}}'

@@ -250,10 +250,10 @@ class EngineTest {
         st.items.get(ITEM).lock = new Lock();
         st.items.get(ITEM).lock.tokens.add("201");
         st.items.get(ITEM).evidenceRunId = "r1";
-        store.save(st);
         Path test = root.resolve(new GtaPaths(root).testSourceRel("com.acme.OrderCreateIT"));
         Files.createDirectories(test.getParent());
         Files.writeString(test, "class OrderCreateIT {}\n");
+        store.save(st);
         git("config", "commit.gpgsign", "true");
         git("config", "gpg.format", "openpgp");
         git("config", "gpg.program", "false-gpg-that-does-not-exist");

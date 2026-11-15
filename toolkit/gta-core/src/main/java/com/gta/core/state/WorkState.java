@@ -106,7 +106,7 @@ public class WorkState {
         public int checks;
         public String token;
         public Baseline baseline;
-        /** The workspace when the current review round was issued: a reviewer may change nothing (plan §5.8). */
+        /** The workspace of the run under triage or oracle review: nothing may change until the verdict (plan §5.8). */
         public Baseline reviewBaseline;
 
         public Lock lock;

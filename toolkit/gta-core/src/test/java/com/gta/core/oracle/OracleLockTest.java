@@ -26,6 +26,26 @@ class OracleLockTest {
     }
 
     @Test
+    void shouldAlsoLockAThenValueAssertedAfterTheLockWasTaken() {
+        Lock lock = OracleLock.create(FIRST, List.of("201", "50.00", "CREATED"), "r1");
+
+        OracleLock.extend(
+                lock,
+                oracle(
+                        List.of("isEqualTo(201)", "isEqualTo(\"50.00\")", "isEqualTo(\"CREATED\")"),
+                        Set.of("201", "50.00", "CREATED")),
+                List.of("201", "50.00", "CREATED"));
+
+        assertEquals(List.of("201", "50.00", "CREATED"), lock.tokens);
+        assertEquals(
+                OracleLock.Verdict.MODIFIED,
+                OracleLock.check(lock, FIRST).verdict(),
+                "removing the later CREATED assertion is a change to a locked value");
+        OracleLock.extend(lock, FIRST, List.of("201", "50.00", "CREATED"));
+        assertEquals(List.of("201", "50.00", "CREATED"), lock.tokens, "a locked value is never dropped");
+    }
+
+    @Test
     void shouldDetectAChangedValueARestructuredAssertionAndAcceptAnAddedOne() {
         Lock lock = OracleLock.create(FIRST, List.of("201", "50.00"), "r1");
 
@@ -65,6 +85,33 @@ class OracleLockTest {
                 OracleLock.check(lock, oracle(List.of("contains(\"Ordernotfound\")"), Set.of("Order not found")))
                         .verdict(),
                 "a weakened assertion of the locked value is not OK");
+    }
+
+    @Test
+    void shouldLockAnAssertionThatNamesTheValueInsteadOfWritingIt() {
+        AssertionScanner.ScenarioOracle first = oracle(
+                List.of(
+                        "isNotFound()",
+                        "isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)",
+                        "isTrue()",
+                        "isEqualTo(\"TOKEN\")"),
+                Set.of("404", "503", "true", "200"));
+
+        Lock lock = OracleLock.create(first, List.of("404", "503", "true", "200"), "r1");
+
+        assertEquals(
+                List.of("isNotFound()", "isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)", "isTrue()"),
+                lock.statements,
+                "OK (200) is a whole word: \"TOKEN\" does not carry it");
+        assertEquals(
+                OracleLock.Verdict.STRUCTURAL_CHANGE,
+                OracleLock.check(
+                                lock,
+                                oracle(
+                                        List.of("isNotEqualTo(HttpStatus.SERVICE_UNAVAILABLE)", "isTrue()"),
+                                        Set.of("404", "503", "true", "200")))
+                        .verdict(),
+                "a weakened or deleted assertion of a named value is caught");
     }
 
     @Test

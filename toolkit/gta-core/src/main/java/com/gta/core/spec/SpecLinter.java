@@ -143,7 +143,8 @@ public final class SpecLinter {
                         spec.requirements.stream()
                                 .flatMap(r -> r.scenarios.stream())
                                 .map(Spec.Scenario::id),
-                        spec.invariants.stream().map(Spec.Invariant::id))
+                        spec.invariants.stream().map(Spec.Invariant::id),
+                        spec.questions.stream().map(Spec.Question::id))
                 .flatMap(x -> x)
                 .filter(id -> id != null && !seenIds.add(id))
                 .distinct()

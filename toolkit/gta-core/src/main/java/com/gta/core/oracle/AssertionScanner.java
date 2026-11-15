@@ -108,6 +108,30 @@ public final class AssertionScanner {
     private static final Map<String, String> BOOLEAN_MATCHERS =
             Map.of("isTrue", "true", "assertTrue", "true", "isFalse", "false", "assertFalse", "false");
 
+    /**
+     * The names an assertion statement may use for a THEN value instead of the value itself: {@code NOT_FOUND} and
+     * {@code isNotFound(} for {@code 404}, {@code isTrue(} for {@code true}.
+     */
+    static List<String> namesOf(String value) {
+        List<String> out = new ArrayList<>();
+        STATUS_NAMES.forEach((name, code) -> {
+            if (code.equals(value)) {
+                out.add(name);
+            }
+        });
+        STATUS_MATCHERS.forEach((matcher, code) -> {
+            if (code.equals(value)) {
+                out.add(matcher + "(");
+            }
+        });
+        BOOLEAN_MATCHERS.forEach((matcher, bool) -> {
+            if (bool.equals(value)) {
+                out.add(matcher + "(");
+            }
+        });
+        return out;
+    }
+
     private static final Set<String> STIMULUS_CALLS = Set.of(
             "perform",
             "post",

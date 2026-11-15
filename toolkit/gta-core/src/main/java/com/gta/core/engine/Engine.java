@@ -287,6 +287,7 @@ public final class Engine {
                     st, sw, flowId, entry, capability, List.of("spec is stale: production code it references changed"));
         }
         if ("in-review".equals(spec.status())) {
+            ctx.specs.snapshotIfMissing(flowId, spec);
             WorkState.Pending p = new WorkState.Pending();
             p.flowId = flowId;
             if (!spec.openQuestions().isEmpty()) {

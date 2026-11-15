@@ -70,6 +70,9 @@ public final class SurefireReportParser {
             if (n == null) {
                 // a Cucumber scenario: reports name it after the scenario, under the suite's simple name or the feature
                 n = tagged.get(FEATURE_KEY + c.method);
+                if (n == AMBIGUOUS) {
+                    n = null;
+                }
                 if (n != null) {
                     c.className = n.path("className").asText(c.className);
                 }
@@ -175,6 +178,8 @@ public final class SurefireReportParser {
     /** Key of a Cucumber scenario's result: its name, as the reports print it. */
     static final String FEATURE_KEY = "feature|";
 
+    private static final JsonNode AMBIGUOUS = com.fasterxml.jackson.databind.node.NullNode.getInstance();
+
     static Map<String, JsonNode> readGtaResults(Path dir) {
         Map<String, JsonNode> out = new HashMap<>();
         if (dir == null || !Files.isDirectory(dir)) {
@@ -193,7 +198,16 @@ public final class SurefireReportParser {
                                         + n.path("method").asText(),
                                 n);
                         if (n.hasNonNull("feature")) {
-                            out.put(FEATURE_KEY + methodName(n.path("method").asText()), n);
+                            // reports name a scenario only: a name two scenarios share is never guessed (it would
+                            // give one scenario's result to the other); such a case is left untagged
+                            out.merge(
+                                    FEATURE_KEY + methodName(n.path("method").asText()),
+                                    n,
+                                    (a, b) -> a != AMBIGUOUS
+                                                    && a.path("feature").equals(b.path("feature"))
+                                                    && a.path("className").equals(b.path("className"))
+                                            ? b // the same scenario recorded again: the last run counts
+                                            : AMBIGUOUS);
                         }
                         if (n.hasNonNull("displayName")) {
                             out.putIfAbsent(
