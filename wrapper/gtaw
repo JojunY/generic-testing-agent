@@ -27,7 +27,9 @@ else
     # credentials never appear on a command line (visible in ps): curl reads them from stdin, wget from the environment
     if command -v curl >/dev/null 2>&1; then
       if [ -n "$GTA_NEXUS_USER" ]; then
-        printf 'user = "%s:%s"\n' "$GTA_NEXUS_USER" "$GTA_NEXUS_PASSWORD" | curl -fsSL -K - -o "$TMP" "$URL" && OK=1 || OK=0
+        # a quoted curl config value: \ and " inside it are escaped
+        esc() { printf '%s' "$1" | sed 's/[\\"]/\\&/g'; }
+        printf 'user = "%s:%s"\n' "$(esc "$GTA_NEXUS_USER")" "$(esc "$GTA_NEXUS_PASSWORD")" | curl -fsSL -K - -o "$TMP" "$URL" && OK=1 || OK=0
       else
         curl -fsSL -o "$TMP" "$URL" && OK=1 || OK=0
       fi

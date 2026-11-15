@@ -29,6 +29,7 @@ public final class GradleRunner extends MavenRunner {
                     t.systemProperty 'gta.run', 'true'
                     t.filter { excludeTestsMatching '*E2ETest'; failOnNoMatchingTests = false }
                     t.outputs.upToDateWhen { false }
+                    t.outputs.cacheIf { false }
                 }
             }
             """;

@@ -175,4 +175,19 @@ class FailureClassifierTest {
         assertEquals(FailureClassifier.fingerprint("X", null), FailureClassifier.fingerprint("X", "  "));
         assertEquals("com.acme.Order", FailureClassifier.outerClass("com.acme.Order$Line"));
     }
+
+    @Test
+    void shouldReadGradleFramesWithTheirClassLoaderName() {
+        // Gradle's JUnit XML keeps the class loader in front of each frame
+        TestOutcome c = failing(
+                "error",
+                "java.lang.NullPointerException",
+                "java.lang.NullPointerException\n\tat app//com.acme.order.OrderService.create(OrderService.java:20)\n"
+                        + "\tat app//com.acme.order.OrderIT.should(OrderIT.java:10)\n"
+                        + "\tat java.base/java.lang.Thread.run(Thread.java:840)");
+
+        FailureClassifier.classify(c, PROD, TESTS);
+
+        assertEquals(ErrorCode.TEST_SUT_ERROR.name(), c.code, "the same failure as on Maven");
+    }
 }

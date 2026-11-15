@@ -96,7 +96,8 @@ public final class GtaCli implements Callable<Integer> {
             GtaException ge = new GtaException(
                     ErrorCode.USAGE_INVALID_ARGUMENT,
                     ex.getMessage(),
-                    "Run ./gtaw " + String.join(" ", args2.length > 0 ? args2[0] : "") + " --help");
+                    // the command that failed, not args2[0]: the wrapper always passes --root <dir> first
+                    "Run ./" + ex.getCommandLine().getCommandSpec().qualifiedName() + " --help");
             System.out.println(Json.write(ge.toErrorObject()));
             return ErrorCode.USAGE_INVALID_ARGUMENT.exitCode();
         });
@@ -359,11 +360,18 @@ public final class GtaCli implements Callable<Integer> {
                 description = "Read the reply from a UTF-8 file (use when the terminal mangles non-ASCII text)")
         Path file;
 
+        /** Notepad and PowerShell 5.1 start a UTF-8 file with a BOM, which no reply pattern expects. */
+        static String replyFile(Path file) throws IOException {
+            return Files.readString(file, StandardCharsets.UTF_8)
+                    .replaceFirst("^\uFEFF", "")
+                    .strip();
+        }
+
         @Override
         public Integer call() throws IOException {
             String reply;
             if (file != null) {
-                reply = replyFromFile(file);
+                reply = replyFile(file);
             } else if (words != null && !words.isEmpty()) {
                 reply = String.join(" ", words);
             } else {
@@ -373,12 +381,6 @@ public final class GtaCli implements Callable<Integer> {
                         "Run ./gtaw answer \"<reply>\" or ./gtaw answer --file <path>");
             }
             return print(parent, engine(parent).answer(reply));
-        }
-
-        /** The reply in a UTF-8 file; the BOM Windows PowerShell 5.1 writes is not part of it. */
-        static String replyFromFile(Path file) throws IOException {
-            String text = Files.readString(file, StandardCharsets.UTF_8);
-            return (text.startsWith("\uFEFF") ? text.substring(1) : text).strip();
         }
     }
 

@@ -122,9 +122,9 @@ public final class Installer {
                 }
                 default -> {
                     Path target = root.resolve(rel);
-                    String newHash = managedHash(content);
+                    String newHash = textHash(content);
                     if (Files.exists(target)) {
-                        String current = managedHash(target);
+                        String current = textHash(target);
                         String recorded = previous.get(rel);
                         if (!current.equals(newHash) && recorded != null && !recorded.equals(current)) {
                             conflicts.add(rel);
@@ -149,11 +149,11 @@ public final class Installer {
         for (String w : List.of("gtaw", "gtaw.cmd")) {
             String content = resource("gta/wrapper/" + w);
             writes.put(root.resolve(w), content);
-            files.put(w, managedHash(content));
+            files.put(w, textHash(content));
         }
         String ps1 = resource("gta/wrapper/gtaw-download.ps1");
         writes.put(paths.gta().resolve("wrapper/gtaw-download.ps1"), ps1);
-        files.put(".gta/wrapper/gtaw-download.ps1", managedHash(ps1));
+        files.put(".gta/wrapper/gtaw-download.ps1", textHash(ps1));
         writes.put(paths.wrapperProperties(), wrapperProperties(distributionUrl, distributionSha));
 
         // managed files the new version no longer ships: remove them if untouched, report them if edited locally
@@ -165,7 +165,7 @@ public final class Installer {
             if (files.containsKey(old.getKey()) || !Files.exists(target)) {
                 continue;
             }
-            if (managedHash(target).equals(old.getValue())) {
+            if (textHash(target).equals(old.getValue())) {
                 removals.add(target);
                 removed.add(old.getKey());
             } else {
@@ -343,11 +343,13 @@ public final class Installer {
                         ErrorCode.CONFIG_INVALID, target + " is not a JSON object", "Fix the file and re-run init");
             }
             ObjectNode merged = baseObject.deepCopy();
-            merge(merged, add);
-            if (merged.equals(baseObject)) {
+            boolean clean = merge(merged, add);
+            if (merged.equals(baseObject) && clean) {
                 return new JsonMerge(null, null);
             }
-            return plainJson ? new JsonMerge(PRETTY.writeValueAsString(merged) + "\n", null) : new JsonMerge(null, add);
+            return plainJson && clean
+                    ? new JsonMerge(PRETTY.writeValueAsString(merged) + "\n", null)
+                    : new JsonMerge(null, add);
         } catch (IOException e) {
             throw new GtaException(
                     ErrorCode.CONFIG_INVALID,
@@ -356,13 +358,35 @@ public final class Installer {
         }
     }
 
-    static void merge(ObjectNode base, JsonNode add) {
+    /**
+     * The hash of a managed file, line ends ignored: git on Windows checks text files out with CRLF (core.autocrlf),
+     * which is not a local edit.
+     */
+    static String textHash(String text) {
+        return Hashes.sha256(text.replace("\r\n", "\n"));
+    }
+
+    static String textHash(Path file) {
+        return textHash(read(file).orElseThrow());
+    }
+
+    /**
+     * Adds gta's keys to {@code base}; false when a team value has another shape than gta's (e.g. {@code "bash": "ask"}
+     * against gta's rules object): that value is kept and the keys are left to the person, since replacing it would
+     * silently change the team's setting.
+     */
+    static boolean merge(ObjectNode base, JsonNode add) {
+        boolean clean = true;
         Iterator<Map.Entry<String, JsonNode>> it = add.fields();
         while (it.hasNext()) {
             Map.Entry<String, JsonNode> e = it.next();
             JsonNode existing = base.get(e.getKey());
             if (existing instanceof ObjectNode o && e.getValue().isObject()) {
-                merge(o, e.getValue());
+                clean &= merge(o, e.getValue());
+            } else if (existing != null
+                    && (existing.isContainerNode() || e.getValue().isContainerNode())
+                    && existing.getNodeType() != e.getValue().getNodeType()) {
+                clean = false;
             } else if (existing instanceof ArrayNode a && e.getValue().isArray()) {
                 for (JsonNode v : e.getValue()) {
                     boolean present = false;
@@ -377,6 +401,7 @@ public final class Installer {
                 base.set(e.getKey(), e.getValue());
             }
         }
+        return clean;
     }
 
     private Optional<String> gitignoreUpdate() {
@@ -406,22 +431,6 @@ public final class Installer {
                         "Rebuild gta-cli after generating copilot/ and opencode/");
             }
             return new String(in.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    /**
-     * The hash of a managed file, line endings ignored: Git for Windows checks text files out with CRLF
-     * ({@code core.autocrlf=true}), which must not read as a local edit.
-     */
-    static String managedHash(String content) {
-        return Hashes.sha256(content.replace("\r\n", "\n"));
-    }
-
-    static String managedHash(Path file) {
-        try {
-            return managedHash(Files.readString(file, StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

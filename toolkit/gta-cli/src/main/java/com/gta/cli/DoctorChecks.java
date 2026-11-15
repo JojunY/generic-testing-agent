@@ -188,7 +188,7 @@ public final class DoctorChecks {
             if (files instanceof Map<?, ?> fm) {
                 fm.forEach((k, v) -> {
                     Path f = root.resolve(String.valueOf(k));
-                    if (!Files.exists(f) || !Installer.managedHash(f).equals(v)) {
+                    if (!Files.exists(f) || !Installer.textHash(f).equals(v)) {
                         modified.add(String.valueOf(k));
                     }
                 });

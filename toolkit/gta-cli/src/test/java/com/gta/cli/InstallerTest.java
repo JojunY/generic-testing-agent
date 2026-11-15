@@ -118,18 +118,6 @@ class InstallerTest {
     }
 
     @Test
-    void shouldNotTakeACrlfCheckoutForALocalEdit() throws Exception {
-        new Installer(root).install("opencode", null, null, false);
-        Path agent = root.resolve(".opencode/agents/gta-test-author.md");
-        // what Git for Windows checks out with core.autocrlf=true
-        Files.writeString(agent, Files.readString(agent).replace("\n", "\r\n"));
-
-        Map<String, Object> out = new Installer(root).install("opencode", null, null, true);
-
-        assertEquals(null, out.get("conflicts"), "line endings are not an edit: the file is upgraded");
-    }
-
-    @Test
     void shouldRemoveUntouchedFilesANewVersionNoLongerShipsAndKeepEditedOnes() throws Exception {
         new Installer(root).install("copilot", null, null, false);
         Path managed = root.resolve(".gta/managed-files.json");
@@ -208,5 +196,27 @@ class InstallerTest {
                 GtaException.class, () -> new Installer(root).install("copilot", null, null, false, false));
 
         assertTrue(e.getMessage().contains("build.gradle"), e.getMessage());
+    }
+
+    @Test
+    void shouldKeepATeamSettingOfAnotherShapeAndReportTheKeysToAdd() throws Exception {
+        String team = "{ \"permission\": { \"bash\": \"ask\" } }\n";
+        Files.writeString(root.resolve("opencode.json"), team);
+
+        Map<String, Object> out = new Installer(root).install("opencode", null, null, false);
+
+        assertEquals(team, Files.readString(root.resolve("opencode.json")), "\"ask\" for every command stays");
+        assertTrue(((Map<?, ?>) out.get("mergeManually")).containsKey("opencode.json"), out.toString());
+    }
+
+    @Test
+    void shouldNotTakeAWindowsCheckoutForALocalEdit() throws Exception {
+        new Installer(root).install("opencode", null, null, false);
+        Path agent = root.resolve(".opencode/agents/gta-test-author.md");
+        Files.writeString(agent, Files.readString(agent).replace("\n", "\r\n")); // git with core.autocrlf=true
+
+        Map<String, Object> out = new Installer(root).install("opencode", null, null, true);
+
+        assertEquals(null, out.get("conflicts"), "line ends are not an edit: " + out);
     }
 }

@@ -101,8 +101,10 @@ public final class PomInfo {
                 if (md != null) {
                     for (Element d : children(md, "dependency")) {
                         if ("spring-boot-dependencies".equals(child(d, "artifactId"))) {
-                            // usually ${spring-boot.version}, defined in the same pom
-                            info.bootVersion = resolve(child(d, "version"), childElement(project, "properties"));
+                            // usually ${spring-boot.version}; unresolved, the parent's version applies
+                            Element props = childElement(project, "properties");
+                            String v = props == null ? child(d, "version") : resolve(child(d, "version"), props);
+                            info.bootVersion = v == null || v.startsWith("$") ? null : v;
                         }
                     }
                 }
@@ -244,7 +246,7 @@ public final class PomInfo {
 
     /** Resolves one {@code ${property}} reference against the same properties block. */
     private static String resolve(String value, Element props) {
-        if (props != null && value != null && value.startsWith("${") && value.endsWith("}")) {
+        if (value != null && value.startsWith("${") && value.endsWith("}")) {
             return child(props, value.substring(2, value.length() - 1));
         }
         return value;

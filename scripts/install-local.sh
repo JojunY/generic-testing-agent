@@ -25,7 +25,7 @@ fi
 if command -v sha256sum >/dev/null 2>&1; then SHA=$(sha256sum "$JAR" | cut -d' ' -f1); else SHA=$(shasum -a 256 "$JAR" | cut -d' ' -f1); fi
 
 echo "== installing the $PLATFORM harness into $SERVICE (wrapper pinned to $JAR)"
-java -jar "$JAR" --root "$SERVICE" init --platform "$PLATFORM" --distribution-url "file://$JAR" --distribution-sha256 "$SHA" >/dev/null
+java -jar "$JAR" --root "$SERVICE" init --platform "$PLATFORM" --distribution-url "file://${JAR// /%20}" --distribution-sha256 "$SHA" >/dev/null
 
 echo "== ./gtaw doctor"
 (cd "$SERVICE" && ./gtaw --format human doctor) || true
