@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -172,18 +173,18 @@ class GitTest {
         commitFile("a.txt", "a\n");
         String base = git.head();
         String name = "\u00dcbersicht.java"; // git quotes it as "\303\234bersicht.java" by default
-        // added through the index: the JVM of a POSIX-locale CI cannot create the file itself
+        // added through the index: a JVM under the C locale cannot create the file itself
         Files.writeString(root.resolve("x.txt"), "class X {}\n");
         String blob = run("hash-object", "-w", "x.txt").output().strip();
-        ProcessRunner.run(
-                root,
-                Duration.ofSeconds(30),
-                Map.of(),
-                List.of(
-                        "sh",
-                        "-c",
-                        "printf '100644 " + blob
-                                + "\\t\"\\303\\234bersicht.java\"\\n' | git update-index --index-info"));
+        // the path in git's C-quoted form is plain ASCII: no shell and no file name encoding involved
+        Process p = new ProcessBuilder("git", "update-index", "--index-info")
+                .directory(root.toFile())
+                .redirectErrorStream(true)
+                .start();
+        try (var in = p.getOutputStream()) {
+            in.write(("100644 " + blob + "\t\"\\303\\234bersicht.java\"\n").getBytes(StandardCharsets.US_ASCII));
+        }
+        assertEquals(0, p.waitFor(), new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
         run("commit", "-qm", "add " + name);
 
         assertEquals(List.of(name), git.changedFiles(base));
