@@ -75,7 +75,7 @@
     var gaps = this.columns.length - 1;
     var lamp = this.lampAfter ? 1.6 : 0;
     var units = this.cols + gaps * 1.1 + lamp;
-    var cw = Math.max(this.minCell, Math.min(this.maxCell, Math.floor((width / units) * dpr) / dpr));
+    var cw = Math.max(this.minCell, Math.min(this.maxCell, Math.floor((width / units) * 100) / 100));
     var ch = Math.round(cw * this.ratio);
     var gap = Math.max(1, Math.round(cw * 0.09));
     this.cw = cw;
@@ -114,7 +114,7 @@
   Board.prototype.tiles = function (style) {
     if (this.atlas[style]) return this.atlas[style];
     var dpr = this.dpr;
-    var w = Math.ceil(this.cw * dpr);
+    var w = Math.round(this.cw * dpr);
     var h = Math.ceil(this.ch * dpr);
     var sheet = document.createElement('canvas');
     sheet.width = w * DRUM.length;
@@ -225,7 +225,7 @@
     var cell = this.cells[row][col];
     var g = this.ctx;
     var dpr = this.dpr;
-    var w = Math.ceil(this.cw * dpr);
+    var w = Math.round(this.cw * dpr);
     var h = Math.ceil(this.ch * dpr);
     var half = Math.floor(h / 2);
     var x = Math.round(this.x[col] * dpr);

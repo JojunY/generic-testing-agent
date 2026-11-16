@@ -6,6 +6,7 @@ Pick the row that fits you; you do not need the rest.
 
 | Read | For |
 |---|---|
+| [site/index.html](site/index.html) ([简体中文](site/index.zh-CN.html)) | the introduction, to open in a browser or to present (`P` for stage mode): the idea, a replay of a recorded gtaw run, what is covered and what is not |
 | [../README.md](../README.md) ([简体中文](../README.zh-CN.md)) | what gta does, and the two ways to install it (on your machine without Nexus, or for a team) |
 | [guides/quickstart.md](guides/quickstart.md) ([简体中文](guides/quickstart.zh-CN.md)) | installing gta in a service, the `/gta` commands, the configuration, what to do when something goes wrong |
 | [guides/pilot.md](guides/pilot.md) | the first run with a real model on a real service: checklist, what to record |

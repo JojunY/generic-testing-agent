@@ -91,6 +91,9 @@
         if (board.visible) board.start();
       }).observe(container);
     }
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) board.start(); // the lamps stop pulsing in a hidden tab
+    });
     return function () {
       return board;
     };
@@ -460,7 +463,7 @@
         var pre = el('pre');
         pre.innerHTML = escapeHtml(what)
           .replace(/^(\s*──.*)$/gm, '<span class="hd">$1</span>')
-          .replace(/(← recommended[^\n]*)/g, '<span class="rec">$1</span>');
+          .replace(/(←[^\n]*)/g, '<span class="rec">$1</span>');
         entry.appendChild(pre);
       } else {
         entry.appendChild(el('span', 'entry-who', who));

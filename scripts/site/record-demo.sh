@@ -4,14 +4,25 @@
 # recording (every gtaw output, the spec, the briefs, the test, the commits, the report) is written to
 # docs/site/assets/js/run-data.js. Run it again after a change to what gtaw says, then review the diff.
 #
-# Needs: the same as evals/e2e/run.sh (the toolkit built and installed). Usage: scripts/site/record-demo.sh [work-dir]
+# With --lang zh-CN gtaw speaks Chinese (output.language) and the recording goes to run-data.zh-CN.js, for the Chinese
+# page; what the scripted agents write stays English.
+#
+# Needs: the same as evals/e2e/run.sh (the toolkit built and installed).
+# Usage: scripts/site/record-demo.sh [--lang zh-CN] [work-dir]
 set -euo pipefail
+
+LANGUAGE=en
+if [ "${1:-}" = "--lang" ]; then
+  LANGUAGE="$2"
+  shift 2
+fi
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 AGENT="$REPO/scripts/site/demo"                      # what the scripted analyst and test author write
 SEED="$REPO/evals/e2e/scripted-output/lending"       # the seed test of the lending sample, shared with the e2e
 WORK="${1:-$(mktemp -d)}"
 DATA="$REPO/docs/site/assets/js/run-data.js"
+[ "$LANGUAGE" = en ] || DATA="$REPO/docs/site/assets/js/run-data.$LANGUAGE.js"
 REC="$(mktemp)"
 P=""
 export GTA_CLI_JAR="$REPO/toolkit/gta-cli/target/gta-cli.jar"
@@ -54,7 +65,7 @@ printf 'target/\n' > .gitignore
 git init -q -b main && git add -A && git commit -qm "lending-service"
 gta_init copilot
 # this run shows the common case, JUnit tests; the sample's Cucumber suite stays the team's own (plan §7.10)
-printf '{ "build": { "cucumber": "off" } }\n' > .gta/config.json
+printf '{ "build": { "cucumber": "off" }, "output": { "language": "%s" } }\n' "$LANGUAGE" > .gta/config.json
 git add -A && git commit -qm "gta init"
 git checkout -q -b feature/gta-tests
 SPEC=.gta/specs/borrow/book.spec.md
@@ -161,9 +172,9 @@ git log --reverse --format='%h %s' main..HEAD > "$REC.files/commits.txt"
 git diff --quiet || fail "the work tree is dirty"
 
 step "write $DATA"
-python3 - "$REC" "$DATA" "$(cd "$REPO" && git rev-parse --short HEAD)" "$GTA_VERSION" <<'PY'
+python3 - "$REC" "$DATA" "$(cd "$REPO" && git rev-parse --short HEAD)" "$GTA_VERSION" "$LANGUAGE" <<'PY'
 import datetime, json, pathlib, sys
-rec, data, commit, version = sys.argv[1:]
+rec, data, commit, version, language = sys.argv[1:]
 events = [json.loads(line) for line in pathlib.Path(rec).read_text(encoding="utf-8").splitlines() if line.strip()]
 files = {f.name: f.read_text(encoding="utf-8") for f in sorted(pathlib.Path(rec + ".files").iterdir())}
 run = {
@@ -171,6 +182,7 @@ run = {
         "recorded": datetime.date.today().isoformat(),
         "gta": version,
         "commit": commit,
+        "language": language,
         "service": "evals/fixtures/lending-service",
         "flow": "borrow.book",
         "how": "scripts/site/record-demo.sh: a script plays the agents, every gtaw output is real",

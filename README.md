@@ -4,7 +4,7 @@
 
 gta is a spec-first testing harness for Java/Spring services. It runs inside **GitHub Copilot** (VS Code, IntelliJ) or **OpenCode**.
 
-> **Status:** `gtaw`, the deterministic part, is covered by unit tests and six scripted end-to-end runs in which a script plays the agents. A run with a real model on a real service is not recorded here yet: start with the [pilot guide](docs/guides/pilot.md). New here? Read [gta in ten minutes](docs/design/overview.md); [docs/README.md](docs/README.md) says which document is for whom.
+> **Status:** `gtaw`, the deterministic part, is covered by unit tests and six scripted end-to-end runs in which a script plays the agents. A run with a real model on a real service is not recorded here yet: start with the [pilot guide](docs/guides/pilot.md). New here? Open [the introduction](docs/site/index.html) in a browser (a local file, no server needed), or read [gta in ten minutes](docs/design/overview.md); [docs/README.md](docs/README.md) says which document is for whom.
 
 You type `/gta` and it runs this loop:
 
@@ -83,9 +83,9 @@ copilot/     GENERATED from core/ + platforms/copilot (committed so teams can pi
 opencode/    GENERATED from core/ + platforms/opencode (committed so teams can pick it): never edit by hand
 toolkit/     Java sources: gta-core, gta-cli, gta-junit, gta-harness-gen (Maven reactor; pom.xml holds the version)
 wrapper/     files installed into services: gtaw, gtaw.cmd, gtaw-download.ps1 (pinned jar from Nexus, sha256-verified)
-scripts/     install-local.sh (install into a service without Nexus), generate.sh (platform folders), diagrams/render.py (docs/diagrams)
+scripts/     install-local.sh (install into a service without Nexus), generate.sh (platform folders), diagrams/render.py (docs/diagrams), site/record-demo.sh (records the replay of docs/site)
 evals/       order-service fixture with seeded defects and a scripted end-to-end run
-docs/        guides/ (quickstart, pilot, CI integration, test naming, diagram style, adding a capability), design/ (overview: start here; plan: the full design), archive/ (past review records), diagrams/; README.md is the index
+docs/        guides/ (quickstart, pilot, CI integration, test naming, diagram style, adding a capability), design/ (overview: start here; plan: the full design), archive/ (past review records), diagrams/, site/ (the introduction site, static); README.md is the index
 ```
 
 ## Development

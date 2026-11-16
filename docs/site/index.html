@@ -8,7 +8,7 @@
 <meta name="color-scheme" content="dark">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%2315181d'/%3E%3Crect y='15.5' width='32' height='1' fill='%23000'/%3E%3Ctext x='16' y='23' font-family='Arial Narrow,Arial' font-weight='700' font-size='20' text-anchor='middle' fill='%23ece6d8'%3EG%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/css/site.css">
-<noscript><style>.board-table{position:static;width:100%;height:auto;clip:auto;overflow:visible}.hall-board,.hall-desk,.needs-js{display:none}.reveal{opacity:1;transform:none}</style></noscript>
+<noscript><style>.sr{position:static;width:auto;height:auto;clip:auto;overflow:visible;white-space:normal}.hall-board,.hall-desk,.needs-js{display:none}.reveal{opacity:1;transform:none}</style></noscript>
 </head>
 <body>
 <a class="skip" href="#problem">Skip to the content</a>
@@ -48,6 +48,7 @@
         <canvas id="main-board" role="img" aria-label="Split-flap board of test scenarios and their verdicts. The same rows are in the table that follows."></canvas>
         <div class="macro" id="macro" aria-hidden="true"><canvas id="macro-board"></canvas></div>
       </div>
+      <div class="sr">
       <table class="board-table" id="board-data">
         <caption>Scenarios of the sample services and the verdict gtaw gave each</caption>
         <thead><tr><th>Scenario</th><th>Kind</th><th>Locked expected values</th><th>Verdict</th></tr></thead>
@@ -66,6 +67,7 @@
           <tr data-end="passed"><td>restock.restock/s01</td><td>Workflow</td><td>restocked</td><td>Passed</td></tr>
         </tbody>
       </table>
+      </div>
       <div class="hall-desk">
         <div class="desk-item">
           <button class="key key-ok" id="ok-key" type="button" disabled>OK <kbd>⏎</kbd></button>
@@ -336,15 +338,12 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   "forceRefused": "Refused. No run, no lock, no review: gtaw has nothing that says so.",
   "forceRefused2": "Refused again. The board shows what gtaw can prove, nothing else.",
   "forceRefused3": "Still no. The only way to green is a test that passes against what a person approved.",
-  "tried": "Tried",
-  "succeeded": "succeeded",
   "again": "Run the board again",
   "penYou": "waiting for you",
   "penAi": "an agent is working",
   "penGtaw": "gtaw is deciding",
   "penDone": "done for now",
   "replyHintWrong": "This is a recording: the reply that was given here is {reply}.",
-  "replyHintWork": "gta is working. It asks when it needs you.",
   "replyDone": "The run is over: one scenario passed, one defect found and pinned. Your part was a flow number and three times OK.",
   "replayAgain": "Replay",
   "actorYou": "you",
@@ -356,8 +355,6 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   "didApplyAnswer": "rewrites the THEN of s02 from your answer",
   "didWriteSeed": "writes the seed test: the application starts with faked dependencies",
   "didWriteTest": "writes {file}",
-  "didAccept": "{text}",
-  "didVerdict": "{text}",
   "didPin": "adds {text} to the test",
   "dispatch": "hands a brief to {agent}",
   "statusLine": "status: {items}",
@@ -374,7 +371,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   "tabCommits": "Commits",
   "tabReport": "Report",
   "tabSpecNote": "From the first draft to the approved spec. Your first OK rewrote the THEN of s02; gtaw recorded the answer, the approval and the hashes of what you approved.",
-  "tabTestNote": "Written by the test author. The highlighted line is the pin: outside gta the test is skipped, so the build stays green.",
+  "tabTestNote": "Written by the test author. The highlighted line is the pin: a plain build reports this test as skipped, so the build stays green.",
   "tabLockNote": "The oracle lock gtaw committed next to the spec. A test that drops one of these values is refused.",
   "tabCommitsNote": "Every commit of the branch was made by gtaw, one per decision.",
   "tabReportNote": "The session report, with the words of each human confirmation.",
