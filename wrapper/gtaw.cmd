@@ -14,8 +14,9 @@ for /f "usebackq delims=" %%J in (`powershell -NoProfile -ExecutionPolicy Bypass
 if not defined GTA_JAR exit /b 30
 if "%GTA_JAR:~0,1%"=="{" goto failed
 :run
-java %GTA_JAVA_OPTS% -jar "%GTA_JAR%" --root "%GTA_DIR%" %*
-exit /b %ERRORLEVEL%
+rem one line: cmd.exe reads a batch file line by line from its byte offset, and "gtaw upgrade" rewrites this
+rem file while it runs, so a next line would be read from the new file. exit /b keeps java's exit code.
+java %GTA_JAVA_OPTS% -jar "%GTA_JAR%" --root "%GTA_DIR%" %* & exit /b
 
 :failed
 rem the JSON error of gtaw-download.ps1, with the exit code of its category as ./gtaw gives it: config 21,

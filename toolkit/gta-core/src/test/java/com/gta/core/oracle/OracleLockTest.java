@@ -115,6 +115,15 @@ class OracleLockTest {
     }
 
     @Test
+    void shouldLockAnAssertTrueOrAssertFalseWithItsArgument() {
+        List<String> locked = OracleLock.lockedStatements(
+                List.of("assertTrue(order.isPaid())", "assertFalse(order.isCancelled())", "assertNotNull(order)"),
+                List.of("true", "false"));
+
+        assertEquals(List.of("assertTrue(order.isPaid())", "assertFalse(order.isCancelled())"), locked);
+    }
+
+    @Test
     void shouldFingerprintStatementsIndependentlyOfOrder() {
         assertEquals(OracleLock.fingerprint(List.of("a", "b")), OracleLock.fingerprint(List.of("b", "a")));
     }

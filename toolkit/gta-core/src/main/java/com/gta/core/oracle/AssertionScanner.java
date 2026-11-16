@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 /**
  * Extracts the oracle of a scenario's test methods (methods tagged {@code @Tag("scenario:<id>")}):
@@ -479,11 +480,24 @@ public final class AssertionScanner {
     public static List<String> missingThenLiterals(List<String> thenLiterals, Set<String> tokens) {
         List<String> missing = new ArrayList<>();
         for (String lit : thenLiterals) {
-            boolean ok = tokens.contains(lit) || tokens.stream().anyMatch(t -> lit.length() >= 3 && t.contains(lit));
+            boolean ok = tokens.contains(lit)
+                    || (lit.length() >= 3 && tokens.stream().anyMatch(t -> holds(t, lit)));
             if (!ok) {
                 missing.add(lit);
             }
         }
         return missing;
+    }
+
+    /**
+     * A longer value may hold the expected one (a message, a JSON body), but not as part of another number: -100,
+     * 1000 and 100.5 do not assert 100.
+     */
+    private static boolean holds(String token, String lit) {
+        String before = Character.isDigit(lit.charAt(0)) ? "(?<![0-9.-])" : "";
+        String after = Character.isDigit(lit.charAt(lit.length() - 1)) ? "(?![0-9]|\\.[0-9])" : "";
+        return Pattern.compile(before + Pattern.quote(lit) + after)
+                .matcher(token)
+                .find();
     }
 }

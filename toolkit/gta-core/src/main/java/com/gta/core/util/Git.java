@@ -2,6 +2,9 @@ package com.gta.core.util;
 
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -10,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Stream;
 
 /**
  * Thin git wrapper. Only gtaw performs git writes; agents never do (plan §5.2).
@@ -175,13 +180,31 @@ public final class Git {
     }
 
     /**
-     * Line numbers of {@code path} (working tree) that differ from {@code baseRef}: added or changed lines, from the
-     * hunks of {@code git diff -U0}.
+     * Line numbers of {@code path} (working tree) changed since it branched off {@code baseRef} (the merge base, as
+     * {@link #changedFiles}): added or changed lines, from the hunks of {@code git diff -U0}. Every line of an
+     * untracked file is new.
      */
     public java.util.Set<Integer> changedLines(String baseRef, String path) {
-        ProcessRunner.Result r = git("diff", "-U0", baseRef, "--", path);
+        if (!isTracked(path)) {
+            Set<Integer> all = new TreeSet<>();
+            try (Stream<String> lines = Files.lines(root.resolve(path))) {
+                long n = lines.count();
+                for (int i = 1; i <= n; i++) {
+                    all.add(i);
+                }
+            } catch (IOException | UncheckedIOException e) {
+                // unreadable: no lines
+            }
+            return all;
+        }
+        ProcessRunner.Result mb = git("merge-base", baseRef, "HEAD");
+        if (!mb.ok()) {
+            throw failed("merge-base " + baseRef + " HEAD", mb);
+        }
+        String base = mb.output().strip();
+        ProcessRunner.Result r = git("diff", "-U0", base, "--", path);
         if (!r.ok()) {
-            throw failed("diff -U0 " + baseRef + " -- " + path, r);
+            throw failed("diff -U0 " + base + " -- " + path, r);
         }
         return hunkLines(r.output());
     }

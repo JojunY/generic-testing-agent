@@ -30,6 +30,8 @@ if (-not (Test-Path $jar)) {
         $pair = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("$($env:GTA_NEXUS_USER):$($env:GTA_NEXUS_PASSWORD)"))
         $headers['Authorization'] = "Basic $pair"
     }
+    # Windows PowerShell 5.1 may offer only TLS 1.0/1.1, which a current Nexus refuses
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
     try {
         Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $tmp -Headers $headers
     } catch {

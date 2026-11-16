@@ -77,7 +77,10 @@ jobs:
         run: |
           set GTA_CLI_JAR=%CD%\toolkit\gta-cli\target\gta-cli.jar
           copy wrapper\gtaw.cmd evals\fixtures\order-service\gtaw.cmd
-          cd evals\fixtures\order-service && gtaw.cmd --version
+          cd evals\fixtures\order-service
+          call gtaw.cmd no-such-command
+          if not "%ERRORLEVEL%"=="20" exit /b 1
+          gtaw.cmd --version
       - name: gtaw.cmd reports an unconfigured wrapper as JSON with the config exit code
         shell: pwsh
         run: |

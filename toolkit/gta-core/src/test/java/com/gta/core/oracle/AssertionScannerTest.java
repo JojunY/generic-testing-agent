@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -183,6 +184,18 @@ class AssertionScannerTest {
                 java.util.List.of("5"),
                 AssertionScanner.missingThenLiterals(java.util.List.of("5"), java.util.Set.of("50")),
                 "short values must match exactly");
+    }
+
+    @Test
+    void shouldNotMatchANumberInsideAnotherNumber() {
+        for (String other : List.of("-100", "1000", "100.5", "2100")) {
+            assertEquals(
+                    List.of("100"),
+                    AssertionScanner.missingThenLiterals(List.of("100"), Set.of(other)),
+                    other + " does not assert 100");
+        }
+        assertEquals(List.of(), AssertionScanner.missingThenLiterals(List.of("100"), Set.of("{\"amount\":100}")));
+        assertEquals(List.of(), AssertionScanner.missingThenLiterals(List.of("100.00"), Set.of("total 100.00 EUR")));
     }
 
     @Test

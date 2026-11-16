@@ -279,6 +279,10 @@ public final class FeatureScanner {
                     fixtures(step, testResources, watched);
                 }
                 s.examples().forEach(cell -> tokens(cell, tokens));
+                if (!s.examples().isEmpty()) {
+                    // the Then steps of an outline hold <placeholders>: the examples carry the expected values
+                    statements.add("examples:" + String.join("|", s.examples()).replaceAll("\\s+", ""));
+                }
             }
         }
         if (scenarios > 0) {

@@ -81,6 +81,8 @@ public final class GtaCli implements Callable<Integer> {
     /** The command line with gtaw's error contract: every failure is one JSON error object and its exit code. */
     static CommandLine commandLine() {
         CommandLine cli = new CommandLine(new GtaCli());
+        // a person's words are verbatim: "@team" is not the contents of a file named team
+        cli.setExpandAtFiles(false);
         cli.setExecutionExceptionHandler((ex, cmd, parsed) -> {
             GtaException ge = ex instanceof GtaException g
                     ? g
@@ -198,7 +200,7 @@ public final class GtaCli implements Callable<Integer> {
         @CommandLine.ParentCommand
         GtaCli parent;
 
-        @Option(names = "--platform", required = true, description = "copilot | opencode")
+        @Option(names = "--platform", description = "copilot | opencode (default: the installed one)")
         String platform;
 
         @Option(names = "--distribution-url", description = "Nexus URL of gta-cli-<version>.jar for the wrapper")
@@ -397,9 +399,7 @@ public final class GtaCli implements Callable<Integer> {
 
         @Override
         public Integer call() throws IOException {
-            String text = file != null
-                    ? Files.readString(file, StandardCharsets.UTF_8)
-                    : words == null ? "" : String.join(" ", words);
+            String text = file != null ? Answer.replyFile(file) : words == null ? "" : String.join(" ", words);
             return print(parent, engine(parent).note(text));
         }
     }

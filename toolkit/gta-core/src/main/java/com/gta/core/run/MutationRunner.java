@@ -314,6 +314,8 @@ public final class MutationRunner {
                 "--outputFormats",
                 "XML",
                 "--timestampedReports=false",
+                // no mutant (an interface, constants) is a result, not a failed run: parse() reads a missing report
+                "--failWhenNoMutations=false",
                 "--threads",
                 "2");
         mustSucceed(pit, "run PIT");

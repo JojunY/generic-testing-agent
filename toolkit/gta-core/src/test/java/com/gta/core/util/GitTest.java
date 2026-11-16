@@ -224,4 +224,25 @@ class GitTest {
         org.junit.jupiter.api.Assertions.assertEquals(
                 java.util.Set.of(3, 11, 12), Git.hunkLines(diff), "a pure deletion adds no new line");
     }
+
+    @Test
+    void shouldCountOnlyTheLinesChangedSinceTheBranchLeftTheBase() throws Exception {
+        commitFile("A.java", "1\n2\n3\n4\n");
+        run("branch", "-q", "-M", "main");
+        run("checkout", "-q", "-b", "feature");
+        commitFile("A.java", "1\n2\n3\nfour\n");
+        run("checkout", "-q", "main");
+        commitFile("A.java", "one\n2\n3\n4\n");
+        run("checkout", "-q", "feature");
+
+        assertEquals(java.util.Set.of(4), git.changedLines("main", "A.java"), "line 1 changed on main only");
+    }
+
+    @Test
+    void shouldCountEveryLineOfAnUntrackedFileAsChanged() throws Exception {
+        commitFile("A.java", "a\n");
+        Files.writeString(root.resolve("New.java"), "x\ny\nz\n");
+
+        assertEquals(java.util.Set.of(1, 2, 3), git.changedLines("HEAD", "New.java"));
+    }
 }

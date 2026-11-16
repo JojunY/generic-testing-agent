@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /** Keeps the plan in step with the approved spec and adopts tests that already exist (plan §5.2). */
 final class PlanSync {
@@ -50,7 +52,12 @@ final class PlanSync {
         List<PlanItem> fresh = Planner.plan(spec, registry, profile);
         List<PlanItem> plan = store.loadPlan();
         Map<String, PlanItem> existing = new LinkedHashMap<>();
-        plan.stream().filter(i -> i.flowId.equals(spec.flowId())).forEach(i -> existing.put(i.id, i));
+        // the seed item is one per domain: a flow planned later shares the one an earlier flow of the domain planned
+        Set<String> seeds =
+                fresh.stream().filter(PlanItem::isFoundation).map(i -> i.id).collect(Collectors.toSet());
+        plan.stream()
+                .filter(i -> i.flowId.equals(spec.flowId()) || seeds.contains(i.id))
+                .forEach(i -> existing.put(i.id, i));
         List<PlanItem> result = new ArrayList<>();
         for (PlanItem f : fresh) {
             PlanItem old = existing.remove(f.id);
@@ -73,7 +80,7 @@ final class PlanSync {
             }
             dropPendingDecision(st, gone.id);
         }
-        plan.removeIf(i -> i.flowId.equals(spec.flowId()));
+        plan.removeIf(i -> i.flowId.equals(spec.flowId()) || seeds.contains(i.id));
         plan.addAll(result);
         store.savePlan(plan);
         // rebuild: tests that already exist for a fresh pending item are verified first
@@ -93,6 +100,7 @@ final class PlanSync {
             }
             if (s.status == ItemStatus.PENDING
                     && s.attempts == 0
+                    && s.intentOverride == null // a confirmed defect is pinned by the author, not adopted as it is
                     && Files.exists(test)
                     && shard.containsKey(i.id)
                     && i.scenarioRevision.equals(shard.get(i.id).scenarioRevision)) {

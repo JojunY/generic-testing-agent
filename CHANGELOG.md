@@ -32,6 +32,25 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- Review round 6:
+  - oracle lock and gate:
+    - `assertTrue(order.isPaid())` and `assertFalse(...)` are locked for a THEN of `true`/`false` (only `isTrue()` was);
+    - a number inside another number no longer satisfies a THEN value: `-100`, `1000` and `100.5` do not assert `100`;
+    - the examples of a Cucumber Scenario Outline are part of its locked statements, so changing an expected value in them changes the fingerprint;
+    - submit re-checks the locks of the passed items that share the test class (plan §5.3 "shared files"): weakening another scenario's locked assertion is `POLICY_ORACLE_MODIFIED`, not committed;
+  - engine:
+    - the seed item `<domain>#foundation-01` is shared by the flows of a domain: a second flow no longer resets it (a passed seed was re-run, a seed waiting for a person was written again without them) or adds a second plan entry;
+    - a confirmed defect of a committed test is pinned by the author instead of being adopted and re-run unpinned;
+  - runs and profiling:
+    - Gradle writes `<failure>` for every exception: a failure of an exception type (`NullPointerException` in setup) is an error, not `TEST_ASSERTION_FAILED`;
+    - `gtaw mutate --changed` counts the lines changed since the branch left the base (not lines only the base changed), all lines of a file not yet added to git, and reports no mutant instead of failing when PIT generates none (`--failWhenNoMutations=false`);
+    - a Gradle build whose root has only `settings.gradle(.kts)` can be profiled with `build.module`;
+  - CLI, agents and wrapper:
+    - gtaw no longer expands an argument starting with `@` into a file's contents (`./gtaw note '@team'`);
+    - `note --file` drops a UTF-8 BOM like `answer --file`;
+    - `gtaw init --ci` works without `--platform` on an installed service, as documented;
+    - the orchestrator and test author pass every free text (`--reason`, `--question`, `--recommend`, `answer`, `--target`) in single quotes, so the shell does not run a backtick in a reviewer's reason;
+    - `gtaw.cmd upgrade` no longer reads its next line from the rewritten `gtaw.cmd` (java and `exit /b` are one line); `gtaw-download.ps1` enables TLS 1.2 on Windows PowerShell 5.1.
 - Review round 5, follow-up:
   - the can-fail check and `gtaw mutate` count only mutants a test ran against: `NON_VIABLE`, `RUN_ERROR` and `NOT_STARTED` mutants no longer read as survivors, which made a good test look like one that passes whatever the code does;
   - an assertion of a test-class constant (`isEqualTo(MSG)`) is locked by the constant's value, so weakening it or changing the constant is reported (shards locked before report it once; relock them);

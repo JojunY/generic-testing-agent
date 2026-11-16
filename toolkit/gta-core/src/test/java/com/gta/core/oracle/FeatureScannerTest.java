@@ -106,6 +106,26 @@ class FeatureScannerTest {
     }
 
     @Test
+    void shouldLockTheExamplesOfAnOutline(@TempDir Path test) throws Exception {
+        Path resources = test.resolve("resources");
+        Files.createDirectories(resources);
+        Path feature = resources.resolve("book.feature");
+        Files.writeString(
+                feature, FEATURE.replace("| 3.47 |\n", "| 3.47 |\n                    | 20000    | 6.94 |\n"));
+        List<String> tokens = List.of("6.94");
+        String locked = OracleLock.fingerprint(OracleLock.lockedStatements(
+                FeatureScanner.scan(resources, "borrow.book/s03").assertionStatements(), tokens));
+
+        // the Then step reads "the fee is <fee>": the expected value lives in the examples
+        Files.writeString(
+                feature, FEATURE.replace("| 3.47 |\n", "| 3.47 |\n                    | 20000    | 9.99 |\n"));
+        String changed = OracleLock.fingerprint(OracleLock.lockedStatements(
+                FeatureScanner.scan(resources, "borrow.book/s03").assertionStatements(), tokens));
+
+        assertNotEquals(locked, changed);
+    }
+
+    @Test
     void shouldFindAScenarioNoTestMethodCarriesInTheFeatures(@TempDir Path test) throws Exception {
         Path resources = test.resolve("resources");
         Files.createDirectories(resources.resolve("features"));

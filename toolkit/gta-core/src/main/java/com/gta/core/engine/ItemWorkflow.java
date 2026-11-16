@@ -526,6 +526,27 @@ final class ItemWorkflow {
                         "Locked expected values were changed or removed: " + lockCheck.missingTokens()
                                 + ". Restore them; only a human can relock.");
             }
+            // scenarios of a flow and layer share a test class: submit re-checks the locks of its passed items
+            for (PlanItem other : store.loadPlan()) {
+                WorkState.ItemState os = st.items.get(other.id);
+                if (other.id.equals(item.id)
+                        || os == null
+                        || os.status != ItemStatus.PASSED
+                        || !Objects.equals(other.testClass, item.testClass)
+                        || !Objects.equals(other.feature, item.feature)) {
+                    continue;
+                }
+                OracleLock.Check otherCheck = OracleLock.check(os.lock, ctx.runs.scanOracle(other));
+                if (otherCheck.verdict() == OracleLock.Verdict.MODIFIED) {
+                    return fail(
+                            st,
+                            item,
+                            s,
+                            ErrorCode.POLICY_ORACLE_MODIFIED,
+                            "Locked expected values of " + other.ref + " (passed) were changed or removed: "
+                                    + otherCheck.missingTokens() + ". Restore them; only a human can relock.");
+                }
+            }
             OracleLock.extend(s.lock, oracle, item.oracle.then);
             s.structuralOracleChange = lockCheck.verdict() == OracleLock.Verdict.STRUCTURAL_CHANGE;
             if (s.lock != null

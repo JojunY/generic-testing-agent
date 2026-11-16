@@ -137,6 +137,21 @@ class PomInfoTest {
     }
 
     @Test
+    void shouldReadAGradleModuleWhenTheRootHasOnlySettings() throws Exception {
+        // the layout of gradle init: no build script at the root
+        Files.writeString(root.resolve("settings.gradle.kts"), "rootProject.name = \"lending\"\ninclude(\"app\")\n");
+        Files.createDirectories(root.resolve("app"));
+        Files.writeString(root.resolve("app/build.gradle.kts"), """
+                plugins { id("org.springframework.boot") version "3.4.1" }
+                """);
+
+        PomInfo app = PomInfo.read(root, "app");
+
+        assertEquals("gradle", app.tool);
+        assertEquals(3, app.bootMajor());
+    }
+
+    @Test
     void shouldReadMultiLineIncludesAndIgnoreIncludedBuilds() throws Exception {
         Files.writeString(root.resolve("settings.gradle.kts"), """
                 pluginManagement { includeBuild("build-logic") }
