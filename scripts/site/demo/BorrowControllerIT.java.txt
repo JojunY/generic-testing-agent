@@ -1,0 +1,88 @@
+package com.example.lending.borrow;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.github.tomakehurst.wiremock.http.Fault;
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import com.gta.junit.KnownDefect;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.assertj.MockMvcTester;
+import org.springframework.test.web.servlet.assertj.MvcTestResult;
+
+@Tag("component")
+@Tag("gta")
+@SpringBootTest
+@AutoConfigureMockMvc
+@Import(TestChannelBinderConfiguration.class)
+class BorrowControllerIT {
+
+    @RegisterExtension
+    static WireMockExtension inventory = WireMockExtension.newInstance()
+            .options(wireMockConfig().dynamicPort().http2PlainDisabled(true))
+            .build();
+
+    @DynamicPropertySource
+    static void inventoryUrl(DynamicPropertyRegistry registry) {
+        registry.add("inventory.url", inventory::baseUrl);
+    }
+
+    @Autowired
+    MockMvcTester mvc;
+
+    @Autowired
+    CircuitBreakerRegistry breakers;
+
+    @BeforeEach
+    void closeTheBreaker() {
+        breakers.circuitBreaker("inventory").reset();
+    }
+
+    @Test
+    @Tag("flow:borrow.book")
+    @Tag("scenario:borrow.book/s01")
+    @Tag("characterization")
+    @DisplayName("[borrow.book/s01] a borrow of no shares is refused")
+    void shouldRefuseABorrowOfNoShares() {
+        MvcTestResult response = book("c-1", "ACME", 0);
+
+        assertThat(response).hasStatus(400);
+    }
+
+    @Test
+    @Tag("flow:borrow.book")
+    @Tag("scenario:borrow.book/s02")
+    @Tag("hardening")
+    @DisplayName("[borrow.book/s02] inventory-service cannot be reached")
+    void shouldKeepTheBorrowPendingWhenInventoryCannotBeReached() {
+        inventory.stubFor(post("/reservations").willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)));
+
+        MvcTestResult response = book("c-1", "ACME", 10000);
+
+        assertThat(response).hasStatus(503);
+        assertThat(response).bodyJson().extractingPath("$.status").isEqualTo("PENDING_LOCATE");
+    }
+
+    private MvcTestResult book(String clientId, String security, long quantity) {
+        return mvc.post()
+                .uri("/api/borrows")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"clientId\":\"%s\",\"security\":\"%s\",\"quantity\":%d}".formatted(clientId, security, quantity))
+                .exchange();
+    }
+}

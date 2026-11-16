@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gta · AI writes the tests. It doesn't get to grade them.</title>
+<meta name="description" content="gta is a testing harness for Java services built with Spring. A model writes the tests; gtaw, a deterministic referee, decides whether they count; a person signs the expectations.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%2315181d'/%3E%3Crect y='15.5' width='32' height='1' fill='%23000'/%3E%3Ctext x='16' y='23' font-family='Arial Narrow,Arial' font-weight='700' font-size='20' text-anchor='middle' fill='%23ece6d8'%3EG%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/css/site.css">
+<noscript><style>.board-table{position:static;width:100%;height:auto;clip:auto;overflow:visible}.hall-board,.hall-desk,.needs-js{display:none}.reveal{opacity:1;transform:none}</style></noscript>
+</head>
+<body>
+<a class="skip" href="#problem">Skip to the content</a>
+
+<header class="top" id="top">
+  <a class="brand" href="#board" aria-label="gta, top of the page"><span>G</span><span>T</span><span>A</span></a>
+  <nav class="nav" aria-label="Sections">
+    <a href="#problem">Problem</a>
+    <a href="#roles">Roles</a>
+    <a href="#loop">Replay</a>
+    <a href="#covers">Covers</a>
+    <a href="#safety">Limits</a>
+    <a href="#start">Start</a>
+  </nav>
+  <div class="tools">
+    <a class="tool" href="index.zh-CN.html" lang="zh-CN" hreflang="zh-CN">中文</a>
+    <button class="tool needs-js" id="sound-key" type="button" aria-pressed="false" title="Sound (M)">Sound off</button>
+    <button class="tool needs-js" id="stage-key" type="button" aria-pressed="false" title="Stage mode (P)">Stage</button>
+  </div>
+</header>
+
+<main>
+
+<section class="hero" id="board" data-scene>
+  <div class="wrap">
+    <div class="hero-head">
+      <div>
+      <p class="eyebrow">gta · generic testing agent · for Java services built with Spring</p>
+      <h1>AI writes the tests.<br><em>It doesn’t get to grade them.</em></h1>
+      </div>
+      <p class="lede">A model writes regression and integration tests for your service. <b>gtaw</b>, a deterministic referee with no model inside, runs them, checks them against expectations a person approved, and locks those. Nothing on this board turns green before gtaw has the evidence.</p>
+    </div>
+
+    <div class="hall" id="hall">
+      <div class="hall-top"><span>Verdicts</span><span>Referee: gtaw · no model inside</span></div>
+      <div class="hall-board">
+        <canvas id="main-board" role="img" aria-label="Split-flap board of test scenarios and their verdicts. The same rows are in the table that follows."></canvas>
+        <div class="macro" id="macro" aria-hidden="true"><canvas id="macro-board"></canvas></div>
+      </div>
+      <table class="board-table" id="board-data">
+        <caption>Scenarios of the sample services and the verdict gtaw gave each</caption>
+        <thead><tr><th>Scenario</th><th>Kind</th><th>Locked expected values</th><th>Verdict</th></tr></thead>
+        <tbody>
+          <tr data-end="passed"><td>borrow.book/s01</td><td>REST</td><td>400</td><td>Passed</td></tr>
+          <tr data-end="pinned"><td>borrow.book/s02</td><td>REST</td><td>503 PENDING_LOCATE</td><td>Defect pinned</td></tr>
+          <tr data-end="pinned"><td>recall.recall/s02</td><td>Stream</td><td>1000 b-1</td><td>Defect pinned</td></tr>
+          <tr data-end="passed"><td>fee-accrual.flow/s01</td><td>Integration</td><td>0</td><td>Passed</td></tr>
+          <tr data-end="pinned"><td>quote.request/s02</td><td>STOMP</td><td>45.00</td><td>Defect pinned</td></tr>
+          <tr data-end="passed"><td>product.reserve/s01</td><td>WebFlux</td><td>200 3</td><td>Passed</td></tr>
+          <tr data-end="pinned"><td>stock.get/s02</td><td>gRPC</td><td>false</td><td>Defect pinned</td></tr>
+          <tr data-end="passed"><td>low-stock.transform/s01</td><td>Beam</td><td>Kettle</td><td>Passed</td></tr>
+          <tr data-end="pinned"><td>db.customer-tier/s02</td><td>Migration</td><td>GOLD</td><td>Defect pinned</td></tr>
+          <tr data-end="passed"><td>invoice.quote/s01</td><td>REST</td><td>200 40.00</td><td>Passed</td></tr>
+          <tr data-end="pinned"><td>admin.purge-cancelled/s02</td><td>Security</td><td>403</td><td>Defect pinned</td></tr>
+          <tr data-end="passed"><td>restock.restock/s01</td><td>Workflow</td><td>restocked</td><td>Passed</td></tr>
+        </tbody>
+      </table>
+      <div class="hall-desk">
+        <div class="desk-item">
+          <button class="key key-ok" id="ok-key" type="button" disabled>OK <kbd>⏎</kbd></button>
+          <p class="desk-note" id="ok-note" aria-live="polite">Nothing waits for you yet.</p>
+        </div>
+        <div class="desk-item desk-force">
+          <button class="key key-force" id="force-key" type="button">Force green</button>
+          <p class="desk-note" id="force-note" aria-live="polite"><span id="force-text">Go on, try.</span> <span class="counter">Tried <b id="tried">0</b> · succeeded <b>0</b></span></p>
+        </div>
+      </div>
+    </div>
+    <p class="caption">Rows are real scenarios, and the final verdicts are the ones gtaw gave them in the scripted end-to-end runs on the four sample services of this repository. The steps in between are animated for illustration.</p>
+  </div>
+</section>
+
+<section id="problem" data-scene>
+  <div class="wrap">
+    <p class="eyebrow">01 · The problem</p>
+    <h2>Green is not proof.</h2>
+    <p class="lede">A model that writes a test and also decides whether the test is right will bend the test until it is green. One method of the lending sample is enough to show it. When the inventory service does not answer, the fallback says the shares are reserved:</p>
+<pre class="code reveal"><span class="c-dim">// InventoryClient.java</span>
+Reservation inventoryDown(String security, long quantity, Throwable cause) {
+    return new Reservation(<mark>true</mark>);
+}</pre>
+    <div class="versus">
+      <article class="lane lane-self reveal">
+        <p class="lane-label">The model grades itself</p>
+        <h3>It asserts what the code does.</h3>
+        <p>It reads the method, writes a test that expects a booked borrow, runs it and reports success.</p>
+        <pre class="code small">assertThat(response).hasStatus(201);</pre>
+        <div class="mini-wrap"><canvas class="mini" data-mini="self" role="img" aria-label="Board row: borrow.book/s02, expected 201 BOOKED, verdict PASSED, drawn as an outline because nobody verified it."></canvas></div>
+        <p class="lane-end">Green. The defect now has a test that protects it.</p>
+        <p class="tag">Illustration of a self-graded test for this method.</p>
+      </article>
+      <article class="lane lane-gta reveal">
+        <p class="lane-label">gta</p>
+        <h3>It asserts what a person signed.</h3>
+        <p>The analyst sees that <code>docs/business-rules.md</code> disagrees with the code and asks. A person replies <code>OK</code> to the recommended answer. gtaw runs the test, gets <code>expected: 503 but was: 201</code>, re-runs it, has it triaged and asks the person once more.</p>
+        <pre class="code small">assertThat(response).hasStatus(503);</pre>
+        <div class="mini-wrap"><canvas class="mini" data-mini="gta" role="img" aria-label="Board row: borrow.book/s02, locked 503 PENDING_LOCATE, verdict DEFECT PINNED."></canvas></div>
+        <p class="lane-end">The build stays green. The defect stays visible.</p>
+        <p class="tag">Recorded. You can replay this run below.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="roles" data-scene>
+  <div class="wrap">
+    <p class="eyebrow">02 · The one idea</p>
+    <h2>Three hands. One job each.</h2>
+    <p class="lede">Banks call it maker and checker: whoever makes an entry is never the one who approves it. gta applies it to tests.</p>
+    <div class="plates">
+      <article class="plate reveal">
+        <p class="plate-who">The agents</p>
+        <p class="plate-verb">Write</p>
+        <p class="plate-sub">analyst · test author · reviewer</p>
+        <ul class="does">
+          <li>read the code</li>
+          <li>write the spec, with questions and a recommended answer</li>
+          <li>write one test per brief</li>
+          <li>give a verdict on a test or a failure</li>
+        </ul>
+        <p class="never-label">Never</p>
+        <ul class="never">
+          <li>decide that a test passed</li>
+          <li>change state or commit</li>
+          <li>touch production code</li>
+        </ul>
+      </article>
+      <article class="plate plate-ref reveal">
+        <p class="plate-who">gtaw</p>
+        <p class="plate-verb">Decides</p>
+        <p class="plate-sub">a Java CLI · no model inside</p>
+        <ul class="does">
+          <li>plans the items from the approved spec</li>
+          <li>runs the tests</li>
+          <li>checks that the spec’s expected values are asserted, and locks them</li>
+          <li>restores edits outside an item’s files</li>
+          <li>commits, and runs the gate</li>
+        </ul>
+        <p class="never-label">Never</p>
+        <ul class="never">
+          <li>guesses: what it cannot decide goes to a person</li>
+        </ul>
+      </article>
+      <article class="plate plate-you reveal">
+        <p class="plate-who">You</p>
+        <p class="plate-verb">Sign</p>
+        <p class="plate-sub">developer · product owner</p>
+        <ul class="does">
+          <li>answer the questions, usually with <code>OK</code></li>
+          <li>approve the spec</li>
+          <li>confirm a defect</li>
+        </ul>
+        <p class="never-label">Never have to</p>
+        <ul class="never">
+          <li>read every test: the spec is what you sign</li>
+        </ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="loop" data-scene>
+  <div class="wrap">
+    <p class="eyebrow">03 · Replay</p>
+    <h2>Your part is five replies.</h2>
+    <p class="lede">This is a recording of a real gtaw run on the lending sample: the flow <code>borrow.book</code>, from <code>/gta</code> to a pinned defect. A script plays the agents; every line gtaw prints is real. Take the person’s seat.</p>
+    <div class="loop needs-js">
+      <div class="console" id="console">
+        <div class="console-bar"><span>chat · lending-service</span><span class="pen" id="pen"></span></div>
+        <div class="console-log" id="log" tabindex="0" role="log" aria-label="The recorded conversation"></div>
+        <form class="console-in" id="reply-form" autocomplete="off">
+          <span class="prompt" aria-hidden="true">›</span>
+          <input id="reply" type="text" spellcheck="false" autocapitalize="off" aria-label="Your reply">
+          <button class="key key-ok" id="reply-key" type="submit">/gta <kbd>⏎</kbd></button>
+        </form>
+        <p class="console-hint" id="reply-hint" aria-live="polite"></p>
+      </div>
+      <aside class="rail" aria-label="State of the two scenarios">
+        <div class="rail-board"><canvas id="loop-board" role="img" aria-label="Board of the two scenarios of borrow.book; it follows the conversation."></canvas></div>
+        <div class="tickets" id="tickets">
+          <p class="slot" id="ticket-slot">A ticket prints when gtaw locks a scenario’s expected values.</p>
+        </div>
+      </aside>
+    </div>
+    <div class="evidence needs-js" id="evidence" hidden>
+      <p class="evidence-title">What the run left in the repository</p>
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div class="tab-body" id="tab-body" role="tabpanel" tabindex="0"></div>
+    </div>
+    <p class="caption" id="run-meta"></p>
+    <noscript><p class="caption">The replay needs JavaScript. The recording itself is in <code>assets/js/run-data.js</code>.</p></noscript>
+  </div>
+</section>
+
+<section id="covers" data-scene>
+  <div class="wrap">
+    <p class="eyebrow">04 · What it covers</p>
+    <h2>Every kind of flow a Spring service has.</h2>
+    <p class="lede">“Generic” means every kind of entry point of a Java service built with Spring, not every stack. Each row is a flow of a sample service in this repository, with the values gtaw locked on the scenario that exposed its seeded defect.</p>
+    <div class="timetable-wrap reveal">
+      <table class="timetable">
+        <thead><tr><th>Kind of flow</th><th>Flow</th><th>Sample</th><th>Locked</th></tr></thead>
+        <tbody>
+          <tr><td>REST endpoint</td><td>borrow.book</td><td>lending</td><td>503 · PENDING_LOCATE</td></tr>
+          <tr><td>WebFlux endpoint</td><td>product.reserve</td><td>catalog</td><td>409</td></tr>
+          <tr><td>GraphQL query</td><td>product-graphql.products-up-to</td><td>catalog</td><td>Kettle · Toaster</td></tr>
+          <tr><td>gRPC service</td><td>stock.get</td><td>catalog</td><td>false</td></tr>
+          <tr><td>Message listener</td><td>loyalty.on-order-created</td><td>order</td><td>c-8 · 2</td></tr>
+          <tr><td>Cloud Stream function</td><td>recall.recall</td><td>lending</td><td>1000 · b-1</td></tr>
+          <tr><td>Spring Integration flow</td><td>fee-accrual.flow</td><td>lending</td><td>b-1 · 3.47</td></tr>
+          <tr><td>Scheduled job</td><td>shipping.ship-paid-orders</td><td>order</td><td>CREATED</td></tr>
+          <tr><td>Spring Batch job</td><td>archive-job.archive-orders</td><td>order</td><td>false</td></tr>
+          <tr><td>Database migration</td><td>db.customer-tier</td><td>order</td><td>GOLD</td></tr>
+          <tr><td>WebSocket, STOMP</td><td>quote.request</td><td>order</td><td>45.00</td></tr>
+          <tr><td>Server-sent events</td><td>quote-stream.ladder</td><td>order</td><td>4 · 20</td></tr>
+          <tr><td>Workflow</td><td>restock.restock</td><td>catalog</td><td>po-1</td></tr>
+          <tr><td>Beam pipeline</td><td>low-stock.transform</td><td>catalog</td><td>Kettle · Mixer</td></tr>
+          <tr><td>REST, Gradle build</td><td>invoice.quote</td><td>invoice</td><td>200 · 90.00</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="also reveal">
+      <p class="also-label">Also understood, across flows</p>
+      <ul class="chips">
+        <li>Spring Security</li><li>caches</li><li>Resilience4j and Spring Retry</li><li>Secret Manager, faked and never read</li><li>Cloud Run functions</li><li>an existing Cucumber suite</li><li>your own tests, not repeated</li><li>multi-module Maven</li><li>Gradle</li><li>Spring Boot 2.2 to 4.x</li>
+      </ul>
+      <p class="also-not"><b>Not covered:</b> other languages and frameworks, and tests against deployed environments. What is planned, in order, is in <a href="../design/plan.md">the plan, §15</a>.</p>
+    </div>
+  </div>
+</section>
+
+<section id="safety" data-scene>
+  <div class="wrap">
+    <p class="eyebrow">05 · Limits</p>
+    <h2>Where it does not go.</h2>
+    <div class="safety">
+      <div class="safety-board reveal"><canvas id="safety-board" role="img" aria-label="Board: SIT, UAT and PROD, each with NO SERVICE."></canvas></div>
+      <ul class="safety-list reveal">
+        <li><b>No deployed environment.</b> Tests run on a developer machine or in CI, against embedded or faked dependencies. There is no mode that targets SIT, UAT or production.</li>
+        <li><b>No borrowed identity.</b> gtaw starts every test run with cloud credentials cut off and with your Spring profile removed: a shell set to UAT cannot make a test load UAT’s configuration.</li>
+        <li><b>No production code.</b> An edit outside the files of an item is restored. A defect is pinned and reported, never patched.</li>
+      </ul>
+    </div>
+    <div class="standing reveal">
+      <p class="standing-title">Where this stands</p>
+      <div class="standing-grid">
+        <div>
+          <p class="standing-label st-green">Proven</p>
+          <p>The referee. gtaw has unit tests with a 90&nbsp;% line coverage gate and six scripted end-to-end runs, in which a script plays the agents. The 21 seeded defects of the four sample services are found and pinned.</p>
+        </div>
+        <div>
+          <p class="standing-label st-amber">Not proven yet</p>
+          <p>The players. No run with a real model on a real service is recorded in this repository. Treat every capability as unproven with models until its pilot is done.</p>
+        </div>
+        <div>
+          <p class="standing-label">Next</p>
+          <p>A pilot on one real service, with a checklist of what to record and what decides the outcome: <a href="../guides/pilot.md">the pilot guide</a>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="start" data-scene>
+  <div class="wrap">
+    <p class="eyebrow">06 · Start</p>
+    <h2>One script, then <code>/gta</code>.</h2>
+    <p class="lede">The script builds gta once, installs it into your service with the wrapper pinned to that jar, and runs <code>./gtaw doctor</code>. Then open the service in VS Code, IntelliJ or OpenCode.</p>
+    <ol class="steps reveal">
+      <li><span class="step-n">1</span><div><p class="step-label">In a checkout of this repository</p><pre class="code cmd" data-copy>scripts/install-local.sh path/to/your-service</pre></div></li>
+      <li><span class="step-n">2</span><div><p class="step-label">In GitHub Copilot or OpenCode, inside your service</p><pre class="code cmd" data-copy>/gta</pre></div></li>
+      <li><span class="step-n">3</span><div><p class="step-label">When gta asks</p><pre class="code cmd">OK</pre></div></li>
+    </ol>
+    <ul class="reads reveal">
+      <li><a href="../design/overview.md"><b>gta in ten minutes</b><span>the design, its limits, what is specific to the first adopter</span></a></li>
+      <li><a href="../guides/quickstart.md"><b>Quickstart</b><span>install it for a team, with CI</span></a></li>
+      <li><a href="../guides/pilot.md"><b>Pilot guide</b><span>the first run with a real model</span></a></li>
+      <li><a href="../../README.md"><b>README</b><span>everything else</span></a></li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>gta · generic testing agent. This page makes no external request and sets no cookie. Fonts: Barlow, Barlow Condensed and JetBrains Mono, under the SIL Open Font License 1.1.</p>
+    <p class="needs-js">Keys: <kbd>P</kbd> stage mode · <kbd>←</kbd> <kbd>→</kbd> step · <kbd>M</kbd> sound · <kbd>F</kbd> full screen · <kbd>?</kbd> help</p>
+  </div>
+</footer>
+
+<div class="stage-hud needs-js" id="stage-hud" hidden>Stage · <kbd>→</kbd> next · <kbd>←</kbd> back · <kbd>M</kbd> sound · <kbd>F</kbd> full screen · <kbd>P</kbd> leave</div>
+<div class="help needs-js" id="help" hidden role="dialog" aria-modal="true" aria-labelledby="help-title">
+  <div class="help-card">
+    <p class="help-title" id="help-title">Keys</p>
+    <dl>
+      <dt><kbd>P</kbd></dt><dd>Stage mode: larger type, one step per key press</dd>
+      <dt><kbd>→</kbd> <kbd>Space</kbd></dt><dd>Next step: reply OK where the page waits, otherwise the next section</dd>
+      <dt><kbd>←</kbd></dt><dd>Previous section</dd>
+      <dt><kbd>M</kbd></dt><dd>Sound of the flaps</dd>
+      <dt><kbd>F</kbd></dt><dd>Full screen</dd>
+      <dt><kbd>Esc</kbd></dt><dd>Close</dd>
+    </dl>
+    <button class="key" id="help-close" type="button">Close</button>
+  </div>
+</div>
+
+<script type="application/json" id="i18n">{
+  "soundOn": "Sound on",
+  "soundOff": "Sound off",
+  "stage": "Stage",
+  "stageOn": "Leave stage",
+  "colScenario": "SCENARIO",
+  "colKind": "KIND",
+  "colLocked": "LOCKED",
+  "colVerdict": "VERDICT",
+  "colWho": "WITH",
+  "colExpected": "EXPECTED",
+  "colEnv": "ENVIRONMENT",
+  "colService": "GTA TESTS",
+  "okNone": "Nothing waits for you yet.",
+  "okOne": "1 row waits for you: a test failed against an approved expectation, and only a person can call that a defect.",
+  "okMany": "{n} rows wait for you: tests failed against approved expectations, and only a person can call that a defect.",
+  "okDone": "Every row has its verdict: {p} passed with evidence, {d} defects are pinned, and the build is green.",
+  "forceRefused": "Refused. No run, no lock, no review: gtaw has nothing that says so.",
+  "forceRefused2": "Refused again. The board shows what gtaw can prove, nothing else.",
+  "forceRefused3": "Still no. The only way to green is a test that passes against what a person approved.",
+  "tried": "Tried",
+  "succeeded": "succeeded",
+  "again": "Run the board again",
+  "penYou": "waiting for you",
+  "penAi": "an agent is working",
+  "penGtaw": "gtaw is deciding",
+  "penDone": "done for now",
+  "replyHintWrong": "This is a recording: the reply that was given here is {reply}.",
+  "replyHintWork": "gta is working. It asks when it needs you.",
+  "replyDone": "The run is over: one scenario passed, one defect found and pinned. Your part was a flow number and three times OK.",
+  "replayAgain": "Replay",
+  "actorYou": "you",
+  "actorAnalyst": "analyst",
+  "actorAuthor": "test author",
+  "actorReviewer": "reviewer",
+  "actorGtaw": "gtaw",
+  "didWriteSpec": "writes the spec {file}",
+  "didApplyAnswer": "rewrites the THEN of s02 from your answer",
+  "didWriteSeed": "writes the seed test: the application starts with faked dependencies",
+  "didWriteTest": "writes {file}",
+  "didAccept": "{text}",
+  "didVerdict": "{text}",
+  "didPin": "adds {text} to the test",
+  "dispatch": "hands a brief to {agent}",
+  "statusLine": "status: {items}",
+  "ticketWhen": "WHEN",
+  "ticketThen": "THEN · locked",
+  "ticketEdit": "Try to change an expected value.",
+  "ticketPassed": "PASSED",
+  "ticketPinned": "DEFECT PINNED",
+  "ticketRefused": "POLICY_ORACLE_MODIFIED · Locked expected values were changed or removed: [{tokens}]. Restore them; only a human can relock.",
+  "ticketRefusedNote": "The text above is gtaw’s own. Restored.",
+  "tabSpec": "Spec R1 → R2",
+  "tabTest": "The test",
+  "tabLock": "The lock",
+  "tabCommits": "Commits",
+  "tabReport": "Report",
+  "tabSpecNote": "From the first draft to the approved spec. Your first OK rewrote the THEN of s02; gtaw recorded the answer, the approval and the hashes of what you approved.",
+  "tabTestNote": "Written by the test author. The highlighted line is the pin: outside gta the test is skipped, so the build stays green.",
+  "tabLockNote": "The oracle lock gtaw committed next to the spec. A test that drops one of these values is refused.",
+  "tabCommitsNote": "Every commit of the branch was made by gtaw, one per decision.",
+  "tabReportNote": "The session report, with the words of each human confirmation.",
+  "runMeta": "Recorded {recorded} with gta {gta} at commit {commit} on {service}. How: scripts/site/record-demo.sh.",
+  "copy": "Copy",
+  "copied": "Copied",
+  "noService": "NO SERVICE"
+}</script>
+<script defer src="assets/js/run-data.js"></script>
+<script defer src="assets/js/flap.js"></script>
+<script defer src="assets/js/sound.js"></script>
+<script defer src="assets/js/site.js"></script>
+</body>
+</html>
