@@ -121,6 +121,28 @@ class GradleRunnerTest {
     }
 
     @Test
+    void shouldReadAGradleFailureThatIsNoAssertionAsAnError() {
+        GradleRunner runner = new GradleRunner(paths, config);
+        TestOutcome setupCrash = new TestOutcome();
+        setupCrash.outcome = "failed";
+        setupCrash.failureType = "java.lang.IllegalStateException";
+        TestOutcome assertion = new TestOutcome();
+        assertion.outcome = "failed";
+        assertion.failureType = "org.opentest4j.AssertionFailedError";
+        TestOutcome verification = new TestOutcome();
+        verification.outcome = "failed";
+        verification.failureType = "org.mockito.exceptions.verification.WantedButNotInvoked";
+
+        runner.normalizeOutcome(setupCrash);
+        runner.normalizeOutcome(assertion);
+        runner.normalizeOutcome(verification);
+
+        assertEquals("error", setupCrash.outcome, "Gradle writes <failure> for every exception");
+        assertEquals("failed", assertion.outcome);
+        assertEquals("failed", verification.outcome, "a Mockito verification failure is an assertion");
+    }
+
+    @Test
     void shouldRunTheTestTaskOfTheServiceSubproject() {
         assertEquals("test", GradleRunner.testTask(null));
         assertEquals("test", GradleRunner.testTask(""));

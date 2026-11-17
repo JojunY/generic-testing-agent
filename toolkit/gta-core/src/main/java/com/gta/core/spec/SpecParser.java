@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -68,7 +69,7 @@ public final class SpecParser {
                 continue;
             }
             if (trimmed.startsWith("## ")) {
-                section = trimmed.substring(3).trim().toLowerCase();
+                section = trimmed.substring(3).trim().toLowerCase(Locale.ROOT);
                 spec.sections.add(section);
                 req = null;
                 scenario = null;

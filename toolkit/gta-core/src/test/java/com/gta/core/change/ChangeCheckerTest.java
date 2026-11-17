@@ -42,6 +42,21 @@ class ChangeCheckerTest {
     }
 
     @Test
+    void shouldReportCommitsDroppedByMovingHeadBack() throws Exception {
+        Files.writeString(root.resolve("src/main/java/App.java"), "class App { int fixed; }\n");
+        git("commit", "-qam", "fix");
+        Baseline baseline = checker.capture();
+        git("reset", "-q", "--hard", "HEAD~1"); // the work tree is clean again, the fix is gone
+
+        ChangeChecker.Result r = checker.check(baseline, List.of("src/test/java/**"), root.resolve("backup"), true);
+
+        assertFalse(r.ok(), "a reset that drops a commit is a change, not a clean tree");
+        assertEquals(List.of("src/main/java/App.java"), r.outOfScope());
+        assertEquals(List.of("src/main/java/App.java"), r.unrestorable());
+        assertEquals(1, r.foreignCommits().size());
+    }
+
+    @Test
     void shouldRevertChangesOutsideTheOwnedFiles() throws Exception {
         Baseline baseline = checker.capture();
         Files.writeString(root.resolve("src/test/java/AppIT.java"), "class AppIT {}\n");

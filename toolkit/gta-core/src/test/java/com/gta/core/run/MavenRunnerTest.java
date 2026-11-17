@@ -123,6 +123,28 @@ class MavenRunnerTest {
     }
 
     @Test
+    void shouldDropJavaToolOptionsThatHoldOnlyASpringProfile() {
+        assertEquals(null, MavenRunner.javaToolOptions("-Dspring.profiles.active=uat", List.of()));
+        assertEquals(
+                "-Dhttps.proxyHost=p -Duser.timezone=UTC",
+                MavenRunner.javaToolOptions(
+                        "-Dspring.profiles.active=uat -Dhttps.proxyHost=p", List.of("-Duser.timezone=UTC")));
+        assertEquals(null, MavenRunner.javaToolOptions(null, List.of()));
+    }
+
+    @Test
+    void shouldNotLetSurefireRerunAFailingTest() throws Exception {
+        script("exit 0\n");
+
+        new MavenRunner(paths, config)
+                .run("r5", null, new TestRunner.Options("X", null, false, false), Set.of(), Set.of());
+
+        assertTrue(
+                Files.readString(root.resolve("args.txt")).contains("-Dsurefire.rerunFailingTestsCount=0"),
+                "a rerun would turn a flaky failure into a pass");
+    }
+
+    @Test
     void shouldPreferTheMavenWrapper() throws Exception {
         assumeFalse(ProcessRunner.isWindows());
         assertEquals(List.of("mvn"), new MavenRunner(paths, config).mavenCommand());

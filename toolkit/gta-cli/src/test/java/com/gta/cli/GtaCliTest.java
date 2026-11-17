@@ -3,6 +3,8 @@ package com.gta.cli;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.gta.core.error.ErrorCode;
+import com.gta.core.run.RunResult;
 import com.gta.core.util.ProcessRunner;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -81,8 +83,25 @@ class GtaCliTest {
         assertTrue(
                 badOption.out().contains("./gtaw status --help"),
                 "the failing command, not --root: " + badOption.out());
-        assertEquals(20, unavailable.exit(), "a later phase");
+        assertEquals(20, unavailable.exit(), "deployed environments are out of scope");
         assertEquals(20, noIds.exit(), "deleting tests needs explicit ids or --all");
+    }
+
+    @Test
+    void shouldExitWithZeroOnlyWhenTheRunFinishedAndEveryTestPassed() {
+        RunResult passed = new RunResult();
+        RunResult compileError = new RunResult();
+        compileError.compileError = true;
+        compileError.exitCode = 1;
+        RunResult timedOut = new RunResult();
+        timedOut.timedOut = true;
+        RunResult brokenBuild = new RunResult(); // e.g. a dependency that cannot be resolved: no report at all
+        brokenBuild.exitCode = 1;
+
+        assertEquals(0, GtaCli.Run.runExitCode(passed));
+        assertEquals(ErrorCode.BUILD_COMPILE_ERROR.exitCode(), GtaCli.Run.runExitCode(compileError));
+        assertEquals(ErrorCode.TEST_TIMEOUT.exitCode(), GtaCli.Run.runExitCode(timedOut));
+        assertEquals(ErrorCode.ENV_TEST_REPORTS_UNUSABLE.exitCode(), GtaCli.Run.runExitCode(brokenBuild));
     }
 
     @Test

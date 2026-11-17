@@ -37,7 +37,13 @@ if (-not (Test-Path $jar)) {
         Write-Output '{"error":{"code":"ENV_TOOL_UNAVAILABLE","category":"environment","message":"cannot download the gta-cli jar from distributionUrl","hint":"check distributionUrl in .gta/wrapper/gta-wrapper.properties, the network and GTA_NEXUS_USER/GTA_NEXUS_PASSWORD","retryable":true}}'
         exit 0
     }
-    Move-Item -Force $tmp $jar
+    try {
+        Move-Item -Force $tmp $jar
+    } catch {
+        # a parallel first run moved its copy first and Windows locks the jar it runs: use that one (verified below)
+        Remove-Item -Force -ErrorAction SilentlyContinue $tmp
+        if (-not (Test-Path $jar)) { throw }
+    }
 }
 $actual = (Get-FileHash -Algorithm SHA256 $jar).Hash.ToLower()
 if ($actual -ne $sha.ToLower()) {

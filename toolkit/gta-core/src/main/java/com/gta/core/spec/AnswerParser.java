@@ -3,6 +3,7 @@ package com.gta.core.spec;
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -45,13 +46,15 @@ public final class AnswerParser {
     private static final Pattern PLAIN_OK =
             Pattern.compile("^\\s*(?:ok|okay|好的|好|确认|確認|同意)[\\s,，;；。.!！]*$", Pattern.CASE_INSENSITIVE);
     /**
-     * "2: retry twice" at the start of a line or after a comma ("OK, 2: retry twice"), running to the end of the line;
+     * "2: retry twice" at the start of a line, after a comma ("OK, 2: retry twice") or after a leading OK ("OK 2: retry
+     * twice"), running to the end of the line;
      * "2: B" (a letter alone, or followed by another pick or "rest default", as in "1: A 2: B") is a pick, not an own
      * answer.
      */
-    private static final Pattern OWN_ANSWER = Pattern.compile("(?m)(?:^|[,，;；])\\s*(\\d{1,2})\\s*[:：]\\s*"
-            + "(?![A-Za-z](?:\\s*(?:$|[,，;；])|\\s+(?:\\d{1,2}\\s*[:：]?\\s*[A-Za-z](?![A-Za-z])|其余默认|其他默认|rest\\s+default)))"
-            + "(\\S.*?)\\s*$");
+    private static final Pattern OWN_ANSWER =
+            Pattern.compile("(?m)(?:^|[,，;；]|(?<=^\\s{0,8}(?i:ok|okay|好的|好|确认|確認|同意)))\\s*(\\d{1,2})\\s*[:：]\\s*"
+                    + "(?![A-Za-z](?:\\s*(?:$|[,，;；])|\\s+(?:\\d{1,2}\\s*[:：]?\\s*[A-Za-z](?![A-Za-z])|其余默认|其他默认|rest\\s+default)))"
+                    + "(\\S.*?)\\s*$");
 
     public sealed interface Parsed permits Answers, Approval, Choice {}
 
@@ -88,7 +91,7 @@ public final class AnswerParser {
     public static Parsed parse(String text) {
         Matcher a = APPROVAL.matcher(text);
         if (a.matches()) {
-            return new Approval(a.group(1), a.group(2).toUpperCase());
+            return new Approval(a.group(1), a.group(2).toUpperCase(Locale.ROOT));
         }
         // an own answer may say "approve" ("2: a manager must approve refunds"): only the rest is an approval attempt
         if (APPROVAL_MENTION.matcher(OWN_ANSWER.matcher(text).replaceAll("")).find()
@@ -101,13 +104,13 @@ public final class AnswerParser {
         }
         Matcher c = CHOICE.matcher(text);
         if (c.find()) {
-            return new Choice(c.group(1).toUpperCase());
+            return new Choice(c.group(1).toUpperCase(Locale.ROOT));
         }
         String round = null;
         Matcher r = ROUND.matcher(text);
         String body = text;
         if (r.find()) {
-            round = r.group(1).toUpperCase();
+            round = r.group(1).toUpperCase(Locale.ROOT);
             body = text.substring(r.end());
         }
         Map<String, String> own = new LinkedHashMap<>();
@@ -124,7 +127,7 @@ public final class AnswerParser {
         Map<String, String> picks = new LinkedHashMap<>();
         Matcher p = PICK.matcher(picksPart);
         while (p.find()) {
-            picks.put(p.group(1), p.group(2).toUpperCase());
+            picks.put(p.group(1), p.group(2).toUpperCase(Locale.ROOT));
         }
         boolean rest = REST_DEFAULT.matcher(picksPart).find();
         boolean ok = OK.matcher(picksPart).find();

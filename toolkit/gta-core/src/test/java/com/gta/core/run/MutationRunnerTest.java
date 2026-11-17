@@ -177,6 +177,7 @@ class MutationRunnerTest {
                 <mutations>
                 <mutation status='KILLED'><sourceFile>P.java</sourceFile><mutatedClass>a.P</mutatedClass><mutatedMethod>f</mutatedMethod><lineNumber>3</lineNumber><mutator>x.MathMutator</mutator></mutation>
                 <mutation status='SURVIVED'><sourceFile>P.java</sourceFile><mutatedClass>a.P</mutatedClass><mutatedMethod>g</mutatedMethod><lineNumber>9</lineNumber><mutator>x.MathMutator</mutator></mutation>
+                <mutation status='KILLED'><sourceFile>P.java</sourceFile><mutatedClass>a.P$1</mutatedClass><mutatedMethod>f</mutatedMethod><lineNumber>3</lineNumber><mutator>x.MathMutator</mutator></mutation>
                 </mutations>
                 XML
                 """);
@@ -185,7 +186,10 @@ class MutationRunnerTest {
                 new MutationRunner(new com.gta.core.config.GtaPaths(repo), config, java.toString()).changed("base");
 
         assertEquals(List.of("a.P"), out.get("classes"));
-        assertEquals(1, out.get("mutants"), "the survivor on an unchanged line is not counted: " + out);
+        assertEquals(
+                2,
+                out.get("mutants"),
+                "a changed line in a nested class counts, the survivor on an unchanged line does not: " + out);
         assertEquals("100%", out.get("strength"));
         assertTrue(Files.readString(repo.resolve(".gta/work/pit/pit-tools.pom.xml"))
                 .contains("<artifactId>junit-platform-launcher</artifactId><version>6.0.3</version>"));

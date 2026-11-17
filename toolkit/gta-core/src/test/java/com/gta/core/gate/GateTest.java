@@ -161,6 +161,25 @@ class GateTest {
     }
 
     @Test
+    void shouldFailOnceInsteadOfAbortingWhenTheShardOfAChangedSpecIsUnreadable() throws Exception {
+        Files.writeString(
+                paths.spec("order.create"),
+                Files.readString(paths.spec("order.create"))
+                        .replace("status=approved rev=R2", "status=approved rev=R3"));
+        Files.writeString(paths.oracleShard("order.create"), "{ <<<<<<< conflict");
+        git("commit", "-qam", "spec change and a conflicted shard");
+
+        Gate.Result r = gate();
+
+        assertEquals(
+                1,
+                r.failures.stream()
+                        .filter(c -> c.code.equals(ErrorCode.GATE_SHARD_UNREADABLE.name()))
+                        .count(),
+                r.failures.toString());
+    }
+
+    @Test
     void shouldRaiseAConcernWhenASpecWithLockedScenariosIsDeleted() throws Exception {
         Files.delete(paths.spec("order.create"));
 

@@ -57,8 +57,9 @@ public final class ChangeChecker {
             "target/**", "**/target/**", ".gta/work/**", "**/.gta/work/**", ".gta/lessons.md", "**/.gta/lessons.md");
 
     /**
-     * @param foreignCommits commits made since the baseline that gtaw did not make (see {@link CommitLedger});
-     *                       gtaw never rewrites history, so their files are reported as out of scope and unrestorable
+     * @param foreignCommits commits made since the baseline that gtaw did not make (see {@link CommitLedger}), and
+     *                       commits HEAD no longer holds (moved back by a reset); gtaw never rewrites history, so their
+     *                       files are reported as out of scope and unrestorable
      */
     public record Result(
             List<String> changed,
@@ -127,10 +128,11 @@ public final class ChangeChecker {
         List<String> unrestorable = new ArrayList<>();
         List<String> foreign = new ArrayList<>();
         Set<String> gtawCommits = new CommitLedger(paths).shas();
-        for (Git.Commit c : git.commitsSince(baseline.head)) {
-            if (gtawCommits.contains(c.sha())) {
-                continue;
-            }
+        List<Git.Commit> commits = new ArrayList<>(git.commitsSince(baseline.head));
+        commits.removeIf(c -> gtawCommits.contains(c.sha()));
+        // HEAD moved back (reset, checkout): the dropped commits' changes are gone, gtaw's own commits included
+        commits.addAll(git.commitsDropped(baseline.head));
+        for (Git.Commit c : commits) {
             foreign.add(c.sha().substring(0, Math.min(12, c.sha().length())));
             for (String f : c.files()) {
                 if (matchesAny(f, IGNORED)) {

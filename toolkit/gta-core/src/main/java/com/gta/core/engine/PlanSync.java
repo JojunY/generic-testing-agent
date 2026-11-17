@@ -76,7 +76,8 @@ final class PlanSync {
         plan.removeIf(i -> i.flowId.equals(spec.flowId()));
         plan.addAll(result);
         store.savePlan(plan);
-        // rebuild: tests that already exist for a fresh pending item are verified first
+        // rebuild: tests that already exist for a fresh pending item (never dispatched, so no baseline) are verified
+        // first; an item a person sent back (a confirmed defect, a retry) is dispatched to its author instead
         Map<String, OracleShard.Entry> shard = OracleShard.read(paths.oracleShard(spec.flowId()));
         for (PlanItem i : result) {
             WorkState.ItemState s = st.items.get(i.id);
@@ -84,6 +85,7 @@ final class PlanSync {
             if (i.isFoundation()
                     && s.status == ItemStatus.PENDING
                     && s.attempts == 0
+                    && s.baseline == null
                     && Files.exists(test)
                     && git.isTracked(paths.rel(test))) {
                 // the committed seed test is adopted after one verification run instead of being written again
@@ -93,6 +95,7 @@ final class PlanSync {
             }
             if (s.status == ItemStatus.PENDING
                     && s.attempts == 0
+                    && s.baseline == null
                     && Files.exists(test)
                     && shard.containsKey(i.id)
                     && i.scenarioRevision.equals(shard.get(i.id).scenarioRevision)) {

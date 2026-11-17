@@ -26,7 +26,7 @@ void shouldSumUsagePerAccountWhenEventsArriveOutOfOrder(TestPipeline p) {
 2. Transforms: `TestPipeline` + `PAssert`; keep abandoned-node enforcement on.
 3. Streaming: `TestStream` to advance watermarks and inject late data (`references/test-stream.md`).
 4. Retries: bundles can be retried, so side effects inside DoFns must be idempotent — test calling them twice.
-5. IO: Pub/Sub emulator and in-memory GCS where possible; BigQuery IO and real Dataflow runs are P4 (`references/dataflow-runs.md`).
+5. IO: Pub/Sub emulator and in-memory GCS where possible. Real Dataflow runs and SQL against real BigQuery are out of scope (plan §7.7): replace BigQuery IO with a fake at the pipeline's boundary.
 
 ## Rules
 
@@ -38,4 +38,4 @@ void shouldSumUsagePerAccountWhenEventsArriveOutOfOrder(TestPipeline p) {
 
 ## References
 
-- `references/test-stream.md` · `references/dataflow-runs.md`
+- `references/test-stream.md`

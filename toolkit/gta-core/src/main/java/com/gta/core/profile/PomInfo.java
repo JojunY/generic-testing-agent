@@ -47,6 +47,10 @@ public final class PomInfo {
                     "Set build.module in .gta/config.json to the folder of the module that holds the service");
         }
         PomInfo info = read(moduleRoot);
+        if (!Files.exists(repository.resolve("pom.xml"))
+                && gradleBuildFile(repository).isEmpty()) {
+            return info; // a Gradle root with only settings.gradle(.kts): nothing to inherit
+        }
         PomInfo parent = read(repository);
         if (info.bootVersion == null) {
             info.bootVersion = parent.bootVersion;

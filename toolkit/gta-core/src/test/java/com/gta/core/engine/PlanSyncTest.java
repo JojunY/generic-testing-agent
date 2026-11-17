@@ -76,6 +76,25 @@ class PlanSyncTest {
     }
 
     @Test
+    void shouldSendAnItemAPersonSentBackToItsAuthorInsteadOfAdoptingIt() {
+        sync();
+        WorkState.ItemState s01 = st.items.get(OrderServiceTestData.ITEM);
+        s01.baseline = new com.gta.core.change.ChangeChecker(paths).capture(); // it was dispatched before
+        s01.intentOverride = "known-defect"; // a person confirmed the defect: the author pins the test
+        AtomicFiles.write(
+                root.resolve("src/test/java/com/acme/order/OrderControllerIT.java"), "class OrderControllerIT {}\n");
+        OracleShard.Entry e = new OracleShard.Entry();
+        e.scenarioRevision = spec().scenario("order.create/s01").orElseThrow().revision();
+        e.tokens = List.of("201");
+        e.testClass = OrderServiceTestData.TEST_CLASS;
+        OracleShard.write(paths.oracleShard("order.create"), Map.of(OrderServiceTestData.ITEM, e));
+
+        sync();
+
+        assertEquals(ItemStatus.PENDING, s01.status, "adoption is for a rebuilt work dir only");
+    }
+
+    @Test
     void shouldAdoptACommittedSeedAndALockedScenarioTest() {
         String seed = "src/test/java/com/acme/order/ApplicationIT.java";
         AtomicFiles.write(root.resolve(seed), "class ApplicationIT {}\n");

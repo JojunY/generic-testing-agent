@@ -90,6 +90,23 @@ public final class GradleRunner extends MavenRunner {
         return cmd;
     }
 
+    /** Assertion failures, Mockito's verification failures included; anything else Gradle reports is an error. */
+    private static final Pattern ASSERTION_TYPE =
+            Pattern.compile("Assert|ComparisonFailure|MultipleFailures|^org\\.mockito\\.exceptions\\.verification\\.");
+
+    /**
+     * Gradle writes every failed test as {@code <failure>}, where Surefire writes {@code <error>} for an exception that is
+     * not an assertion: a setup crash must not read as an assertion that reached the code (plan §5.3).
+     */
+    @Override
+    protected void normalizeOutcome(TestOutcome c) {
+        if ("failed".equals(c.outcome)
+                && (c.failureType == null
+                        || !ASSERTION_TYPE.matcher(c.failureType).find())) {
+            c.outcome = "error";
+        }
+    }
+
     /** {@code test}, or {@code :order-api:test} for a subproject. */
     public static String testTask(String module) {
         return module == null || module.isEmpty() ? "test" : projectPath(module) + ":test";

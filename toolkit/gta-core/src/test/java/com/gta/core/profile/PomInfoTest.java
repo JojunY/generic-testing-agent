@@ -137,6 +137,19 @@ class PomInfoTest {
     }
 
     @Test
+    void shouldReadAGradleSubprojectWhenTheRootHasOnlySettings() throws Exception {
+        Files.writeString(root.resolve("settings.gradle.kts"), "include(\"app\")\n");
+        Files.createDirectories(root.resolve("app"));
+        Files.writeString(root.resolve("app/build.gradle.kts"), """
+                plugins { id("org.springframework.boot") version "3.5.4" }
+                """);
+
+        PomInfo app = PomInfo.read(root, "app");
+
+        assertEquals("3.5.4", app.bootVersion, "the root has nothing to inherit and is not required");
+    }
+
+    @Test
     void shouldReadMultiLineIncludesAndIgnoreIncludedBuilds() throws Exception {
         Files.writeString(root.resolve("settings.gradle.kts"), """
                 pluginManagement { includeBuild("build-logic") }

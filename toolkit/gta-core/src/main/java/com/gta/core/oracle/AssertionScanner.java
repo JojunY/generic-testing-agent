@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 /**
  * Extracts the oracle of a scenario's test methods (methods tagged {@code @Tag("scenario:<id>")}):
@@ -229,13 +230,13 @@ public final class AssertionScanner {
                                         .orElse("")
                                 + ")";
                         // a constant of the test class is locked by its value: isEqualTo(MSG) is
-                        // isEqualTo("Order not found"), so changing the constant changes the assertion
-                        statements.add(fragment.getNameAsString() + "("
-                                + fragment.getArguments().stream()
-                                        .map(arg -> normalize(withConstantValues(arg, constantLiterals)))
-                                        .reduce((a, b) -> a + "," + b)
-                                        .orElse("")
-                                + ")");
+                        // isEqualTo("Order not found"), so changing the constant changes the assertion.
+                        // An expectation is locked with its subject: assertThat(actual).isEqualTo(404) may not
+                        // become assertThat(404).isEqualTo(404)
+                        String locked = lockedForm(fragment, constantLiterals);
+                        statements.add(subject(fragment)
+                                .map(sub -> lockedForm(sub, constantLiterals) + "." + locked)
+                                .orElse(locked));
                         rest = rest.replace(f, "");
                     }
                     watched.append(rest);
@@ -258,6 +259,28 @@ public final class AssertionScanner {
         }
         cu.findAll(FieldDeclaration.class).forEach(f -> watched.append(normalize(f)));
         return new ScenarioOracle(methods, statements, tokens, Hashes.shortSha(watched.toString()));
+    }
+
+    private static String lockedForm(MethodCallExpr call, Map<String, Expression> constantLiterals) {
+        return call.getNameAsString() + "("
+                + call.getArguments().stream()
+                        .map(arg -> normalize(withConstantValues(arg, constantLiterals)))
+                        .reduce((a, b) -> a + "," + b)
+                        .orElse("")
+                + ")";
+    }
+
+    /** The {@code assertThat(actual)} (or {@code assertThatThrownBy(...)}) an expectation is chained on, if any. */
+    static Optional<MethodCallExpr> subject(MethodCallExpr fragment) {
+        MethodCallExpr subject = null;
+        Optional<Expression> scope = fragment.getScope();
+        while (scope.isPresent() && scope.get() instanceof MethodCallExpr s) {
+            if (s.getNameAsString().startsWith("assertThat")) {
+                subject = s;
+            }
+            scope = s.getScope();
+        }
+        return Optional.ofNullable(subject);
     }
 
     static boolean isTest(MethodDeclaration m) {
@@ -288,15 +311,34 @@ public final class AssertionScanner {
                 || STATUS_MATCHERS.containsKey(n);
     }
 
+    /**
+     * An assertion call, or a stimulus-named call made after {@code then()}: REST Assured's
+     * {@code then().body("status", equalTo("PENDING"))} is an expectation, not a request body.
+     */
+    static boolean isExpectationCall(MethodCallExpr c) {
+        return isAssertionCall(c) || (STIMULUS_CALLS.contains(c.getNameAsString()) && afterThen(c));
+    }
+
+    static boolean afterThen(MethodCallExpr call) {
+        Optional<Expression> scope = call.getScope();
+        while (scope.isPresent() && scope.get() instanceof MethodCallExpr s) {
+            if (s.getNameAsString().equals("then")) {
+                return true;
+            }
+            scope = s.getScope();
+        }
+        return false;
+    }
+
     static boolean isAssertion(Statement stmt) {
-        return stmt.findAll(MethodCallExpr.class).stream().anyMatch(AssertionScanner::isAssertionCall);
+        return stmt.findAll(MethodCallExpr.class).stream().anyMatch(AssertionScanner::isExpectationCall);
     }
 
     /** Outermost assertion calls of a statement (an assertion nested in another one's arguments belongs to it). */
     static List<MethodCallExpr> assertionFragments(Statement stmt) {
         List<MethodCallExpr> out = new ArrayList<>();
         for (MethodCallExpr c : stmt.findAll(MethodCallExpr.class)) {
-            if (isAssertionCall(c) && !inArgumentsOf(c, AssertionScanner::isAssertionCall)) {
+            if (isExpectationCall(c) && !inArgumentsOf(c, AssertionScanner::isAssertionCall)) {
                 out.add(c);
             }
         }
@@ -346,14 +388,14 @@ public final class AssertionScanner {
      * arguments are what the test expects to be sent, not inputs.
      */
     static boolean verified(MethodCallExpr call) {
-        Optional<com.github.javaparser.ast.expr.Expression> scope = call.getScope();
+        Optional<Expression> scope = call.getScope();
         while (scope.isPresent() && scope.get() instanceof MethodCallExpr s) {
             if (isAssertionCall(s)) {
                 return true;
             }
             scope = s.getScope();
         }
-        return false;
+        return afterThen(call);
     }
 
     static void collectTokens(Statement stmt, Map<String, String> constants, Set<String> tokens) {
@@ -475,11 +517,26 @@ public final class AssertionScanner {
         return node.toString().replaceAll("\\s+", "");
     }
 
+    private static final Pattern NUMBER = Pattern.compile("-?\\d+(?:\\.\\d+)?");
+
+    /**
+     * Whether a text holds a value. A number counts only as a whole number: {@code 100} is in {@code 100.00} but not in
+     * {@code -100} or {@code 1000}.
+     */
+    static boolean holds(String text, String value) {
+        if (!NUMBER.matcher(value).matches()) {
+            return text.contains(value);
+        }
+        return Pattern.compile("(?<![\\d.-])" + Pattern.quote(value) + "(?!\\d)")
+                .matcher(text)
+                .find();
+    }
+
     /** THEN literal check: every expected value of the spec must appear in an assertion (plan §5.3 item 2). */
     public static List<String> missingThenLiterals(List<String> thenLiterals, Set<String> tokens) {
         List<String> missing = new ArrayList<>();
         for (String lit : thenLiterals) {
-            boolean ok = tokens.contains(lit) || tokens.stream().anyMatch(t -> lit.length() >= 3 && t.contains(lit));
+            boolean ok = tokens.contains(lit) || tokens.stream().anyMatch(t -> lit.length() >= 3 && holds(t, lit));
             if (!ok) {
                 missing.add(lit);
             }

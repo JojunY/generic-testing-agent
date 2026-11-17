@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -80,7 +81,7 @@ public record Frontmatter(Map<String, Object> fields, String body) {
         }
         String s = String.valueOf(v);
         if (PLAIN.matcher(s).matches()
-                && !RESERVED.contains(s.toLowerCase())
+                && !RESERVED.contains(s.toLowerCase(Locale.ROOT))
                 && !s.endsWith(" ")
                 && !s.matches("^[0-9.]+$")) {
             return s;

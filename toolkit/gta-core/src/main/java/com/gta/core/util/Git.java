@@ -74,11 +74,12 @@ public final class Git {
             if (e.length() < 4) {
                 continue;
             }
-            char status = e.charAt(0);
+            // a rename or copy is reported in the index column, or in the work-tree one after `git add -N`
+            String xy = e.substring(0, 2);
             paths.add(e.substring(3));
-            if ((status == 'R' || status == 'C') && i + 1 < entries.length) {
+            if ((xy.indexOf('R') >= 0 || xy.indexOf('C') >= 0) && i + 1 < entries.length) {
                 i++;
-                if (status == 'R') {
+                if (xy.indexOf('R') >= 0) {
                     paths.add(entries[i]); // the source of a rename disappeared: it is a change too
                 }
             }
@@ -110,6 +111,22 @@ public final class Git {
                     "The baseline commit " + since + " no longer exists",
                     "History was rewritten since the brief. Run ./gtaw next --takeover to restart the item from the current HEAD");
         }
+        return commitsIn(range);
+    }
+
+    /**
+     * Commits reachable from {@code since} but no longer from HEAD (a reset or checkout moved HEAD back), oldest first.
+     * Empty when {@code since} is unknown or HEAD still contains it.
+     */
+    public List<Commit> commitsDropped(String since) {
+        if (since == null || since.equals(NO_COMMIT) || since.equals(head()) || !refExists(since)) {
+            return new ArrayList<>();
+        }
+        return commitsIn(head().equals(NO_COMMIT) ? since : "HEAD.." + since);
+    }
+
+    private List<Commit> commitsIn(String range) {
+        List<Commit> out = new ArrayList<>();
         ProcessRunner.Result log =
                 git("log", "--reverse", "-m", "--first-parent", "--name-only", "--format=%x1e%H", range);
         if (!log.ok()) {

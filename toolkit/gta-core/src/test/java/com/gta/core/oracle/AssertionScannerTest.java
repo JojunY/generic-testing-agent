@@ -100,7 +100,10 @@ class AssertionScannerTest {
         AssertionScanner.ScenarioOracle first = scanSource(body);
         Lock lock = OracleLock.create(first, List.of("Order not found"), "r1");
 
-        assertEquals(List.of("isEqualTo(\"Ordernotfound\")"), lock.statements, "the constant is locked by its value");
+        assertEquals(
+                List.of("assertThat(error.message()).isEqualTo(\"Ordernotfound\")"),
+                lock.statements,
+                "the constant is locked by its value");
         assertEquals(
                 OracleLock.Verdict.STRUCTURAL_CHANGE,
                 OracleLock.check(lock, scanSource(body.replace("isEqualTo(MSG)", "contains(MSG)")))
@@ -320,6 +323,49 @@ class AssertionScannerTest {
 
         assertEquals(List.of(), AssertionScanner.missingThenLiterals(List.of("-1", "-2.5"), o.tokens()));
         assertEquals(List.of("1"), AssertionScanner.missingThenLiterals(List.of("1"), o.tokens()));
+    }
+
+    @Test
+    void shouldLockAnExpectationWithTheSubjectItAsserts() throws Exception {
+        String body = """
+                    @Test @Tag("scenario:order.create/s01")
+                    void shouldRefuse() { assertThat(response.getStatusCode().value()).isEqualTo(404); }
+                """;
+        Lock lock = OracleLock.create(scanSource(body), List.of("404"), "r1");
+
+        OracleLock.Check tautology = OracleLock.check(
+                lock, scanSource(body.replace("assertThat(response.getStatusCode().value())", "assertThat(404)")));
+
+        assertEquals(
+                OracleLock.Verdict.STRUCTURAL_CHANGE,
+                tautology.verdict(),
+                "assertThat(404).isEqualTo(404) still holds the value but no longer checks the response");
+    }
+
+    @Test
+    void shouldReadRestAssuredExpectationsAfterThenAsExpectedValues() throws Exception {
+        AssertionScanner.ScenarioOracle o = scanSource("""
+                    @Test @Tag("scenario:order.create/s01")
+                    void shouldCreate() {
+                        given().body("{\\"subtotal\\":50}").when().post("/orders")
+                                .then().body("status", equalTo("PENDING")).statusCode(201);
+                    }
+                """);
+
+        assertEquals(List.of(), AssertionScanner.missingThenLiterals(List.of("PENDING", "201"), o.tokens()));
+        assertFalse(o.tokens().contains("{\"subtotal\":50}"), "the request body before then() is an input");
+        Lock lock = OracleLock.create(o, List.of("PENDING"), "r1");
+        assertEquals(1, lock.statements.size(), lock.statements.toString());
+        assertTrue(lock.statements.get(0).startsWith("body("), "the body expectation is locked");
+    }
+
+    @Test
+    void shouldMatchANumberOnlyAsAWholeNumber() {
+        assertEquals(
+                List.of("100", "200"),
+                AssertionScanner.missingThenLiterals(List.of("100", "200"), java.util.Set.of("-100", "2000")));
+        assertEquals(List.of(), AssertionScanner.missingThenLiterals(List.of("100"), java.util.Set.of("100.00")));
+        assertEquals(List.of(), AssertionScanner.missingThenLiterals(List.of("100"), java.util.Set.of("total: 100")));
     }
 
     @Test

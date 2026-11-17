@@ -105,6 +105,7 @@ public class MavenRunner implements TestRunner {
         }
         result.cases = SurefireReportParser.parse(List.of(reports), gtaResults, timedOut);
         for (TestOutcome c : result.cases) {
+            normalizeOutcome(c);
             FailureClassifier.classify(c, productionClasses, testClasses);
         }
         Path runDir = paths.runs().resolve(runId);
@@ -114,6 +115,9 @@ public class MavenRunner implements TestRunner {
         return result;
     }
 
+    /** Brings a build tool's report into Surefire's meaning of failed (an assertion) and error (anything else). */
+    protected void normalizeOutcome(TestOutcome c) {}
+
     /** The build command that runs the selected tests and writes JUnit XML reports to {@link #reportDir()}. */
     protected List<String> testCommand(Options options, Path gtaResults) {
         List<String> cmd = mavenCommand();
@@ -122,6 +126,8 @@ public class MavenRunner implements TestRunner {
                 "-Dsurefire.failIfNoSpecifiedTests=false",
                 "-DfailIfNoTests=false",
                 "-Djacoco.skip=true",
+                // gtaw decides stability itself (plan §5.3): a Surefire rerun would turn a flaky failure into a pass
+                "-Dsurefire.rerunFailingTestsCount=0",
                 // a gtaw run: pinned Cucumber scenarios run and are checked against their fingerprint (gta-junit)
                 "-Dgta.run=true",
                 "-Dgta.results.dir=" + gtaResults));
@@ -209,21 +215,26 @@ public class MavenRunner implements TestRunner {
      */
     Map<String, String> buildEnv(IsolatedEnv isolated, List<String> extraToolOptions) {
         Map<String, String> env = isolated.variables();
-        List<String> toolOptions = new ArrayList<>();
-        String inherited = System.getenv("JAVA_TOOL_OPTIONS");
-        if (inherited != null
-                && !IsolatedEnv.withoutSpringEnvironment(inherited).isEmpty()) {
-            toolOptions.add(IsolatedEnv.withoutSpringEnvironment(inherited));
-        }
-        toolOptions.addAll(extraToolOptions);
-        if (!toolOptions.isEmpty()) {
-            env.put("JAVA_TOOL_OPTIONS", String.join(" ", toolOptions));
-        }
+        env.put("JAVA_TOOL_OPTIONS", javaToolOptions(System.getenv("JAVA_TOOL_OPTIONS"), extraToolOptions));
         String javaHome = javaHome(config.build.javaHomeEnv, System::getenv);
         if (javaHome != null) {
             env.put("JAVA_HOME", javaHome);
         }
         return env;
+    }
+
+    /**
+     * JAVA_TOOL_OPTIONS of a run: the inherited options without Spring's, then the run's own; null (the variable is
+     * removed) when nothing is left, so an inherited value of only Spring options never reaches the tests.
+     */
+    static String javaToolOptions(String inherited, List<String> extraToolOptions) {
+        List<String> toolOptions = new ArrayList<>();
+        if (inherited != null
+                && !IsolatedEnv.withoutSpringEnvironment(inherited).isEmpty()) {
+            toolOptions.add(IsolatedEnv.withoutSpringEnvironment(inherited));
+        }
+        toolOptions.addAll(extraToolOptions);
+        return toolOptions.isEmpty() ? null : String.join(" ", toolOptions);
     }
 
     /**
