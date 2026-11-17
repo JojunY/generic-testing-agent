@@ -27,7 +27,8 @@ public final class FeatureScanner {
 
     /**
      * One scenario (or outline): its own tags and the ones it inherits from the feature and its rule, without the
-     * {@code @}, and the lines of the file it spans, its tags included (0-based, inclusive).
+     * {@code @}, and the lines of the file it spans, its tags included (0-based, inclusive). The examples of an outline
+     * are its cells with their column, {@code fee=3.47}.
      */
     public record Scenario(
             String name,
@@ -69,6 +70,7 @@ public final class FeatureScanner {
         int first = -1;
         List<Step> steps = null;
         List<String> examples = null;
+        List<String> columns = null;
         String section = "given";
         boolean inDocString = false;
         String fence = null;
@@ -146,13 +148,20 @@ public final class FeatureScanner {
                     inherited.addAll(pending); // tags on Examples reach the pickles of their rows
                 }
                 pending.clear();
+                columns = null; // the table's first row names its columns
                 continue;
             }
             if (line.startsWith("|")) {
                 List<String> cells = cells(line);
                 Optional<Step> step = lastStep(block, steps, background);
                 if (block.equals("scenario") && examplesAfterSteps(lines, i)) {
-                    examples.addAll(cells);
+                    if (columns == null) {
+                        columns = cells;
+                    } else {
+                        for (int c = 0; c < cells.size(); c++) {
+                            examples.add((c < columns.size() ? columns.get(c) : "") + "=" + cells.get(c));
+                        }
+                    }
                 } else {
                     step.ifPresent(s -> s.arguments().add(String.join("|", cells)));
                 }
@@ -278,10 +287,24 @@ public final class FeatureScanner {
                     }
                     fixtures(step, testResources, watched);
                 }
-                s.examples().forEach(cell -> tokens(cell, tokens));
-                if (!s.examples().isEmpty()) {
-                    // the Then steps of an outline hold <placeholders>: the examples carry the expected values
-                    statements.add("examples:" + String.join("|", s.examples()).replaceAll("\\s+", ""));
+                // the Then steps of an outline hold <placeholders>: the columns they name carry the expected values,
+                // the other columns are inputs (plan §5.3.2)
+                String then = s.steps().stream()
+                        .filter(step -> step.section().equals("then"))
+                        .map(FeatureScanner::normalize)
+                        .reduce("", String::concat);
+                List<String> expected = new ArrayList<>();
+                for (String cell : s.examples()) {
+                    String column = cell.substring(0, cell.indexOf('='));
+                    if (then.contains("<" + column.replaceAll("\\s+", "") + ">")) {
+                        tokens(cell.substring(column.length() + 1), tokens);
+                        expected.add(cell);
+                    } else {
+                        watched.append(cell);
+                    }
+                }
+                if (!expected.isEmpty()) {
+                    statements.add("examples:" + String.join("|", expected).replaceAll("\\s+", ""));
                 }
             }
         }

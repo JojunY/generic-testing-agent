@@ -177,6 +177,7 @@ class MutationRunnerTest {
                 <mutations>
                 <mutation status='KILLED'><sourceFile>P.java</sourceFile><mutatedClass>a.P</mutatedClass><mutatedMethod>f</mutatedMethod><lineNumber>3</lineNumber><mutator>x.MathMutator</mutator></mutation>
                 <mutation status='SURVIVED'><sourceFile>P.java</sourceFile><mutatedClass>a.P</mutatedClass><mutatedMethod>g</mutatedMethod><lineNumber>9</lineNumber><mutator>x.MathMutator</mutator></mutation>
+                <mutation status='KILLED'><sourceFile>P.java</sourceFile><mutatedClass>a.P$Inner</mutatedClass><mutatedMethod>lambda$f$0</mutatedMethod><lineNumber>3</lineNumber><mutator>x.MathMutator</mutator></mutation>
                 </mutations>
                 XML
                 """);
@@ -185,7 +186,10 @@ class MutationRunnerTest {
                 new MutationRunner(new com.gta.core.config.GtaPaths(repo), config, java.toString()).changed("base");
 
         assertEquals(List.of("a.P"), out.get("classes"));
-        assertEquals(1, out.get("mutants"), "the survivor on an unchanged line is not counted: " + out);
+        assertEquals(
+                2,
+                out.get("mutants"),
+                "a nested class is in the changed file; the survivor on an unchanged line is not counted: " + out);
         assertEquals("100%", out.get("strength"));
         assertTrue(Files.readString(repo.resolve(".gta/work/pit/pit-tools.pom.xml"))
                 .contains("<artifactId>junit-platform-launcher</artifactId><version>6.0.3</version>"));
@@ -239,6 +243,16 @@ class MutationRunnerTest {
         assertEquals(
                 MutationRunner.CanFail.NOT_APPLICABLE,
                 MutationRunner.verdict(List.of(), "a.LTest").verdict());
+    }
+
+    @Test
+    void shouldPlaceAMutantOfALambdaOrNestedClassInItsSourceClassAndMethod() {
+        MutationRunner.Mutant lambda =
+                new MutationRunner.Mutant("L.java", "a.L$Inner", "lambda$create$0", 5, "x.MathMutator", "KILLED");
+
+        assertEquals("a.L", lambda.sourceClass());
+        assertEquals("create", lambda.sourceMethod(), "orElseThrow(() -> ...) in create is create's code");
+        assertEquals("on", new MutationRunner.Mutant("L.java", "a.L", "on", 5, "x", "KILLED").sourceMethod());
     }
 
     @Test

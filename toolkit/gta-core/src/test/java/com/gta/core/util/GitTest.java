@@ -84,6 +84,18 @@ class GitTest {
     }
 
     @Test
+    void shouldFailClosedWhenHeadWasMovedBehindTheBaseline() throws Exception {
+        commitFile("a.txt", "a\n");
+        commitFile("b.txt", "b\n");
+        String baseline = git.head();
+        run("reset", "-q", "--hard", "HEAD~1");
+
+        GtaException e = assertThrows(GtaException.class, () -> git.commitsSince(baseline));
+
+        assertEquals(ErrorCode.ENV_GIT_FAILED, e.code(), "the dropped commit must not look like no change");
+    }
+
+    @Test
     void shouldFailClosedWhenTheBaselineCommitNoLongerExists() throws Exception {
         commitFile("a.txt", "a\n");
 

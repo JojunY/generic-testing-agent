@@ -64,4 +64,29 @@ class SessionManagerTest {
 
         assertNotEquals("s20261104090000-old", st.session.id, "a hand-edited state must not lock the session forever");
     }
+
+    @Test
+    void shouldRunAReviewedTestAgainWhenTheFilesChangedSinceItsReviewRound() throws Exception {
+        OrderServiceTestData.create(root);
+        WorkState st = session(Instant.now().minusSeconds(3600).toString());
+        WorkState.ItemState review = new WorkState.ItemState();
+        review.id = "order.create/s01#component-01";
+        review.status = com.gta.core.state.ItemStatus.REVIEWING;
+        review.reviewBaseline = new com.gta.core.change.ChangeChecker(new EngineContext(root).paths).capture();
+        st.items.put(review.id, review);
+        WorkState.ItemState triage = new WorkState.ItemState();
+        triage.id = "order.create/s02#component-01";
+        triage.status = com.gta.core.state.ItemStatus.TRIAGING;
+        st.items.put(triage.id, triage);
+        Path edited = root.resolve("src/main/java/Developer.java");
+        java.nio.file.Files.createDirectories(edited.getParent());
+        java.nio.file.Files.writeString(edited, "class Developer {}\n");
+
+        new EngineContext(root).sessions.touchSession(st, false);
+
+        assertEquals(com.gta.core.state.ItemStatus.VERIFYING, review.status, "the reviewed run is out of date");
+        assertNull(review.reviewBaseline);
+        assertEquals(com.gta.core.state.ItemStatus.TRIAGING, triage.status, "no round was issued yet: nothing to redo");
+        assertEquals("class Developer {}\n", java.nio.file.Files.readString(edited), "the developer's edit is kept");
+    }
 }

@@ -47,23 +47,23 @@ public final class PomInfo {
                     "Set build.module in .gta/config.json to the folder of the module that holds the service");
         }
         PomInfo info = read(moduleRoot);
-        // a Gradle root may hold settings.gradle(.kts) only: then there is nothing to inherit
-        if (Files.exists(repository.resolve("pom.xml"))
-                || gradleBuildFile(repository).isPresent()) {
-            PomInfo parent = read(repository);
-            if (info.bootVersion == null) {
-                info.bootVersion = parent.bootVersion;
-            }
-            if (info.javaRelease == null) {
-                info.javaRelease = parent.javaRelease;
-            }
+        PomInfo parent = read(repository);
+        if (info.bootVersion == null) {
+            info.bootVersion = parent.bootVersion;
+        }
+        if (info.javaRelease == null) {
+            info.javaRelease = parent.javaRelease;
         }
         return info;
     }
 
     public static PomInfo read(Path root) {
         Path pom = root.resolve("pom.xml");
-        if (!Files.exists(pom) && gradleBuildFile(root).isPresent()) {
+        // a Gradle root may hold settings.gradle(.kts) only (the layout of gradle init)
+        if (!Files.exists(pom)
+                && (gradleBuildFile(root).isPresent()
+                        || Files.exists(root.resolve("settings.gradle.kts"))
+                        || Files.exists(root.resolve("settings.gradle")))) {
             return readGradle(root);
         }
         if (!Files.exists(pom)) {
@@ -180,8 +180,10 @@ public final class PomInfo {
         info.tool = "gradle";
         info.artifactId = String.valueOf(root.toAbsolutePath().normalize().getFileName());
         try {
-            String build =
-                    Files.readString(gradleBuildFile(root).orElseThrow(), java.nio.charset.StandardCharsets.UTF_8);
+            java.util.Optional<Path> buildFile = gradleBuildFile(root);
+            String build = buildFile.isPresent()
+                    ? Files.readString(buildFile.get(), java.nio.charset.StandardCharsets.UTF_8)
+                    : "";
             java.util.regex.Matcher boot = BOOT_PLUGIN.matcher(build);
             if (boot.find()) {
                 info.bootVersion = boot.group(1);

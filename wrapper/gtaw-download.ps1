@@ -27,7 +27,7 @@ if (-not (Test-Path $jar)) {
     $tmp = "$jar.$PID.part"  # one file per process: parallel first runs do not collide
     $headers = @{}
     if ($env:GTA_NEXUS_USER) {
-        $pair = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("$($env:GTA_NEXUS_USER):$($env:GTA_NEXUS_PASSWORD)"))
+        $pair = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("$($env:GTA_NEXUS_USER):$($env:GTA_NEXUS_PASSWORD)"))
         $headers['Authorization'] = "Basic $pair"
     }
     # Windows PowerShell 5.1 may offer only TLS 1.0/1.1, which a current Nexus refuses
@@ -39,7 +39,16 @@ if (-not (Test-Path $jar)) {
         Write-Output '{"error":{"code":"ENV_TOOL_UNAVAILABLE","category":"environment","message":"cannot download the gta-cli jar from distributionUrl","hint":"check distributionUrl in .gta/wrapper/gta-wrapper.properties, the network and GTA_NEXUS_USER/GTA_NEXUS_PASSWORD","retryable":true}}'
         exit 0
     }
-    Move-Item -Force $tmp $jar
+    try {
+        Move-Item -Force $tmp $jar -ErrorAction Stop
+    } catch {
+        # a parallel first run placed the jar first and its java holds it open: use that one (checked below)
+        Remove-Item -Force -ErrorAction SilentlyContinue $tmp
+        if (-not (Test-Path $jar)) {
+            Write-Output '{"error":{"code":"ENV_TOOL_UNAVAILABLE","category":"environment","message":"cannot place the downloaded gta-cli jar in the cache","hint":"check the permissions of the gtaw cache directory and run again","retryable":true}}'
+            exit 0
+        }
+    }
 }
 $actual = (Get-FileHash -Algorithm SHA256 $jar).Hash.ToLower()
 if ($actual -ne $sha.ToLower()) {

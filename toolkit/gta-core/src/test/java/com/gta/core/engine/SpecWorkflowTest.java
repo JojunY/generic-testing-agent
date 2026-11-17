@@ -105,6 +105,27 @@ class SpecWorkflowTest {
     }
 
     @Test
+    void shouldStartANewBriefAfterACommitMadeOutsideGtaw() throws Exception {
+        Files.writeString(root.resolve("NOTES.md"), "the developer's commit\n");
+        git("add", "NOTES.md");
+        git("commit", "-qm", "developer");
+
+        assertEquals(
+                ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE, submitFails(scripted()).code());
+        assertEquals(
+                ErrorCode.STATE_STALE_SESSION,
+                assertThrows(GtaException.class, () -> engine().submitSpec(FLOW, token))
+                        .code(),
+                "the round ended: resubmitting it could never pass");
+
+        Map<String, Object> again = engine().next(null, null, null, false);
+        assertEquals("analyze", again.get("node"), "not an escalation: the commit was not the analyst's attempt");
+        assertEquals(
+                "R1",
+                engine().submitSpec(FLOW, String.valueOf(again.get("token"))).get("rev"));
+    }
+
+    @Test
     void shouldRefuseFieldsOnlyGtawMayWrite() throws Exception {
         Files.writeString(paths.spec(FLOW), scripted());
         engine().submitSpec(FLOW, token);

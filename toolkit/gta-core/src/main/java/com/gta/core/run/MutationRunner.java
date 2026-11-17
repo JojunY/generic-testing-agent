@@ -93,6 +93,18 @@ public final class MutationRunner {
         boolean killed() {
             return "KILLED".equals(status) || "TIMED_OUT".equals(status) || "MEMORY_ERROR".equals(status);
         }
+
+        /** The class of the source file: a mutant of {@code Outer$Inner} or {@code Outer$1} is in {@code Outer}. */
+        String sourceClass() {
+            int nested = mutatedClass.indexOf('$');
+            return nested < 0 ? mutatedClass : mutatedClass.substring(0, nested);
+        }
+
+        /** The method as written: a mutant in a lambda of {@code create} ({@code lambda$create$0}) is in {@code create}. */
+        String sourceMethod() {
+            String[] parts = method.split("\\$");
+            return method.startsWith("lambda$") && parts.length > 1 ? parts[1] : method;
+        }
     }
 
     public Map<String, Object> changed(String base) {
@@ -107,7 +119,7 @@ public final class MutationRunner {
         Path work = paths.work().resolve("pit");
         List<Mutant> all = run(work, lines.keySet(), List.of("*Test"));
         List<Mutant> onChangedLines = all.stream()
-                .filter(m -> lines.getOrDefault(m.mutatedClass(), Set.of()).contains(m.line()))
+                .filter(m -> lines.getOrDefault(m.sourceClass(), Set.of()).contains(m.line()))
                 .toList();
         return summary(out, onChangedLines);
     }
@@ -188,7 +200,7 @@ public final class MutationRunner {
         Path work = paths.work().resolve("pit").resolve(itemId.replaceAll("[^A-Za-z0-9.-]", "_"));
         List<Mutant> mutants = run(work, methodsByClass.keySet(), List.of(testClass)).stream()
                 .filter(m ->
-                        methodsByClass.getOrDefault(m.mutatedClass(), Set.of()).contains(m.method()))
+                        methodsByClass.getOrDefault(m.mutatedClass(), Set.of()).contains(m.sourceMethod()))
                 .filter(Mutant::covered)
                 .toList();
         return verdict(mutants, testClass);
@@ -304,7 +316,8 @@ public final class MutationRunner {
                 "--reportDir",
                 report.toAbsolutePath().toString(),
                 "--targetClasses",
-                String.join(",", classes),
+                // with its nested and anonymous classes: they are in the same source file
+                classes.stream().map(c -> c + "," + c + "$*").collect(java.util.stream.Collectors.joining(",")),
                 "--targetTests",
                 String.join(",", targetTests),
                 "--excludedTestClasses",

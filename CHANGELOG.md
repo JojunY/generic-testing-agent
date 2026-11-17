@@ -32,6 +32,24 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- Review round 6, follow-up:
+  - oracle lock and gate:
+    - an assertion is locked with its subject (`assertThat(r.status()).isEqualTo(503)`) and with what a verification expects (`verify(producer).send("orders", payload)`, RestAssured `statusCode(201).body(...)`), so asserting on another object or changing the verified arguments is reported. Shards locked before hold a fingerprint without them: the gate reports them once; relock them (`./gtaw relock`);
+    - in a Scenario Outline only the Examples columns a Then step names (`<fee>`) are expected values; the other columns are watched inputs;
+    - the watched inputs include the helpers a test calls (one level), a class-level `@Sql` and fixtures named by constants (plan §5.3);
+  - engine:
+    - a review or triage round that spans sessions while the files changed (the developer's edits or commits) runs the test again on the current tree first, instead of reverting those edits or escalating the commits;
+    - a commit made outside gtaw during spec analysis ends the analyst's round instead of failing every resubmit until the flow had to be aborted; `./gtaw next` issues a new brief;
+    - the scope check fails closed when HEAD no longer contains the baseline commit (a reset or a branch switch), instead of seeing no change;
+    - running `./gtaw next --mode pr` again keeps the flows an earlier run made stale and did not finish;
+  - runs and profiling:
+    - `mutate --changed` and the can-fail check count mutants of nested classes and lambdas (`Outer$Inner`, `lambda$create$0`) as their source class and method;
+    - a Gradle root with only `settings.gradle(.kts)` is read by `doctor` too;
+  - CLI and wrapper:
+    - `gtaw doctor` warns when git records `gtaw` without the executable bit (an `init` on Windows) and gives the command to fix it;
+    - `init`/`upgrade` and `doctor` read `gta-wrapper.properties` as the wrappers do, so a backslash in a value is kept;
+    - `gtaw-download.ps1` encodes Nexus credentials as UTF-8, like curl, and uses the jar a parallel first run placed in the cache;
+  - plan §13 states that `.gta/work/**` cannot be restored by the change check.
 - Review round 6:
   - oracle lock and gate:
     - `assertTrue(order.isPaid())` and `assertFalse(...)` are locked for a THEN of `true`/`false` (only `isTrue()` was);

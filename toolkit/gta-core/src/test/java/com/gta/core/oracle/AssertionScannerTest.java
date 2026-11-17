@@ -2,6 +2,7 @@ package com.gta.core.oracle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
@@ -92,6 +93,77 @@ class AssertionScannerTest {
     }
 
     @Test
+    void shouldWatchHelpersAndTheFixturesOfTheClassAndItsConstants() throws Exception {
+        Path fixtures = dir.resolve("resources/fixtures");
+        Files.createDirectories(fixtures);
+        Files.writeString(fixtures.resolve("orders.sql"), "insert 1;");
+        Files.writeString(fixtures.resolve("order.json"), "{}");
+        String body = """
+                    private static final String ORDER = "fixtures/order.json";
+                    @Test @Tag("scenario:order.create/s01")
+                    void shouldCreate() { assertThat(create(5)).isEqualTo(201); }
+                    private int create(int qty) { return client.post(qty); }
+                """;
+        String before = scanSource(body).watchedHash();
+
+        assertNotEquals(
+                before, scanSource(body.replace("post(qty)", "post(qty + 1)")).watchedHash(), "a helper");
+        Files.writeString(fixtures.resolve("order.json"), "{\"qty\": 9}");
+        String afterConstant = scanSource(body).watchedHash();
+        assertNotEquals(before, afterConstant, "a fixture named by a constant");
+        Path test = dir.resolve("ScanIT.java");
+        Files.writeString(test, "@Sql(\"fixtures/orders.sql\")\nclass ScanIT {\n" + body + "\n}\n");
+        String classSql = AssertionScanner.scan(test, "order.create/s01", dir.resolve("resources"))
+                .watchedHash();
+        Files.writeString(fixtures.resolve("orders.sql"), "insert 2;");
+        assertNotEquals(
+                classSql,
+                AssertionScanner.scan(test, "order.create/s01", dir.resolve("resources"))
+                        .watchedHash(),
+                "a class-level @Sql");
+    }
+
+    @Test
+    void shouldLockTheSubjectOfAnAssertionWithIt() throws Exception {
+        String body = """
+                    @Test @Tag("scenario:order.create/s01")
+                    void shouldRefuse() { assertThat(response.getStatusCode().value()).isEqualTo(503); }
+                """;
+        Lock lock = OracleLock.create(scanSource(body), List.of("503"), "r1");
+
+        assertEquals(List.of("assertThat(response.getStatusCode().value()).isEqualTo(503)"), lock.statements);
+        assertEquals(
+                OracleLock.Verdict.STRUCTURAL_CHANGE,
+                OracleLock.check(lock, scanSource(body.replace("response.getStatusCode()", "cached.getStatusCode()")))
+                        .verdict(),
+                "asserting the value on another object is a change to the locked assertion");
+    }
+
+    @Test
+    void shouldLockWhatAVerificationExpects() throws Exception {
+        String body = """
+                    @Test @Tag("scenario:order.create/s01")
+                    void shouldPublish() {
+                        verify(producer).send("orders", payload);
+                        given().when().post("/orders").then().statusCode(201).body("status", equalTo("CREATED"));
+                    }
+                """;
+        AssertionScanner.ScenarioOracle first = scanSource(body);
+
+        assertEquals(
+                List.of(
+                        "verify(producer).send(\"orders\",payload)",
+                        "statusCode(201).body(\"status\",equalTo(\"CREATED\"))"),
+                OracleLock.lockedStatements(first.assertionStatements(), List.of("orders", "CREATED")));
+        String changed = body.replace("send(\"orders\"", "send(\"audit\"");
+        assertEquals(
+                List.of("verify(producer).send(\"audit\",payload)"),
+                scanSource(changed).assertionStatements().stream()
+                        .filter(t -> t.startsWith("verify"))
+                        .toList());
+    }
+
+    @Test
     void shouldLockAnAssertionOfAClassConstantByItsValue() throws Exception {
         String body = """
                     private static final String MSG = "Order not found";
@@ -101,7 +173,10 @@ class AssertionScannerTest {
         AssertionScanner.ScenarioOracle first = scanSource(body);
         Lock lock = OracleLock.create(first, List.of("Order not found"), "r1");
 
-        assertEquals(List.of("isEqualTo(\"Ordernotfound\")"), lock.statements, "the constant is locked by its value");
+        assertEquals(
+                List.of("assertThat(error.message()).isEqualTo(\"Ordernotfound\")"),
+                lock.statements,
+                "the constant is locked by its value");
         assertEquals(
                 OracleLock.Verdict.STRUCTURAL_CHANGE,
                 OracleLock.check(lock, scanSource(body.replace("isEqualTo(MSG)", "contains(MSG)")))

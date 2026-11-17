@@ -96,7 +96,8 @@ public final class Git {
 
     /**
      * Commits reachable from HEAD but not from {@code since}, oldest first, in one git call. When {@code since} is
-     * {@link #NO_COMMIT}, every commit counts. A {@code since} that no longer exists (history rewritten) fails closed.
+     * {@link #NO_COMMIT}, every commit counts. A {@code since} that no longer exists or is no longer an ancestor of HEAD (history rewritten,
+     * reset or switched) fails closed.
      */
     public List<Commit> commitsSince(String since) {
         List<Commit> out = new ArrayList<>();
@@ -107,12 +108,14 @@ public final class Git {
         String range;
         if (since == null || since.equals(NO_COMMIT)) {
             range = "HEAD";
-        } else if (refExists(since)) {
+        } else if (refExists(since)
+                && git("merge-base", "--is-ancestor", since, "HEAD").ok()) {
             range = since + "..HEAD";
         } else {
+            // a reset or a branch switch drops commits without adding any: the range would look empty
             throw new GtaException(
                     ErrorCode.ENV_GIT_FAILED,
-                    "The baseline commit " + since + " no longer exists",
+                    "The baseline commit " + since + " no longer exists or is no longer in the history of HEAD",
                     "History was rewritten since the brief. Run ./gtaw next --takeover to restart the item from the current HEAD");
         }
         ProcessRunner.Result log =

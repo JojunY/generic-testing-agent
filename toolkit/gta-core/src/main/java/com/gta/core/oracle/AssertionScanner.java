@@ -212,11 +212,15 @@ public final class AssertionScanner {
         Set<String> tokens = new LinkedHashSet<>();
         StringBuilder watched = new StringBuilder();
         int methods = 0;
+        Set<String> called = new LinkedHashSet<>();
         for (MethodDeclaration m : cu.findAll(MethodDeclaration.class)) {
             if (!isTest(m) || (scenarioId != null && !tags(m).contains("scenario:" + scenarioId))) {
                 continue;
             }
             methods++;
+            m.findAll(MethodCallExpr.class).stream()
+                    .filter(c -> c.getScope().isEmpty() || c.getScope().get().isThisExpr())
+                    .forEach(c -> called.add(c.getNameAsString()));
             for (ExpressionStmt stmt : m.findAll(ExpressionStmt.class)) {
                 if (isAssertion(stmt)) {
                     // a MockMvc/RestTestClient chain mixes the stimulus and the expectations in one statement:
@@ -229,14 +233,7 @@ public final class AssertionScanner {
                                         .reduce((a, b) -> a + "," + b)
                                         .orElse("")
                                 + ")";
-                        // a constant of the test class is locked by its value: isEqualTo(MSG) is
-                        // isEqualTo("Order not found"), so changing the constant changes the assertion
-                        statements.add(fragment.getNameAsString() + "("
-                                + fragment.getArguments().stream()
-                                        .map(arg -> normalize(withConstantValues(arg, constantLiterals)))
-                                        .reduce((a, b) -> a + "," + b)
-                                        .orElse("")
-                                + ")");
+                        statements.add(lockedText(fragment, constantLiterals));
                         rest = rest.replace(f, "");
                     }
                     watched.append(rest);
@@ -250,14 +247,25 @@ public final class AssertionScanner {
                 hashResource(s.getValue(), testResources, watched);
             }
         }
-        // setup methods and fields belong to the inputs of every scenario in the class
+        // setup methods, the helpers the tests call (one level) and fields belong to the inputs of the scenario
         for (MethodDeclaration m : cu.findAll(MethodDeclaration.class)) {
-            if (m.getAnnotationByName("BeforeEach").isPresent()
+            boolean helper = !isTest(m) && called.contains(m.getNameAsString());
+            if (helper
+                    || m.getAnnotationByName("BeforeEach").isPresent()
                     || m.getAnnotationByName("BeforeAll").isPresent()) {
                 watched.append(normalize(m));
+                m.findAll(StringLiteralExpr.class).forEach(x -> hashResource(x.getValue(), testResources, watched));
             }
         }
         cu.findAll(FieldDeclaration.class).forEach(f -> watched.append(normalize(f)));
+        // fixtures named by the class's annotations (a class-level @Sql) or by its constants
+        cu.findAll(com.github.javaparser.ast.body.ClassOrInterfaceDeclaration.class)
+                .forEach(c -> c.getAnnotations()
+                        .forEach(a -> a.findAll(StringLiteralExpr.class)
+                                .forEach(x -> hashResource(x.getValue(), testResources, watched))));
+        cu.findAll(FieldDeclaration.class)
+                .forEach(f -> f.findAll(StringLiteralExpr.class)
+                        .forEach(x -> hashResource(x.getValue(), testResources, watched)));
         return new ScenarioOracle(methods, statements, tokens, Hashes.shortSha(watched.toString()));
     }
 
@@ -302,6 +310,38 @@ public final class AssertionScanner {
             }
         }
         return out;
+    }
+
+    /**
+     * The text an assertion is locked by (plan §5.3): the assertion with the subject it is chained on, from the nearest
+     * {@code assert…}, {@code verify…} or {@code expect…} call ({@code assertThat(r.status()).isEqualTo(503)}), and the
+     * calls that follow it without being assertions themselves, which state what is verified
+     * ({@code verify(producer).send("orders", payload)}, {@code statusCode(201).body("status", equalTo("X"))}). A
+     * constant of the test class is replaced by its value: {@code isEqualTo(MSG)} is {@code isEqualTo("Order not
+     * found")}, so changing the constant changes the assertion.
+     */
+    static String lockedText(MethodCallExpr fragment, Map<String, Expression> literals) {
+        Expression whole = fragment;
+        while (whole.getParentNode().orElse(null) instanceof MethodCallExpr next
+                && next.getScope().orElse(null) == whole
+                && !isAssertionCall(next)) {
+            whole = next;
+        }
+        MethodCallExpr subject = fragment;
+        for (Expression e = fragment;
+                e instanceof MethodCallExpr call;
+                e = call.getScope().orElse(null)) {
+            String n = call.getNameAsString();
+            if (n.startsWith("assert") || n.startsWith("verify") || n.startsWith("expect")) {
+                subject = call;
+                break;
+            }
+        }
+        String text = normalize(withConstantValues(whole, literals));
+        String before = subject.getScope()
+                .map(scope -> normalize(withConstantValues(scope, literals)) + ".")
+                .orElse("");
+        return text.startsWith(before) ? text.substring(before.length()) : text;
     }
 
     /** True when the node sits inside the arguments (not the scope) of an enclosing call matching the predicate. */

@@ -149,6 +149,7 @@ class PomInfoTest {
 
         assertEquals("gradle", app.tool);
         assertEquals(3, app.bootMajor());
+        assertEquals(java.util.List.of("app"), PomInfo.read(root).modules, "doctor reads the root on its own");
     }
 
     @Test

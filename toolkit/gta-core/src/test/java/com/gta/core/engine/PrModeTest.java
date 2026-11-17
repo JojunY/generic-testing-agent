@@ -74,6 +74,20 @@ class PrModeTest {
     }
 
     @Test
+    void shouldKeepAFlowAnEarlierPrRunMadeStaleWhenRunAgain() throws Exception {
+        Files.writeString(
+                root.resolve("src/main/java/com/acme/order/OrderController.java"),
+                "package com.acme.order;\nclass OrderController { int approvalLimit = 1000; }\n");
+        new Engine(root, new TestRunnerFake()).next("pr", null, base, false, null);
+
+        // the next day: the spec is stale, so impact (approved specs only) no longer names it
+        Map<String, Object> again = new Engine(root, new TestRunnerFake()).next("pr", null, base, false, null);
+
+        assertEquals("analyze", again.get("node"), again.toString());
+        assertEquals("order.create", again.get("flowId"));
+    }
+
+    @Test
     void shouldSaySoWhenTheDiffAffectsNoFlow() throws Exception {
         Files.writeString(root.resolve("README.md"), "docs only\n");
 

@@ -678,7 +678,7 @@ A working-state file that cannot be read is moved aside as `*.corrupt-<time>` an
 
 **Recovery**:
 - On takeover, the `ownsFiles` of items an agent was editing (`authoring`, `repairing`), including untracked files, are first copied to `.gta/work/recover/<seq>/`.
-- Those items are then reset to `pending`. Items waiting for triage or review keep their state.
+- Those items are then reset to `pending`. Items waiting for triage or review keep their state; when the files changed since their review round was issued (the developer's edits or commits), the test runs again on the current tree first and a new round reviews that run. Nothing is reverted.
 - **git stash is not used.**
 
 **Handover**: someone else takes over by pushing the branch. Specs, oracles, escalation records and tests are all in git. Repair attempts start counting again; escalation records are not lost.
@@ -1669,7 +1669,7 @@ The same conversation works in Chinese: `R3: 1A 2A 其余默认` and `批准 bor
 - `.github/agents/gta-*`, `.github/prompts/gta*`
 - `.vscode/settings.json`, `.opencode/**`
 
-When an agent writes to these paths, the change check of §5.8 restores them. Apart from `.gta/work/**`, changes to these paths in a PR are listed separately in the PR comment. The `**/` prefix covers every module of a monorepo. When CODEOWNERS is enabled later, this list is used as is.
+When an agent writes to these paths, the change check of §5.8 restores them. `.gta/work/**` is the exception: it is gitignored, so git can neither see nor restore it. It is protected only by being gtaw's alone to write (§5.2) and by the agents' shell allow-list (no `git`, so a forged entry in the commit ledger has no commit to cover); an agent that edits it with a file tool is not detected. Apart from `.gta/work/**`, changes to these paths in a PR are listed separately in the PR comment. The `**/` prefix covers every module of a monorepo. When CODEOWNERS is enabled later, this list is used as is.
 
 | Topic | Measures |
 |---|---|
