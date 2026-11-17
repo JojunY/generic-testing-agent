@@ -83,7 +83,7 @@ copilot/     GENERATED from core/ + platforms/copilot (committed so teams can pi
 opencode/    GENERATED from core/ + platforms/opencode (committed so teams can pick it): never edit by hand
 toolkit/     Java sources: gta-core, gta-cli, gta-junit, gta-harness-gen (Maven reactor; pom.xml holds the version)
 wrapper/     files installed into services: gtaw, gtaw.cmd, gtaw-download.ps1 (pinned jar from Nexus, sha256-verified)
-scripts/     install-local.sh (install into a service without Nexus), generate.sh (platform folders), diagrams/render.py (docs/diagrams), site/record-demo.sh (records the replay of docs/site)
+scripts/     install-local.sh (install into a service without Nexus), generate.sh (platform folders), diagrams/render.py (docs/diagrams), site/record-demo.sh (records the replay of docs/site), site/build-zh-heading-font.py (the font of its Chinese headings)
 evals/       order-service fixture with seeded defects and a scripted end-to-end run
 docs/        guides/ (quickstart, pilot, CI integration, test naming, diagram style, adding a capability), design/ (overview: start here; plan: the full design), archive/ (past review records), diagrams/, site/ (the introduction site, static); README.md is the index
 ```

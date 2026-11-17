@@ -8,7 +8,7 @@
 <meta name="color-scheme" content="light">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23f4efe6'/%3E%3Ccircle cx='21' cy='20' r='8' fill='%23f6c445'/%3E%3Crect x='10' y='6' width='14' height='14' fill='%232a3be0'/%3E%3Cpath d='M13 20h11v-6.200a8 8 0 0 0-11 6.200z' fill='%2317804f'/%3E%3Ccircle cx='9' cy='12' r='6' fill='%23f58fb0'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/css/site.css">
-<noscript><style>.needs-js{display:none}.reveal{opacity:1;transform:none}</style></noscript>
+<noscript><style>.needs-js{display:none}.reveal{opacity:1;transform:none}.strip .stamp{opacity:1}.shape-ring path{stroke-dashoffset:0}.ns-word::after{transform:none}.art{display:none}</style></noscript>
 </head>
 <body>
 <svg class="sprite" aria-hidden="true" focusable="false">
@@ -43,7 +43,7 @@
   <div class="wrap hero-grid">
     <div class="hero-copy">
       <p class="eyebrow">gta — generic testing agent — for Java services built with Spring</p>
-      <h1 data-kinetic>AI writes the tests. <em>It doesn’t get to grade them.</em></h1>
+      <h1 data-kinetic><span class="nb">AI writes the tests.</span> <em>It doesn’t get to grade them.</em></h1>
       <p class="lede">A model writes regression and integration tests for your service. <b>gtaw</b>, a deterministic referee with no model inside, runs them against expectations a person approved, and locks those. Nothing here turns green on its own say-so.</p>
       <div class="desk needs-js">
         <div class="desk-item">
@@ -98,7 +98,7 @@
       <div class="desk sheet-desk needs-js">
         <div class="desk-item">
           <button class="key key-ok" data-key="ok" type="button" disabled>OK <kbd>⏎</kbd></button>
-          <p class="desk-note" data-note="ok" aria-live="polite">Nothing waits for you yet.</p>
+          <p class="desk-note" data-note="ok">Nothing waits for you yet.</p>
         </div>
         <div class="desk-item">
           <button class="key key-force" data-key="force" type="button">Force green</button>
@@ -214,7 +214,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   <div class="wrap">
     <p class="eyebrow">03 — Replay</p>
     <h2 data-kinetic>Your part is <em>five replies.</em></h2>
-    <p class="lede">This is a recording of a real gtaw run on the lending sample: the flow <code>borrow.book</code>, from <code>/gta</code> to a pinned defect. A script plays the agents; every line gtaw prints is real. Take the person’s seat.</p>
+    <p class="lede">This is a recording of a real gtaw run on the lending sample: the flow <code>borrow.book</code>, from <code>/gta</code> to a pinned defect. A script plays the agents. What gtaw answered is shown as it was recorded; a line such as “hands a brief to” sums up its JSON, and one-time tokens are left out. Take the person’s seat.</p>
     <div class="loop needs-js">
       <div class="console" id="console">
         <div class="console-bar"><span>chat · lending-service</span><span class="pen" id="pen"></span></div>
@@ -231,6 +231,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
           <div class="sheet-top"><span>borrow.book</span><span>2 scenarios</span></div>
           <table class="ledger ledger-mini" id="loop-table">
             <caption class="sr">The two scenarios of borrow.book; the table follows the conversation.</caption>
+            <thead><tr><th>Scenario</th><th>Kind</th><th>Locked expected values</th><th>Verdict</th></tr></thead>
             <tbody>
               <tr><td>s01</td><td></td><td></td><td></td></tr>
               <tr><td>s02</td><td></td><td></td><td></td></tr>
@@ -284,7 +285,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
       <ul class="chips-list">
         <li>Spring Security</li><li>caches</li><li>Resilience4j and Spring Retry</li><li>Secret Manager, faked and never read</li><li>Cloud Run functions</li><li>an existing Cucumber suite</li><li>your own tests, not repeated</li><li>multi-module Maven</li><li>Gradle</li><li>Spring Boot 2.2 to 4.x</li>
       </ul>
-      <p class="also-not"><b>Not covered:</b> other languages and frameworks, and tests against deployed environments. What is planned, in order, is in <a href="../design/plan.md">the plan, §15</a>.</p>
+      <p class="also-not"><b>Not covered:</b> other languages and frameworks, and tests against deployed environments. What is planned, in order, is in <a href="https://github.com/JojunY/generic-testing-agent/blob/main/docs/design/plan.md">the plan, §15</a>.</p>
     </div>
   </div>
 </section>
@@ -316,7 +317,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
         </div>
         <div>
           <p class="standing-label">Next</p>
-          <p>A pilot on one real service, with a checklist of what to record and what decides the outcome: <a href="../guides/pilot.md">the pilot guide</a>.</p>
+          <p>A pilot on one real service, with a checklist of what to record and what decides the outcome: <a href="https://github.com/JojunY/generic-testing-agent/blob/main/docs/guides/pilot.md">the pilot guide</a>.</p>
         </div>
       </div>
     </div>
@@ -334,10 +335,10 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
       <li><span class="step-n">3</span><div><p class="step-label">When gta asks</p><pre class="code cmd">OK</pre></div></li>
     </ol>
     <ul class="reads reveal">
-      <li><a href="../design/overview.md"><b>gta in ten minutes</b><span>the design, its limits, what is specific to the first adopter</span></a></li>
-      <li><a href="../guides/quickstart.md"><b>Quickstart</b><span>install it for a team, with CI</span></a></li>
-      <li><a href="../guides/pilot.md"><b>Pilot guide</b><span>the first run with a real model</span></a></li>
-      <li><a href="../../README.md"><b>README</b><span>everything else</span></a></li>
+      <li><a href="https://github.com/JojunY/generic-testing-agent/blob/main/docs/design/overview.md"><b>gta in ten minutes</b><span>the design, its limits, what is specific to the first adopter</span></a></li>
+      <li><a href="https://github.com/JojunY/generic-testing-agent/blob/main/docs/guides/quickstart.md"><b>Quickstart</b><span>install it for a team, with CI</span></a></li>
+      <li><a href="https://github.com/JojunY/generic-testing-agent/blob/main/docs/guides/pilot.md"><b>Pilot guide</b><span>the first run with a real model</span></a></li>
+      <li><a href="https://github.com/JojunY/generic-testing-agent/blob/main/README.md"><b>README</b><span>everything else</span></a></li>
     </ul>
   </div>
 </section>
@@ -426,7 +427,9 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   "tabReportNote": "The session report, with the words of each human confirmation.",
   "runMeta": "Recorded {recorded} with gta {gta} at commit {commit} on {service}. How: scripts/site/record-demo.sh.",
   "copy": "Copy",
-  "copied": "Copied"
+  "copied": "Copied",
+  "stConfirmed": "defect confirmed by you",
+  "copyFailed": "Selected: press Ctrl+C"
 }</script>
 <script defer src="assets/js/run-data.js"></script>
 <script defer src="assets/js/art.js"></script>

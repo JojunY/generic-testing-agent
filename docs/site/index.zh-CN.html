@@ -8,7 +8,7 @@
 <meta name="color-scheme" content="light">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23f4efe6'/%3E%3Ccircle cx='21' cy='20' r='8' fill='%23f6c445'/%3E%3Crect x='10' y='6' width='14' height='14' fill='%232a3be0'/%3E%3Cpath d='M13 20h11v-6.200a8 8 0 0 0-11 6.200z' fill='%2317804f'/%3E%3Ccircle cx='9' cy='12' r='6' fill='%23f58fb0'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/css/site.css">
-<noscript><style>.needs-js{display:none}.reveal{opacity:1;transform:none}</style></noscript>
+<noscript><style>.needs-js{display:none}.reveal{opacity:1;transform:none}.strip .stamp{opacity:1}.shape-ring path{stroke-dashoffset:0}.ns-word::after{transform:none}.art{display:none}</style></noscript>
 </head>
 <body>
 <svg class="sprite" aria-hidden="true" focusable="false">
@@ -43,7 +43,7 @@
   <div class="wrap hero-grid">
     <div class="hero-copy">
       <p class="eyebrow">gta — generic testing agent — 面向用 Spring 构建的 Java 服务</p>
-      <h1 data-kinetic>AI 写测试。<em>但不给自己打分。</em></h1>
+      <h1 data-kinetic><span class="nb">AI 写测试。</span><em>但不给自己打分。</em></h1>
       <p class="lede">模型为你的服务编写回归测试和集成测试。<b>gtaw</b> 是一个确定性的裁判，内部没有模型：它对照经人批准的期望值运行这些测试，并把期望值锁定。在这里，没有什么能自己说自己是绿的。</p>
       <div class="desk needs-js">
         <div class="desk-item">
@@ -82,15 +82,15 @@
           <tbody>
             <tr data-end="passed"><td>borrow.book/s01</td><td>REST</td><td>400</td><td>通过</td></tr>
             <tr data-end="pinned"><td>borrow.book/s02</td><td>REST</td><td>503 PENDING_LOCATE</td><td>缺陷已标注</td></tr>
-            <tr data-end="pinned"><td>recall.recall/s02</td><td>Stream</td><td>1000 b-1</td><td>缺陷已标注</td></tr>
-            <tr data-end="passed"><td>fee-accrual.flow/s01</td><td>Integration</td><td>0</td><td>通过</td></tr>
+            <tr data-end="pinned"><td>recall.recall/s02</td><td>消息流</td><td>1000 b-1</td><td>缺陷已标注</td></tr>
+            <tr data-end="passed"><td>fee-accrual.flow/s01</td><td>集成流</td><td>0</td><td>通过</td></tr>
             <tr data-end="pinned"><td>quote.request/s02</td><td>STOMP</td><td>45.00</td><td>缺陷已标注</td></tr>
             <tr data-end="passed"><td>product.reserve/s01</td><td>WebFlux</td><td>200 3</td><td>通过</td></tr>
             <tr data-end="pinned"><td>stock.get/s02</td><td>gRPC</td><td>false</td><td>缺陷已标注</td></tr>
             <tr data-end="passed"><td>low-stock.transform/s01</td><td>Beam</td><td>Kettle</td><td>通过</td></tr>
-            <tr data-end="pinned"><td>db.customer-tier/s02</td><td>Migration</td><td>GOLD</td><td>缺陷已标注</td></tr>
+            <tr data-end="pinned"><td>db.customer-tier/s02</td><td>数据库迁移</td><td>GOLD</td><td>缺陷已标注</td></tr>
             <tr data-end="passed"><td>invoice.quote/s01</td><td>REST</td><td>200 40.00</td><td>通过</td></tr>
-            <tr data-end="pinned"><td>admin.purge-cancelled/s02</td><td>Security</td><td>403</td><td>缺陷已标注</td></tr>
+            <tr data-end="pinned"><td>admin.purge-cancelled/s02</td><td>安全</td><td>403</td><td>缺陷已标注</td></tr>
             <tr data-end="passed"><td>restock.restock/s01</td><td>工作流</td><td>restocked</td><td>通过</td></tr>
           </tbody>
         </table>
@@ -98,7 +98,7 @@
       <div class="desk sheet-desk needs-js">
         <div class="desk-item">
           <button class="key key-ok" data-key="ok" type="button" disabled>OK <kbd>⏎</kbd></button>
-          <p class="desk-note" data-note="ok" aria-live="polite">暂时没有需要你处理的。</p>
+          <p class="desk-note" data-note="ok">暂时没有需要你处理的。</p>
         </div>
         <div class="desk-item">
           <button class="key key-force" data-key="force" type="button">强制变绿</button>
@@ -161,7 +161,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
       <div class="role-shape" aria-hidden="true"><i class="shape-blob"></i></div>
       <p class="role-who">Agent</p>
       <p class="role-verb">写</p>
-      <p class="role-sub">analyst · 测试作者 · reviewer</p>
+      <p class="role-sub">analyst · test author · reviewer</p>
       <ul class="does">
         <li>阅读代码</li>
         <li>编写规格，附带问题和推荐答案</li>
@@ -214,7 +214,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   <div class="wrap">
     <p class="eyebrow">03 — 重放</p>
     <h2 data-kinetic>你只需要<em>回复五次。</em></h2>
-    <p class="lede">这是在借贷示例上真实运行 gtaw 的录制：流程 <code>borrow.book</code>，从 <code>/gta</code> 到标注一个缺陷，gtaw 的输出语言设为中文（<code>output.language: zh-CN</code>）。agent 由脚本扮演；gtaw 输出的每一行都是真的。请坐到“人”的位置上。</p>
+    <p class="lede">这是在借贷示例上真实运行 gtaw 的录制：流程 <code>borrow.book</code>，从 <code>/gta</code> 到标注一个缺陷，gtaw 的输出语言设为中文（<code>output.language: zh-CN</code>）。agent 由脚本扮演。gtaw 的回应按录制原样呈现；“把 brief 交给”这类行是对其 JSON 输出的概括，一次性令牌已省略。请坐到“人”的位置上。</p>
     <div class="loop needs-js">
       <div class="console" id="console">
         <div class="console-bar"><span>对话 · lending-service</span><span class="pen" id="pen"></span></div>
@@ -231,6 +231,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
           <div class="sheet-top"><span>borrow.book</span><span>2 个场景</span></div>
           <table class="ledger ledger-mini" id="loop-table">
             <caption class="sr">borrow.book 的两个场景，表格随对话更新。</caption>
+            <thead><tr><th>场景</th><th>类型</th><th>锁定的期望值</th><th>判定</th></tr></thead>
             <tbody>
               <tr><td>s01</td><td></td><td></td><td></td></tr>
               <tr><td>s02</td><td></td><td></td><td></td></tr>
@@ -284,7 +285,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
       <ul class="chips-list">
         <li>Spring Security</li><li>缓存</li><li>Resilience4j 与 Spring Retry</li><li>Secret Manager（用假实现，绝不读取真实密钥）</li><li>Cloud Run 函数</li><li>已有的 Cucumber 套件</li><li>团队已有的测试（不重复编写）</li><li>多模块 Maven</li><li>Gradle</li><li>Spring Boot 2.2 至 4.x</li>
       </ul>
-      <p class="also-not"><b>不覆盖：</b>其他语言和框架，以及针对已部署环境的测试。后续计划及其顺序见<a href="../design/plan.zh-CN.md">设计文档 §15</a>。</p>
+      <p class="also-not"><b>不覆盖：</b>其他语言和框架，以及针对已部署环境的测试。后续计划及其顺序见<a href="https://github.com/JojunY/generic-testing-agent/blob/main/docs/design/plan.zh-CN.md">设计文档 §15</a>。</p>
     </div>
   </div>
 </section>
@@ -316,7 +317,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
         </div>
         <div>
           <p class="standing-label">下一步</p>
-          <p>在一个真实服务上做试点；要记录什么、由什么决定结果，都有清单：<a href="../guides/pilot.md">试点指南</a>。</p>
+          <p>在一个真实服务上做试点；要记录什么、由什么决定结果，都有清单：<a href="https://github.com/JojunY/generic-testing-agent/blob/main/docs/guides/pilot.md">试点指南</a>。</p>
         </div>
       </div>
     </div>
@@ -334,10 +335,10 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
       <li><span class="step-n">3</span><div><p class="step-label">当 gta 提问时</p><pre class="code cmd">OK</pre></div></li>
     </ol>
     <ul class="reads reveal">
-      <li><a href="../design/overview.md"><b>十分钟了解 gta</b><span>设计、局限，以及哪些是首个采用方特有的</span></a></li>
-      <li><a href="../guides/quickstart.zh-CN.md"><b>快速上手</b><span>为团队安装，并接入 CI</span></a></li>
-      <li><a href="../guides/pilot.md"><b>试点指南</b><span>第一次用真实模型运行</span></a></li>
-      <li><a href="../../README.zh-CN.md"><b>README</b><span>其余的一切</span></a></li>
+      <li><a href="https://github.com/JojunY/generic-testing-agent/blob/main/docs/design/overview.md"><b>十分钟了解 gta</b><span>设计、局限，以及哪些是首个采用方特有的</span></a></li>
+      <li><a href="https://github.com/JojunY/generic-testing-agent/blob/main/docs/guides/quickstart.zh-CN.md"><b>快速上手</b><span>为团队安装，并接入 CI</span></a></li>
+      <li><a href="https://github.com/JojunY/generic-testing-agent/blob/main/docs/guides/pilot.md"><b>试点指南</b><span>第一次用真实模型运行</span></a></li>
+      <li><a href="https://github.com/JojunY/generic-testing-agent/blob/main/README.zh-CN.md"><b>README</b><span>其余的一切</span></a></li>
     </ul>
   </div>
 </section>
@@ -357,7 +358,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
     <p class="help-title" id="help-title">按键</p>
     <dl>
       <dt><kbd>P</kbd></dt><dd>演示模式：字更大，每按一次走一步</dd>
-      <dt><kbd>→</kbd> <kbd>Space</kbd></dt><dd>下一步：页面在等人时回复 OK，否则进入下一节</dd>
+      <dt><kbd>→</kbd> <kbd>空格</kbd></dt><dd>下一步：页面在等人时回复 OK，否则进入下一节</dd>
       <dt><kbd>←</kbd></dt><dd>上一节</dd>
       <dt><kbd>F</kbd></dt><dd>全屏</dd>
       <dt><kbd>Esc</kbd></dt><dd>关闭</dd>
@@ -426,7 +427,9 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   "tabReportNote": "本次会话的报告，其中记录了每一次人工确认的原话。",
   "runMeta": "录制于 {recorded}，gta {gta}，提交 {commit}，服务 {service}。录制方式：scripts/site/record-demo.sh --lang zh-CN。",
   "copy": "复制",
-  "copied": "已复制"
+  "copied": "已复制",
+  "stConfirmed": "你已确认缺陷",
+  "copyFailed": "已选中，请按 Ctrl+C"
 }</script>
 <script defer src="assets/js/run-data.zh-CN.js"></script>
 <script defer src="assets/js/art.js"></script>

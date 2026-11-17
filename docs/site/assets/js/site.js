@@ -61,6 +61,7 @@
     failed: { text: 'stFailed', who: 'gtaw', look: 'st st-failed' },
     triage: { text: 'stTriage', who: 'ai', look: 'st' },
     waiting: { text: 'stWaiting', who: 'you', look: 'st st-waiting' },
+    confirmed: { text: 'stConfirmed', who: 'you', look: 'st' },
     passed: { text: 'stPassed', who: '', look: 'stamp stamp-passed', locked: true },
     pinned: { text: 'stPinned', who: '', look: 'stamp stamp-pinned', locked: true }
   };
@@ -76,7 +77,12 @@
       var row = rows[i];
       tr.textContent = '';
       var line = { tr: tr, shown: null };
-      tr.appendChild(el('td', 'c-scn', row.scenario));
+      var id = el('td', 'c-scn');
+      row.scenario.split(/([./])/).forEach(function (part) {
+        id.appendChild(document.createTextNode(part));
+        if (part === '.' || part === '/') id.appendChild(document.createElement('wbr'));
+      });
+      tr.appendChild(id);
       tr.appendChild(el('td', 'c-kind', row.kind));
       var lock = el('td', 'c-lock');
       line.lock = lock;
@@ -172,23 +178,28 @@
       timers.push(later(ms, fn));
     }
 
+    var said = '';
     function desk() {
       var waiting = rows.filter(function (row) { return row.state === 'waiting'; }).length;
       var open = rows.filter(function (row) { return row.state !== 'passed' && row.state !== 'pinned'; }).length;
+      var passed = rows.filter(function (row) { return row.state === 'passed'; }).length;
+      var text = waiting > 0 ? (waiting === 1 ? t('okOne') : t('okMany', { n: waiting }))
+        : open === 0 ? t('okDone', { p: passed, d: rows.length - passed }) : t('okNone');
       all('[data-key="ok"]').forEach(function (key) { key.disabled = waiting === 0; });
+      if (text === said) return; // a live region announces each message once
+      said = text;
       all('[data-note="ok"]').forEach(function (note) {
-        if (waiting > 0) {
-          note.textContent = waiting === 1 ? t('okOne') : t('okMany', { n: waiting });
-        } else if (open === 0) {
-          var passed = rows.filter(function (row) { return row.state === 'passed'; }).length;
-          note.textContent = t('okDone', { p: passed, d: rows.length - passed }) + ' ';
-          var again = el('button', 'tool', t('again'));
-          again.type = 'button';
-          again.addEventListener('click', run);
-          note.appendChild(again);
-        } else {
-          note.textContent = t('okNone');
-        }
+        note.textContent = text;
+        if (open !== 0) return;
+        var again = el('button', 'tool', t('again'));
+        again.type = 'button';
+        again.addEventListener('click', function () {
+          var key = note.parentNode.parentNode.querySelector('[data-key="force"]');
+          run();
+          if (key) key.focus();
+        });
+        note.appendChild(document.createTextNode(' '));
+        note.appendChild(again);
       });
     }
 
@@ -268,7 +279,8 @@
 
     board = {
       ok: ok,
-      waiting: function () { return rows.some(function (row) { return row.state === 'waiting'; }); }
+      waiting: function () { return rows.some(function (row) { return row.state === 'waiting'; }); },
+      stage: function (on) { art.setMarkScale(on ? 1.4 : 1); }
     };
     run();
   }
@@ -333,10 +345,10 @@
       'review-s01': function () { move(0, 'review'); },
       's01-passed': function () { move(0, 'passed'); printTicket(rows[0], 'passed'); },
       'author-s02': function () { move(1, 'writing'); },
-      's02-failed': function () { move(1, 'failed'); },
+      's02-failed': function () { move(1, 'running'); timers.push(later(450, function () { move(1, 'failed'); })); },
       triage: function () { move(1, 'triage'); },
       defect: function () { move(1, 'waiting'); },
-      'defect-confirmed': function () { move(1, 'none'); },
+      'defect-confirmed': function () { move(1, 'confirmed'); },
       'author-pin': function () { move(1, 'writing'); },
       pinned: function () { move(1, 'pinned'); printTicket(rows[1], 'pinned'); }
     };
@@ -425,10 +437,12 @@
       input.placeholder = beats[next].reply;
       key.disabled = false;
       key.firstChild.nodeValue = beats[next].reply + ' ';
-      if (form.getAttribute('data-typed')) input.focus({ preventScroll: true });
+      if (typing) input.focus({ preventScroll: true });
     }
 
+    var typing = false; // the reply was typed in the input, so the next one probably will be too
     function play(beat) {
+      typing = document.activeElement === input;
       playing = true;
       input.disabled = true;
       key.disabled = true;
@@ -595,8 +609,10 @@
       var pre = el('pre');
       pre.innerHTML = tabs[index][1]();
       body.appendChild(pre);
+      body.setAttribute('aria-labelledby', 'tab-' + index);
       all('.tab', $('tabs')).forEach(function (button, n) {
         button.setAttribute('aria-selected', n === index ? 'true' : 'false');
+        button.tabIndex = n === index ? 0 : -1;
       });
       var hit = pre.querySelector('.hit');
       if (hit) pre.scrollTop = hit.offsetTop - pre.offsetTop - 120;
@@ -604,8 +620,21 @@
     tabs.forEach(function (tab, index) {
       var button = el('button', 'tab', t(tab[0]));
       button.type = 'button';
+      button.id = 'tab-' + index;
       button.setAttribute('role', 'tab');
+      button.setAttribute('aria-controls', 'tab-body');
       button.addEventListener('click', function () { showTab(index); });
+      button.addEventListener('keydown', function (event) {
+        var step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+        if (event.key === 'Home') step = -index;
+        if (event.key === 'End') step = tabs.length - 1 - index;
+        if (step === undefined) return;
+        event.preventDefault();
+        event.stopPropagation(); // not a stage key here
+        var to = (index + step + tabs.length) % tabs.length;
+        showTab(to);
+        $('tab-' + to).focus();
+      });
       $('tabs').appendChild(button);
     });
     function showEvidence() {
@@ -617,7 +646,6 @@
       event.preventDefault();
       reply(input.value.trim());
     });
-    input.addEventListener('focus', function () { form.setAttribute('data-typed', '1'); });
     $('run-meta').textContent = t('runMeta', RUN.meta);
     replay = {
       canReply: function () { return !playing && next < beats.length; },
@@ -688,40 +716,73 @@
       });
       return found;
     }
+    var top = $('top');
+    var nights = all('.night');
     var ticking = false;
+    /** The header names the scene in view, and turns dark over the dark scenes. */
+    function follow() {
+      ticking = false;
+      var id = currentScene().id;
+      links.forEach(function (link) { link.classList.toggle('here', link.getAttribute('href') === '#' + id); });
+      var dark = nights.some(function (night) {
+        var box = night.getBoundingClientRect();
+        return box.top <= 28 && box.bottom > 28;
+      });
+      top.classList.toggle('on-night', dark);
+    }
     window.addEventListener('scroll', function () {
       if (ticking) return;
       ticking = true;
-      window.requestAnimationFrame(function () {
-        ticking = false;
-        var id = currentScene().id;
-        links.forEach(function (link) { link.classList.toggle('here', link.getAttribute('href') === '#' + id); });
-      });
+      window.requestAnimationFrame(follow);
     }, { passive: true });
+    follow();
 
+    // the moving shapes of the roles run only while they can be seen
+    var roles = document.querySelector('.roles');
+    if (roles && 'IntersectionObserver' in window) {
+      roles.classList.add('paused');
+      new IntersectionObserver(function (entries) {
+        roles.classList.toggle('paused', !entries[0].isIntersecting);
+      }).observe(roles);
+    }
+
+    /** Copies text; where the browser refuses, the old way, and where that fails too, the text is selected. */
+    function copy(text, button, pre) {
+      function done() {
+        button.textContent = t('copied');
+        window.setTimeout(function () { button.textContent = t('copy'); }, 1400);
+      }
+      function fallback() {
+        var area = el('textarea');
+        area.value = text;
+        area.setAttribute('readonly', '');
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        var copied = false;
+        try {
+          copied = document.execCommand('copy');
+        } catch (e) {
+          copied = false;
+        }
+        document.body.removeChild(area);
+        if (copied) return done();
+        var range = document.createRange();
+        range.selectNodeContents(pre.firstChild);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        button.textContent = t('copyFailed');
+        window.setTimeout(function () { button.textContent = t('copy'); }, 2600);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
+      else fallback();
+    }
     all('pre[data-copy]').forEach(function (pre) {
       var text = pre.textContent;
       var button = el('button', 'copy', t('copy'));
       button.type = 'button';
-      button.addEventListener('click', function () {
-        function done() {
-          button.textContent = t('copied');
-          window.setTimeout(function () { button.textContent = t('copy'); }, 1400);
-        }
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(done, function () {});
-        } else {
-          var area = el('textarea');
-          area.value = text;
-          document.body.appendChild(area);
-          area.select();
-          try {
-            document.execCommand('copy');
-            done();
-          } catch (e) { /* the command stays selectable */ }
-          document.body.removeChild(area);
-        }
-      });
+      button.addEventListener('click', function () { copy(text, button, pre); });
       pre.appendChild(button);
     });
 
@@ -730,9 +791,14 @@
     var hud = $('stage-hud');
     var help = $('help');
     var hudTimer = 0;
+    var opener = null;
+    var smooth = reduced ? 'auto' : 'smooth';
 
+    function staged() {
+      return document.body.classList.contains('stage');
+    }
     function stage() {
-      var on = !document.body.classList.contains('stage');
+      var on = !staged();
       var scene = currentScene();
       document.body.classList.toggle('stage', on);
       stageKey.setAttribute('aria-pressed', on ? 'true' : 'false');
@@ -741,27 +807,61 @@
       hud.classList.remove('quiet');
       window.clearTimeout(hudTimer);
       if (on) hudTimer = window.setTimeout(function () { hud.classList.add('quiet'); }, 5000);
+      if (board) board.stage(on);
       window.dispatchEvent(new Event('resize'));
       window.setTimeout(function () { scene.scrollIntoView({ behavior: 'auto', block: 'start' }); }, 160);
     }
     function go(step) {
       var index = scenes.indexOf(currentScene()) + step;
       if (index < 0 || index >= scenes.length) return;
-      scenes[index].scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+      scenes[index].scrollIntoView({ behavior: smooth, block: 'start' });
     }
-    /** One step of a presentation: reply OK where the page waits for a person, otherwise the next section. */
+    /** Brings a part of a scene into view before something happens in it, so that the audience sees it happen. */
+    function show(node) {
+      var box = node.getBoundingClientRect();
+      if (box.top >= 64 && box.bottom <= window.innerHeight) return;
+      node.scrollIntoView({ behavior: smooth, block: box.height > window.innerHeight - 80 ? 'start' : 'center' });
+    }
+    /**
+     * One step of a presentation: reply OK where the page waits for a person; otherwise the rest of a scene that is
+     * taller than the screen; otherwise the next scene.
+     */
     function advance() {
-      var id = currentScene().id;
-      if (id === 'ledger' && board && board.waiting()) return board.ok();
+      var scene = currentScene();
+      var id = scene.id;
+      if ((id === 'title' || id === 'ledger') && board && board.waiting()) {
+        if (id === 'ledger') show(scene.querySelector('.sheet-desk'));
+        return board.ok();
+      }
       if (id === 'loop' && replay) {
         if (replay.playing()) return undefined;
-        if (replay.canReply()) return replay.reply();
+        if (replay.canReply()) {
+          show($('console'));
+          return replay.reply();
+        }
+      }
+      var box = scene.getBoundingClientRect();
+      if (box.bottom > window.innerHeight + 24) {
+        return window.scrollBy({ top: Math.min(box.bottom - window.innerHeight, window.innerHeight * 0.8), behavior: smooth });
       }
       return go(1);
     }
+    /** Back: to the top of the scene when part of it was stepped through, otherwise the scene before. */
+    function back() {
+      var top = currentScene().getBoundingClientRect().top;
+      if (top < -24) return currentScene().scrollIntoView({ behavior: smooth, block: 'start' });
+      return go(-1);
+    }
     function toggleHelp(show) {
+      if (show === !help.hidden) return;
       help.hidden = !show;
-      if (show) $('help-close').focus();
+      if (show) {
+        opener = document.activeElement;
+        $('help-close').focus();
+      } else if (opener && opener.focus) {
+        opener.focus();
+        opener = null;
+      }
     }
 
     stageKey.addEventListener('click', stage);
@@ -770,33 +870,55 @@
       if (event.target === help) toggleHelp(false);
     });
 
+    // the other language opens at the same scene, in stage mode if this one is in it
+    all('.tool[hreflang]').forEach(function (link) {
+      link.addEventListener('click', function () {
+        link.href = link.getAttribute('href').split(/[?#]/)[0] + (staged() ? '?stage' : '') + '#' + currentScene().id;
+      });
+    });
+
     document.addEventListener('keydown', function (event) {
       if (event.ctrlKey || event.metaKey || event.altKey) return;
       var target = event.target;
+      if (!help.hidden) { // a modal dialog: only its own keys
+        if (event.key === 'Escape') toggleHelp(false);
+        else if (event.key === 'Tab') {
+          event.preventDefault();
+          $('help-close').focus();
+        } else if (event.key !== 'Enter' && event.key !== ' ') {
+          event.preventDefault();
+        }
+        return;
+      }
       var typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
       if (event.key === 'Escape') {
-        if (!help.hidden) toggleHelp(false);
-        else if (typing) target.blur();
+        if (typing) target.blur();
+        return;
+      }
+      // in stage mode an empty reply box does not swallow the presenter's keys
+      if (typing && staged() && target.id === 'reply' && !target.value && (event.key === 'ArrowRight' || event.key === 'PageDown')) {
+        event.preventDefault();
+        target.blur();
+        advance();
         return;
       }
       if (typing) return;
       var onControl = target && (target.tagName === 'BUTTON' || target.tagName === 'A');
-      var staged = document.body.classList.contains('stage');
       switch (event.key) {
         case 'p': case 'P': stage(); break;
         case 'f': case 'F':
           if (document.fullscreenElement) document.exitFullscreen();
           else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(function () {});
           break;
-        case '?': toggleHelp(help.hidden); break;
+        case '?': toggleHelp(true); break;
         case 'ArrowRight': case 'PageDown':
-          if (staged) { event.preventDefault(); advance(); }
+          if (staged()) { event.preventDefault(); advance(); }
           break;
         case ' ':
-          if (staged && !onControl) { event.preventDefault(); advance(); }
+          if (staged() && !onControl) { event.preventDefault(); advance(); }
           break;
         case 'ArrowLeft': case 'PageUp':
-          if (staged) { event.preventDefault(); go(-1); }
+          if (staged()) { event.preventDefault(); back(); }
           break;
         case 'Enter':
           var scene = currentScene().id;
@@ -805,9 +927,11 @@
         default: return;
       }
     });
+    return { stage: stage };
   }
 
-  setUpPage();
+  var page = setUpPage();
   setUpBoard();
   setUpReplay();
+  if (/[?&]stage\b/.test(window.location.search)) page.stage(); // opened from the other language in stage mode
 })();

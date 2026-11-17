@@ -64,6 +64,7 @@
     }
     this.pointer = { x: 0, y: 0, tx: 0, ty: 0 };
     this.claimUntil = 0;
+    this.markScale = 1;
     this.thud = 0;
     this.time = 0;
     this.last = 0;
@@ -115,8 +116,8 @@
         return { x: 0.468, y: 0.31 + mark.fail * 0.022 };
       case 'waiting':
         if (mark.wait < 0) mark.wait = this.waited++;
-        var a = (35 + (mark.wait % 6) * 22) * Math.PI / 180;
-        return { x: CIRCLE.x + Math.cos(a) * 0.125, y: CIRCLE.y + Math.sin(a) * 0.125 };
+        var w = mark.wait % 6; // a block of three by two in the circle, below the green
+        return { x: CIRCLE.x - 0.05 + (w % 3) * 0.05, y: CIRCLE.y + 0.07 + Math.floor(w / 3) * 0.05 };
       case 'passed': case 'pinned':
         if (mark.rest < 0) mark.rest = this.rested++;
         return this.places[mark.rest % this.places.length];
@@ -155,6 +156,12 @@
       this.draw(this.time);
       window.setTimeout(function () { art.draw(art.time); }, 980);
     }
+  };
+
+  /** Stage mode: the marks are drawn larger, for the back of the room. */
+  Art.prototype.setMarkScale = function (scale) {
+    this.markScale = scale;
+    this.draw(this.time);
   };
 
   Art.prototype.point = function (x, y) {
@@ -377,7 +384,8 @@
     var len = u * 0.015;
     g.save();
     g.translate(m.x * u, m.y * u);
-    g.scale(1 + 0.7 * m.pop, 1 + 0.7 * m.pop);
+    var grow = (1 + 0.7 * m.pop) * this.markScale;
+    g.scale(grow, grow);
     g.lineWidth = u * 0.0078;
     if (claiming && !FINAL[m.state]) {
       g.setLineDash([u * 0.006, u * 0.007]);

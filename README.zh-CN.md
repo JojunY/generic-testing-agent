@@ -83,7 +83,7 @@ copilot/     由 core/ + platforms/copilot 生成（已提交，供团队选用�
 opencode/    由 core/ + platforms/opencode 生成（已提交，供团队选用），不要手改
 toolkit/     Java 源码：gta-core、gta-cli、gta-junit、gta-harness-gen（Maven 多模块；版本号以 pom.xml 为准）
 wrapper/     安装到服务中的文件：gtaw、gtaw.cmd、gtaw-download.ps1（从 Nexus 下载锁定版本的 jar 并校验 sha256）
-scripts/     install-local.sh（不经 Nexus 安装到服务）、generate.sh（平台文件夹）、diagrams/render.py（docs/diagrams）、site/record-demo.sh（录制 docs/site 的重放数据）
+scripts/     install-local.sh（不经 Nexus 安装到服务）、generate.sh（平台文件夹）、diagrams/render.py（docs/diagrams）、site/record-demo.sh（录制 docs/site 的重放数据）、site/build-zh-heading-font.py（生成其中文标题字体）
 evals/       带预埋缺陷的 order-service 样例和脚本化端到端测试
 docs/        guides/（快速开始、试点、CI 接入、测试命名、图表风格、新增能力）、design/（overview：从这里开始；plan：完整设计）、archive/（历史评审记录）、diagrams/、site/（介绍页，纯静态）
 ```
