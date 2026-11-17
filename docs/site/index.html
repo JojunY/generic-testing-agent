@@ -5,16 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>gta · AI writes the tests. It doesn't get to grade them.</title>
 <meta name="description" content="gta is a testing harness for Java services built with Spring. A model writes the tests; gtaw, a deterministic referee, decides whether they count; a person signs the expectations.">
-<meta name="color-scheme" content="dark">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%2315181d'/%3E%3Crect y='15.5' width='32' height='1' fill='%23000'/%3E%3Ctext x='16' y='23' font-family='Arial Narrow,Arial' font-weight='700' font-size='20' text-anchor='middle' fill='%23ece6d8'%3EG%3C/text%3E%3C/svg%3E">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23f4efe6'/%3E%3Ccircle cx='21' cy='20' r='8' fill='%23f6c445'/%3E%3Crect x='10' y='6' width='14' height='14' fill='%232a3be0'/%3E%3Cpath d='M13 20h11v-6.200a8 8 0 0 0-11 6.200z' fill='%2317804f'/%3E%3Ccircle cx='9' cy='12' r='6' fill='%23f58fb0'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/css/site.css">
-<noscript><style>.sr{position:static;width:auto;height:auto;clip:auto;overflow:visible;white-space:normal}.hall-board,.hall-desk,.needs-js{display:none}.reveal{opacity:1;transform:none}</style></noscript>
+<noscript><style>.needs-js{display:none}.reveal{opacity:1;transform:none}</style></noscript>
 </head>
 <body>
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="s-blob" viewBox="0 0 24 24"><path d="M12.6 2.100c4.100-.5 8.300 2.200 9.100 6.400.8 4.100-1.300 8.700-5 10.900-3.600 2.100-8.800 2.200-11.700-.9C2 15.400 1.400 10.600 3.300 7.100 5 4 8.700 2.500 12.600 2.100z"/></symbol>
+  <symbol id="s-square" viewBox="0 0 24 24"><rect x="3.500" y="3.500" width="17" height="17"/></symbol>
+  <symbol id="s-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.200"/></symbol>
+</svg>
 <a class="skip" href="#problem">Skip to the content</a>
 
 <header class="top" id="top">
-  <a class="brand" href="#board" aria-label="gta, top of the page"><span>G</span><span>T</span><span>A</span></a>
+  <a class="brand" href="#title" aria-label="gta, top of the page">
+    <svg class="brand-mark" viewBox="0 0 44 28" aria-hidden="true"><circle class="f-you" cx="31" cy="16" r="10"/><path class="f-ai" d="M10.800 3.100c4.200-.5 8.400 2.100 9.200 6.200.8 4-1.300 8.500-5 10.700-3.600 2.100-8.700 2.100-11.600-.9C.900 16 .300 11.300 2.200 7.900 3.900 4.900 7 3.500 10.800 3.100z"/><rect class="f-gtaw" x="14" y="4" width="16" height="16"/><path class="f-green" d="M21.500 20H30v-13.900A10 10 0 0 0 21.500 20z"/></svg>
+    <span>gta</span>
+  </a>
   <nav class="nav" aria-label="Sections">
     <a href="#problem">Problem</a>
     <a href="#roles">Roles</a>
@@ -25,57 +33,76 @@
   </nav>
   <div class="tools">
     <a class="tool" href="index.zh-CN.html" lang="zh-CN" hreflang="zh-CN">中文</a>
-    <button class="tool needs-js" id="sound-key" type="button" aria-pressed="false" title="Sound (M)">Sound off</button>
     <button class="tool needs-js" id="stage-key" type="button" aria-pressed="false" title="Stage mode (P)">Stage</button>
   </div>
 </header>
 
 <main>
 
-<section class="hero" id="board" data-scene>
-  <div class="wrap">
-    <div class="hero-head">
-      <div>
-      <p class="eyebrow">gta · generic testing agent · for Java services built with Spring</p>
-      <h1>AI writes the tests.<br><em>It doesn’t get to grade them.</em></h1>
-      </div>
-      <p class="lede">A model writes regression and integration tests for your service. <b>gtaw</b>, a deterministic referee with no model inside, runs them, checks them against expectations a person approved, and locks those. Nothing on this board turns green before gtaw has the evidence.</p>
-    </div>
-
-    <div class="hall" id="hall">
-      <div class="hall-top"><span>Verdicts</span><span>Referee: gtaw · no model inside</span></div>
-      <div class="hall-board">
-        <canvas id="main-board" role="img" aria-label="Split-flap board of test scenarios and their verdicts. The same rows are in the table that follows."></canvas>
-        <div class="macro" id="macro" aria-hidden="true"><canvas id="macro-board"></canvas></div>
-      </div>
-      <div class="sr">
-      <table class="board-table" id="board-data">
-        <caption>Scenarios of the sample services and the verdict gtaw gave each</caption>
-        <thead><tr><th>Scenario</th><th>Kind</th><th>Locked expected values</th><th>Verdict</th></tr></thead>
-        <tbody>
-          <tr data-end="passed"><td>borrow.book/s01</td><td>REST</td><td>400</td><td>Passed</td></tr>
-          <tr data-end="pinned"><td>borrow.book/s02</td><td>REST</td><td>503 PENDING_LOCATE</td><td>Defect pinned</td></tr>
-          <tr data-end="pinned"><td>recall.recall/s02</td><td>Stream</td><td>1000 b-1</td><td>Defect pinned</td></tr>
-          <tr data-end="passed"><td>fee-accrual.flow/s01</td><td>Integration</td><td>0</td><td>Passed</td></tr>
-          <tr data-end="pinned"><td>quote.request/s02</td><td>STOMP</td><td>45.00</td><td>Defect pinned</td></tr>
-          <tr data-end="passed"><td>product.reserve/s01</td><td>WebFlux</td><td>200 3</td><td>Passed</td></tr>
-          <tr data-end="pinned"><td>stock.get/s02</td><td>gRPC</td><td>false</td><td>Defect pinned</td></tr>
-          <tr data-end="passed"><td>low-stock.transform/s01</td><td>Beam</td><td>Kettle</td><td>Passed</td></tr>
-          <tr data-end="pinned"><td>db.customer-tier/s02</td><td>Migration</td><td>GOLD</td><td>Defect pinned</td></tr>
-          <tr data-end="passed"><td>invoice.quote/s01</td><td>REST</td><td>200 40.00</td><td>Passed</td></tr>
-          <tr data-end="pinned"><td>admin.purge-cancelled/s02</td><td>Security</td><td>403</td><td>Defect pinned</td></tr>
-          <tr data-end="passed"><td>restock.restock/s01</td><td>Workflow</td><td>restocked</td><td>Passed</td></tr>
-        </tbody>
-      </table>
-      </div>
-      <div class="hall-desk">
+<section class="hero" id="title" data-scene>
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow">gta — generic testing agent — for Java services built with Spring</p>
+      <h1 data-kinetic>AI writes the tests. <em>It doesn’t get to grade them.</em></h1>
+      <p class="lede">A model writes regression and integration tests for your service. <b>gtaw</b>, a deterministic referee with no model inside, runs them against expectations a person approved, and locks those. Nothing here turns green on its own say-so.</p>
+      <div class="desk needs-js">
         <div class="desk-item">
-          <button class="key key-ok" id="ok-key" type="button" disabled>OK <kbd>⏎</kbd></button>
-          <p class="desk-note" id="ok-note" aria-live="polite">Nothing waits for you yet.</p>
+          <button class="key key-ok" data-key="ok" type="button" disabled>OK <kbd>⏎</kbd></button>
+          <p class="desk-note" data-note="ok" aria-live="polite">Nothing waits for you yet.</p>
         </div>
-        <div class="desk-item desk-force">
-          <button class="key key-force" id="force-key" type="button">Force green</button>
-          <p class="desk-note" id="force-note" aria-live="polite"><span id="force-text">Go on, try.</span> <span class="counter">Tried <b id="tried">0</b> · succeeded <b>0</b></span></p>
+        <div class="desk-item">
+          <button class="key key-force" data-key="force" type="button">Force green</button>
+          <p class="desk-note" data-note="force" aria-live="polite"><span data-force-text>Go on, try.</span> <span class="counter">Tried <b data-tried>0</b> · succeeded <b>0</b></span></p>
+        </div>
+      </div>
+    </div>
+    <figure class="art">
+      <div class="art-stage" id="art-stage">
+        <canvas id="art" role="img" aria-label="Three overlapping shapes: a pink blob for the agents, a blue square for gtaw and a yellow circle for you. Marks leave the blob, cross the square, and come to rest in the green area where the square and the circle overlap. The table below lists the same twelve scenarios."></canvas>
+        <span class="art-label al-ai" aria-hidden="true">The agents write</span>
+        <span class="art-label al-gtaw" aria-hidden="true">gtaw decides</span>
+        <span class="art-label al-you" aria-hidden="true">You sign</span>
+        <span class="art-label al-green" aria-hidden="true">Evidence + signature</span>
+      </div>
+      <figcaption>Green exists only where gtaw’s evidence and your signature overlap. Each mark is one of the twelve scenarios below.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="ledger-scene" id="ledger" data-scene>
+  <div class="wrap">
+    <p class="eyebrow">The same twelve, on paper</p>
+    <h2 data-kinetic>Every verdict is <em>earned.</em></h2>
+    <div class="sheet reveal">
+      <div class="sheet-top"><span>Verdicts</span><span>Referee: gtaw — no model inside</span></div>
+      <div class="ledger-wrap">
+        <table class="ledger" id="ledger-table">
+          <caption class="sr">Scenarios of the sample services and the verdict gtaw gave each</caption>
+          <thead><tr><th>Scenario</th><th>Kind</th><th>Locked expected values</th><th>Verdict</th></tr></thead>
+          <tbody>
+            <tr data-end="passed"><td>borrow.book/s01</td><td>REST</td><td>400</td><td>Passed</td></tr>
+            <tr data-end="pinned"><td>borrow.book/s02</td><td>REST</td><td>503 PENDING_LOCATE</td><td>Defect pinned</td></tr>
+            <tr data-end="pinned"><td>recall.recall/s02</td><td>Stream</td><td>1000 b-1</td><td>Defect pinned</td></tr>
+            <tr data-end="passed"><td>fee-accrual.flow/s01</td><td>Integration</td><td>0</td><td>Passed</td></tr>
+            <tr data-end="pinned"><td>quote.request/s02</td><td>STOMP</td><td>45.00</td><td>Defect pinned</td></tr>
+            <tr data-end="passed"><td>product.reserve/s01</td><td>WebFlux</td><td>200 3</td><td>Passed</td></tr>
+            <tr data-end="pinned"><td>stock.get/s02</td><td>gRPC</td><td>false</td><td>Defect pinned</td></tr>
+            <tr data-end="passed"><td>low-stock.transform/s01</td><td>Beam</td><td>Kettle</td><td>Passed</td></tr>
+            <tr data-end="pinned"><td>db.customer-tier/s02</td><td>Migration</td><td>GOLD</td><td>Defect pinned</td></tr>
+            <tr data-end="passed"><td>invoice.quote/s01</td><td>REST</td><td>200 40.00</td><td>Passed</td></tr>
+            <tr data-end="pinned"><td>admin.purge-cancelled/s02</td><td>Security</td><td>403</td><td>Defect pinned</td></tr>
+            <tr data-end="passed"><td>restock.restock/s01</td><td>Workflow</td><td>restocked</td><td>Passed</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="desk sheet-desk needs-js">
+        <div class="desk-item">
+          <button class="key key-ok" data-key="ok" type="button" disabled>OK <kbd>⏎</kbd></button>
+          <p class="desk-note" data-note="ok" aria-live="polite">Nothing waits for you yet.</p>
+        </div>
+        <div class="desk-item">
+          <button class="key key-force" data-key="force" type="button">Force green</button>
+          <p class="desk-note" data-note="force"><span data-force-text>Go on, try.</span> <span class="counter">Tried <b data-tried>0</b> · succeeded <b>0</b></span></p>
         </div>
       </div>
     </div>
@@ -83,10 +110,10 @@
   </div>
 </section>
 
-<section id="problem" data-scene>
+<section class="night" id="problem" data-scene>
   <div class="wrap">
-    <p class="eyebrow">01 · The problem</p>
-    <h2>Green is not proof.</h2>
+    <p class="eyebrow">01 — The problem</p>
+    <h2 data-kinetic>Green is <em>not</em> proof.</h2>
     <p class="lede">A model that writes a test and also decides whether the test is right will bend the test until it is green. One method of the lending sample is enough to show it. When the inventory service does not answer, the fallback says the shares are reserved:</p>
 <pre class="code reveal"><span class="c-dim">// InventoryClient.java</span>
 Reservation inventoryDown(String security, long quantity, Throwable cause) {
@@ -94,20 +121,28 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
 }</pre>
     <div class="versus">
       <article class="lane lane-self reveal">
-        <p class="lane-label">The model grades itself</p>
+        <p class="lane-label"><svg class="tok tok-ai" aria-hidden="true"><use href="#s-blob"/></svg>The model grades itself</p>
         <h3>It asserts what the code does.</h3>
         <p>It reads the method, writes a test that expects a booked borrow, runs it and reports success.</p>
         <pre class="code small">assertThat(response).hasStatus(201);</pre>
-        <div class="mini-wrap"><canvas class="mini" data-mini="self" role="img" aria-label="Board row: borrow.book/s02, expected 201 BOOKED, verdict PASSED, drawn as an outline because nobody verified it."></canvas></div>
+        <div class="strip">
+          <span class="strip-label">Expected</span>
+          <span class="chips"><span class="chip on">201</span><span class="chip on">BOOKED</span></span>
+          <span class="stamp stamp-claimed">Passed</span>
+        </div>
         <p class="lane-end">Green. The defect now has a test that protects it.</p>
         <p class="tag">Illustration of a self-graded test for this method.</p>
       </article>
       <article class="lane lane-gta reveal">
-        <p class="lane-label">gta</p>
+        <p class="lane-label"><svg class="tok tok-gtaw" aria-hidden="true"><use href="#s-square"/></svg>gta</p>
         <h3>It asserts what a person signed.</h3>
         <p>The analyst sees that <code>docs/business-rules.md</code> disagrees with the code and asks. A person replies <code>OK</code> to the recommended answer. gtaw runs the test, gets <code>expected: 503 but was: 201</code>, re-runs it, has it triaged and asks the person once more.</p>
         <pre class="code small">assertThat(response).hasStatus(503);</pre>
-        <div class="mini-wrap"><canvas class="mini" data-mini="gta" role="img" aria-label="Board row: borrow.book/s02, locked 503 PENDING_LOCATE, verdict DEFECT PINNED."></canvas></div>
+        <div class="strip">
+          <span class="strip-label">Locked</span>
+          <span class="chips"><span class="chip on locked">503</span><span class="chip on locked">PENDING_LOCATE</span></span>
+          <span class="stamp stamp-pinned">Defect pinned</span>
+        </div>
         <p class="lane-end">The build stays green. The defect stays visible.</p>
         <p class="tag">Recorded. You can replay this run below.</p>
       </article>
@@ -115,67 +150,70 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   </div>
 </section>
 
-<section id="roles" data-scene>
+<section class="roles-scene" id="roles" data-scene>
   <div class="wrap">
-    <p class="eyebrow">02 · The one idea</p>
-    <h2>Three hands. One job each.</h2>
+    <p class="eyebrow">02 — The one idea</p>
+    <h2 data-kinetic>Three hands. <em>One job each.</em></h2>
     <p class="lede">Banks call it maker and checker: whoever makes an entry is never the one who approves it. gta applies it to tests.</p>
-    <div class="plates">
-      <article class="plate reveal">
-        <p class="plate-who">The agents</p>
-        <p class="plate-verb">Write</p>
-        <p class="plate-sub">analyst · test author · reviewer</p>
-        <ul class="does">
-          <li>read the code</li>
-          <li>write the spec, with questions and a recommended answer</li>
-          <li>write one test per brief</li>
-          <li>give a verdict on a test or a failure</li>
-        </ul>
-        <p class="never-label">Never</p>
-        <ul class="never">
-          <li>decide that a test passed</li>
-          <li>change state or commit</li>
-          <li>touch production code</li>
-        </ul>
-      </article>
-      <article class="plate plate-ref reveal">
-        <p class="plate-who">gtaw</p>
-        <p class="plate-verb">Decides</p>
-        <p class="plate-sub">a Java CLI · no model inside</p>
-        <ul class="does">
-          <li>plans the items from the approved spec</li>
-          <li>runs the tests</li>
-          <li>checks that the spec’s expected values are asserted, and locks them</li>
-          <li>restores edits outside an item’s files</li>
-          <li>commits, and runs the gate</li>
-        </ul>
-        <p class="never-label">Never</p>
-        <ul class="never">
-          <li>guesses: what it cannot decide goes to a person</li>
-        </ul>
-      </article>
-      <article class="plate plate-you reveal">
-        <p class="plate-who">You</p>
-        <p class="plate-verb">Sign</p>
-        <p class="plate-sub">developer · product owner</p>
-        <ul class="does">
-          <li>answer the questions, usually with <code>OK</code></li>
-          <li>approve the spec</li>
-          <li>confirm a defect</li>
-        </ul>
-        <p class="never-label">Never have to</p>
-        <ul class="never">
-          <li>read every test: the spec is what you sign</li>
-        </ul>
-      </article>
-    </div>
+  </div>
+  <div class="roles">
+    <article class="role role-ai reveal">
+      <div class="role-shape" aria-hidden="true"><i class="shape-blob"></i></div>
+      <p class="role-who">The agents</p>
+      <p class="role-verb">Write</p>
+      <p class="role-sub">analyst · test author · reviewer</p>
+      <ul class="does">
+        <li>read the code</li>
+        <li>write the spec, with questions and a recommended answer</li>
+        <li>write one test per brief</li>
+        <li>give a verdict on a test or a failure</li>
+      </ul>
+      <p class="never-label">Never</p>
+      <ul class="never">
+        <li>decide that a test passed</li>
+        <li>change state or commit</li>
+        <li>touch production code</li>
+      </ul>
+    </article>
+    <article class="role role-gtaw reveal">
+      <div class="role-shape" aria-hidden="true"><i class="shape-square"></i></div>
+      <p class="role-who">gtaw</p>
+      <p class="role-verb">Decides</p>
+      <p class="role-sub">a Java CLI · no model inside</p>
+      <ul class="does">
+        <li>plans the items from the approved spec</li>
+        <li>runs the tests</li>
+        <li>checks that the spec’s expected values are asserted, and locks them</li>
+        <li>restores edits outside an item’s files</li>
+        <li>commits, and runs the gate</li>
+      </ul>
+      <p class="never-label">Never</p>
+      <ul class="never">
+        <li>guesses: what it cannot decide goes to a person</li>
+      </ul>
+    </article>
+    <article class="role role-you reveal">
+      <div class="role-shape" aria-hidden="true"><svg class="shape-ring" viewBox="0 0 120 120"><path d="M63 12C36 9 12 30 11 58c-1 29 22 51 50 51 27 0 49-21 49-48 0-25-18-46-43-49-6-.700-12 0-17 2"/></svg></div>
+      <p class="role-who">You</p>
+      <p class="role-verb">Sign</p>
+      <p class="role-sub">developer · product owner</p>
+      <ul class="does">
+        <li>answer the questions, usually with <code>OK</code></li>
+        <li>approve the spec</li>
+        <li>confirm a defect</li>
+      </ul>
+      <p class="never-label">Never have to</p>
+      <ul class="never">
+        <li>read every test: the spec is what you sign</li>
+      </ul>
+    </article>
   </div>
 </section>
 
 <section id="loop" data-scene>
   <div class="wrap">
-    <p class="eyebrow">03 · Replay</p>
-    <h2>Your part is five replies.</h2>
+    <p class="eyebrow">03 — Replay</p>
+    <h2 data-kinetic>Your part is <em>five replies.</em></h2>
     <p class="lede">This is a recording of a real gtaw run on the lending sample: the flow <code>borrow.book</code>, from <code>/gta</code> to a pinned defect. A script plays the agents; every line gtaw prints is real. Take the person’s seat.</p>
     <div class="loop needs-js">
       <div class="console" id="console">
@@ -189,7 +227,16 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
         <p class="console-hint" id="reply-hint" aria-live="polite"></p>
       </div>
       <aside class="rail" aria-label="State of the two scenarios">
-        <div class="rail-board"><canvas id="loop-board" role="img" aria-label="Board of the two scenarios of borrow.book; it follows the conversation."></canvas></div>
+        <div class="rail-board sheet">
+          <div class="sheet-top"><span>borrow.book</span><span>2 scenarios</span></div>
+          <table class="ledger ledger-mini" id="loop-table">
+            <caption class="sr">The two scenarios of borrow.book; the table follows the conversation.</caption>
+            <tbody>
+              <tr><td>s01</td><td></td><td></td><td></td></tr>
+              <tr><td>s02</td><td></td><td></td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
         <div class="tickets" id="tickets">
           <p class="slot" id="ticket-slot">A ticket prints when gtaw locks a scenario’s expected values.</p>
         </div>
@@ -205,10 +252,10 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   </div>
 </section>
 
-<section id="covers" data-scene>
+<section class="covers-scene" id="covers" data-scene>
   <div class="wrap">
-    <p class="eyebrow">04 · What it covers</p>
-    <h2>Every kind of flow a Spring service has.</h2>
+    <p class="eyebrow">04 — What it covers</p>
+    <h2 data-kinetic>Every kind of flow <em>a Spring service has.</em></h2>
     <p class="lede">“Generic” means every kind of entry point of a Java service built with Spring, not every stack. Each row is a flow of a sample service in this repository, with the values gtaw locked on the scenario that exposed its seeded defect.</p>
     <div class="timetable-wrap reveal">
       <table class="timetable">
@@ -234,7 +281,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
     </div>
     <div class="also reveal">
       <p class="also-label">Also understood, across flows</p>
-      <ul class="chips">
+      <ul class="chips-list">
         <li>Spring Security</li><li>caches</li><li>Resilience4j and Spring Retry</li><li>Secret Manager, faked and never read</li><li>Cloud Run functions</li><li>an existing Cucumber suite</li><li>your own tests, not repeated</li><li>multi-module Maven</li><li>Gradle</li><li>Spring Boot 2.2 to 4.x</li>
       </ul>
       <p class="also-not"><b>Not covered:</b> other languages and frameworks, and tests against deployed environments. What is planned, in order, is in <a href="../design/plan.md">the plan, §15</a>.</p>
@@ -242,18 +289,20 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   </div>
 </section>
 
-<section id="safety" data-scene>
+<section class="night" id="safety" data-scene>
   <div class="wrap">
-    <p class="eyebrow">05 · Limits</p>
-    <h2>Where it does not go.</h2>
-    <div class="safety">
-      <div class="safety-board reveal"><canvas id="safety-board" role="img" aria-label="Board: SIT, UAT and PROD, each with NO SERVICE."></canvas></div>
-      <ul class="safety-list reveal">
-        <li><b>No deployed environment.</b> Tests run on a developer machine or in CI, against embedded or faked dependencies. There is no mode that targets SIT, UAT or production.</li>
-        <li><b>No borrowed identity.</b> gtaw starts every test run with cloud credentials cut off and with your Spring profile removed: a shell set to UAT cannot make a test load UAT’s configuration.</li>
-        <li><b>No production code.</b> An edit outside the files of an item is restored. A defect is pinned and reported, never patched.</li>
-      </ul>
-    </div>
+    <p class="eyebrow">05 — Limits</p>
+    <h2 data-kinetic>Where it does <em>not</em> go.</h2>
+    <ul class="noservice reveal" aria-label="SIT, UAT and PROD: no service">
+      <li><span class="ns-word">SIT</span><span class="ns-tag">no service</span></li>
+      <li><span class="ns-word">UAT</span><span class="ns-tag">no service</span></li>
+      <li><span class="ns-word">PROD</span><span class="ns-tag">no service</span></li>
+    </ul>
+    <ul class="safety-list reveal">
+      <li><b>No deployed environment.</b> Tests run on a developer machine or in CI, against embedded or faked dependencies. There is no mode that targets SIT, UAT or production.</li>
+      <li><b>No borrowed identity.</b> gtaw starts every test run with cloud credentials cut off and with your Spring profile removed: a shell set to UAT cannot make a test load UAT’s configuration.</li>
+      <li><b>No production code.</b> An edit outside the files of an item is restored. A defect is pinned and reported, never patched.</li>
+    </ul>
     <div class="standing reveal">
       <p class="standing-title">Where this stands</p>
       <div class="standing-grid">
@@ -274,10 +323,10 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   </div>
 </section>
 
-<section id="start" data-scene>
+<section class="start-scene" id="start" data-scene>
   <div class="wrap">
-    <p class="eyebrow">06 · Start</p>
-    <h2>One script, then <code>/gta</code>.</h2>
+    <p class="eyebrow">06 — Start</p>
+    <h2 data-kinetic>One script, <em>then</em> <span class="nb"><code>/gta</code>.</span></h2>
     <p class="lede">The script builds gta once, installs it into your service with the wrapper pinned to that jar, and runs <code>./gtaw doctor</code>. Then open the service in VS Code, IntelliJ or OpenCode.</p>
     <ol class="steps reveal">
       <li><span class="step-n">1</span><div><p class="step-label">In a checkout of this repository</p><pre class="code cmd" data-copy>scripts/install-local.sh path/to/your-service</pre></div></li>
@@ -297,12 +346,12 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
 
 <footer class="foot">
   <div class="wrap">
-    <p>gta · generic testing agent. This page makes no external request and sets no cookie. Fonts: Barlow, Barlow Condensed and JetBrains Mono, under the SIL Open Font License 1.1.</p>
-    <p class="needs-js">Keys: <kbd>P</kbd> stage mode · <kbd>←</kbd> <kbd>→</kbd> step · <kbd>M</kbd> sound · <kbd>F</kbd> full screen · <kbd>?</kbd> help</p>
+    <p>gta · generic testing agent. This page makes no external request and sets no cookie. Fonts: Instrument Serif, Instrument Sans, Barlow Condensed and JetBrains Mono, under the SIL Open Font License 1.1.</p>
+    <p class="needs-js">Keys: <kbd>P</kbd> stage mode · <kbd>←</kbd> <kbd>→</kbd> step · <kbd>F</kbd> full screen · <kbd>?</kbd> help</p>
   </div>
 </footer>
 
-<div class="stage-hud needs-js" id="stage-hud" hidden>Stage · <kbd>→</kbd> next · <kbd>←</kbd> back · <kbd>M</kbd> sound · <kbd>F</kbd> full screen · <kbd>P</kbd> leave</div>
+<div class="stage-hud needs-js" id="stage-hud" hidden>Stage · <kbd>→</kbd> next · <kbd>←</kbd> back · <kbd>F</kbd> full screen · <kbd>P</kbd> leave</div>
 <div class="help needs-js" id="help" hidden role="dialog" aria-modal="true" aria-labelledby="help-title">
   <div class="help-card">
     <p class="help-title" id="help-title">Keys</p>
@@ -310,7 +359,6 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
       <dt><kbd>P</kbd></dt><dd>Stage mode: larger type, one step per key press</dd>
       <dt><kbd>→</kbd> <kbd>Space</kbd></dt><dd>Next step: reply OK where the page waits, otherwise the next section</dd>
       <dt><kbd>←</kbd></dt><dd>Previous section</dd>
-      <dt><kbd>M</kbd></dt><dd>Sound of the flaps</dd>
       <dt><kbd>F</kbd></dt><dd>Full screen</dd>
       <dt><kbd>Esc</kbd></dt><dd>Close</dd>
     </dl>
@@ -319,26 +367,29 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
 </div>
 
 <script type="application/json" id="i18n">{
-  "soundOn": "Sound on",
-  "soundOff": "Sound off",
   "stage": "Stage",
   "stageOn": "Leave stage",
-  "colScenario": "SCENARIO",
-  "colKind": "KIND",
-  "colLocked": "LOCKED",
-  "colVerdict": "VERDICT",
-  "colWho": "WITH",
-  "colExpected": "EXPECTED",
-  "colEnv": "ENVIRONMENT",
-  "colService": "GTA TESTS",
+  "colWho": "With",
+  "whoAi": "agent",
+  "whoGtaw": "gtaw",
+  "whoYou": "you",
+  "stNone": "no evidence",
+  "stWriting": "an agent is writing",
+  "stRunning": "gtaw is running it",
+  "stReview": "an agent is reviewing",
+  "stFailed": "failed",
+  "stTriage": "an agent triages the failure",
+  "stWaiting": "waiting for you",
+  "stPassed": "Passed",
+  "stPinned": "Defect pinned",
   "okNone": "Nothing waits for you yet.",
-  "okOne": "1 row waits for you: a test failed against an approved expectation, and only a person can call that a defect.",
-  "okMany": "{n} rows wait for you: tests failed against approved expectations, and only a person can call that a defect.",
-  "okDone": "Every row has its verdict: {p} passed with evidence, {d} defects are pinned, and the build is green.",
+  "okOne": "1 scenario waits for you: a test failed against an approved expectation, and only a person can call that a defect.",
+  "okMany": "{n} scenarios wait for you: tests failed against approved expectations, and only a person can call that a defect.",
+  "okDone": "Every scenario has its verdict: {p} passed with evidence, {d} defects are pinned, and the build is green.",
   "forceRefused": "Refused. No run, no lock, no review: gtaw has nothing that says so.",
-  "forceRefused2": "Refused again. The board shows what gtaw can prove, nothing else.",
+  "forceRefused2": "Refused again. Green shows what gtaw can prove, nothing else.",
   "forceRefused3": "Still no. The only way to green is a test that passes against what a person approved.",
-  "again": "Run the board again",
+  "again": "Run it again",
   "penYou": "waiting for you",
   "penAi": "an agent is working",
   "penGtaw": "gtaw is deciding",
@@ -361,8 +412,6 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   "ticketWhen": "WHEN",
   "ticketThen": "THEN · locked",
   "ticketEdit": "Try to change an expected value.",
-  "ticketPassed": "PASSED",
-  "ticketPinned": "DEFECT PINNED",
   "ticketRefused": "POLICY_ORACLE_MODIFIED · Locked expected values were changed or removed: [{tokens}]. Restore them; only a human can relock.",
   "ticketRefusedNote": "The text above is gtaw’s own. Restored.",
   "tabSpec": "Spec R1 → R2",
@@ -377,12 +426,10 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   "tabReportNote": "The session report, with the words of each human confirmation.",
   "runMeta": "Recorded {recorded} with gta {gta} at commit {commit} on {service}. How: scripts/site/record-demo.sh.",
   "copy": "Copy",
-  "copied": "Copied",
-  "noService": "NO SERVICE"
+  "copied": "Copied"
 }</script>
 <script defer src="assets/js/run-data.js"></script>
-<script defer src="assets/js/flap.js"></script>
-<script defer src="assets/js/sound.js"></script>
+<script defer src="assets/js/art.js"></script>
 <script defer src="assets/js/site.js"></script>
 </body>
 </html>

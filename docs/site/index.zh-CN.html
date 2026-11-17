@@ -5,16 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>gta · AI 写测试，但不给自己打分</title>
 <meta name="description" content="gta 是面向 Spring Java 服务的测试工具。模型写测试；确定性的裁判 gtaw 判定测试算不算数；期望值由人签字。">
-<meta name="color-scheme" content="dark">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%2315181d'/%3E%3Crect y='15.5' width='32' height='1' fill='%23000'/%3E%3Ctext x='16' y='23' font-family='Arial Narrow,Arial' font-weight='700' font-size='20' text-anchor='middle' fill='%23ece6d8'%3EG%3C/text%3E%3C/svg%3E">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23f4efe6'/%3E%3Ccircle cx='21' cy='20' r='8' fill='%23f6c445'/%3E%3Crect x='10' y='6' width='14' height='14' fill='%232a3be0'/%3E%3Cpath d='M13 20h11v-6.200a8 8 0 0 0-11 6.200z' fill='%2317804f'/%3E%3Ccircle cx='9' cy='12' r='6' fill='%23f58fb0'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/css/site.css">
-<noscript><style>.sr{position:static;width:auto;height:auto;clip:auto;overflow:visible;white-space:normal}.hall-board,.hall-desk,.needs-js{display:none}.reveal{opacity:1;transform:none}</style></noscript>
+<noscript><style>.needs-js{display:none}.reveal{opacity:1;transform:none}</style></noscript>
 </head>
 <body>
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="s-blob" viewBox="0 0 24 24"><path d="M12.6 2.100c4.100-.5 8.300 2.200 9.100 6.400.8 4.100-1.300 8.700-5 10.900-3.600 2.100-8.800 2.200-11.700-.9C2 15.400 1.400 10.600 3.300 7.100 5 4 8.700 2.500 12.600 2.100z"/></symbol>
+  <symbol id="s-square" viewBox="0 0 24 24"><rect x="3.500" y="3.500" width="17" height="17"/></symbol>
+  <symbol id="s-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.200"/></symbol>
+</svg>
 <a class="skip" href="#problem">跳到正文</a>
 
 <header class="top" id="top">
-  <a class="brand" href="#board" aria-label="gta，回到页首"><span>G</span><span>T</span><span>A</span></a>
+  <a class="brand" href="#title" aria-label="gta，回到页首">
+    <svg class="brand-mark" viewBox="0 0 44 28" aria-hidden="true"><circle class="f-you" cx="31" cy="16" r="10"/><path class="f-ai" d="M10.800 3.100c4.200-.5 8.400 2.100 9.200 6.200.8 4-1.300 8.500-5 10.700-3.600 2.100-8.700 2.100-11.600-.9C.900 16 .300 11.300 2.200 7.900 3.900 4.900 7 3.500 10.800 3.100z"/><rect class="f-gtaw" x="14" y="4" width="16" height="16"/><path class="f-green" d="M21.500 20H30v-13.900A10 10 0 0 0 21.500 20z"/></svg>
+    <span>gta</span>
+  </a>
   <nav class="nav" aria-label="章节">
     <a href="#problem">问题</a>
     <a href="#roles">分工</a>
@@ -25,57 +33,76 @@
   </nav>
   <div class="tools">
     <a class="tool" href="index.html" lang="en" hreflang="en">English</a>
-    <button class="tool needs-js" id="sound-key" type="button" aria-pressed="false" title="声音（M）">声音：关</button>
     <button class="tool needs-js" id="stage-key" type="button" aria-pressed="false" title="演示模式（P）">演示</button>
   </div>
 </header>
 
 <main>
 
-<section class="hero" id="board" data-scene>
-  <div class="wrap">
-    <div class="hero-head">
-      <div>
-      <p class="eyebrow">gta · generic testing agent · 面向用 Spring 构建的 Java 服务</p>
-      <h1>AI 写测试。<br><em>但不给自己打分。</em></h1>
-      </div>
-      <p class="lede">模型为你的服务编写回归测试和集成测试。<b>gtaw</b> 是一个确定性的裁判，内部没有模型：它运行这些测试，对照经人批准的期望值逐一核对，并把期望值锁定。在 gtaw 拿到证据之前，这块看板上不会出现绿色。</p>
-    </div>
-
-    <div class="hall" id="hall">
-      <div class="hall-top"><span>判定</span><span>裁判：gtaw · 内部没有模型</span></div>
-      <div class="hall-board">
-        <canvas id="main-board" role="img" aria-label="翻牌看板：各测试场景及其判定。下方表格包含相同内容。"></canvas>
-        <div class="macro" id="macro" aria-hidden="true"><canvas id="macro-board"></canvas></div>
-      </div>
-      <div class="sr">
-      <table class="board-table" id="board-data">
-        <caption>示例服务的场景，以及 gtaw 给出的判定</caption>
-        <thead><tr><th>场景</th><th>类型</th><th>锁定的期望值</th><th>判定</th></tr></thead>
-        <tbody>
-          <tr data-end="passed"><td>borrow.book/s01</td><td>REST</td><td>400</td><td>通过</td></tr>
-          <tr data-end="pinned"><td>borrow.book/s02</td><td>REST</td><td>503 PENDING_LOCATE</td><td>缺陷已标注</td></tr>
-          <tr data-end="pinned"><td>recall.recall/s02</td><td>Stream</td><td>1000 b-1</td><td>缺陷已标注</td></tr>
-          <tr data-end="passed"><td>fee-accrual.flow/s01</td><td>Integration</td><td>0</td><td>通过</td></tr>
-          <tr data-end="pinned"><td>quote.request/s02</td><td>STOMP</td><td>45.00</td><td>缺陷已标注</td></tr>
-          <tr data-end="passed"><td>product.reserve/s01</td><td>WebFlux</td><td>200 3</td><td>通过</td></tr>
-          <tr data-end="pinned"><td>stock.get/s02</td><td>gRPC</td><td>false</td><td>缺陷已标注</td></tr>
-          <tr data-end="passed"><td>low-stock.transform/s01</td><td>Beam</td><td>Kettle</td><td>通过</td></tr>
-          <tr data-end="pinned"><td>db.customer-tier/s02</td><td>Migration</td><td>GOLD</td><td>缺陷已标注</td></tr>
-          <tr data-end="passed"><td>invoice.quote/s01</td><td>REST</td><td>200 40.00</td><td>通过</td></tr>
-          <tr data-end="pinned"><td>admin.purge-cancelled/s02</td><td>Security</td><td>403</td><td>缺陷已标注</td></tr>
-          <tr data-end="passed"><td>restock.restock/s01</td><td>工作流</td><td>restocked</td><td>通过</td></tr>
-        </tbody>
-      </table>
-      </div>
-      <div class="hall-desk">
+<section class="hero" id="title" data-scene>
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow">gta — generic testing agent — 面向用 Spring 构建的 Java 服务</p>
+      <h1 data-kinetic>AI 写测试。<em>但不给自己打分。</em></h1>
+      <p class="lede">模型为你的服务编写回归测试和集成测试。<b>gtaw</b> 是一个确定性的裁判，内部没有模型：它对照经人批准的期望值运行这些测试，并把期望值锁定。在这里，没有什么能自己说自己是绿的。</p>
+      <div class="desk needs-js">
         <div class="desk-item">
-          <button class="key key-ok" id="ok-key" type="button" disabled>OK <kbd>⏎</kbd></button>
-          <p class="desk-note" id="ok-note" aria-live="polite">暂时没有需要你处理的。</p>
+          <button class="key key-ok" data-key="ok" type="button" disabled>OK <kbd>⏎</kbd></button>
+          <p class="desk-note" data-note="ok" aria-live="polite">暂时没有需要你处理的。</p>
         </div>
-        <div class="desk-item desk-force">
-          <button class="key key-force" id="force-key" type="button">强制变绿</button>
-          <p class="desk-note" id="force-note" aria-live="polite"><span id="force-text">试试看。</span> <span class="counter">尝试 <b id="tried">0</b> 次 · 成功 <b>0</b> 次</span></p>
+        <div class="desk-item">
+          <button class="key key-force" data-key="force" type="button">强制变绿</button>
+          <p class="desk-note" data-note="force" aria-live="polite"><span data-force-text>试试看。</span> <span class="counter">尝试 <b data-tried>0</b> 次 · 成功 <b>0</b> 次</span></p>
+        </div>
+      </div>
+    </div>
+    <figure class="art">
+      <div class="art-stage" id="art-stage">
+        <canvas id="art" role="img" aria-label="三个相互重叠的形状：粉色的流体代表 agent，蓝色方块代表 gtaw，黄色的圆代表你。记号从流体出发，穿过方块，最后停在方块与圆重叠的绿色区域。下方表格列出同样的十二个场景。"></canvas>
+        <span class="art-label al-ai" aria-hidden="true">Agent 负责写</span>
+        <span class="art-label al-gtaw" aria-hidden="true">gtaw 负责判</span>
+        <span class="art-label al-you" aria-hidden="true">你负责签</span>
+        <span class="art-label al-green" aria-hidden="true">证据 + 签字</span>
+      </div>
+      <figcaption>只有 gtaw 的证据和你的签字重叠的地方，才有绿色。每个记号都是下面十二个场景中的一个。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="ledger-scene" id="ledger" data-scene>
+  <div class="wrap">
+    <p class="eyebrow">同样的十二个，落在纸面上</p>
+    <h2 data-kinetic>每一个判定，<em>都凭证据。</em></h2>
+    <div class="sheet reveal">
+      <div class="sheet-top"><span>判定</span><span>裁判：gtaw — 内部没有模型</span></div>
+      <div class="ledger-wrap">
+        <table class="ledger" id="ledger-table">
+          <caption class="sr">示例服务的场景，以及 gtaw 给出的判定</caption>
+          <thead><tr><th>场景</th><th>类型</th><th>锁定的期望值</th><th>判定</th></tr></thead>
+          <tbody>
+            <tr data-end="passed"><td>borrow.book/s01</td><td>REST</td><td>400</td><td>通过</td></tr>
+            <tr data-end="pinned"><td>borrow.book/s02</td><td>REST</td><td>503 PENDING_LOCATE</td><td>缺陷已标注</td></tr>
+            <tr data-end="pinned"><td>recall.recall/s02</td><td>Stream</td><td>1000 b-1</td><td>缺陷已标注</td></tr>
+            <tr data-end="passed"><td>fee-accrual.flow/s01</td><td>Integration</td><td>0</td><td>通过</td></tr>
+            <tr data-end="pinned"><td>quote.request/s02</td><td>STOMP</td><td>45.00</td><td>缺陷已标注</td></tr>
+            <tr data-end="passed"><td>product.reserve/s01</td><td>WebFlux</td><td>200 3</td><td>通过</td></tr>
+            <tr data-end="pinned"><td>stock.get/s02</td><td>gRPC</td><td>false</td><td>缺陷已标注</td></tr>
+            <tr data-end="passed"><td>low-stock.transform/s01</td><td>Beam</td><td>Kettle</td><td>通过</td></tr>
+            <tr data-end="pinned"><td>db.customer-tier/s02</td><td>Migration</td><td>GOLD</td><td>缺陷已标注</td></tr>
+            <tr data-end="passed"><td>invoice.quote/s01</td><td>REST</td><td>200 40.00</td><td>通过</td></tr>
+            <tr data-end="pinned"><td>admin.purge-cancelled/s02</td><td>Security</td><td>403</td><td>缺陷已标注</td></tr>
+            <tr data-end="passed"><td>restock.restock/s01</td><td>工作流</td><td>restocked</td><td>通过</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="desk sheet-desk needs-js">
+        <div class="desk-item">
+          <button class="key key-ok" data-key="ok" type="button" disabled>OK <kbd>⏎</kbd></button>
+          <p class="desk-note" data-note="ok" aria-live="polite">暂时没有需要你处理的。</p>
+        </div>
+        <div class="desk-item">
+          <button class="key key-force" data-key="force" type="button">强制变绿</button>
+          <p class="desk-note" data-note="force"><span data-force-text>试试看。</span> <span class="counter">尝试 <b data-tried>0</b> 次 · 成功 <b>0</b> 次</span></p>
         </div>
       </div>
     </div>
@@ -83,10 +110,10 @@
   </div>
 </section>
 
-<section id="problem" data-scene>
+<section class="night" id="problem" data-scene>
   <div class="wrap">
-    <p class="eyebrow">01 · 问题</p>
-    <h2>绿了，不等于对了。</h2>
+    <p class="eyebrow">01 — 问题</p>
+    <h2 data-kinetic>绿了，<em>不等于</em>对了。</h2>
     <p class="lede">一个模型既写测试、又判断测试对不对，就会把测试一直改到变绿为止。借贷示例里的一个方法就足以说明：库存服务没有应答时，降级方法却说股份已经预留：</p>
 <pre class="code reveal"><span class="c-dim">// InventoryClient.java</span>
 Reservation inventoryDown(String security, long quantity, Throwable cause) {
@@ -94,20 +121,28 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
 }</pre>
     <div class="versus">
       <article class="lane lane-self reveal">
-        <p class="lane-label">模型给自己打分</p>
+        <p class="lane-label"><svg class="tok tok-ai" aria-hidden="true"><use href="#s-blob"/></svg>模型给自己打分</p>
         <h3>它断言的是代码现在的行为。</h3>
         <p>它读了这个方法，写出一个期望“借券成功”的测试，运行，然后报告成功。</p>
         <pre class="code small">assertThat(response).hasStatus(201);</pre>
-        <div class="mini-wrap"><canvas class="mini" data-mini="self" role="img" aria-label="看板行：borrow.book/s02，期望 201 BOOKED，判定 PASSED，以空心字显示，因为没有人验证过。"></canvas></div>
+        <div class="strip">
+          <span class="strip-label">期望值</span>
+          <span class="chips"><span class="chip on">201</span><span class="chip on">BOOKED</span></span>
+          <span class="stamp stamp-claimed">通过</span>
+        </div>
         <p class="lane-end">绿了。而这个缺陷从此有了一个保护它的测试。</p>
         <p class="tag">示意：对这个方法“自己打分”的测试会是什么样。</p>
       </article>
       <article class="lane lane-gta reveal">
-        <p class="lane-label">gta</p>
+        <p class="lane-label"><svg class="tok tok-gtaw" aria-hidden="true"><use href="#s-square"/></svg>gta</p>
         <h3>它断言的是人签过字的期望。</h3>
         <p>analyst 发现 <code>docs/business-rules.md</code> 与代码不一致，于是提问。人对推荐答案回复 <code>OK</code>。gtaw 运行测试，得到 <code>expected: 503 but was: 201</code>，重跑确认，交给 reviewer 分流，然后再问一次人。</p>
         <pre class="code small">assertThat(response).hasStatus(503);</pre>
-        <div class="mini-wrap"><canvas class="mini" data-mini="gta" role="img" aria-label="看板行：borrow.book/s02，锁定 503 PENDING_LOCATE，判定 DEFECT PINNED。"></canvas></div>
+        <div class="strip">
+          <span class="strip-label">锁定值</span>
+          <span class="chips"><span class="chip on locked">503</span><span class="chip on locked">PENDING_LOCATE</span></span>
+          <span class="stamp stamp-pinned">缺陷已标注</span>
+        </div>
         <p class="lane-end">构建保持绿色，缺陷始终可见。</p>
         <p class="tag">真实录制：下方可以重放这次运行。</p>
       </article>
@@ -115,67 +150,70 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   </div>
 </section>
 
-<section id="roles" data-scene>
+<section class="roles-scene" id="roles" data-scene>
   <div class="wrap">
-    <p class="eyebrow">02 · 核心想法</p>
-    <h2>三方，各司其职。</h2>
+    <p class="eyebrow">02 — 核心想法</p>
+    <h2 data-kinetic>三方，<em>各司其职。</em></h2>
     <p class="lede">银行把这叫做经办与复核：录入的人，永远不是批准的人。gta 把这条规矩用在测试上。</p>
-    <div class="plates">
-      <article class="plate reveal">
-        <p class="plate-who">Agent</p>
-        <p class="plate-verb">写</p>
-        <p class="plate-sub">analyst · 测试作者 · reviewer</p>
-        <ul class="does">
-          <li>阅读代码</li>
-          <li>编写规格，附带问题和推荐答案</li>
-          <li>每份 brief 写一个测试</li>
-          <li>对测试或失败给出意见</li>
-        </ul>
-        <p class="never-label">绝不</p>
-        <ul class="never">
-          <li>判定测试通过</li>
-          <li>修改状态或提交</li>
-          <li>改动生产代码</li>
-        </ul>
-      </article>
-      <article class="plate plate-ref reveal">
-        <p class="plate-who">gtaw</p>
-        <p class="plate-verb">判</p>
-        <p class="plate-sub">一个 Java 命令行程序 · 内部没有模型</p>
-        <ul class="does">
-          <li>根据已批准的规格排出条目</li>
-          <li>运行测试</li>
-          <li>检查规格里的期望值确实被断言，并将其锁定</li>
-          <li>还原条目范围之外的改动</li>
-          <li>提交，并执行质量门禁</li>
-        </ul>
-        <p class="never-label">绝不</p>
-        <ul class="never">
-          <li>猜测：它判断不了的，交给人</li>
-        </ul>
-      </article>
-      <article class="plate plate-you reveal">
-        <p class="plate-who">你</p>
-        <p class="plate-verb">签</p>
-        <p class="plate-sub">开发者 · 产品负责人</p>
-        <ul class="does">
-          <li>回答问题，通常一句 <code>OK</code></li>
-          <li>批准规格</li>
-          <li>确认缺陷</li>
-        </ul>
-        <p class="never-label">不必</p>
-        <ul class="never">
-          <li>逐个阅读测试：你签的是规格</li>
-        </ul>
-      </article>
-    </div>
+  </div>
+  <div class="roles">
+    <article class="role role-ai reveal">
+      <div class="role-shape" aria-hidden="true"><i class="shape-blob"></i></div>
+      <p class="role-who">Agent</p>
+      <p class="role-verb">写</p>
+      <p class="role-sub">analyst · 测试作者 · reviewer</p>
+      <ul class="does">
+        <li>阅读代码</li>
+        <li>编写规格，附带问题和推荐答案</li>
+        <li>每份 brief 写一个测试</li>
+        <li>对测试或失败给出意见</li>
+      </ul>
+      <p class="never-label">绝不</p>
+      <ul class="never">
+        <li>判定测试通过</li>
+        <li>修改状态或提交</li>
+        <li>改动生产代码</li>
+      </ul>
+    </article>
+    <article class="role role-gtaw reveal">
+      <div class="role-shape" aria-hidden="true"><i class="shape-square"></i></div>
+      <p class="role-who">gtaw</p>
+      <p class="role-verb">判</p>
+      <p class="role-sub">一个 Java 命令行程序 · 内部没有模型</p>
+      <ul class="does">
+        <li>根据已批准的规格排出条目</li>
+        <li>运行测试</li>
+        <li>检查规格里的期望值确实被断言，并将其锁定</li>
+        <li>还原条目范围之外的改动</li>
+        <li>提交，并执行质量门禁</li>
+      </ul>
+      <p class="never-label">绝不</p>
+      <ul class="never">
+        <li>猜测：它判断不了的，交给人</li>
+      </ul>
+    </article>
+    <article class="role role-you reveal">
+      <div class="role-shape" aria-hidden="true"><svg class="shape-ring" viewBox="0 0 120 120"><path d="M63 12C36 9 12 30 11 58c-1 29 22 51 50 51 27 0 49-21 49-48 0-25-18-46-43-49-6-.700-12 0-17 2"/></svg></div>
+      <p class="role-who">你</p>
+      <p class="role-verb">签</p>
+      <p class="role-sub">开发者 · 产品负责人</p>
+      <ul class="does">
+        <li>回答问题，通常一句 <code>OK</code></li>
+        <li>批准规格</li>
+        <li>确认缺陷</li>
+      </ul>
+      <p class="never-label">不必</p>
+      <ul class="never">
+        <li>逐个阅读测试：你签的是规格</li>
+      </ul>
+    </article>
   </div>
 </section>
 
 <section id="loop" data-scene>
   <div class="wrap">
-    <p class="eyebrow">03 · 重放</p>
-    <h2>你只需要回复五次。</h2>
+    <p class="eyebrow">03 — 重放</p>
+    <h2 data-kinetic>你只需要<em>回复五次。</em></h2>
     <p class="lede">这是在借贷示例上真实运行 gtaw 的录制：流程 <code>borrow.book</code>，从 <code>/gta</code> 到标注一个缺陷，gtaw 的输出语言设为中文（<code>output.language: zh-CN</code>）。agent 由脚本扮演；gtaw 输出的每一行都是真的。请坐到“人”的位置上。</p>
     <div class="loop needs-js">
       <div class="console" id="console">
@@ -189,7 +227,16 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
         <p class="console-hint" id="reply-hint" aria-live="polite"></p>
       </div>
       <aside class="rail" aria-label="两个场景的状态">
-        <div class="rail-board"><canvas id="loop-board" role="img" aria-label="borrow.book 两个场景的看板，随对话更新。"></canvas></div>
+        <div class="rail-board sheet">
+          <div class="sheet-top"><span>borrow.book</span><span>2 个场景</span></div>
+          <table class="ledger ledger-mini" id="loop-table">
+            <caption class="sr">borrow.book 的两个场景，表格随对话更新。</caption>
+            <tbody>
+              <tr><td>s01</td><td></td><td></td><td></td></tr>
+              <tr><td>s02</td><td></td><td></td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
         <div class="tickets" id="tickets">
           <p class="slot" id="ticket-slot">gtaw 锁定某个场景的期望值时，会在这里打出一张票。</p>
         </div>
@@ -205,10 +252,10 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   </div>
 </section>
 
-<section id="covers" data-scene>
+<section class="covers-scene" id="covers" data-scene>
   <div class="wrap">
-    <p class="eyebrow">04 · 覆盖范围</p>
-    <h2>Spring 服务里的每一种流程。</h2>
+    <p class="eyebrow">04 — 覆盖范围</p>
+    <h2 data-kinetic>Spring 服务里的<em>每一种流程。</em></h2>
     <p class="lede">“通用”指的是用 Spring 构建的 Java 服务的每一种入口，而不是每一种技术栈。下表每一行都是本仓库示例服务中的一个流程，以及 gtaw 在暴露其预埋缺陷的场景上锁定的值。</p>
     <div class="timetable-wrap reveal">
       <table class="timetable">
@@ -234,7 +281,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
     </div>
     <div class="also reveal">
       <p class="also-label">同时能识别的横切能力</p>
-      <ul class="chips">
+      <ul class="chips-list">
         <li>Spring Security</li><li>缓存</li><li>Resilience4j 与 Spring Retry</li><li>Secret Manager（用假实现，绝不读取真实密钥）</li><li>Cloud Run 函数</li><li>已有的 Cucumber 套件</li><li>团队已有的测试（不重复编写）</li><li>多模块 Maven</li><li>Gradle</li><li>Spring Boot 2.2 至 4.x</li>
       </ul>
       <p class="also-not"><b>不覆盖：</b>其他语言和框架，以及针对已部署环境的测试。后续计划及其顺序见<a href="../design/plan.zh-CN.md">设计文档 §15</a>。</p>
@@ -242,18 +289,20 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   </div>
 </section>
 
-<section id="safety" data-scene>
+<section class="night" id="safety" data-scene>
   <div class="wrap">
-    <p class="eyebrow">05 · 边界</p>
-    <h2>它不会去的地方。</h2>
-    <div class="safety">
-      <div class="safety-board reveal"><canvas id="safety-board" role="img" aria-label="看板：SIT、UAT、PROD，均为 NO SERVICE。"></canvas></div>
-      <ul class="safety-list reveal">
-        <li><b>不碰已部署的环境。</b>测试只在开发机或 CI 上运行，依赖用内嵌或假的实现。没有任何模式会指向 SIT、UAT 或生产环境。</li>
-        <li><b>不借用你的身份。</b>gtaw 每次运行测试都会切断云凭据，并移除你的 Spring profile：即使终端指向 UAT，测试也不会加载 UAT 的配置。</li>
-        <li><b>不改生产代码。</b>条目范围之外的改动会被还原。缺陷只会被标注并上报，绝不会被悄悄修掉。</li>
-      </ul>
-    </div>
+    <p class="eyebrow">05 — 边界</p>
+    <h2 data-kinetic>它<em>不会</em>去的地方。</h2>
+    <ul class="noservice reveal" aria-label="SIT、UAT、PROD：均不提供服务">
+      <li><span class="ns-word">SIT</span><span class="ns-tag">不提供服务</span></li>
+      <li><span class="ns-word">UAT</span><span class="ns-tag">不提供服务</span></li>
+      <li><span class="ns-word">PROD</span><span class="ns-tag">不提供服务</span></li>
+    </ul>
+    <ul class="safety-list reveal">
+      <li><b>不碰已部署的环境。</b>测试只在开发机或 CI 上运行，依赖用内嵌或假的实现。没有任何模式会指向 SIT、UAT 或生产环境。</li>
+      <li><b>不借用你的身份。</b>gtaw 每次运行测试都会切断云凭据，并移除你的 Spring profile：即使终端指向 UAT，测试也不会加载 UAT 的配置。</li>
+      <li><b>不改生产代码。</b>条目范围之外的改动会被还原。缺陷只会被标注并上报，绝不会被悄悄修掉。</li>
+    </ul>
     <div class="standing reveal">
       <p class="standing-title">目前的状态</p>
       <div class="standing-grid">
@@ -274,10 +323,10 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   </div>
 </section>
 
-<section id="start" data-scene>
+<section class="start-scene" id="start" data-scene>
   <div class="wrap">
-    <p class="eyebrow">06 · 开始</p>
-    <h2>一个脚本，然后 <code>/gta</code>。</h2>
+    <p class="eyebrow">06 — 开始</p>
+    <h2 data-kinetic>一个脚本，<em>然后</em><span class="nb"><code>/gta</code>。</span></h2>
     <p class="lede">脚本会构建一次 gta，把它安装到你的服务里（wrapper 固定指向这个 jar），并运行 <code>./gtaw doctor</code>。之后用 VS Code、IntelliJ 或 OpenCode 打开你的服务。</p>
     <ol class="steps reveal">
       <li><span class="step-n">1</span><div><p class="step-label">在本仓库的检出目录中</p><pre class="code cmd" data-copy>scripts/install-local.sh path/to/your-service</pre></div></li>
@@ -297,12 +346,12 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
 
 <footer class="foot">
   <div class="wrap">
-    <p>gta · generic testing agent。本页不发起任何外部请求，也不设置 cookie。字体：Barlow、Barlow Condensed 与 JetBrains Mono，采用 SIL Open Font License 1.1。</p>
-    <p class="needs-js">按键：<kbd>P</kbd> 演示模式 · <kbd>←</kbd> <kbd>→</kbd> 步进 · <kbd>M</kbd> 声音 · <kbd>F</kbd> 全屏 · <kbd>?</kbd> 帮助</p>
+    <p>gta · generic testing agent。本页不发起任何外部请求，也不设置 cookie。字体：Instrument Serif、Instrument Sans、Barlow Condensed 与 JetBrains Mono，采用 SIL Open Font License 1.1。</p>
+    <p class="needs-js">按键：<kbd>P</kbd> 演示模式 · <kbd>←</kbd> <kbd>→</kbd> 步进 · <kbd>F</kbd> 全屏 · <kbd>?</kbd> 帮助</p>
   </div>
 </footer>
 
-<div class="stage-hud needs-js" id="stage-hud" hidden>演示 · <kbd>→</kbd> 下一步 · <kbd>←</kbd> 上一节 · <kbd>M</kbd> 声音 · <kbd>F</kbd> 全屏 · <kbd>P</kbd> 退出</div>
+<div class="stage-hud needs-js" id="stage-hud" hidden>演示 · <kbd>→</kbd> 下一步 · <kbd>←</kbd> 上一节 · <kbd>F</kbd> 全屏 · <kbd>P</kbd> 退出</div>
 <div class="help needs-js" id="help" hidden role="dialog" aria-modal="true" aria-labelledby="help-title">
   <div class="help-card">
     <p class="help-title" id="help-title">按键</p>
@@ -310,7 +359,6 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
       <dt><kbd>P</kbd></dt><dd>演示模式：字更大，每按一次走一步</dd>
       <dt><kbd>→</kbd> <kbd>Space</kbd></dt><dd>下一步：页面在等人时回复 OK，否则进入下一节</dd>
       <dt><kbd>←</kbd></dt><dd>上一节</dd>
-      <dt><kbd>M</kbd></dt><dd>翻牌声</dd>
       <dt><kbd>F</kbd></dt><dd>全屏</dd>
       <dt><kbd>Esc</kbd></dt><dd>关闭</dd>
     </dl>
@@ -319,26 +367,29 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
 </div>
 
 <script type="application/json" id="i18n">{
-  "soundOn": "声音：开",
-  "soundOff": "声音：关",
   "stage": "演示",
   "stageOn": "退出演示",
-  "colScenario": "场景",
-  "colKind": "类型",
-  "colLocked": "锁定值",
-  "colVerdict": "判定",
   "colWho": "在谁手上",
-  "colExpected": "期望值",
-  "colEnv": "环境",
-  "colService": "gta 测试",
+  "whoAi": "agent",
+  "whoGtaw": "gtaw",
+  "whoYou": "你",
+  "stNone": "尚无证据",
+  "stWriting": "agent 正在编写",
+  "stRunning": "gtaw 正在运行",
+  "stReview": "agent 正在审查",
+  "stFailed": "测试失败",
+  "stTriage": "agent 正在分流这次失败",
+  "stWaiting": "等你处理",
+  "stPassed": "通过",
+  "stPinned": "缺陷已标注",
   "okNone": "暂时没有需要你处理的。",
-  "okOne": "有 1 行在等你：测试没有通过已批准的期望，而只有人才能认定这是缺陷。",
-  "okMany": "有 {n} 行在等你：测试没有通过已批准的期望，而只有人才能认定这是缺陷。",
-  "okDone": "每一行都有了判定：{p} 个凭证据通过，{d} 个缺陷已标注，构建是绿的。",
+  "okOne": "有 1 个场景在等你：测试没有通过已批准的期望，而只有人才能认定这是缺陷。",
+  "okMany": "有 {n} 个场景在等你：测试没有通过已批准的期望，而只有人才能认定这是缺陷。",
+  "okDone": "每个场景都有了判定：{p} 个凭证据通过，{d} 个缺陷已标注，构建是绿的。",
   "forceRefused": "拒绝。没有运行、没有锁定、没有评审：gtaw 手里没有任何证据。",
-  "forceRefused2": "再次拒绝。看板只显示 gtaw 能证明的东西。",
+  "forceRefused2": "再次拒绝。绿色只代表 gtaw 能证明的东西。",
   "forceRefused3": "还是不行。变绿只有一条路：测试通过了人批准的期望。",
-  "again": "让看板重新运行",
+  "again": "重新运行",
   "penYou": "等你回复",
   "penAi": "agent 在工作",
   "penGtaw": "gtaw 在判定",
@@ -361,8 +412,6 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   "ticketWhen": "WHEN",
   "ticketThen": "THEN · 已锁定",
   "ticketEdit": "试着改一下期望值。",
-  "ticketPassed": "PASSED",
-  "ticketPinned": "DEFECT PINNED",
   "ticketRefused": "POLICY_ORACLE_MODIFIED · Locked expected values were changed or removed: [{tokens}]. Restore them; only a human can relock.",
   "ticketRefusedNote": "上面是 gtaw 的原话。已还原。",
   "tabSpec": "规格 R1 → R2",
@@ -377,12 +426,10 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   "tabReportNote": "本次会话的报告，其中记录了每一次人工确认的原话。",
   "runMeta": "录制于 {recorded}，gta {gta}，提交 {commit}，服务 {service}。录制方式：scripts/site/record-demo.sh --lang zh-CN。",
   "copy": "复制",
-  "copied": "已复制",
-  "noService": "NO SERVICE"
+  "copied": "已复制"
 }</script>
 <script defer src="assets/js/run-data.zh-CN.js"></script>
-<script defer src="assets/js/flap.js"></script>
-<script defer src="assets/js/sound.js"></script>
+<script defer src="assets/js/art.js"></script>
 <script defer src="assets/js/site.js"></script>
 </body>
 </html>
