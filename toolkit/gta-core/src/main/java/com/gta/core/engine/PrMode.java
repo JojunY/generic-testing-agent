@@ -29,8 +29,11 @@ final class PrMode {
         this.paths = ctx.paths;
     }
 
-    /** The PR's flows, in order: stale approved flows first (by impact), then new entry points of changed classes. */
-    Map<String, Object> start(WorkState st, ServiceProfile profile, String base, String intent) {
+    /**
+     * The PR's flows, in order: stale approved flows first (by impact), then the flows still open from an earlier run
+     * ({@code earlier}, and specs left stale), then new entry points of changed classes.
+     */
+    Map<String, Object> start(WorkState st, ServiceProfile profile, String base, String intent, List<String> earlier) {
         Map<String, Object> impact = ctx.cases.impactUnlocked(base);
         @SuppressWarnings("unchecked")
         List<String> needsReview = (List<String>) impact.get("needsReview");
@@ -53,6 +56,17 @@ final class PrMode {
                                     .setHeader("status", "stale")
                                     .text());
                 }
+            }
+        }
+        // impact reads approved specs only: a flow an earlier run made stale and did not finish is still the PR's
+        List<String> open = new ArrayList<>(earlier);
+        profile.entrypoints.forEach(e -> open.add(e.flowId));
+        for (String flowId : open) {
+            Path spec = paths.spec(flowId);
+            String status = Files.exists(spec) ? SpecParser.parse(spec).status() : null;
+            boolean unfinished = earlier.contains(flowId) ? !"approved".equals(status) : "stale".equals(status);
+            if (status != null && unfinished && flows.add(flowId)) {
+                why.put(flowId, "still open from an earlier pr run (spec " + status + ")");
             }
         }
         List<String> unmapped = new ArrayList<>();

@@ -94,6 +94,14 @@ public final class Engine {
             Map<String, Object> recovered = ctx.sessions.touchSession(st, takeover);
             boolean startPr = "pr".equals(mode) && target == null;
             boolean startService = ServiceMode.MODE.equals(mode) && target == null;
+            // the flows an earlier pr run queued: a new pr run keeps the ones not done yet
+            List<String> earlierPr = new ArrayList<>();
+            if ("pr".equals(st.mode)) {
+                if (st.activeFlow != null) {
+                    earlierPr.add(st.activeFlow);
+                }
+                earlierPr.addAll(st.queue);
+            }
             if (mode != null) {
                 if (!ServiceMode.MODE.equals(mode)) {
                     st.parked.clear(); // only service mode asks parked decisions; their flows ask again when worked on
@@ -112,7 +120,8 @@ public final class Engine {
             } else if (startService) {
                 ServiceMode.start(st, profile);
             } else if (startPr) {
-                prScope = ctx.pr.start(st, profile, base == null ? ctx.sessionEnd.defaultBase() : base, intent);
+                prScope = ctx.pr.start(
+                        st, profile, base == null ? ctx.sessionEnd.defaultBase() : base, intent, earlierPr);
             }
             Map<String, Object> out = prScope != null && st.activeFlow == null
                     ? done("No flow is affected by the changes since " + prScope.get("base"), null)

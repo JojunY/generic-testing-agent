@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /** Session ownership (plan §5.2): start, idle takeover and recovery of interrupted nodes. */
@@ -33,8 +34,9 @@ final class SessionManager {
     /**
      * Starts a session when there is none, when the previous one ended cleanly, on an explicit takeover, or when the
      * previous one went idle. Only items an agent was editing (AUTHORING, REPAIRING) are reset, and only when the previous
-     * session was interrupted (takeover or idle): items waiting for triage or review keep their state. After a clean end
-     * the open items get a fresh scope baseline.
+     * session was interrupted (takeover or idle): items waiting for triage or review keep their state, unless the files
+     * changed since their review round, when their test runs again first. After a clean end the open items get a fresh
+     * scope baseline.
      */
     Map<String, Object> touchSession(WorkState st, boolean takeover) {
         Map<String, Object> recovered = new LinkedHashMap<>();
@@ -72,6 +74,22 @@ final class SessionManager {
                 for (WorkState.ItemState s : st.items.values()) {
                     if (!s.status.terminal() && s.baseline != null) {
                         s.baseline = cc.capture();
+                    }
+                }
+            }
+            // a review round judges the run of the tree it recorded: when that tree changed since (the developer's
+            // edits or commits, a reviewer that stopped mid-round), the test runs again on today's tree first, and a
+            // new round reviews that run; nothing is reverted
+            ChangeChecker review = new ChangeChecker(paths);
+            for (WorkState.ItemState s : st.items.values()) {
+                if ((s.status == ItemStatus.REVIEWING || s.status == ItemStatus.TRIAGING) && s.reviewBaseline != null) {
+                    ChangeChecker.Result since = review.check(s.reviewBaseline, List.of(), null, false);
+                    if (!since.changed().isEmpty() || !since.foreignCommits().isEmpty()) {
+                        st.move(s, ItemStatus.PENDING);
+                        st.move(s, ItemStatus.VERIFYING);
+                        s.baseline = review.capture();
+                        s.reviewBaseline = null;
+                        recovered.put(s.id, "the files changed since its review round: its test runs again first");
                     }
                 }
             }

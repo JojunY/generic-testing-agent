@@ -97,6 +97,24 @@ class DoctorChecksTest {
     }
 
     @Test
+    void shouldWarnWhenGitRecordsGtawWithoutTheExecutableBit(@TempDir Path root) throws Exception {
+        for (List<String> cmd :
+                List.of(List.of("git", "init", "-q"), List.of("git", "config", "core.fileMode", "false"))) {
+            com.gta.core.util.ProcessRunner.run(root, cmd);
+        }
+        Files.writeString(root.resolve("gtaw"), "#!/bin/sh\n");
+        assertEquals("warn", status(root, "gtaw-executable"), "not in git yet");
+
+        com.gta.core.util.ProcessRunner.run(root, List.of("git", "add", "gtaw"));
+        Map<String, String> plain = check(root, "gtaw-executable");
+        assertEquals("warn", plain.get("status"), "as init on Windows leaves it");
+        assertTrue(plain.get("hint").contains("git update-index --chmod=+x gtaw"), plain.toString());
+
+        com.gta.core.util.ProcessRunner.run(root, List.of("git", "update-index", "--chmod=+x", "gtaw"));
+        assertEquals("ok", status(root, "gtaw-executable"));
+    }
+
+    @Test
     void shouldFailWhenThereIsNoPom(@TempDir Path root) {
         Map<String, String> pom = check(root, "pom");
 

@@ -676,7 +676,7 @@ always:
 
 **恢复**：
 - 接管时，先把 agent 正在编辑的条目（`authoring`、`repairing`）的 `ownsFiles`（包括未跟踪的文件）复制到 `.gta/work/recover/<seq>/`。
-- 然后把这些条目重置为 `pending`；等待分流或评审的条目保持原状态。
+- 然后把这些条目重置为 `pending`；等待分流或评审的条目保持原状态。如果评审轮次发出后文件有变化（开发者的修改或提交），会先在当前代码上重跑测试，再由新一轮评审这次运行。不回滚任何文件。
 - **不使用 git stash**。
 
 **交接**：换人接手时 push 分支即可。规格、oracle、升级记录和测试都在 git 中。修复次数会重新计数；升级记录不会丢失。
@@ -1624,7 +1624,7 @@ GTA：共生成 6 个条目，本次会话先处理 5 个……
 - `.github/agents/gta-*`、`.github/prompts/gta*`
 - `.vscode/settings.json`、`.opencode/**`
 
-agent 写入以上路径时，会被 §5.8 的改动检查还原。除 `.gta/work/**` 之外，这些路径在 PR 中的改动都会被 PR 评论单独列出。路径使用 `**/` 前缀，以便覆盖 monorepo 中的各个模块。以后启用 CODEOWNERS 时，直接用这份清单。
+agent 写入以上路径时，会被 §5.8 的改动检查还原。`.gta/work/**` 例外：它被 gitignore，git 既看不到也无法还原它。它只靠两点保护：只有 gtaw 写它（§5.2）；agent 的 shell 白名单里没有 `git`，伪造的 commit ledger 条目没有提交可掩护。agent 用文件工具改它时检测不到。除 `.gta/work/**` 之外，这些路径在 PR 中的改动都会被 PR 评论单独列出。路径使用 `**/` 前缀，以便覆盖 monorepo 中的各个模块。以后启用 CODEOWNERS 时，直接用这份清单。
 
 | 主题 | 措施 |
 |---|---|

@@ -83,7 +83,9 @@ public final class OracleLock {
                 .toList();
         List<Pattern> names = tokens.stream()
                 .flatMap(t -> AssertionScanner.namesOf(t).stream())
-                .map(n -> Pattern.compile("(?<![A-Za-z0-9_])" + Pattern.quote(n) + "(?![A-Za-z0-9_])"))
+                // a matcher name ends with its "(": assertTrue(order.isPaid()) has an argument after it
+                .map(n -> Pattern.compile(
+                        "(?<![A-Za-z0-9_])" + Pattern.quote(n) + (n.endsWith("(") ? "" : "(?![A-Za-z0-9_])")))
                 .toList();
         return statements.stream()
                 .filter(stmt -> values.stream().anyMatch(stmt::contains)

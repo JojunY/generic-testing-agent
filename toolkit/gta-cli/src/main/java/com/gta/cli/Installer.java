@@ -26,7 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
+import java.util.TreeMap;
 
 /**
  * Installs one platform folder (copilot/ or opencode/, bundled in the jar) into a service repository (plan §11.2).
@@ -257,20 +257,13 @@ public final class Installer {
     }
 
     private String wrapperProperties(String distributionUrl, String distributionSha) {
-        Properties p = new Properties();
-        if (Files.exists(paths.wrapperProperties())) {
-            try (var in = Files.newInputStream(paths.wrapperProperties())) {
-                p.load(in);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        }
-        p.setProperty("version", GtaCli.version());
+        Map<String, String> p = new TreeMap<>(wrapperValues(paths.wrapperProperties()));
+        p.put("version", GtaCli.version());
         if (distributionUrl != null) {
-            p.setProperty("distributionUrl", distributionUrl);
+            p.put("distributionUrl", distributionUrl);
         }
         if (distributionSha != null) {
-            p.setProperty("distributionSha256Sum", distributionSha);
+            p.put("distributionSha256Sum", distributionSha);
         }
         p.putIfAbsent(
                 "distributionUrl",
@@ -278,10 +271,32 @@ public final class Installer {
                         + GtaCli.version() + ".jar");
         StringBuilder sb = new StringBuilder(
                 "# gta wrapper: which gta-cli jar to download (from the company Nexus) and its sha256\n");
-        p.stringPropertyNames().stream()
-                .sorted()
-                .forEach(k -> sb.append(k).append('=').append(p.getProperty(k)).append('\n'));
+        p.forEach((k, v) -> sb.append(k).append('=').append(v).append('\n'));
         return sb.toString();
+    }
+
+    /**
+     * The wrapper's properties as gtaw and gtaw.cmd read them: {@code key=value} lines taken as written, without the
+     * escapes of {@link java.util.Properties} (a backslash stays a backslash); the last line of a key wins.
+     */
+    static Map<String, String> wrapperValues(Path file) {
+        Map<String, String> out = new LinkedHashMap<>();
+        if (!Files.exists(file)) {
+            return out;
+        }
+        try {
+            for (String line : Files.readAllLines(file, java.nio.charset.StandardCharsets.UTF_8)) {
+                int eq = line.indexOf('=');
+                if (eq > 0 && !line.strip().startsWith("#")) {
+                    out.put(
+                            line.substring(0, eq).strip(),
+                            line.substring(eq + 1).strip());
+                }
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        return out;
     }
 
     private List<String> manifest(String platform) {

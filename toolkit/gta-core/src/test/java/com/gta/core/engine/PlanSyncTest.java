@@ -100,4 +100,44 @@ class PlanSyncTest {
         assertEquals(List.of("201"), s01.lock.tokens, "the lock comes from the committed shard");
         assertTrue(s01.baseline != null);
     }
+
+    @Test
+    void shouldShareTheSeedItemAnotherFlowOfTheDomainPlanned() {
+        sync();
+        List<PlanItem> plan = new StateStore(paths).loadPlan();
+        plan.stream().filter(PlanItem::isFoundation).forEach(i -> i.flowId = "order.cancel");
+        new StateStore(paths).savePlan(plan);
+        st.items.get("order#foundation-01").status = ItemStatus.PASSED;
+
+        sync();
+
+        assertEquals(ItemStatus.PASSED, st.items.get("order#foundation-01").status, "the domain's seed is not redone");
+        assertEquals(
+                1,
+                new StateStore(paths)
+                        .loadPlan().stream().filter(PlanItem::isFoundation).count(),
+                "one seed item per domain");
+    }
+
+    @Test
+    void shouldNotAdoptTheTestOfAConfirmedDefectThatStillNeedsItsPin() {
+        sync();
+        st.items.get(OrderServiceTestData.ITEM).intentOverride = "known-defect";
+        AtomicFiles.write(
+                root.resolve("src/test/java/com/acme/order/OrderControllerIT.java"), "class OrderControllerIT {}\n");
+        OrderServiceTestData.git(root, "add", "-A");
+        OrderServiceTestData.git(root, "commit", "-qm", "tests");
+        OracleShard.Entry e = new OracleShard.Entry();
+        e.scenarioRevision = spec().scenario("order.create/s01").orElseThrow().revision();
+        e.tokens = List.of("201");
+        e.testClass = OrderServiceTestData.TEST_CLASS;
+        OracleShard.write(paths.oracleShard("order.create"), Map.of(OrderServiceTestData.ITEM, e));
+
+        sync();
+
+        assertEquals(
+                ItemStatus.PENDING,
+                st.items.get(OrderServiceTestData.ITEM).status,
+                "the author pins it with @KnownDefect");
+    }
 }

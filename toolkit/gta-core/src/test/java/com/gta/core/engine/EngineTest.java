@@ -938,10 +938,14 @@ class EngineTest {
             loop().submitItem(s01, token(author("s01")));
             reviewAccept("s01");
 
-            // s02
+            // s02 shares the test class with s01: weakening s01's locked assertion is refused (plan §5.3)
             out = author("s02");
             addMethod("s02.method.java.txt");
-            loop().submitItem(FLOW + "/s02#component-01", token(out));
+            Files.writeString(test, Files.readString(test).replace("value(50.00)", "value(51.00)"));
+            Map<String, Object> refused = loop().submitItem(FLOW + "/s02#component-01", token(out));
+            assertEquals(ErrorCode.POLICY_ORACLE_MODIFIED.name(), refused.get("code"), refused.toString());
+            Files.writeString(test, Files.readString(test).replace("value(51.00)", "value(50.00)"));
+            loop().submitItem(FLOW + "/s02#component-01", token(author("s02")));
             reviewAccept("s02");
 
             // s03: the confirmed expectation exposes the seeded defect; a human confirms it and it is pinned

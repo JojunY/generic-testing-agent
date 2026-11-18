@@ -92,4 +92,15 @@ class GtaCliTest {
 
         assertEquals("approve order.create@R4", GtaCli.Answer.replyFile(reply), "Notepad's BOM is not part of it");
     }
+
+    @Test
+    void shouldPassAWordStartingWithAnAtSignVerbatim() throws Exception {
+        Path team = root.resolve("team");
+        Files.writeString(team, "owns refunds");
+
+        List<String> words =
+                GtaCli.commandLine().parseArgs("note", "@" + team).subcommand().matchedPositionalValue(0, List.of());
+
+        assertEquals(List.of("@" + team), words, "not the contents of the file it names");
+    }
 }

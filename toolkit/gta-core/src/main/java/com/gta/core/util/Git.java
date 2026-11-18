@@ -2,6 +2,9 @@ package com.gta.core.util;
 
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -10,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Stream;
 
 /**
  * Thin git wrapper. Only gtaw performs git writes; agents never do (plan §5.2).
@@ -91,7 +96,8 @@ public final class Git {
 
     /**
      * Commits reachable from HEAD but not from {@code since}, oldest first, in one git call. When {@code since} is
-     * {@link #NO_COMMIT}, every commit counts. A {@code since} that no longer exists (history rewritten) fails closed.
+     * {@link #NO_COMMIT}, every commit counts. A {@code since} that no longer exists or is no longer an ancestor of HEAD (history rewritten,
+     * reset or switched) fails closed.
      */
     public List<Commit> commitsSince(String since) {
         List<Commit> out = new ArrayList<>();
@@ -102,12 +108,14 @@ public final class Git {
         String range;
         if (since == null || since.equals(NO_COMMIT)) {
             range = "HEAD";
-        } else if (refExists(since)) {
+        } else if (refExists(since)
+                && git("merge-base", "--is-ancestor", since, "HEAD").ok()) {
             range = since + "..HEAD";
         } else {
+            // a reset or a branch switch drops commits without adding any: the range would look empty
             throw new GtaException(
                     ErrorCode.ENV_GIT_FAILED,
-                    "The baseline commit " + since + " no longer exists",
+                    "The baseline commit " + since + " no longer exists or is no longer in the history of HEAD",
                     "History was rewritten since the brief. Run ./gtaw next --takeover to restart the item from the current HEAD");
         }
         ProcessRunner.Result log =
@@ -175,13 +183,31 @@ public final class Git {
     }
 
     /**
-     * Line numbers of {@code path} (working tree) that differ from {@code baseRef}: added or changed lines, from the
-     * hunks of {@code git diff -U0}.
+     * Line numbers of {@code path} (working tree) changed since it branched off {@code baseRef} (the merge base, as
+     * {@link #changedFiles}): added or changed lines, from the hunks of {@code git diff -U0}. Every line of an
+     * untracked file is new.
      */
     public java.util.Set<Integer> changedLines(String baseRef, String path) {
-        ProcessRunner.Result r = git("diff", "-U0", baseRef, "--", path);
+        if (!isTracked(path)) {
+            Set<Integer> all = new TreeSet<>();
+            try (Stream<String> lines = Files.lines(root.resolve(path))) {
+                long n = lines.count();
+                for (int i = 1; i <= n; i++) {
+                    all.add(i);
+                }
+            } catch (IOException | UncheckedIOException e) {
+                // unreadable: no lines
+            }
+            return all;
+        }
+        ProcessRunner.Result mb = git("merge-base", baseRef, "HEAD");
+        if (!mb.ok()) {
+            throw failed("merge-base " + baseRef + " HEAD", mb);
+        }
+        String base = mb.output().strip();
+        ProcessRunner.Result r = git("diff", "-U0", base, "--", path);
         if (!r.ok()) {
-            throw failed("diff -U0 " + baseRef + " -- " + path, r);
+            throw failed("diff -U0 " + base + " -- " + path, r);
         }
         return hunkLines(r.output());
     }

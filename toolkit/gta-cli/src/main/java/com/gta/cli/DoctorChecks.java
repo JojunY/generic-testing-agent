@@ -7,15 +7,12 @@ import com.gta.core.profile.PomInfo;
 import com.gta.core.util.Git;
 import com.gta.core.util.Json;
 import com.gta.core.util.ProcessRunner;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 /** Environment and installation checks with actionable hints (plan §11.2). */
 public final class DoctorChecks {
@@ -164,16 +161,9 @@ public final class DoctorChecks {
             add("config", "fail", e.getMessage(), e.hint());
         }
 
-        Properties wrapper = new Properties();
-        if (Files.exists(paths.wrapperProperties())) {
-            try (var in = Files.newInputStream(paths.wrapperProperties())) {
-                wrapper.load(in);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        }
-        String url = wrapper.getProperty("distributionUrl", "");
-        boolean pinned = !wrapper.getProperty("distributionSha256Sum", "").isBlank()
+        Map<String, String> wrapper = Installer.wrapperValues(paths.wrapperProperties());
+        String url = wrapper.getOrDefault("distributionUrl", "");
+        boolean pinned = !wrapper.getOrDefault("distributionSha256Sum", "").isBlank()
                 && !url.isBlank()
                 && !url.contains("nexus.example.com");
         add(
@@ -182,6 +172,23 @@ public final class DoctorChecks {
                 pinned ? "gta-cli pinned to " + url : "distributionUrl/distributionSha256Sum not set",
                 "Set both in " + paths.rel(paths.wrapperProperties())
                         + " (gtaw refuses to run an unpinned jar; GTA_CLI_JAR overrides for development)");
+
+        if (git && Files.exists(root.resolve("gtaw"))) {
+            // the mode git records is what teammates and CI check out: init on Windows cannot set it
+            String mode = ProcessRunner.run(root, List.of("git", "ls-files", "-s", "--", "gtaw"))
+                    .output()
+                    .strip();
+            boolean executable = mode.startsWith("100755");
+            add(
+                    "gtaw-executable",
+                    executable ? "ok" : "warn",
+                    executable
+                            ? "gtaw is executable in git"
+                            : mode.isEmpty() ? "gtaw is not in git yet" : "gtaw is not executable in git",
+                    mode.isEmpty()
+                            ? "Add it with git add --chmod=+x gtaw, so ./gtaw runs on Linux, macOS and CI"
+                            : "Run git update-index --chmod=+x gtaw and commit, so ./gtaw runs on Linux, macOS and CI");
+        }
 
         Path managed = paths.managedFiles();
         if (Files.exists(managed)) {

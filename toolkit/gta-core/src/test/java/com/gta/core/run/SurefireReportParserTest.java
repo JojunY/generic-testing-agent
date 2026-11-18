@@ -61,6 +61,20 @@ class SurefireReportParserTest {
     }
 
     @Test
+    void shouldReadAGradleFailureOfAnExceptionAsAnError() throws Exception {
+        // Gradle writes <failure> for every exception; Surefire only for assertion errors
+        report("com.acme.OrderIT", """
+                <testcase classname="com.acme.OrderIT" name="setup()"><failure type="java.lang.NullPointerException" message="x">stack</failure></testcase>
+                <testcase classname="com.acme.OrderIT" name="verify()"><failure type="org.mockito.exceptions.verification.WantedButNotInvoked" message="y">stack</failure></testcase>
+                """);
+
+        List<TestOutcome> cases = SurefireReportParser.parse(List.of(reports), gtaResults);
+
+        assertEquals(
+                List.of("error", "failed"), cases.stream().map(c -> c.outcome).toList());
+    }
+
+    @Test
     void shouldKeepTheScenarioTagsOfParameterizedAndRepeatedTests() throws Exception {
         report("com.acme.OrderIT", """
                 <testcase classname="com.acme.OrderIT" name="rejects(String)[1]"/>

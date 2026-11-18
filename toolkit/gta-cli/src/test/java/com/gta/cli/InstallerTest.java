@@ -108,6 +108,20 @@ class InstallerTest {
     }
 
     @Test
+    void shouldKeepTheWrapperValuesAsTheWrappersReadThem() throws Exception {
+        Path props = root.resolve(".gta/wrapper/gta-wrapper.properties");
+        Files.createDirectories(props.getParent());
+        Files.writeString(props, "distributionUrl=\\\\fileserver\\gta\\gta-cli.jar\ndistributionSha256Sum=abc\n");
+
+        new Installer(root).install("copilot", null, null, true);
+
+        assertTrue(
+                Files.readString(props).contains("distributionUrl=\\\\fileserver\\gta\\gta-cli.jar\n"),
+                "gtaw reads the raw text: the backslashes are not escapes");
+        assertEquals("abc", Installer.wrapperValues(props).get("distributionSha256Sum"));
+    }
+
+    @Test
     void shouldBeIdempotent() throws Exception {
         new Installer(root).install("copilot", null, null, false);
         String first = Files.readString(root.resolve("AGENTS.md"));

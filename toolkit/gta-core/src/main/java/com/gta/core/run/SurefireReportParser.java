@@ -122,8 +122,10 @@ public final class SurefireReportParser {
                     c.outcome = "skipped";
                 } else if (failure != null || error != null) {
                     Element x = failure != null ? failure : error;
-                    c.outcome = failure != null ? "failed" : "error";
                     c.failureType = x.getAttribute("type");
+                    // Surefire writes <failure> for assertion errors only; Gradle writes it for every exception, so a
+                    // <failure> of an exception type (NullPointerException in setup) is an error
+                    c.outcome = failure != null && !c.failureType.endsWith("Exception") ? "failed" : "error";
                     c.message = withoutTypePrefix(x.getAttribute("message"), c.failureType);
                     c.stack = x.getTextContent();
                 }

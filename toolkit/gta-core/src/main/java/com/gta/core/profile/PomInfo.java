@@ -59,7 +59,11 @@ public final class PomInfo {
 
     public static PomInfo read(Path root) {
         Path pom = root.resolve("pom.xml");
-        if (!Files.exists(pom) && gradleBuildFile(root).isPresent()) {
+        // a Gradle root may hold settings.gradle(.kts) only (the layout of gradle init)
+        if (!Files.exists(pom)
+                && (gradleBuildFile(root).isPresent()
+                        || Files.exists(root.resolve("settings.gradle.kts"))
+                        || Files.exists(root.resolve("settings.gradle")))) {
             return readGradle(root);
         }
         if (!Files.exists(pom)) {
@@ -176,8 +180,10 @@ public final class PomInfo {
         info.tool = "gradle";
         info.artifactId = String.valueOf(root.toAbsolutePath().normalize().getFileName());
         try {
-            String build =
-                    Files.readString(gradleBuildFile(root).orElseThrow(), java.nio.charset.StandardCharsets.UTF_8);
+            java.util.Optional<Path> buildFile = gradleBuildFile(root);
+            String build = buildFile.isPresent()
+                    ? Files.readString(buildFile.get(), java.nio.charset.StandardCharsets.UTF_8)
+                    : "";
             java.util.regex.Matcher boot = BOOT_PLUGIN.matcher(build);
             if (boot.find()) {
                 info.bootVersion = boot.group(1);

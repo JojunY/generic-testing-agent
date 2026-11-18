@@ -32,6 +32,43 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- Review round 6, follow-up:
+  - oracle lock and gate:
+    - an assertion is locked with its subject (`assertThat(r.status()).isEqualTo(503)`) and with what a verification expects (`verify(producer).send("orders", payload)`, RestAssured `statusCode(201).body(...)`), so asserting on another object or changing the verified arguments is reported. Shards locked before hold a fingerprint without them: the gate reports them once; relock them (`./gtaw relock`);
+    - in a Scenario Outline only the Examples columns a Then step names (`<fee>`) are expected values; the other columns are watched inputs;
+    - the watched inputs include the helpers a test calls (one level), a class-level `@Sql` and fixtures named by constants (plan §5.3);
+  - engine:
+    - a review or triage round that spans sessions while the files changed (the developer's edits or commits) runs the test again on the current tree first, instead of reverting those edits or escalating the commits;
+    - a commit made outside gtaw during spec analysis ends the analyst's round instead of failing every resubmit until the flow had to be aborted; `./gtaw next` issues a new brief;
+    - the scope check fails closed when HEAD no longer contains the baseline commit (a reset or a branch switch), instead of seeing no change;
+    - running `./gtaw next --mode pr` again keeps the flows an earlier run made stale and did not finish;
+  - runs and profiling:
+    - `mutate --changed` and the can-fail check count mutants of nested classes and lambdas (`Outer$Inner`, `lambda$create$0`) as their source class and method;
+    - a Gradle root with only `settings.gradle(.kts)` is read by `doctor` too;
+  - CLI and wrapper:
+    - `gtaw doctor` warns when git records `gtaw` without the executable bit (an `init` on Windows) and gives the command to fix it;
+    - `init`/`upgrade` and `doctor` read `gta-wrapper.properties` as the wrappers do, so a backslash in a value is kept;
+    - `gtaw-download.ps1` encodes Nexus credentials as UTF-8, like curl, and uses the jar a parallel first run placed in the cache;
+  - plan §13 states that `.gta/work/**` cannot be restored by the change check.
+- Review round 6:
+  - oracle lock and gate:
+    - `assertTrue(order.isPaid())` and `assertFalse(...)` are locked for a THEN of `true`/`false` (only `isTrue()` was);
+    - a number inside another number no longer satisfies a THEN value: `-100`, `1000` and `100.5` do not assert `100`;
+    - the examples of a Cucumber Scenario Outline are part of its locked statements, so changing an expected value in them changes the fingerprint;
+    - submit re-checks the locks of the passed items that share the test class (plan §5.3 "shared files"): weakening another scenario's locked assertion is `POLICY_ORACLE_MODIFIED`, not committed;
+  - engine:
+    - the seed item `<domain>#foundation-01` is shared by the flows of a domain: a second flow no longer resets it (a passed seed was re-run, a seed waiting for a person was written again without them) or adds a second plan entry;
+    - a confirmed defect of a committed test is pinned by the author instead of being adopted and re-run unpinned;
+  - runs and profiling:
+    - Gradle writes `<failure>` for every exception: a failure of an exception type (`NullPointerException` in setup) is an error, not `TEST_ASSERTION_FAILED`;
+    - `gtaw mutate --changed` counts the lines changed since the branch left the base (not lines only the base changed), all lines of a file not yet added to git, and reports no mutant instead of failing when PIT generates none (`--failWhenNoMutations=false`);
+    - a Gradle build whose root has only `settings.gradle(.kts)` can be profiled with `build.module`;
+  - CLI, agents and wrapper:
+    - gtaw no longer expands an argument starting with `@` into a file's contents (`./gtaw note '@team'`);
+    - `note --file` drops a UTF-8 BOM like `answer --file`;
+    - `gtaw init --ci` works without `--platform` on an installed service, as documented;
+    - the orchestrator and test author pass every free text (`--reason`, `--question`, `--recommend`, `answer`, `--target`) in single quotes, so the shell does not run a backtick in a reviewer's reason;
+    - `gtaw.cmd upgrade` no longer reads its next line from the rewritten `gtaw.cmd` (java and `exit /b` are one line); `gtaw-download.ps1` enables TLS 1.2 on Windows PowerShell 5.1.
 - Review round 5, follow-up:
   - the can-fail check and `gtaw mutate` count only mutants a test ran against: `NON_VIABLE`, `RUN_ERROR` and `NOT_STARTED` mutants no longer read as survivors, which made a good test look like one that passes whatever the code does;
   - an assertion of a test-class constant (`isEqualTo(MSG)`) is locked by the constant's value, so weakening it or changing the constant is reported (shards locked before report it once; relock them);

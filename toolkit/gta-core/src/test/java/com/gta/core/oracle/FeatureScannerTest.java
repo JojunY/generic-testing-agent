@@ -73,7 +73,7 @@ class FeatureScannerTest {
                 s02.steps().get(4).arguments());
         FeatureScanner.Scenario s03 = f.scenarios().get(2);
         assertEquals(List.of("security|fee", "ACME|3.47"), s03.steps().get(2).arguments(), "a step's data table");
-        assertEquals(List.of("quantity", "fee", "10000", "3.47"), s03.examples());
+        assertEquals(List.of("quantity=10000", "fee=3.47"), s03.examples());
     }
 
     @Test
@@ -90,7 +90,9 @@ class FeatureScannerTest {
         assertTrue(
                 s02.tokens().containsAll(List.of("503", "PENDING_LOCATE", "{\"reason\": \"inventory-unavailable\"}")));
         assertFalse(s02.tokens().contains("10,000"), "a When value is an input, not an expected value");
-        assertTrue(FeatureScanner.scan(resources, "borrow.book/s03").tokens().containsAll(List.of("3.47", "10000")));
+        AssertionScanner.ScenarioOracle s03 = FeatureScanner.scan(resources, "borrow.book/s03");
+        assertTrue(s03.tokens().contains("3.47"));
+        assertFalse(s03.tokens().contains("10000"), "the quantity column is an input: no Then step names it");
         assertFalse(FeatureScanner.scan(resources, "borrow.book/s09").found());
 
         // the steps of the scenario, the background and the step definitions are its inputs
@@ -103,6 +105,26 @@ class FeatureScannerTest {
         String withGlue = FeatureScanner.scan(resources, "borrow.book/s02").watchedHash();
         Files.writeString(test.resolve("java/steps/Other.java"), "class Other { int x; }");
         assertEquals(withGlue, FeatureScanner.scan(resources, "borrow.book/s02").watchedHash(), "not glue");
+    }
+
+    @Test
+    void shouldLockTheExamplesOfAnOutline(@TempDir Path test) throws Exception {
+        Path resources = test.resolve("resources");
+        Files.createDirectories(resources);
+        Path feature = resources.resolve("book.feature");
+        Files.writeString(
+                feature, FEATURE.replace("| 3.47 |\n", "| 3.47 |\n                    | 20000    | 6.94 |\n"));
+        List<String> tokens = List.of("6.94");
+        String locked = OracleLock.fingerprint(OracleLock.lockedStatements(
+                FeatureScanner.scan(resources, "borrow.book/s03").assertionStatements(), tokens));
+
+        // the Then step reads "the fee is <fee>": the expected value lives in the examples
+        Files.writeString(
+                feature, FEATURE.replace("| 3.47 |\n", "| 3.47 |\n                    | 20000    | 9.99 |\n"));
+        String changed = OracleLock.fingerprint(OracleLock.lockedStatements(
+                FeatureScanner.scan(resources, "borrow.book/s03").assertionStatements(), tokens));
+
+        assertNotEquals(locked, changed);
     }
 
     @Test

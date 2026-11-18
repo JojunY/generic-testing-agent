@@ -317,7 +317,13 @@ final class SpecWorkflow {
                             paths.recover().resolve("analyze-" + st.seq),
                             true);
             if (!scope.ok()) {
-                sw.attempts++;
+                if (scope.foreignCommits().isEmpty()) {
+                    sw.attempts++;
+                } else {
+                    // a commit cannot be reverted for the analyst, so resubmitting this round fails forever: the round
+                    // ends, and the next brief starts from the tree the person left (as for items, plan §5.8)
+                    sw.token = null;
+                }
                 store.save(st);
                 throw new GtaException(
                                 ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE,
@@ -325,7 +331,8 @@ final class SpecWorkflow {
                                 scope.foreignCommits().isEmpty()
                                         ? "Reverted (backup in .gta/work/recover/): " + scope.restored()
                                         : "Commits not made by gtaw " + scope.foreignCommits()
-                                                + " must be reverted by a human; agents must not run git")
+                                                + ": agents must not run git. A person reverts or keeps them, then"
+                                                + " runs ./gtaw next for a new brief")
                         .detail("outOfScope", scope.outOfScope());
             }
             if (!Files.exists(specPath)) {
