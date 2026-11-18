@@ -5,6 +5,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 ## [Unreleased]
 
 ### Added
+- `docs/site/`: an introduction site (English and Simplified Chinese) to open from disk or to present. The title scene draws twelve scenarios of the sample services as marks that pass through three shapes (the agents, gtaw, the person) and lists them in a ledger with the verdict gtaw gave each; a replay lets a visitor give the five replies of a recorded gtaw run on the lending sample (`scripts/site/record-demo.sh` records it; with `--lang zh-CN` gtaw speaks Chinese). Static, with no dependency and no external request. Stage mode (`P`) steps through each scene with `→`, at sizes for a 1080p projector. The Chinese headings use a subset of Noto Serif SC built by `scripts/site/build-zh-heading-font.py`; `RepositoryHarnessTest` checks that it covers every heading character.
 - `scripts/install-local.sh`: installs gta into a service on one machine without Nexus (the wrapper pinned to the locally built jar and its sha256); the README's Install section replaces its Quick start snippet, which left the wrapper unpinned.
 - `docs/design/overview.md` (gta in ten minutes: what it is and is not, what is proven, what is specific to the first adopter, known limits) and `docs/guides/pilot.md` (the first run with a real model: checklist, what to record, what decides the outcome).
 - `.github/workflows/release.yml`: a pushed tag publishes a GitHub Release with the jars and their sha256 values.

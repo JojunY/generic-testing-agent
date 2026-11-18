@@ -62,6 +62,40 @@ class RepositoryHarnessTest {
         assertTrue(reviewer.contains("  edit: deny\n") && reviewer.contains("  bash: deny\n"), reviewer);
     }
 
+    /**
+     * The Chinese page of the introduction site sets its headings in a subset of Noto Serif SC that holds only the
+     * characters they use (docs/site/assets/fonts/noto-serif-sc-head.txt). A heading changed without rebuilding the
+     * subset would fall back to another font, character by character.
+     */
+    @Test
+    void shouldCoverEveryChineseHeadingCharacterWithTheHeadingFont() throws IOException {
+        String page = Files.readString(REPO.resolve("docs/site/index.zh-CN.html"));
+        Set<Integer> subset = new java.util.HashSet<>();
+        for (String line : Files.readAllLines(REPO.resolve("docs/site/assets/fonts/noto-serif-sc-head.txt"))) {
+            if (line.startsWith("U+")) {
+                subset.add(Integer.parseInt(line.substring(2), 16));
+            }
+        }
+        Matcher heading = Pattern.compile("<(h1|h2)[^>]*>(.*?)</\\1>|<p class=\"role-verb\">(.*?)</p>", Pattern.DOTALL)
+                .matcher(page);
+        List<String> missing = new ArrayList<>();
+        int checked = 0;
+        while (heading.find()) {
+            String text = (heading.group(2) != null ? heading.group(2) : heading.group(3)).replaceAll("<[^>]+>", "");
+            for (int c : text.codePoints().toArray()) {
+                if (c >= 0x3000) {
+                    checked++;
+                    if (!subset.contains(c)) {
+                        missing.add(new String(Character.toChars(c)));
+                    }
+                }
+            }
+        }
+
+        assertTrue(checked > 0, "no Chinese heading found");
+        assertEquals(List.of(), missing, "run scripts/site/build-zh-heading-font.py");
+    }
+
     @Test
     void shouldKeepDocumentationInEnglish() throws IOException {
         List<String> offenders = new ArrayList<>();
