@@ -33,6 +33,13 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- Review round 7:
+  - submit re-checks the locks of the pinned (`defect-found`) items that share the test class, not only the passed ones: changing a pinned scenario's expected value to the actual one is `POLICY_ORACLE_MODIFIED` (plan §5.3);
+  - a confirmed defect starts its pinning with a new attempt and check budget, as a retry does;
+  - on Gradle, an exception without a message is fingerprinted with no message, like gta-junit does, so its `@KnownDefect` pin matches; a `<failure>` of a JDK error (`ExceptionInInitializerError`, `NoClassDefFoundError`) is an error, not an assertion;
+  - the failure fingerprint spells out its word edges instead of `\b`, whose meaning changed in JDK 19, so gtaw and a service on another JDK mask a number next to a non-ASCII letter (`Auftragé20240001234ö`) the same way;
+  - PR mode reads the config keys a branch changed from the commit it left the base at, not the base's tip: a key changed on the base since then no longer flags scenarios;
+  - `gtaw doctor` accepts a `build.module` starting with `./`.
 - Review round 6, second pass (fixes not covered above):
   - oracle lock and gate:
     - REST Assured expectations after `then()` (`then().body("status", equalTo("PENDING"))`) are expected values and locked, not request inputs, so a correct test no longer fails with `POLICY_ORACLE_MISMATCH`;

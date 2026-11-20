@@ -283,8 +283,8 @@ public final class DoctorChecks {
 
     private String configuredModule() {
         try {
-            String m = GtaConfig.load(new GtaPaths(root)).build.module;
-            return m == null ? "" : m;
+            // normalised as GtaPaths does: "./order-api" is "order-api"
+            return new GtaPaths(root, GtaConfig.load(new GtaPaths(root)).build.module).module();
         } catch (GtaException e) {
             return "";
         }

@@ -527,12 +527,13 @@ final class ItemWorkflow {
                         "Locked expected values were changed or removed: " + lockCheck.missingTokens()
                                 + ". Restore them; only a human can relock.");
             }
-            // scenarios of a flow and layer share a test class: submit re-checks the locks of its passed items
+            // scenarios of a flow and layer share a test class: submit re-checks the locks of its passed and pinned
+            // items
             for (PlanItem other : store.loadPlan()) {
                 WorkState.ItemState os = st.items.get(other.id);
                 if (other.id.equals(item.id)
                         || os == null
-                        || os.status != ItemStatus.PASSED
+                        || (os.status != ItemStatus.PASSED && os.status != ItemStatus.DEFECT_FOUND)
                         || !Objects.equals(other.testClass, item.testClass)
                         || !Objects.equals(other.feature, item.feature)) {
                     continue;

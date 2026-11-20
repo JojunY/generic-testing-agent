@@ -53,6 +53,9 @@ class DoctorChecksTest {
         Map<String, String> set = check(root, "modules");
         assertEquals("ok", set.get("status"));
         assertTrue(set.get("detail").contains("module api"), set.toString());
+
+        Files.writeString(root.resolve(".gta/config.json"), "{\"build\":{\"module\":\"./api\"}}");
+        assertEquals("ok", status(root, "modules"), "build.module may start with ./");
     }
 
     @Test

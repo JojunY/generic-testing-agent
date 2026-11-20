@@ -183,6 +183,15 @@ public final class Git {
         return lines(r.output());
     }
 
+    /** The commit the branch left {@code baseRef} at: what {@code baseRef...HEAD} compares against. */
+    public String mergeBase(String baseRef) {
+        ProcessRunner.Result mb = git("merge-base", baseRef, "HEAD");
+        if (!mb.ok()) {
+            throw failed("merge-base " + baseRef + " HEAD", mb);
+        }
+        return mb.output().strip();
+    }
+
     /**
      * Line numbers of {@code path} (working tree) changed since it branched off {@code baseRef} (the merge base, as
      * {@link #changedFiles}): added or changed lines, from the hunks of {@code git diff -U0}. Every line of an
@@ -201,11 +210,7 @@ public final class Git {
             }
             return all;
         }
-        ProcessRunner.Result mb = git("merge-base", baseRef, "HEAD");
-        if (!mb.ok()) {
-            throw failed("merge-base " + baseRef + " HEAD", mb);
-        }
-        String base = mb.output().strip();
+        String base = mergeBase(baseRef);
         ProcessRunner.Result r = git("diff", "-U0", base, "--", path);
         if (!r.ok()) {
             throw failed("diff -U0 " + base + " -- " + path, r);

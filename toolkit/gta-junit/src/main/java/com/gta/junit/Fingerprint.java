@@ -9,10 +9,11 @@ public final class Fingerprint {
     /**
      * Volatile parts of a failure message: UUIDs, timestamps, hex ids, identity hashes and long numbers. Short numbers
      * (the expected and actual values) are kept, so a defect that changes its actual value is no longer "known".
-     * Must stay identical to FailureClassifier.VOLATILE in gta-core.
+     * Must stay identical to FailureClassifier.VOLATILE in gta-core. Word edges are spelled out instead of {@code \b},
+     * whose meaning changed in JDK 19: the tests run on the service's JDK, gtaw on its own.
      */
     public static final String VOLATILE =
-            "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?|0x[0-9a-fA-F]+|@[0-9a-fA-F]{4,}\\b|\\b[0-9a-f]{8,}\\b|\\b\\d{6,}\\b";
+            "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?|0x[0-9a-fA-F]+|@[0-9a-fA-F]{4,}(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])[0-9a-f]{8,}(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])\\d{6,}(?![A-Za-z0-9_])";
 
     private Fingerprint() {}
 
