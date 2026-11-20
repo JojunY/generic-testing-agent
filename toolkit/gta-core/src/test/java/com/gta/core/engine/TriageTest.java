@@ -225,10 +225,14 @@ class TriageTest {
 
     @Test
     void shouldPinAConfirmedDefect() {
+        s.attempts = 1;
+        s.checks = 8;
         decide("defect", "A");
 
         assertEquals("known-defect", s.intentOverride);
         assertEquals(ItemStatus.PENDING, s.status);
+        assertEquals(0, s.attempts, "pinning is a new task with its own attempts");
+        assertEquals(0, s.checks, "and its own checks");
         assertTrue(Files.exists(paths.escalations().resolve("order.create__s01__component-01.md")));
         assertEquals(null, st.pending);
     }

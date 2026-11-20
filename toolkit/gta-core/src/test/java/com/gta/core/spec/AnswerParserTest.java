@@ -100,6 +100,14 @@ class AnswerParserTest {
     }
 
     @Test
+    void shouldReadAnOwnAnswerRightAfterOk() {
+        AnswerParser.Answers a = (AnswerParser.Answers) AnswerParser.parse("ok 2: retry twice");
+
+        assertEquals(java.util.Map.of("2", "retry twice"), a.ownAnswers(), "not the recommended option for 2");
+        assertTrue(a.acceptRecommended(), "the other questions take their recommendation");
+    }
+
+    @Test
     void shouldReadColonPicksOnOneLineAsPicks() {
         AnswerParser.Answers a = (AnswerParser.Answers) AnswerParser.parse("R3: 1: A 2: B");
         assertEquals(java.util.Map.of("1", "A", "2", "B"), a.picks());

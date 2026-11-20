@@ -32,11 +32,13 @@ public final class Impact {
 
     /**
      * Keys of {@code application*.yml|yaml|properties} in the service's main resources whose value differs between
-     * {@code base} and the working tree (added and removed keys included).
+     * the commit the branch left {@code base} at and the working tree (added and removed keys included), like
+     * {@code changedFiles}: a key changed on {@code base} since then is not this branch's change.
      */
     public static Set<String> changedConfigKeys(Git git, GtaPaths paths, String base, Collection<String> changedFiles) {
         Set<String> out = new LinkedHashSet<>();
         String prefix = paths.inModule(GtaPaths.MAIN_RESOURCES + "/");
+        String from = null;
         for (String file : changedFiles) {
             if (!file.startsWith(prefix) || file.indexOf('/', prefix.length()) >= 0) {
                 continue;
@@ -45,7 +47,10 @@ public final class Impact {
             if (!RefResolver.isConfigFile(name)) {
                 continue;
             }
-            Map<String, String> before = parse(name, git.show(base, file).orElse(""));
+            if (from == null) {
+                from = git.mergeBase(base);
+            }
+            Map<String, String> before = parse(name, git.show(from, file).orElse(""));
             Path now = paths.root().resolve(file);
             Map<String, String> after;
             try {

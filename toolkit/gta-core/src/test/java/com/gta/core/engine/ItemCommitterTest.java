@@ -8,6 +8,7 @@ import com.gta.core.change.ChangeChecker;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.oracle.Lock;
 import com.gta.core.oracle.OracleShard;
+import com.gta.core.plan.PlanItem;
 import com.gta.core.run.TestRunnerFake;
 import com.gta.core.state.ItemStatus;
 import com.gta.core.state.WorkState;
@@ -57,6 +58,29 @@ class ItemCommitterTest {
         assertTrue(s.reason.contains("pom.xml"), s.reason);
         assertEquals(1, OracleShard.read(paths.oracleShard("order.create")).size());
         assertTrue(new com.gta.core.change.CommitLedger(paths).contains(s.commit), "recorded in the ledger");
+    }
+
+    @Test
+    void shouldStillCommitTheTestAnItemWroteBeforeItWasSentBack() throws Exception {
+        PlanItem item = OrderServiceTestData.item();
+        item.ownsFiles.add("src/test/resources/fixtures/order/**");
+        WorkState.ItemState s = new WorkState.ItemState();
+        s.id = OrderServiceTestData.ITEM;
+        s.status = ItemStatus.PASSED;
+        s.baseline = new ChangeChecker(paths).capture();
+        Path test = root.resolve("src/test/java/com/acme/order/OrderControllerIT.java");
+        AtomicFiles.write(test, "class OrderControllerIT {}\n");
+        AtomicFiles.write(root.resolve("src/test/resources/fixtures/order/s01.json"), "{}\n");
+        // a person confirmed a defect: the item goes back to its author with a new baseline, the author pins the test
+        s.baseline = ctx.committer.freshBaseline(item, s);
+        AtomicFiles.write(test, "@KnownDefect class OrderControllerIT {}\n");
+
+        ctx.committer.commitItem(new WorkState(), item, s, "r2", "pin known defect");
+
+        String committed = OrderServiceTestData.git(root, "show", "--name-only", "--format=", "HEAD")
+                .output();
+        assertTrue(committed.contains("src/test/resources/fixtures/order/s01.json"), committed);
+        assertTrue(committed.contains("OrderControllerIT.java"), committed);
     }
 
     @Test

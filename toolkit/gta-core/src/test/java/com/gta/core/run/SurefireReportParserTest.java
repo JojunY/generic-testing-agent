@@ -66,12 +66,17 @@ class SurefireReportParserTest {
         report("com.acme.OrderIT", """
                 <testcase classname="com.acme.OrderIT" name="setup()"><failure type="java.lang.NullPointerException" message="x">stack</failure></testcase>
                 <testcase classname="com.acme.OrderIT" name="verify()"><failure type="org.mockito.exceptions.verification.WantedButNotInvoked" message="y">stack</failure></testcase>
+                <testcase classname="com.acme.OrderIT" name="init()"><failure type="java.lang.ExceptionInInitializerError" message="z">stack</failure></testcase>
+                <testcase classname="com.acme.OrderIT" name="all()"><failure type="org.opentest4j.MultipleFailuresError" message="w">stack</failure></testcase>
+                <testcase classname="com.acme.OrderIT" name="plain()"><failure type="java.lang.AssertionError" message="v">stack</failure></testcase>
                 """);
 
         List<TestOutcome> cases = SurefireReportParser.parse(List.of(reports), gtaResults);
 
         assertEquals(
-                List.of("error", "failed"), cases.stream().map(c -> c.outcome).toList());
+                List.of("error", "failed", "error", "failed", "failed"),
+                cases.stream().map(c -> c.outcome).toList(),
+                "an error of the JVM (a fixture that fails to initialise) is not an assertion");
     }
 
     @Test
@@ -188,6 +193,11 @@ class SurefireReportParserTest {
                         "java.lang.IllegalStateException: boom", "java.lang.IllegalStateException"));
         assertEquals("boom", SurefireReportParser.withoutTypePrefix("boom", "java.lang.IllegalStateException"));
         assertNull(SurefireReportParser.withoutTypePrefix(null, "x.Y"));
+        assertEquals(
+                "",
+                SurefireReportParser.withoutTypePrefix(
+                        "java.lang.UnsupportedOperationException", "java.lang.UnsupportedOperationException"),
+                "Gradle reports an exception without a message by its type: gta-junit fingerprints no message");
     }
 
     @Test

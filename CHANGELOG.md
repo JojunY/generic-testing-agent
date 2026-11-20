@@ -33,6 +33,36 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- Review round 7:
+  - submit re-checks the locks of the pinned (`defect-found`) items that share the test class, not only the passed ones: changing a pinned scenario's expected value to the actual one is `POLICY_ORACLE_MODIFIED` (plan §5.3);
+  - a confirmed defect starts its pinning with a new attempt and check budget, as a retry does;
+  - on Gradle, an exception without a message is fingerprinted with no message, like gta-junit does, so its `@KnownDefect` pin matches; a `<failure>` of a JDK error (`ExceptionInInitializerError`, `NoClassDefFoundError`) is an error, not an assertion;
+  - the failure fingerprint spells out its word edges instead of `\b`, whose meaning changed in JDK 19, so gtaw and a service on another JDK mask a number next to a non-ASCII letter (`Auftragé20240001234ö`) the same way;
+  - PR mode reads the config keys a branch changed from the commit it left the base at, not the base's tip: a key changed on the base since then no longer flags scenarios;
+  - `gtaw doctor` accepts a `build.module` starting with `./`.
+  - with `core.autocrlf` on (Windows), git's "LF will be replaced by CRLF" warning no longer ends up in the paths gtaw reads from `git status`, where it hid a changed file from the scope check.
+- Review round 6, second pass (fixes not covered above):
+  - oracle lock and gate:
+    - REST Assured expectations after `then()` (`then().body("status", equalTo("PENDING"))`) are expected values and locked, not request inputs, so a correct test no longer fails with `POLICY_ORACLE_MISMATCH`;
+    - a value locks a statement only as a whole number: a THEN of `1` no longer locks `hasSize(10)` or `isEqualTo(-100)`;
+    - `gtaw gate` reports an unreadable shard of a spec changed in the PR as `GATE_SHARD_UNREADABLE` instead of aborting;
+  - engine:
+    - an item sent back for more work (a confirmed defect, a retry, a new session) still commits the test files it wrote before, so no lock is committed without its test and fixtures;
+    - an item that was dispatched before (it has a baseline) is dispatched to its author again instead of being adopted as an existing test;
+  - runs:
+    - an inherited `JAVA_TOOL_OPTIONS` holding only Spring options (`-Dspring.profiles.active=uat`) is removed from every run, PIT's included, instead of reaching the tests unchanged;
+    - Maven runs pass `-Dsurefire.rerunFailingTestsCount=0`: a service's rerun setting no longer turns a flaky failure into a pass;
+    - `gtaw mutate --changed` mutates changed lines in nested and anonymous classes (PIT is given `Outer$*` too);
+    - `gtaw run` exits non-zero when the run timed out or the build failed without test reports, and with the build category's code (40) on a compile error;
+  - specs and configuration:
+    - `OK 2: retry twice` records the own answer for question 2 instead of its recommended option;
+    - a question whose `gta:` comment runs over two lines can be ticked;
+    - status ids, answer letters and section names are read the same in every default locale (Turkish `i`);
+    - `build.module` may start with `./`;
+    - a rename git reports in the work-tree column (after `git add -N`) counts its source as a change;
+  - CLI and wrapper:
+    - `gtaw` reads `gta-wrapper.properties` like `gtaw.cmd` and Java do: `key = value`, trailing blanks and CRLF line ends;
+    - `gtaw env` says deployed environments are out of scope instead of "arrive in P4"; the Beam skill no longer points to `gtaw env` for Dataflow runs.
 - Review round 6, follow-up:
   - oracle lock and gate:
     - an assertion is locked with its subject (`assertThat(r.status()).isEqualTo(503)`) and with what a verification expects (`verify(producer).send("orders", payload)`, RestAssured `statusCode(201).body(...)`), so asserting on another object or changing the verified arguments is reported. Shards locked before hold a fingerprint without them: the gate reports them once; relock them (`./gtaw relock`);

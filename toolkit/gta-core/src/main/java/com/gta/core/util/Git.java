@@ -79,11 +79,12 @@ public final class Git {
             if (e.length() < 4) {
                 continue;
             }
-            char status = e.charAt(0);
+            // a rename or copy is reported in the index column, or in the work-tree one after `git add -N`
+            String xy = e.substring(0, 2);
             paths.add(e.substring(3));
-            if ((status == 'R' || status == 'C') && i + 1 < entries.length) {
+            if ((xy.indexOf('R') >= 0 || xy.indexOf('C') >= 0) && i + 1 < entries.length) {
                 i++;
-                if (status == 'R') {
+                if (xy.indexOf('R') >= 0) {
                     paths.add(entries[i]); // the source of a rename disappeared: it is a change too
                 }
             }
@@ -182,6 +183,15 @@ public final class Git {
         return lines(r.output());
     }
 
+    /** The commit the branch left {@code baseRef} at: what {@code baseRef...HEAD} compares against. */
+    public String mergeBase(String baseRef) {
+        ProcessRunner.Result mb = git("merge-base", baseRef, "HEAD");
+        if (!mb.ok()) {
+            throw failed("merge-base " + baseRef + " HEAD", mb);
+        }
+        return mb.output().strip();
+    }
+
     /**
      * Line numbers of {@code path} (working tree) changed since it branched off {@code baseRef} (the merge base, as
      * {@link #changedFiles}): added or changed lines, from the hunks of {@code git diff -U0}. Every line of an
@@ -200,11 +210,7 @@ public final class Git {
             }
             return all;
         }
-        ProcessRunner.Result mb = git("merge-base", baseRef, "HEAD");
-        if (!mb.ok()) {
-            throw failed("merge-base " + baseRef + " HEAD", mb);
-        }
-        String base = mb.output().strip();
+        String base = mergeBase(baseRef);
         ProcessRunner.Result r = git("diff", "-U0", base, "--", path);
         if (!r.ok()) {
             throw failed("diff -U0 " + base + " -- " + path, r);
@@ -274,7 +280,8 @@ public final class Git {
 
     private ProcessRunner.Result git(String... args) {
         // paths as they are: without it git prints a non-ASCII path quoted and octal-escaped ("\346\226\207.java")
-        List<String> cmd = ProcessRunner.cmd("git", "-c", "core.quotePath=false");
+        // and without the "LF will be replaced by CRLF" warning, which core.autocrlf prints into the output it parses
+        List<String> cmd = ProcessRunner.cmd("git", "-c", "core.quotePath=false", "-c", "core.safecrlf=false");
         cmd.addAll(List.of(args));
         return ProcessRunner.run(root, TIMEOUT, ENV, cmd);
     }

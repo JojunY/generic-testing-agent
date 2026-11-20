@@ -19,7 +19,7 @@ public record GtaPaths(Path root, String module) {
     public static final String TEST_RESOURCES = "src/test/resources";
 
     public GtaPaths {
-        module = module == null ? "" : module.replace('\\', '/').replaceAll("^/+|/+$", "");
+        module = module == null ? "" : module.replace('\\', '/').replaceAll("^(?:\\./|/)+|/+$", "");
     }
 
     public GtaPaths(Path root) {

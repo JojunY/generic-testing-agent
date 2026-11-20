@@ -124,8 +124,8 @@ public final class SurefireReportParser {
                     Element x = failure != null ? failure : error;
                     c.failureType = x.getAttribute("type");
                     // Surefire writes <failure> for assertion errors only; Gradle writes it for every exception, so a
-                    // <failure> of an exception type (NullPointerException in setup) is an error
-                    c.outcome = failure != null && !c.failureType.endsWith("Exception") ? "failed" : "error";
+                    // <failure> of an exception or JVM error type (NullPointerException in setup) is an error
+                    c.outcome = failure != null && !notAnAssertion(c.failureType) ? "failed" : "error";
                     c.message = withoutTypePrefix(x.getAttribute("message"), c.failureType);
                     c.stack = x.getTextContent();
                 }
@@ -140,21 +140,33 @@ public final class SurefireReportParser {
         return out;
     }
 
-    /**
-     * The plain method name of a reported test case. Surefire appends the parameter types and, for parameterized or
-     * repeated tests, the invocation index ({@code shouldX(String)[2]}); gta-junit reports the plain name.
-     */
+    /** An exception, or an error of the JDK other than {@code AssertionError} ({@code NoClassDefFoundError}). */
+    static boolean notAnAssertion(String type) {
+        return type.endsWith("Exception")
+                || (type.startsWith("java.") && type.endsWith("Error") && !type.equals("java.lang.AssertionError"));
+    }
+
     /**
      * The exception's own message. Gradle's report puts "type: " in front of it, Surefire's does not; fingerprints are
-     * computed from the bare message on both sides.
+     * computed from the bare message on both sides. Gradle reports an exception without a message by its type alone,
+     * which gta-junit reads as no message.
      */
     static String withoutTypePrefix(String message, String type) {
-        if (message != null && type != null && !type.isEmpty() && message.startsWith(type + ": ")) {
-            return message.substring(type.length() + 2);
+        if (message != null && type != null && !type.isEmpty()) {
+            if (message.equals(type)) {
+                return "";
+            }
+            if (message.startsWith(type + ": ")) {
+                return message.substring(type.length() + 2);
+            }
         }
         return message;
     }
 
+    /**
+     * The plain method name of a reported test case. Surefire appends the parameter types and, for parameterized or
+     * repeated tests, the invocation index ({@code shouldX(String)[2]}); gta-junit reports the plain name.
+     */
     static String methodName(String reported) {
         int cut = reported.length();
         for (char c : new char[] {'(', '['}) {

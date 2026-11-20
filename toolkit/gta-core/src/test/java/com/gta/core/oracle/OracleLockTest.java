@@ -124,6 +124,13 @@ class OracleLockTest {
     }
 
     @Test
+    void shouldLockOnlyStatementsThatHoldTheNumberAsAWholeNumber() {
+        List<String> statements = List.of("isEqualTo(1)", "hasSize(10)", "isEqualTo(-100)", "isEqualTo(1.0)");
+
+        assertEquals(List.of("isEqualTo(1)", "isEqualTo(1.0)"), OracleLock.lockedStatements(statements, List.of("1")));
+    }
+
+    @Test
     void shouldFingerprintStatementsIndependentlyOfOrder() {
         assertEquals(OracleLock.fingerprint(List.of("a", "b")), OracleLock.fingerprint(List.of("b", "a")));
     }

@@ -41,4 +41,11 @@ class FingerprintTest {
         assertNotEquals(Fingerprint.of("X", "total too high"), Fingerprint.of("X", "total too low"));
         assertNotEquals(Fingerprint.of("X", "same"), Fingerprint.of("Y", "same"));
     }
+
+    @Test
+    void shouldMaskALongNumberNextToALetterOutsideAsciiOnEveryJdk() {
+        // \b changed meaning in JDK 19, and the tests run on the service's JDK while gtaw runs on its own
+        assertEquals(Fingerprint.of("X", "Auftragé20240001234ö"), Fingerprint.of("X", "Auftragé20249999999ö"));
+        assertEquals(-1, Fingerprint.VOLATILE.indexOf("\\b"), "word edges are spelled out");
+    }
 }

@@ -463,9 +463,22 @@ public final class GtaCli implements Callable<Integer> {
             out.put("tests", r.cases.size());
             out.put("failed", r.failures().size());
             out.put("compileError", r.compileError);
+            out.put("timedOut", r.timedOut);
             out.put("log", r.logFile);
             print(parent, out);
-            return r.compileError || !r.failures().isEmpty() ? ErrorCode.TEST_ASSERTION_FAILED.exitCode() : 0;
+            return runExitCode(r);
+        }
+
+        /** Exit code of a run: 0 only when the build finished and every test it reported passed. */
+        static int runExitCode(RunResult r) {
+            if (r.compileError) {
+                return ErrorCode.BUILD_COMPILE_ERROR.exitCode();
+            }
+            if (r.timedOut || !r.failures().isEmpty()) {
+                return ErrorCode.TEST_ASSERTION_FAILED.exitCode();
+            }
+            // the build failed without a failing test (dependency, plugin, crashed fork): not a pass
+            return r.exitCode != 0 ? ErrorCode.ENV_TEST_REPORTS_UNUSABLE.exitCode() : 0;
         }
     }
 
@@ -680,14 +693,14 @@ public final class GtaCli implements Callable<Integer> {
         }
     }
 
-    @Command(name = "env", description = "Ephemeral cloud environments (P4).")
+    @Command(name = "env", description = "Deployed environments: out of scope (plan §7.7).")
     static final class Env implements Callable<Integer> {
         @Override
         public Integer call() {
             throw new GtaException(
                     ErrorCode.USAGE_NOT_AVAILABLE_IN_PHASE,
-                    "Ephemeral environments arrive in P4",
-                    "Not needed for component tests");
+                    "gta does not test deployed environments (SIT, UAT, production); teams test them themselves",
+                    "gta's tests run locally with embedded or emulated dependencies (plan §7.7)");
         }
     }
 

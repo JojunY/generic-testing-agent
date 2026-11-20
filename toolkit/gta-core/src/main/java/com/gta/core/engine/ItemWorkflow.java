@@ -35,6 +35,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -149,7 +150,7 @@ final class ItemWorkflow {
             }
             st.seq++;
             s.token = BriefWriter.token(st.session.id, st.seq);
-            s.baseline = new ChangeChecker(paths).capture();
+            s.baseline = ctx.committer.freshBaseline(item, s);
             st.move(s, ItemStatus.AUTHORING);
             Path brief = briefs.author(st.seq, s, item, spec, profile);
             return Dispatch.of(authorNode(item, s, brief));
@@ -333,7 +334,7 @@ final class ItemWorkflow {
                 out.put("oracleLocked", s.lock.tokens);
             } else if (s.lock != null) {
                 OracleLock.Check c = OracleLock.check(s.lock, oracle);
-                out.put("oracleLock", c.verdict().name().toLowerCase());
+                out.put("oracleLock", c.verdict().name().toLowerCase(Locale.ROOT));
                 if (!c.missingTokens().isEmpty()) {
                     out.put("lockedValuesMissing", c.missingTokens());
                 }
@@ -526,12 +527,13 @@ final class ItemWorkflow {
                         "Locked expected values were changed or removed: " + lockCheck.missingTokens()
                                 + ". Restore them; only a human can relock.");
             }
-            // scenarios of a flow and layer share a test class: submit re-checks the locks of its passed items
+            // scenarios of a flow and layer share a test class: submit re-checks the locks of its passed and pinned
+            // items
             for (PlanItem other : store.loadPlan()) {
                 WorkState.ItemState os = st.items.get(other.id);
                 if (other.id.equals(item.id)
                         || os == null
-                        || os.status != ItemStatus.PASSED
+                        || (os.status != ItemStatus.PASSED && os.status != ItemStatus.DEFECT_FOUND)
                         || !Objects.equals(other.testClass, item.testClass)
                         || !Objects.equals(other.feature, item.feature)) {
                     continue;

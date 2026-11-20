@@ -122,7 +122,7 @@ public final class FailureClassifier {
 
     /** Same as com.gta.junit.Fingerprint.VOLATILE; gta-junit's FingerprintTest proves both copies agree. */
     public static final String VOLATILE =
-            "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?|0x[0-9a-fA-F]+|@[0-9a-fA-F]{4,}\\b|\\b[0-9a-f]{8,}\\b|\\b\\d{6,}\\b";
+            "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?|0x[0-9a-fA-F]+|@[0-9a-fA-F]{4,}(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])[0-9a-f]{8,}(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])\\d{6,}(?![A-Za-z0-9_])";
 
     /** Same algorithm as com.gta.junit.Fingerprint, so @KnownDefect(failure=...) can be compared at test time. */
     public static String knownDefectFingerprint(String exceptionType, String message) {
