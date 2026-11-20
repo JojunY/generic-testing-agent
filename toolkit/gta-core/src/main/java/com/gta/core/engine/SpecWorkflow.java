@@ -189,9 +189,11 @@ final class SpecWorkflow {
                         ed.setElement(s.id(), "source", source).setElement(s.id(), "by", p.round);
                     }
                 }
-                spec.invariants.stream()
-                        .filter(i -> target.equals(i.id()))
-                        .forEach(i -> ed.setElement(i.id(), "source", "confirmed"));
+                for (Spec.Invariant i : spec.invariants) {
+                    if (target.equals(i.id())) {
+                        ed.setElement(i.id(), "source", source);
+                    }
+                }
             }
             if (option != null && !option.isCurrentCode()) {
                 toApply.add("Q" + q.number + " (" + q.id() + ") → " + letter + ") " + option.text);

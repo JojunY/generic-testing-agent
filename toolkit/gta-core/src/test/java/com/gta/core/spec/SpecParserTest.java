@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Locale;
 import org.junit.jupiter.api.Test;
 
 class SpecParserTest {
@@ -39,5 +40,20 @@ class SpecParserTest {
 
         assertTrue(q.options.get(0).isCurrentCode());
         assertFalse(q.options.get(1).isCurrentCode());
+    }
+
+    @Test
+    void shouldReadTheInvariantsSectionWhateverTheDefaultLocale() {
+        Locale before = Locale.getDefault();
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr-TR")); // "I".toLowerCase() is "ı" there
+            Spec spec = SpecParser.parseText(SpecTestData.CREATE_ORDER.replace(
+                    "## Invariants\n",
+                    "## Invariants\n- totals are never negative <!-- gta: id=order.create/i01 source=observed -->\n"));
+
+            assertEquals(1, spec.invariants.size());
+        } finally {
+            Locale.setDefault(before);
+        }
     }
 }

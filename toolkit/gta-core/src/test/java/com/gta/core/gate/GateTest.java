@@ -186,6 +186,36 @@ class GateTest {
     }
 
     @Test
+    void shouldRequireATestForARenamedScenarioEvenWhenItsContentIsLocked() throws Exception {
+        Files.writeString(
+                paths.spec("order.create"),
+                SpecTestData.CREATE_ORDER
+                        .replace("status=draft", "status=approved rev=R3")
+                        .replace("id=order.create/s01 ", "id=order.create/s05 "));
+
+        Gate.Result r = gate();
+
+        assertTrue(
+                r.failures.stream()
+                        .anyMatch(c -> c.code.equals(ErrorCode.GATE_SCENARIO_UNVERIFIED.name())
+                                && c.target.equals("order.create/s05")),
+                "another scenario's lock does not verify s05: " + r.failures);
+    }
+
+    @Test
+    void shouldFailClosedWhenTheShardOfTheBranchIsUnreadableAndTheSpecChanged() throws Exception {
+        Files.writeString(
+                paths.spec("order.create"),
+                SpecTestData.CREATE_ORDER.replace("status=draft", "status=approved rev=R3"));
+        Files.writeString(paths.oracleShard("order.create"), "{ <<<<<<< conflict");
+
+        Gate.Result r = gate();
+
+        assertTrue(failedWith(r, ErrorCode.GATE_SHARD_UNREADABLE), r.failures.toString());
+        assertEquals("fail", r.decision);
+    }
+
+    @Test
     void shouldRefuseABaseThatDoesNotExist() {
         GtaException e = assertThrows(
                 GtaException.class,

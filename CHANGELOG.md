@@ -33,6 +33,13 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- Bug review, 2026-11-20:
+  - gate ② takes a scenario as verified on the base only by that scenario's own lock: a renamed scenario, or a new one with the text of another, needs its own verified test;
+  - gate ② reports an unreadable shard of the PR as `GATE_SHARD_UNREADABLE` instead of stopping the gate with a configuration error;
+  - a "rest default" answer records the invariants it settles as `defaulted`, not `confirmed` (plan §3.5.3);
+  - the same out-of-scope change by a reviewer in two rounds goes to a person as the same failure twice;
+  - spec headings, answers and item states are case-converted with `Locale.ROOT`: under a Turkish default locale the Invariants section vanished and `state.json` could not be read;
+  - `gtaw` trims the keys and values of `gta-wrapper.properties` and drops a CRLF line ending, as `gtaw.cmd` and `gtaw doctor` do.
 - Review round 6, follow-up:
   - oracle lock and gate:
     - an assertion is locked with its subject (`assertThat(r.status()).isEqualTo(503)`) and with what a verification expects (`verify(producer).send("orders", payload)`, RestAssured `statusCode(201).body(...)`), so asserting on another object or changing the verified arguments is reported. Shards locked before hold a fingerprint without them: the gate reports them once; relock them (`./gtaw relock`);

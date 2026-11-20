@@ -186,6 +186,33 @@ class EngineTest {
     }
 
     @Test
+    void shouldAskAPersonWhenTheReviewerMakesTheSameChangeTwice() throws Exception {
+        Path test = root.resolve(new GtaPaths(root).testSourceRel("com.acme.OrderCreateIT"));
+        Files.createDirectories(test.getParent());
+        Files.writeString(test, "class OrderCreateIT { void t() { assertThat(status).isEqualTo(201); } }\n");
+        WorkState st = state(ItemStatus.REVIEWING);
+        st.items.get(ITEM).reviewBaseline = new ChangeChecker(paths).capture();
+        store.save(st);
+        for (int round = 1; round <= 2; round++) {
+            Files.writeString(test, "class OrderCreateIT { void t() { assertThat(status).isNotNull(); } }\n");
+            engine().submitReview(ITEM, TOKEN, "accept", "looks right");
+            if (round == 1) {
+                assertEquals(ItemStatus.REPAIRING, item().status);
+                WorkState again = store.load(); // the author submits again and a new review round is issued
+                WorkState.ItemState s = again.items.get(ITEM);
+                s.status = ItemStatus.REVIEWING;
+                s.token = TOKEN;
+                Files.writeString(test, "class OrderCreateIT { void t() { assertThat(status).isEqualTo(201); } }\n");
+                s.reviewBaseline = new ChangeChecker(paths).capture();
+                store.save(again);
+            }
+        }
+
+        assertEquals(ItemStatus.NEEDS_HUMAN, item().status);
+        assertTrue(item().reason.startsWith("the same failure happened twice"), item().reason);
+    }
+
+    @Test
     void shouldRefuseAReviewVerdictWithoutTheCurrentToken() {
         store.save(state(ItemStatus.REVIEWING));
 

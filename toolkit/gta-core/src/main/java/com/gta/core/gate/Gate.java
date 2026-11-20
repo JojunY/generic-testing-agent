@@ -178,14 +178,25 @@ public final class Gate {
             if (!"approved".equals(spec.status()) || !changedSpecFlows.contains(spec.flowId())) {
                 continue;
             }
-            Map<String, OracleShard.Entry> shard = OracleShard.read(paths.oracleShard(spec.flowId()));
+            Map<String, OracleShard.Entry> shard;
+            try {
+                shard = OracleShard.read(paths.oracleShard(spec.flowId()));
+            } catch (GtaException unreadable) {
+                if (!baseShards.containsKey(spec.flowId())) { // otherwise ① has reported it
+                    r.failures.add(new Condition(
+                            ErrorCode.GATE_SHARD_UNREADABLE.name(), spec.flowId(), unreadable.getMessage()));
+                }
+                continue;
+            }
             Map<String, OracleShard.Entry> base = baseShards.getOrDefault(spec.flowId(), Map.of());
             for (Spec.Scenario s : spec.scenarios()) {
                 if ("assumed".equals(s.source())) {
                     continue;
                 }
                 String rev = s.revision();
-                boolean inBase = base.values().stream().anyMatch(e -> rev.equals(e.scenarioRevision));
+                boolean inBase = base.entrySet().stream()
+                        .anyMatch(
+                                e -> e.getKey().startsWith(s.id() + "#") && rev.equals(e.getValue().scenarioRevision));
                 boolean verifiedNow = shard.entrySet().stream()
                         .anyMatch(
                                 e -> e.getKey().startsWith(s.id() + "#") && rev.equals(e.getValue().scenarioRevision));

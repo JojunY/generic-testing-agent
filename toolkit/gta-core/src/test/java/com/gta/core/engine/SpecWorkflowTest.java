@@ -281,6 +281,33 @@ class SpecWorkflowTest {
     }
 
     @Test
+    void shouldRecordAnInvariantSettledByRestDefaultAsDefaulted() throws Exception {
+        String question = """
+                <!-- gta: id=order.create/q02 impact=normal affects=order.create/i01 -->
+                2. Can a total ever be negative?
+                   - [ ] A) No (= current code) (recommended: totals are sums of non-negative amounts)
+                   - [ ] B) Yes → i01 is dropped
+
+                ## Findings""";
+        Files.writeString(
+                paths.spec(FLOW),
+                scripted()
+                        .replace(
+                                "## Invariants\n",
+                                "## Invariants\n- totals are never negative <!-- gta: id=order.create/i01 source=assumed -->\n")
+                        .replace("## Findings", question));
+        engine().submitSpec(FLOW, token);
+        engine().next(null, null, null, false);
+
+        Map<String, Object> out = engine().answer("R1: 1A rest default");
+
+        assertTrue(String.valueOf(out.get("result")).contains("spec is now"), out.toString());
+        assertTrue(
+                Files.readString(paths.spec(FLOW)).contains("id=order.create/i01 source=defaulted"),
+                "nobody confirmed i01: " + Files.readString(paths.spec(FLOW)));
+    }
+
+    @Test
     void shouldApproveDirectlyWhenTheAnswerKeepsTheCurrentCode() throws Exception {
         Files.writeString(paths.spec(FLOW), scripted());
         engine().submitSpec(FLOW, token);
