@@ -40,6 +40,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
   - the failure fingerprint spells out its word edges instead of `\b`, whose meaning changed in JDK 19, so gtaw and a service on another JDK mask a number next to a non-ASCII letter (`Auftragé20240001234ö`) the same way;
   - PR mode reads the config keys a branch changed from the commit it left the base at, not the base's tip: a key changed on the base since then no longer flags scenarios;
   - `gtaw doctor` accepts a `build.module` starting with `./`.
+  - with `core.autocrlf` on (Windows), git's "LF will be replaced by CRLF" warning no longer ends up in the paths gtaw reads from `git status`, where it hid a changed file from the scope check.
 - Review round 6, second pass (fixes not covered above):
   - oracle lock and gate:
     - REST Assured expectations after `then()` (`then().body("status", equalTo("PENDING"))`) are expected values and locked, not request inputs, so a correct test no longer fails with `POLICY_ORACLE_MISMATCH`;

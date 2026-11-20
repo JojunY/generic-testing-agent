@@ -280,7 +280,8 @@ public final class Git {
 
     private ProcessRunner.Result git(String... args) {
         // paths as they are: without it git prints a non-ASCII path quoted and octal-escaped ("\346\226\207.java")
-        List<String> cmd = ProcessRunner.cmd("git", "-c", "core.quotePath=false");
+        // and without the "LF will be replaced by CRLF" warning, which core.autocrlf prints into the output it parses
+        List<String> cmd = ProcessRunner.cmd("git", "-c", "core.quotePath=false", "-c", "core.safecrlf=false");
         cmd.addAll(List.of(args));
         return ProcessRunner.run(root, TIMEOUT, ENV, cmd);
     }
