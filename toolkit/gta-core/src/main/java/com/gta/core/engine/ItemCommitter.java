@@ -34,6 +34,30 @@ final class ItemCommitter {
         this.git = ctx.git;
     }
 
+    private boolean testCode(String path) {
+        return path.startsWith(paths.inModule(GtaPaths.TEST_JAVA + "/"))
+                || path.startsWith(paths.inModule(GtaPaths.TEST_RESOURCES + "/"));
+    }
+
+    /**
+     * A new scope baseline for an item that goes on (sent back for more work, a new session): the test files it
+     * wrote and has not committed yet stay counted as its changes, so its commit still holds them (plan §5.2: no lock
+     * without its committed test). Only files that were unchanged at its previous baseline count; a developer's own
+     * uncommitted edits stay theirs.
+     */
+    Baseline freshBaseline(PlanItem item, WorkState.ItemState s) {
+        ChangeChecker cc = new ChangeChecker(paths);
+        Baseline fresh = cc.capture();
+        if (s.baseline != null) {
+            for (String p : cc.changedSince(s.baseline)) {
+                if (!s.baseline.dirty.containsKey(p) && testCode(p) && ChangeChecker.matchesAny(p, item.ownsFiles)) {
+                    fresh.dirty.remove(p);
+                }
+            }
+        }
+        return fresh;
+    }
+
     void commitItem(WorkState st, PlanItem item, WorkState.ItemState s, String runId, String summary) {
         Baseline baseline = s.baseline == null ? new ChangeChecker(paths).capture() : s.baseline;
         List<String> files = new ArrayList<>();
@@ -42,9 +66,7 @@ final class ItemCommitter {
             if (!ChangeChecker.matchesAny(changed, item.ownsFiles)) {
                 continue;
             }
-            boolean testCode = changed.startsWith(paths.inModule(GtaPaths.TEST_JAVA + "/"))
-                    || changed.startsWith(paths.inModule(GtaPaths.TEST_RESOURCES + "/"));
-            if (baseline.dirty.containsKey(changed) && (!testCode || s.sharesDeveloperFile)) {
+            if (baseline.dirty.containsKey(changed) && (!testCode(changed) || s.sharesDeveloperFile)) {
                 // e.g. pom.xml with the developer's own uncommitted edits: never commit those on their behalf.
                 // Test classes are shared by the items of a flow, so earlier items' uncommitted work is gta's own,
                 // unless the class is the developer's (a naming conflict answered "add gta's tests to it").

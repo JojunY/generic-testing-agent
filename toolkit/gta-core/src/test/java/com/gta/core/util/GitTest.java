@@ -115,6 +115,15 @@ class GitTest {
     }
 
     @Test
+    void shouldReportARenameInTheWorkTreeColumnAsBothPaths() throws Exception {
+        commitFile("a.txt", "x\n");
+        Files.move(root.resolve("a.txt"), root.resolve("b.txt"));
+        run("add", "-N", "b.txt"); // git status reports " R b.txt", the rename in the work-tree column
+
+        assertEquals(java.util.Set.of("a.txt", "b.txt"), git.dirtyPaths());
+    }
+
+    @Test
     void shouldCommitOnlyTheGivenPaths() throws Exception {
         commitFile("a.txt", "a\n");
         Files.writeString(root.resolve("a.txt"), "changed\n");

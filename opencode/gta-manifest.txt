@@ -24,7 +24,6 @@
 .gta/skills/gta-testing-api-contracts/references/specmatic.md
 .gta/skills/gta-testing-api-contracts/references/spring-cloud-contract.md
 .gta/skills/gta-testing-beam-pipelines/SKILL.md
-.gta/skills/gta-testing-beam-pipelines/references/dataflow-runs.md
 .gta/skills/gta-testing-beam-pipelines/references/test-stream.md
 .gta/skills/gta-testing-caches/SKILL.md
 .gta/skills/gta-testing-caches/references/cache-stores.md

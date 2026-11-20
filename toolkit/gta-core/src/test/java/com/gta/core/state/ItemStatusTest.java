@@ -55,6 +55,20 @@ class ItemStatusTest {
     }
 
     @Test
+    void shouldReadAndWriteIdsWhateverTheDefaultLocale() {
+        java.util.Locale before = java.util.Locale.getDefault();
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("tr-TR")); // i/I case rules differ
+            for (ItemStatus st : ItemStatus.values()) {
+                assertEquals(st, ItemStatus.of(st.id()));
+            }
+            assertEquals("authoring", ItemStatus.AUTHORING.id());
+        } finally {
+            java.util.Locale.setDefault(before);
+        }
+    }
+
+    @Test
     void shouldNeverLeaveCancelledAndOnlyLetHumansDecideOnNeedsHuman() {
         for (ItemStatus to : ItemStatus.values()) {
             assertFalse(ItemStatus.CANCELLED.canMoveTo(to), "cancelled is final: " + to);

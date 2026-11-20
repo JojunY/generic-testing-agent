@@ -1,5 +1,6 @@
 package com.gta.core.engine;
 
+import com.gta.core.change.Baseline;
 import com.gta.core.change.ChangeChecker;
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
@@ -21,14 +22,24 @@ import java.util.Map;
 
 /** Session ownership (plan §5.2): start, idle takeover and recovery of interrupted nodes. */
 final class SessionManager {
+    private final EngineContext ctx;
     private final GtaPaths paths;
     private final GtaConfig config;
     private final StateStore store;
 
     SessionManager(EngineContext ctx) {
+        this.ctx = ctx;
         this.paths = ctx.paths;
         this.config = ctx.config;
         this.store = ctx.store;
+    }
+
+    private Baseline freshBaseline(WorkState.ItemState s) {
+        try {
+            return ctx.committer.freshBaseline(store.planItem(s.id), s);
+        } catch (GtaException notInPlan) {
+            return new ChangeChecker(paths).capture();
+        }
     }
 
     /**
@@ -70,10 +81,9 @@ final class SessionManager {
             } else if (st.session != null) {
                 // the previous session ended cleanly: every agent change was checked and committed, so what changed
                 // since (the developer's commits, a pull) is not an agent's work and must not fail the next scope check
-                ChangeChecker cc = new ChangeChecker(paths);
                 for (WorkState.ItemState s : st.items.values()) {
                     if (!s.status.terminal() && s.baseline != null) {
-                        s.baseline = cc.capture();
+                        s.baseline = freshBaseline(s);
                     }
                 }
             }

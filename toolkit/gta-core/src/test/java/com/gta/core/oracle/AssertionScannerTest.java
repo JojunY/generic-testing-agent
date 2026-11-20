@@ -411,6 +411,49 @@ class AssertionScannerTest {
     }
 
     @Test
+    void shouldLockAnExpectationWithTheSubjectItAsserts() throws Exception {
+        String body = """
+                    @Test @Tag("scenario:order.create/s01")
+                    void shouldRefuse() { assertThat(response.getStatusCode().value()).isEqualTo(404); }
+                """;
+        Lock lock = OracleLock.create(scanSource(body), List.of("404"), "r1");
+
+        OracleLock.Check tautology = OracleLock.check(
+                lock, scanSource(body.replace("assertThat(response.getStatusCode().value())", "assertThat(404)")));
+
+        assertEquals(
+                OracleLock.Verdict.STRUCTURAL_CHANGE,
+                tautology.verdict(),
+                "assertThat(404).isEqualTo(404) still holds the value but no longer checks the response");
+    }
+
+    @Test
+    void shouldReadRestAssuredExpectationsAfterThenAsExpectedValues() throws Exception {
+        AssertionScanner.ScenarioOracle o = scanSource("""
+                    @Test @Tag("scenario:order.create/s01")
+                    void shouldCreate() {
+                        given().body("{\\"subtotal\\":50}").when().post("/orders")
+                                .then().body("status", equalTo("PENDING")).statusCode(201);
+                    }
+                """);
+
+        assertEquals(List.of(), AssertionScanner.missingThenLiterals(List.of("PENDING", "201"), o.tokens()));
+        assertFalse(o.tokens().contains("{\"subtotal\":50}"), "the request body before then() is an input");
+        Lock lock = OracleLock.create(o, List.of("PENDING"), "r1");
+        assertEquals(1, lock.statements.size(), lock.statements.toString());
+        assertTrue(lock.statements.get(0).startsWith("body("), "the body expectation is locked");
+    }
+
+    @Test
+    void shouldMatchANumberOnlyAsAWholeNumber() {
+        assertEquals(
+                List.of("100", "200"),
+                AssertionScanner.missingThenLiterals(List.of("100", "200"), java.util.Set.of("-100", "2000")));
+        assertEquals(List.of(), AssertionScanner.missingThenLiterals(List.of("100"), java.util.Set.of("100.00")));
+        assertEquals(List.of(), AssertionScanner.missingThenLiterals(List.of("100"), java.util.Set.of("total: 100")));
+    }
+
+    @Test
     void shouldWatchAClasspathFixture() throws Exception {
         Files.createDirectories(dir.resolve("resources/fixtures"));
         Files.writeString(dir.resolve("resources/fixtures/orders.sql"), "insert into orders values (1);");

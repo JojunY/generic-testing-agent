@@ -3,6 +3,7 @@ package com.gta.core.state;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -43,12 +44,12 @@ public enum ItemStatus {
 
     @JsonValue
     public String id() {
-        return name().toLowerCase().replace('_', '-');
+        return name().toLowerCase(Locale.ROOT).replace('_', '-');
     }
 
     @JsonCreator
     public static ItemStatus of(String id) {
-        return valueOf(id.toUpperCase().replace('-', '_'));
+        return valueOf(id.toUpperCase(Locale.ROOT).replace('-', '_'));
     }
 
     public boolean canMoveTo(ItemStatus to) {

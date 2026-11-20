@@ -85,7 +85,7 @@ public final class SpecEditor {
                 if (inQuestion) {
                     break;
                 }
-                inQuestion = CommentMeta.parse(line)
+                inQuestion = CommentMeta.parse(comment(lines, i))
                         .flatMap(m -> m.get("id"))
                         .map(questionId::equals)
                         .orElse(false);
@@ -119,13 +119,22 @@ public final class SpecEditor {
         return letter;
     }
 
+    /** The gta comment that starts at line {@code i}, joined when it runs over several lines (as the parser reads it). */
+    private static String comment(String[] lines, int i) {
+        StringBuilder c = new StringBuilder(lines[i]);
+        for (int j = i + 1; !c.toString().contains("-->") && j < lines.length; j++) {
+            c.append(' ').append(lines[j].trim());
+        }
+        return c.toString();
+    }
+
     public SpecEditor tick(String questionId, String letter) {
         String[] lines = text.split("\\R", -1);
         boolean inQuestion = false;
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i];
             if (line.contains("gta:") && line.contains("<!--")) {
-                inQuestion = CommentMeta.parse(line)
+                inQuestion = CommentMeta.parse(comment(lines, i))
                         .flatMap(m -> m.get("id"))
                         .map(questionId::equals)
                         .orElse(false);

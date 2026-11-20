@@ -2,7 +2,6 @@ package com.gta.core.engine;
 
 import static com.gta.core.engine.NodeResults.result;
 
-import com.gta.core.change.ChangeChecker;
 import com.gta.core.config.GtaConfig;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
@@ -245,7 +244,7 @@ final class Triage {
             s.lock.statements.removeAll(OracleLock.lockedStatements(s.lock.statements, List.of(exp)));
         }
         // the corrected spec is gtaw's own write: without a fresh baseline the next scope check would revert it
-        s.baseline = new ChangeChecker(paths).capture();
+        s.baseline = ctx.committer.freshBaseline(item, s);
         st.move(s, ItemStatus.REPAIRING);
         s.reason = "spec corrected from the actual behaviour: `" + expected + "` → `" + actual
                 + "`; update the assertion to the new expected value";

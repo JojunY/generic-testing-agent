@@ -79,11 +79,12 @@ public final class Git {
             if (e.length() < 4) {
                 continue;
             }
-            char status = e.charAt(0);
+            // a rename or copy is reported in the index column, or in the work-tree one after `git add -N`
+            String xy = e.substring(0, 2);
             paths.add(e.substring(3));
-            if ((status == 'R' || status == 'C') && i + 1 < entries.length) {
+            if ((xy.indexOf('R') >= 0 || xy.indexOf('C') >= 0) && i + 1 < entries.length) {
                 i++;
-                if (status == 'R') {
+                if (xy.indexOf('R') >= 0) {
                     paths.add(entries[i]); // the source of a rename disappeared: it is a change too
                 }
             }

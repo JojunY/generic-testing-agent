@@ -117,7 +117,10 @@ public final class MutationRunner {
             return out;
         }
         Path work = paths.work().resolve("pit");
-        List<Mutant> all = run(work, lines.keySet(), List.of("*Test"));
+        // a changed line may sit in a nested or anonymous class (Order$Builder, Order$1): mutate those too
+        Set<String> targets = new LinkedHashSet<>();
+        lines.keySet().forEach(c -> targets.addAll(List.of(c, c + "$*")));
+        List<Mutant> all = run(work, targets, List.of("*Test"));
         List<Mutant> onChangedLines = all.stream()
                 .filter(m -> lines.getOrDefault(m.sourceClass(), Set.of()).contains(m.line()))
                 .toList();
