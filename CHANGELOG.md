@@ -33,6 +33,14 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- The scope check treated any folder named `target` as build output, so an edit to a source package such as `com.acme.target` went unchecked; only a module's own `target/` is ignored now.
+- A Gradle `<failure>` of a JVM error (`ExceptionInInitializerError`, `NoClassDefFoundError`) was read as an assertion failure; it is an error now, as with Surefire.
+- A plain HTML comment that mentions `gta:` (`<!-- TODO: ask about gta: retries -->`) crashed the spec parser; it is text now. A gta comment that is never closed is reported as `POLICY_SPEC_INVALID` with a hint.
+- Item statuses, spec section names and reply letters no longer depend on the JVM's default locale (a Turkish locale broke `state.json`).
+- `gtaw run` exits 40 (`BUILD_COMPILE_ERROR`) when the tests do not compile, not 10. `answer --file` with a missing file and `gate waive` with an unreadable `.gta/waivers.json` are the person's to fix (exit 20 and 21), not internal errors.
+- `gtaw` reads the wrapper properties as `gtaw.cmd` and `gtaw doctor` do: blanks around `=` and CRLF line ends are allowed.
+- The oracle shard schema accepts the `catching` intent gtaw writes; the status block names the `oracle-defect` and `environment` verdicts in `output.language`.
+- Skill references no longer tell agents to mark scenarios `hint.layer=system` or to deploy workflows: deployed environments are out of scope (plan §7.7).
 - Review round 6, follow-up:
   - oracle lock and gate:
     - an assertion is locked with its subject (`assertThat(r.status()).isEqualTo(503)`) and with what a verification expects (`verify(producer).send("orders", payload)`, RestAssured `statusCode(201).body(...)`), so asserting on another object or changing the verified arguments is reported. Shards locked before hold a fingerprint without them: the gate reports them once; relock them (`./gtaw relock`);

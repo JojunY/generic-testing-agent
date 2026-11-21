@@ -5,7 +5,8 @@ set -e
 DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROPS="$DIR/.gta/wrapper/gta-wrapper.properties"
 
-prop() { sed -n "s/^$1=//p" "$PROPS" 2>/dev/null | tail -n 1; }
+# key = value, with blanks around = and a CRLF line end allowed (as gtaw.cmd and gtaw doctor read it)
+prop() { { tr -d '\r' < "$PROPS"; } 2>/dev/null | sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" | sed 's/[[:space:]]*$//' | tail -n 1; }
 
 if [ -n "$GTA_CLI_JAR" ]; then
   JAR="$GTA_CLI_JAR"

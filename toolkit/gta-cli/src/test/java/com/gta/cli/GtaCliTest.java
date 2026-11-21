@@ -3,6 +3,8 @@ package com.gta.cli;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.gta.core.run.RunResult;
+import com.gta.core.run.TestOutcome;
 import com.gta.core.util.ProcessRunner;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -102,5 +104,48 @@ class GtaCliTest {
                 GtaCli.commandLine().parseArgs("note", "@" + team).subcommand().matchedPositionalValue(0, List.of());
 
         assertEquals(List.of("@" + team), words, "not the contents of the file it names");
+    }
+
+    @Test
+    void shouldExitWithTheBuildCodeWhenTheTestsDoNotCompile() {
+        RunResult broken = new RunResult();
+        broken.compileError = true;
+        RunResult failing = new RunResult();
+        TestOutcome failed = new TestOutcome();
+        failed.outcome = "failed";
+        failing.cases.add(failed);
+
+        assertEquals(40, GtaCli.Run.exitCode(broken), "BUILD_COMPILE_ERROR");
+        assertEquals(10, GtaCli.Run.exitCode(failing), "TEST_ASSERTION_FAILED");
+        assertEquals(0, GtaCli.Run.exitCode(new RunResult()));
+    }
+
+    @Test
+    void shouldReportAMissingReplyFileOrAnUnreadableWaiversFileAsTheUsersToFix() throws Exception {
+        gitRepo();
+        Files.createDirectories(root.resolve(".gta"));
+        Files.writeString(root.resolve(".gta/waivers.json"), "{bad");
+
+        Run noFile = gtaw(
+                "--root",
+                root.toString(),
+                "answer",
+                "--file",
+                root.resolve("nosuch.txt").toString());
+        Run badWaivers = gtaw(
+                "--root",
+                root.toString(),
+                "gate",
+                "waive",
+                "GATE_SCENARIO_REGRESSED",
+                "--target",
+                "*",
+                "--reason",
+                "r",
+                "--expires",
+                java.time.LocalDate.now().plusDays(1).toString());
+
+        assertEquals(20, noFile.exit(), noFile.out());
+        assertEquals(21, badWaivers.exit(), badWaivers.out());
     }
 }

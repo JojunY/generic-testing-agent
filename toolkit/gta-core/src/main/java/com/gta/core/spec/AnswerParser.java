@@ -3,6 +3,7 @@ package com.gta.core.spec;
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -88,7 +89,7 @@ public final class AnswerParser {
     public static Parsed parse(String text) {
         Matcher a = APPROVAL.matcher(text);
         if (a.matches()) {
-            return new Approval(a.group(1), a.group(2).toUpperCase());
+            return new Approval(a.group(1), a.group(2).toUpperCase(Locale.ROOT));
         }
         // an own answer may say "approve" ("2: a manager must approve refunds"): only the rest is an approval attempt
         if (APPROVAL_MENTION.matcher(OWN_ANSWER.matcher(text).replaceAll("")).find()
@@ -101,13 +102,13 @@ public final class AnswerParser {
         }
         Matcher c = CHOICE.matcher(text);
         if (c.find()) {
-            return new Choice(c.group(1).toUpperCase());
+            return new Choice(c.group(1).toUpperCase(Locale.ROOT));
         }
         String round = null;
         Matcher r = ROUND.matcher(text);
         String body = text;
         if (r.find()) {
-            round = r.group(1).toUpperCase();
+            round = r.group(1).toUpperCase(Locale.ROOT);
             body = text.substring(r.end());
         }
         Map<String, String> own = new LinkedHashMap<>();
@@ -124,7 +125,7 @@ public final class AnswerParser {
         Map<String, String> picks = new LinkedHashMap<>();
         Matcher p = PICK.matcher(picksPart);
         while (p.find()) {
-            picks.put(p.group(1), p.group(2).toUpperCase());
+            picks.put(p.group(1), p.group(2).toUpperCase(Locale.ROOT));
         }
         boolean rest = REST_DEFAULT.matcher(picksPart).find();
         boolean ok = OK.matcher(picksPart).find();

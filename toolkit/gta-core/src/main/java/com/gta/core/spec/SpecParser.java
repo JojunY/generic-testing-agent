@@ -8,6 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -68,7 +70,7 @@ public final class SpecParser {
                 continue;
             }
             if (trimmed.startsWith("## ")) {
-                section = trimmed.substring(3).trim().toLowerCase();
+                section = trimmed.substring(3).trim().toLowerCase(Locale.ROOT);
                 spec.sections.add(section);
                 req = null;
                 scenario = null;
@@ -76,9 +78,11 @@ public final class SpecParser {
                 reqBlock = null;
                 continue;
             }
-            boolean isComment = CommentMeta.isGtaComment(trimmed) && trimmed.startsWith("<!--");
+            // a plain HTML comment that only mentions "gta:" is text, not metadata
+            Optional<CommentMeta> comment = trimmed.startsWith("<!--") ? CommentMeta.parse(trimmed) : Optional.empty();
+            boolean isComment = comment.isPresent();
             if (!headerSeen && isComment && section.isEmpty()) {
-                spec.header = CommentMeta.parse(trimmed).orElseThrow();
+                spec.header = comment.get();
                 headerSeen = true;
                 continue;
             }
@@ -105,12 +109,12 @@ public final class SpecParser {
                     } else if (isComment
                             && scenario != null
                             && scenario.meta.entries().isEmpty()) {
-                        scenario.meta = CommentMeta.parse(trimmed).orElseThrow();
+                        scenario.meta = comment.get();
                     } else if (isComment
                             && req != null
                             && scenario == null
                             && req.meta.entries().isEmpty()) {
-                        req.meta = CommentMeta.parse(trimmed).orElseThrow();
+                        req.meta = comment.get();
                     } else if (scenario != null) {
                         Matcher b = BULLET.matcher(line);
                         if (b.find()) {
@@ -144,7 +148,7 @@ public final class SpecParser {
                 }
                 case "open questions" -> {
                     if (isComment) {
-                        CommentMeta meta = CommentMeta.parse(trimmed).orElseThrow();
+                        CommentMeta meta = comment.get();
                         if (meta.get("round").isPresent() && meta.get("id").isEmpty()) {
                             spec.questionRound = meta.get("round").get();
                         } else {
@@ -173,7 +177,7 @@ public final class SpecParser {
                 }
                 case "findings" -> {
                     if (isComment) {
-                        pendingFindingMeta = CommentMeta.parse(trimmed).orElseThrow();
+                        pendingFindingMeta = comment.get();
                     } else if (trimmed.startsWith("- ")) {
                         Spec.Finding f = new Spec.Finding();
                         f.text = trimmed.substring(2).trim();
@@ -186,7 +190,7 @@ public final class SpecParser {
                 }
                 case "answers" -> {
                     if (isComment) {
-                        CommentMeta meta = CommentMeta.parse(trimmed).orElseThrow();
+                        CommentMeta meta = comment.get();
                         if ("answer".equals(meta.kind())) {
                             spec.answers.add(meta);
                         } else if ("approval".equals(meta.kind())) {
@@ -228,7 +232,11 @@ public final class SpecParser {
             out.add(line);
         }
         if (pending != null) {
-            out.add(pending.toString());
+            String start = pending.toString().strip();
+            throw new GtaException(
+                    ErrorCode.POLICY_SPEC_INVALID,
+                    "A gta comment in the spec is never closed: " + start.substring(0, Math.min(80, start.length())),
+                    "End the comment with -->");
         }
         return out;
     }
