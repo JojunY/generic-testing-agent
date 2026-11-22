@@ -33,6 +33,19 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- The scope check treated any folder named `target` as build output, so an edit to a source package such as `com.acme.target` went unchecked; only a module's own `target/` is ignored now.
+- A Gradle `<failure>` of a JVM error (`ExceptionInInitializerError`, `NoClassDefFoundError`) was read as an assertion failure; it is an error now, as with Surefire.
+- A plain HTML comment that mentions `gta:` (`<!-- TODO: ask about gta: retries -->`) crashed the spec parser; it is text now. A gta comment that is never closed is reported as `POLICY_SPEC_INVALID` with a hint.
+- Item statuses, spec section names and reply letters no longer depend on the JVM's default locale (a Turkish locale broke `state.json`).
+- `gtaw run` exits 40 (`BUILD_COMPILE_ERROR`) when the tests do not compile, not 10. `answer --file` with a missing file and `gate waive` with an unreadable `.gta/waivers.json` are the person's to fix (exit 20 and 21), not internal errors.
+- `gtaw` reads the wrapper properties as `gtaw.cmd` and `gtaw doctor` do: blanks around `=` and CRLF line ends are allowed.
+- The oracle shard schema accepts the `catching` intent gtaw writes; the status block names the `oracle-defect` and `environment` verdicts in `output.language`.
+- Skill references no longer tell agents to mark scenarios `hint.layer=system` or to deploy workflows: deployed environments are out of scope (plan §7.7).
+- `qualityGates.mutation.mode=enforced` had no effect: the gate now runs PIT on the changed lines in enforced mode and fails below `minStrength` (`GATE_MUTATION_BELOW_THRESHOLD`, plan §10.5 ⑥). Advisory mode stays with `gtaw mutate --changed`.
+- An item run again unchanged after a person's decision (for example "run it again" after an environment fix) committed its lock and ledger rows without its test: gtaw now remembers the files the author wrote until the item is committed.
+- `gtaw.cmd` stops with `CONFIG_NOT_INITIALIZED` when the wrapper properties have no `version`, as `gtaw` does.
+- `config.v1.schema.json` states the caps gtaw applies (`maxAttemptsPerItem` 3, `maxChecksPerItem` 20, `maxItemsPerSession` 10, `stabilityRepeat` at least 2), so an editor flags a value gtaw would change.
+- `mvnw.cmd` is stored with LF in git, as `.gitattributes` says (checked out with CRLF).
 - Review round 6, follow-up:
   - oracle lock and gate:
     - an assertion is locked with its subject (`assertThat(r.status()).isEqualTo(503)`) and with what a verification expects (`verify(producer).send("orders", payload)`, RestAssured `statusCode(201).body(...)`), so asserting on another object or changing the verified arguments is reported. Shards locked before hold a fingerprint without them: the gate reports them once; relock them (`./gtaw relock`);

@@ -34,16 +34,21 @@ final class ItemCommitter {
         this.git = ctx.git;
     }
 
+    private boolean isTestCode(String rel) {
+        return rel.startsWith(paths.inModule(GtaPaths.TEST_JAVA + "/"))
+                || rel.startsWith(paths.inModule(GtaPaths.TEST_RESOURCES + "/"));
+    }
+
     void commitItem(WorkState st, PlanItem item, WorkState.ItemState s, String runId, String summary) {
         Baseline baseline = s.baseline == null ? new ChangeChecker(paths).capture() : s.baseline;
         List<String> files = new ArrayList<>();
         List<String> mixed = new ArrayList<>();
-        for (String changed : new ChangeChecker(paths).changedSince(baseline)) {
+        List<String> changedSince = new ChangeChecker(paths).changedSince(baseline);
+        for (String changed : changedSince) {
             if (!ChangeChecker.matchesAny(changed, item.ownsFiles)) {
                 continue;
             }
-            boolean testCode = changed.startsWith(paths.inModule(GtaPaths.TEST_JAVA + "/"))
-                    || changed.startsWith(paths.inModule(GtaPaths.TEST_RESOURCES + "/"));
+            boolean testCode = isTestCode(changed);
             if (baseline.dirty.containsKey(changed) && (!testCode || s.sharesDeveloperFile)) {
                 // e.g. pom.xml with the developer's own uncommitted edits: never commit those on their behalf.
                 // Test classes are shared by the items of a flow, so earlier items' uncommitted work is gta's own,
@@ -51,6 +56,16 @@ final class ItemCommitter {
                 mixed.add(changed);
             } else {
                 files.add(changed);
+            }
+        }
+        // the item's own test, written in an earlier attempt and unchanged since the latest baseline (a retry)
+        for (String own : s.written) {
+            if (!changedSince.contains(own)
+                    && baseline.dirty.containsKey(own)
+                    && !s.sharesDeveloperFile
+                    && isTestCode(own)
+                    && ChangeChecker.matchesAny(own, item.ownsFiles)) {
+                files.add(own);
             }
         }
         if (!mixed.isEmpty()) {
@@ -86,6 +101,7 @@ final class ItemCommitter {
         String msg = "test(" + item.domain() + "): " + summary + "\n\nGta-Item: " + item.id + "\nGta-Run: " + runId;
         try {
             ctx.commit(files, msg).ifPresent(sha -> s.commit = sha);
+            s.written.clear();
         } catch (GtaException e) {
             // keep the shard and the commit together: the next submit must not see gtaw's own write as an agent change
             before.forEach(ItemCommitter::restore);

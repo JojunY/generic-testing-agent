@@ -123,9 +123,10 @@ public final class SurefireReportParser {
                 } else if (failure != null || error != null) {
                     Element x = failure != null ? failure : error;
                     c.failureType = x.getAttribute("type");
-                    // Surefire writes <failure> for assertion errors only; Gradle writes it for every exception, so a
-                    // <failure> of an exception type (NullPointerException in setup) is an error
-                    c.outcome = failure != null && !c.failureType.endsWith("Exception") ? "failed" : "error";
+                    // Surefire writes <failure> for assertion errors only; Gradle writes it for every throwable, so a
+                    // <failure> of an exception type (NullPointerException in setup) or a JVM error
+                    // (ExceptionInInitializerError, NoClassDefFoundError) is an error
+                    c.outcome = failure != null && !isExceptionOrJvmError(c.failureType) ? "failed" : "error";
                     c.message = withoutTypePrefix(x.getAttribute("message"), c.failureType);
                     c.stack = x.getTextContent();
                 }
@@ -138,6 +139,13 @@ public final class SurefireReportParser {
                     "Run the command again; if it repeats, look for a test that kills the JVM (System.exit, OOM)");
         }
         return out;
+    }
+
+    private static boolean isExceptionOrJvmError(String type) {
+        return type.endsWith("Exception")
+                || (type.startsWith("java.lang.")
+                        && type.endsWith("Error")
+                        && !type.equals("java.lang.AssertionError"));
     }
 
     /**

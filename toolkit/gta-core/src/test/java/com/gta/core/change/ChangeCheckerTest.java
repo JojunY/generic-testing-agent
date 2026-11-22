@@ -132,6 +132,19 @@ class ChangeCheckerTest {
     }
 
     @Test
+    void shouldIgnoreBuildOutputButNotASourcePackageNamedTarget() throws Exception {
+        Baseline baseline = checker.capture();
+        Files.createDirectories(root.resolve("target/classes"));
+        Files.writeString(root.resolve("target/classes/App.class"), "x");
+        Files.createDirectories(root.resolve("src/main/java/com/acme/target"));
+        Files.writeString(root.resolve("src/main/java/com/acme/target/Targeting.java"), "class Targeting {}\n");
+
+        ChangeChecker.Result r = checker.check(baseline, List.of("src/test/java/**"), root.resolve("backup"), true);
+
+        assertEquals(List.of("src/main/java/com/acme/target/Targeting.java"), r.outOfScope());
+    }
+
+    @Test
     void shouldMatchGlobs() {
         assertTrue(
                 ChangeChecker.matchesAny("src/test/resources/fixtures/order/a.json", List.of("src/test/resources/**")));

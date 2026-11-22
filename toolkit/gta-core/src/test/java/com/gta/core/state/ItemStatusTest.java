@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Locale;
 import org.junit.jupiter.api.Test;
 
 class ItemStatusTest {
@@ -79,5 +80,17 @@ class ItemStatusTest {
         assertEquals(ItemStatus.AUTHORING, s.status);
         assertEquals(s, st.item(s.id));
         assertThrows(RuntimeException.class, () -> st.item("order.create/s09#component-01"));
+    }
+
+    @Test
+    void shouldWriteAndReadTheSameIdsInEveryLocale() {
+        Locale before = Locale.getDefault();
+        Locale.setDefault(Locale.forLanguageTag("tr-TR")); // "i".toUpperCase() is "İ" there
+        try {
+            assertEquals("verifying", ItemStatus.VERIFYING.id());
+            assertEquals(ItemStatus.VERIFYING, ItemStatus.of("verifying"));
+        } finally {
+            Locale.setDefault(before);
+        }
     }
 }

@@ -10,7 +10,7 @@ description: Runs component tests without any containers on Windows developer ma
 | Dependency | Use | Fidelity |
 |---|---|---|
 | Oracle | shared test schema if `environments.oracle.testUrl` is set (`references/oracle.md`), else H2 `MODE=Oracle` | high / low |
-| BigQuery | interface + fake (`references/bigquery-fakes.md`); SQL itself in P4 system tests | low |
+| BigQuery | interface + fake (`references/bigquery-fakes.md`); SQL itself is not tested by gta (no deployed environments) | low |
 | Pub/Sub | official emulator downloaded from Nexus by gtaw (`references/pubsub-emulator.md`), else a fake publisher/subscriber | medium / low |
 | Kafka | `@EmbeddedKafka` (`references/embedded-kafka.md`) | high |
 | MQ (JMS) | embedded ActiveMQ Artemis (`references/jms-artemis.md`) | medium |

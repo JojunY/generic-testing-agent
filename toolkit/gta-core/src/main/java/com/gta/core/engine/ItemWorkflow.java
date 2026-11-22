@@ -35,6 +35,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -333,7 +334,7 @@ final class ItemWorkflow {
                 out.put("oracleLocked", s.lock.tokens);
             } else if (s.lock != null) {
                 OracleLock.Check c = OracleLock.check(s.lock, oracle);
-                out.put("oracleLock", c.verdict().name().toLowerCase());
+                out.put("oracleLock", c.verdict().name().toLowerCase(Locale.ROOT));
                 if (!c.missingTokens().isEmpty()) {
                     out.put("lockedValuesMissing", c.missingTokens());
                 }
@@ -422,6 +423,11 @@ final class ItemWorkflow {
                             item.ownsFiles,
                             paths.recover().resolve(Ids.itemKey(item.id) + "-" + st.seq),
                             true);
+            for (String changed : scope.changed()) {
+                if (!scope.outOfScope().contains(changed) && !s.written.contains(changed)) {
+                    s.written.add(changed);
+                }
+            }
             st.move(s, ItemStatus.VERIFYING);
             if (!scope.ok()) {
                 if (!scope.foreignCommits().isEmpty()) {

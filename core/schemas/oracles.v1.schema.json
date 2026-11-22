@@ -14,7 +14,7 @@
       "fingerprint": { "type": "string", "pattern": "^[0-9a-f]{12}$" },
       "tokens": { "type": "array", "items": { "type": "string" } },
       "testClass": { "type": "string" },
-      "intent": { "enum": ["characterization", "hardening", "reproducing"] },
+      "intent": { "enum": ["characterization", "hardening", "reproducing", "catching"] },
       "source": { "enum": ["observed", "documented", "confirmed", "defaulted"] },
       "relockedBy": { "type": "string" },
       "relockedAt": { "type": "string", "format": "date-time" },
