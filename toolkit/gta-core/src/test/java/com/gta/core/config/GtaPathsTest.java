@@ -61,6 +61,7 @@ class GtaPathsTest {
         GtaPaths m = new GtaPaths(Path.of("/repo"), "services/order-api/");
 
         assertEquals("services/order-api", m.module(), "trailing slashes are dropped");
+        assertEquals("order-api", new GtaPaths(Path.of("/repo"), "./order-api").module(), "a leading ./ too");
         assertEquals(Path.of("/repo/.gta/config.json"), m.config(), ".gta stays at the repository root");
         assertEquals(Path.of("/repo/services/order-api/src/main/java"), m.mainJava());
         assertEquals(

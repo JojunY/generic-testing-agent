@@ -3,8 +3,8 @@ package com.gta.cli;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.gta.core.error.ErrorCode;
 import com.gta.core.run.RunResult;
-import com.gta.core.run.TestOutcome;
 import com.gta.core.util.ProcessRunner;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -83,8 +83,25 @@ class GtaCliTest {
         assertTrue(
                 badOption.out().contains("./gtaw status --help"),
                 "the failing command, not --root: " + badOption.out());
-        assertEquals(20, unavailable.exit(), "a later phase");
+        assertEquals(20, unavailable.exit(), "deployed environments are out of scope");
         assertEquals(20, noIds.exit(), "deleting tests needs explicit ids or --all");
+    }
+
+    @Test
+    void shouldExitWithZeroOnlyWhenTheRunFinishedAndEveryTestPassed() {
+        RunResult passed = new RunResult();
+        RunResult compileError = new RunResult();
+        compileError.compileError = true;
+        compileError.exitCode = 1;
+        RunResult timedOut = new RunResult();
+        timedOut.timedOut = true;
+        RunResult brokenBuild = new RunResult(); // e.g. a dependency that cannot be resolved: no report at all
+        brokenBuild.exitCode = 1;
+
+        assertEquals(0, GtaCli.Run.runExitCode(passed));
+        assertEquals(ErrorCode.BUILD_COMPILE_ERROR.exitCode(), GtaCli.Run.runExitCode(compileError));
+        assertEquals(ErrorCode.TEST_TIMEOUT.exitCode(), GtaCli.Run.runExitCode(timedOut));
+        assertEquals(ErrorCode.ENV_TEST_REPORTS_UNUSABLE.exitCode(), GtaCli.Run.runExitCode(brokenBuild));
     }
 
     @Test
@@ -104,20 +121,6 @@ class GtaCliTest {
                 GtaCli.commandLine().parseArgs("note", "@" + team).subcommand().matchedPositionalValue(0, List.of());
 
         assertEquals(List.of("@" + team), words, "not the contents of the file it names");
-    }
-
-    @Test
-    void shouldExitWithTheBuildCodeWhenTheTestsDoNotCompile() {
-        RunResult broken = new RunResult();
-        broken.compileError = true;
-        RunResult failing = new RunResult();
-        TestOutcome failed = new TestOutcome();
-        failed.outcome = "failed";
-        failing.cases.add(failed);
-
-        assertEquals(40, GtaCli.Run.exitCode(broken), "BUILD_COMPILE_ERROR");
-        assertEquals(10, GtaCli.Run.exitCode(failing), "TEST_ASSERTION_FAILED");
-        assertEquals(0, GtaCli.Run.exitCode(new RunResult()));
     }
 
     @Test

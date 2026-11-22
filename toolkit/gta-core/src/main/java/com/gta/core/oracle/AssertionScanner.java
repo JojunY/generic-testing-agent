@@ -297,15 +297,48 @@ public final class AssertionScanner {
                 || STATUS_MATCHERS.containsKey(n);
     }
 
+    /**
+     * An assertion call, or a stimulus-named call made after {@code then()}: REST Assured's
+     * {@code then().body("status", equalTo("PENDING"))} is an expectation, not a request body.
+     */
+    static boolean isExpectationCall(MethodCallExpr c) {
+        return isAssertionCall(c) || (STIMULUS_CALLS.contains(c.getNameAsString()) && afterThen(c));
+    }
+
+    /** A REST Assured {@code body(...)} chained on another expectation is part of that one's locked text. */
+    private static boolean chainedOnExpectation(MethodCallExpr call) {
+        Optional<Expression> scope = call.getScope();
+        while (scope.isPresent() && scope.get() instanceof MethodCallExpr s) {
+            if (isExpectationCall(s)) {
+                return true;
+            }
+            scope = s.getScope();
+        }
+        return false;
+    }
+
+    static boolean afterThen(MethodCallExpr call) {
+        Optional<Expression> scope = call.getScope();
+        while (scope.isPresent() && scope.get() instanceof MethodCallExpr s) {
+            if (s.getNameAsString().equals("then")) {
+                return true;
+            }
+            scope = s.getScope();
+        }
+        return false;
+    }
+
     static boolean isAssertion(Statement stmt) {
-        return stmt.findAll(MethodCallExpr.class).stream().anyMatch(AssertionScanner::isAssertionCall);
+        return stmt.findAll(MethodCallExpr.class).stream().anyMatch(AssertionScanner::isExpectationCall);
     }
 
     /** Outermost assertion calls of a statement (an assertion nested in another one's arguments belongs to it). */
     static List<MethodCallExpr> assertionFragments(Statement stmt) {
         List<MethodCallExpr> out = new ArrayList<>();
         for (MethodCallExpr c : stmt.findAll(MethodCallExpr.class)) {
-            if (isAssertionCall(c) && !inArgumentsOf(c, AssertionScanner::isAssertionCall)) {
+            if (isExpectationCall(c)
+                    && !inArgumentsOf(c, AssertionScanner::isAssertionCall)
+                    && (isAssertionCall(c) || !chainedOnExpectation(c))) {
                 out.add(c);
             }
         }
@@ -387,14 +420,14 @@ public final class AssertionScanner {
      * arguments are what the test expects to be sent, not inputs.
      */
     static boolean verified(MethodCallExpr call) {
-        Optional<com.github.javaparser.ast.expr.Expression> scope = call.getScope();
+        Optional<Expression> scope = call.getScope();
         while (scope.isPresent() && scope.get() instanceof MethodCallExpr s) {
             if (isAssertionCall(s)) {
                 return true;
             }
             scope = s.getScope();
         }
-        return false;
+        return afterThen(call);
     }
 
     static void collectTokens(Statement stmt, Map<String, String> constants, Set<String> tokens) {
@@ -531,11 +564,11 @@ public final class AssertionScanner {
 
     /**
      * A longer value may hold the expected one (a message, a JSON body), but not as part of another number: -100,
-     * 1000 and 100.5 do not assert 100.
+     * 1000 and 100.5 do not assert 100; 100.00 does.
      */
-    private static boolean holds(String token, String lit) {
+    static boolean holds(String token, String lit) {
         String before = Character.isDigit(lit.charAt(0)) ? "(?<![0-9.-])" : "";
-        String after = Character.isDigit(lit.charAt(lit.length() - 1)) ? "(?![0-9]|\\.[0-9])" : "";
+        String after = Character.isDigit(lit.charAt(lit.length() - 1)) ? "(?![0-9]|\\.[0-9]*[1-9])" : "";
         return Pattern.compile(before + Pattern.quote(lit) + after)
                 .matcher(token)
                 .find();

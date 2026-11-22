@@ -8,12 +8,14 @@ import com.gta.core.change.ChangeChecker;
 import com.gta.core.config.GtaPaths;
 import com.gta.core.oracle.Lock;
 import com.gta.core.oracle.OracleShard;
+import com.gta.core.plan.PlanItem;
 import com.gta.core.run.TestRunnerFake;
 import com.gta.core.state.ItemStatus;
 import com.gta.core.state.WorkState;
 import com.gta.core.util.AtomicFiles;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -78,6 +80,30 @@ class ItemCommitterTest {
                 .output();
         assertTrue(committed.contains(test), committed);
         assertTrue(s.written.isEmpty(), "committed: nothing of its own is left");
+    }
+
+    @Test
+    void shouldStillCommitTheTestAnItemWroteBeforeItWasSentBack() throws Exception {
+        PlanItem item = OrderServiceTestData.item();
+        item.ownsFiles.add("src/test/resources/fixtures/order/**");
+        String test = "src/test/java/com/acme/order/OrderControllerIT.java";
+        String fixture = "src/test/resources/fixtures/order/s01.json";
+        AtomicFiles.write(root.resolve(test), "class OrderControllerIT {}\n");
+        AtomicFiles.write(root.resolve(fixture), "{}\n");
+        WorkState.ItemState s = new WorkState.ItemState();
+        s.id = OrderServiceTestData.ITEM;
+        s.status = ItemStatus.PASSED;
+        s.written.addAll(List.of(test, fixture)); // its earlier submit
+        // a person confirmed a defect: the item goes back to its author with a new baseline, the author pins the test
+        s.baseline = new ChangeChecker(paths).capture();
+        AtomicFiles.write(root.resolve(test), "@KnownDefect class OrderControllerIT {}\n");
+
+        ctx.committer.commitItem(new WorkState(), item, s, "r2", "pin known defect");
+
+        String committed = OrderServiceTestData.git(root, "show", "--name-only", "--format=", "HEAD")
+                .output();
+        assertTrue(committed.contains(fixture), committed);
+        assertTrue(committed.contains("OrderControllerIT.java"), committed);
     }
 
     @Test

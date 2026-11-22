@@ -89,6 +89,8 @@ final class Triage {
             s.intentOverride = "known-defect";
             s.reason = "confirmed product defect: pin with @KnownDefect";
             st.move(s, ItemStatus.PENDING);
+            s.attempts = 0;
+            s.checks = 0; // pinning is a new task with its own budget; lastError keeps the fingerprint to pin
             ctx.escalations.writeEscalation(
                     item,
                     s,

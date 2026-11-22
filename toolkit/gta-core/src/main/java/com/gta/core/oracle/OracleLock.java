@@ -74,7 +74,7 @@ public final class OracleLock {
      * The assertion statements that carry a locked value. Statements are stored without whitespace (see
      * {@link AssertionScanner}), so a value is compared without it too: {@code `Order not found`} locks
      * {@code isEqualTo("Order not found")}. A value may also be written by a name ({@code isNotFound()} or
-     * {@code HttpStatus.NOT_FOUND} for {@code 404}), matched as a whole word.
+     * {@code HttpStatus.NOT_FOUND} for {@code 404}), matched as a whole word, and a number only as a whole number.
      */
     public static List<String> lockedStatements(List<String> statements, List<String> tokens) {
         List<String> values = tokens.stream()
@@ -88,7 +88,7 @@ public final class OracleLock {
                         "(?<![A-Za-z0-9_])" + Pattern.quote(n) + (n.endsWith("(") ? "" : "(?![A-Za-z0-9_])")))
                 .toList();
         return statements.stream()
-                .filter(stmt -> values.stream().anyMatch(stmt::contains)
+                .filter(stmt -> values.stream().anyMatch(v -> AssertionScanner.holds(stmt, v))
                         || names.stream().anyMatch(n -> n.matcher(stmt).find()))
                 .toList();
     }

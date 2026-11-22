@@ -1208,7 +1208,7 @@ profile finds the team's suite (a test class with `@IncludeEngines("cucumber")` 
 | `gta-using-embedded-dependencies` | test-author | `oracle.md` (shared test database and H2 Oracle mode), `bigquery-fakes.md`, `pubsub-emulator.md`, `embedded-kafka.md`, `jms-artemis.md`, `in-memory-fakes.md`, `fidelity.md`, `windows.md`, `secret-manager.md` |
 | `gta-testing-scheduled-jobs` | test-author | `cron.md`, `shedlock.md`, `cloud-scheduler.md` |
 | `gta-testing-spring-batch-jobs` | test-author | `batch5-vs-batch6.md`, `restart.md` |
-| `gta-testing-beam-pipelines` | test-author | `test-stream.md`, `dataflow-runs.md` |
+| `gta-testing-beam-pipelines` | test-author | `test-stream.md` |
 | `gta-testing-event-flows` | test-author | `awaitility.md`, `pubsub-emulator-limits.md`, `kafka.md`, `jms.md`, `modulith-scenario.md`, `cloud-stream.md` |
 | `gta-testing-workflows` | test-author | `gcp-workflows.md`, `state-machines.md` |
 | `gta-testing-db-migrations` | test-author | `flyway.md`, `liquibase.md`, `oracle-ddl.md`, `n-minus-1.md` |

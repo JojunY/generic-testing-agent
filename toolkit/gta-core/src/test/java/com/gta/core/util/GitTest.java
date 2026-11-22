@@ -115,6 +115,25 @@ class GitTest {
     }
 
     @Test
+    void shouldListDirtyPathsWhenGitConvertsLineEnds() throws Exception {
+        run("config", "core.autocrlf", "true");
+        commitFile("a.txt", "x\n");
+        Files.move(root.resolve("a.txt"), root.resolve("b.txt"));
+        run("add", "-N", "b.txt"); // finding the rename, git warns that LF will be replaced by CRLF in b.txt
+
+        assertEquals(java.util.Set.of("a.txt", "b.txt"), git.dirtyPaths());
+    }
+
+    @Test
+    void shouldReportARenameInTheWorkTreeColumnAsBothPaths() throws Exception {
+        commitFile("a.txt", "x\n");
+        Files.move(root.resolve("a.txt"), root.resolve("b.txt"));
+        run("add", "-N", "b.txt"); // git status reports " R b.txt", the rename in the work-tree column
+
+        assertEquals(java.util.Set.of("a.txt", "b.txt"), git.dirtyPaths());
+    }
+
+    @Test
     void shouldCommitOnlyTheGivenPaths() throws Exception {
         commitFile("a.txt", "a\n");
         Files.writeString(root.resolve("a.txt"), "changed\n");

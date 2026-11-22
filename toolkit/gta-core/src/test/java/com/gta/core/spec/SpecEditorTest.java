@@ -39,6 +39,18 @@ class SpecEditorTest {
     }
 
     @Test
+    void shouldTickAQuestionWhoseCommentRunsOverTwoLines() {
+        String wrapped = SpecTestData.CREATE_ORDER.replace(
+                "<!-- gta: id=order.create/q01 impact=high affects=order.create/s02 -->",
+                "<!-- gta: id=order.create/q01 impact=high\naffects=order.create/s02 -->");
+
+        Spec s = SpecParser.parseText(
+                new SpecEditor(wrapped).tick("order.create/q01", "A").text());
+
+        assertEquals("A", s.questions.get(0).chosen().orElseThrow().letter);
+    }
+
+    @Test
     void shouldReplaceAThenValueOnlyInItsScenario() {
         String text = new SpecEditor(SpecTestData.CREATE_ORDER)
                 .replaceThenLiteral("order.create/s01", "50.00", "55.00")

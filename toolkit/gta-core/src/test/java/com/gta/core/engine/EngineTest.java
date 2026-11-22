@@ -984,6 +984,16 @@ class EngineTest {
             String s04 = FLOW + "/s04#component-01";
             out = author("s04");
             addMethod("s04.method.java.txt");
+            // the pinned s03 shares the class: changing its locked value to the actual one is refused too
+            Files.writeString(test, Files.readString(test).replace("value(90.00)", "value(100.00)"));
+            refused = loop().submitItem(s04, token(out));
+            assertEquals(ErrorCode.POLICY_ORACLE_MODIFIED.name(), refused.get("code"), refused.toString());
+            Files.writeString(test, Files.readString(test).replace("value(100.00)", "value(90.00)"));
+            StateStore store = new StateStore(paths);
+            WorkState st = store.load();
+            st.items.get(s04).attempts = 0; // the review round below needs the attempt the refusal used
+            store.save(st);
+            out = author("s04");
             loop().submitItem(s04, token(out));
             out = loop().next(null, null, null, false);
             assertEquals("oracle-review", out.get("kind"));

@@ -91,4 +91,28 @@ class ImpactTest {
 
         assertEquals(Set.of("order.max-items", "order.new-key"), keys, "an unchanged value is not affected");
     }
+
+    @Test
+    void shouldIgnoreConfigKeysTheBaseChangedAfterTheBranchLeftIt() throws Exception {
+        Path yml = root.resolve("src/main/resources/application.yml");
+        Files.createDirectories(yml.getParent());
+        Files.writeString(yml, "order:\n  max-items: 10\n  fee: 1\n");
+        git("init", "-q", "-b", "main");
+        git("config", "user.email", "t@example.com");
+        git("config", "user.name", "t");
+        git("add", "-A");
+        git("commit", "-qm", "base");
+        git("checkout", "-qb", "feature");
+        Files.writeString(yml, "order:\n  max-items: 20\n  fee: 1\n");
+        git("commit", "-qam", "branch");
+        git("checkout", "-q", "main");
+        Files.writeString(yml, "order:\n  max-items: 10\n  fee: 2\n");
+        git("commit", "-qam", "main moves on");
+        git("checkout", "-q", "feature");
+
+        Set<String> keys = Impact.changedConfigKeys(
+                new Git(root), new GtaPaths(root), "main", List.of("src/main/resources/application.yml"));
+
+        assertEquals(Set.of("order.max-items"), keys, "order.fee changed on main, not on this branch");
+    }
 }

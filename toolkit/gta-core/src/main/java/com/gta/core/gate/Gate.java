@@ -187,7 +187,20 @@ public final class Gate {
             if (!"approved".equals(spec.status()) || !changedSpecFlows.contains(spec.flowId())) {
                 continue;
             }
-            Map<String, OracleShard.Entry> shard = OracleShard.read(paths.oracleShard(spec.flowId()));
+            Map<String, OracleShard.Entry> shard;
+            try {
+                shard = OracleShard.read(paths.oracleShard(spec.flowId()));
+            } catch (GtaException unreadable) {
+                // fail closed (plan §10.5): reported once, also when step ① already did
+                boolean reported = r.failures.stream()
+                        .anyMatch(c -> ErrorCode.GATE_SHARD_UNREADABLE.name().equals(c.code)
+                                && spec.flowId().equals(c.target));
+                if (!reported) {
+                    r.failures.add(new Condition(
+                            ErrorCode.GATE_SHARD_UNREADABLE.name(), spec.flowId(), unreadable.getMessage()));
+                }
+                continue;
+            }
             Map<String, OracleShard.Entry> base = baseShards.getOrDefault(spec.flowId(), Map.of());
             for (Spec.Scenario s : spec.scenarios()) {
                 if ("assumed".equals(s.source())) {
