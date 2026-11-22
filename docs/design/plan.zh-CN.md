@@ -1413,15 +1413,15 @@ Cucumber suite，从不在 `ownsFiles` 里。
 
 | 结果 | 条件 |
 |---|---|
-| `fail` | 只要存在以下任一项（且没有有效豁免），即为 fail：<br>① **base 的任一 oracle 分片中**、已经 verified 的 scenario（任何来源，包括 characterization），现在失败、缺失或被禁用。本 PR 的规格 diff 修改或撤销了的 scenario 除外。characterization 测试遇到有意的行为变化时，在 `pr` 模式中用实际值更新 THEN，并在 PR 评论中列为"行为变更"，由 reviewer 判断；<br>② 受影响 flow 中，本 PR 新改动的 scenario 没有 verified 测试；<br>③ 任一 gta 测试的指纹与 base 不同，而该 scenario 的规格在本 PR 中没有改动，并且分片中也没有 `relock` 记录（`GATE_ORACLE_CHANGED_WITHOUT_SPEC`）；<br>④ 新测试在 pass^k 下不稳定；<br>⑤ `@KnownDefect` 以其他原因失败，或者测试已经通过；<br>⑥ `mutation.mode=enforced` 并且测试强度低于阈值；<br>⑦ base 或本 PR 的分片无法读取（`GATE_SHARD_UNREADABLE`） |
+| `fail` | 只要存在以下任一项（且没有有效豁免），即为 fail：<br>① **base 的任一 oracle 分片中**、已经 verified 的 scenario（任何来源，包括 characterization），现在失败、缺失或被禁用。本 PR 的规格 diff 修改或撤销了的 scenario 除外。characterization 测试遇到有意的行为变化时，在 `pr` 模式中用实际值更新 THEN，并在 PR 评论中列为"行为变更"，由 reviewer 判断；<br>② 受影响 flow 中，本 PR 新改动的 scenario 没有 verified 测试；<br>③ 任一 gta 测试的指纹与 base 不同，而该 scenario 的规格在本 PR 中没有改动，并且分片中也没有 `relock` 记录（`GATE_ORACLE_CHANGED_WITHOUT_SPEC`）；<br>④ 新测试在 pass^k 下不稳定；<br>⑤ `@KnownDefect` 以其他原因失败，或者测试已经通过；<br>⑥ `mutation.mode=enforced` 并且测试强度低于阈值（`GATE_MUTATION_BELOW_THRESHOLD`）；<br>⑦ base 或本 PR 的分片无法读取（`GATE_SHARD_UNREADABLE`） |
 | `waived` | 所有不满足的硬性条件都有有效豁免：从 base 读取、未过期，并且豁免本身是经过 PR review 合入 base 的 |
-| `concerns` | 硬性条件都满足，但存在以下任一情况：<br>- 改动的 flow 中有 `assumed` 或 `defaulted` 结论；<br>- 改动的 flow 中 characterization 测试占比过高；<br>- mutation 处于 advisory 模式且测试强度低于阈值；<br>- base 中已批准但还没有测试的 scenario；<br>- `GATE_UNMAPPED_CHANGE`；<br>- 本 PR 新增了确认项或 `relock` 记录（同时列在 PR 评论中）；<br>- 有锁定场景的规格被删除或未批准（`GATE_SCENARIOS_UNLOCKED`）；<br>- 有 inline 自审 |
+| `concerns` | 硬性条件都满足，但存在以下任一情况：<br>- 改动的 flow 中有 `assumed` 或 `defaulted` 结论；<br>- 改动的 flow 中 characterization 测试占比过高；<br>- base 中已批准但还没有测试的 scenario；<br>- `GATE_UNMAPPED_CHANGE`；<br>- 本 PR 新增了确认项或 `relock` 记录（同时列在 PR 评论中）；<br>- 有锁定场景的规格被删除或未批准（`GATE_SCENARIOS_UNLOCKED`）；<br>- 有 inline 自审 |
 | `pass` | 其余情况 |
 
 - 优先级：`fail` > `waived` > `concerns` > `pass`。
 - **运行位置**：每次会话结束时，`next` 会在本地运行一次 gate。结果为 `fail` 时，`/gta` 不会报告完成，并在 PR 评论草稿（`.gta/work/runs/<runId>/pr-comment.md`）中标红。
 - **CI（P1 接入，已确认可以实现）**：本地 gate 可以被人跳过，比如没跑 `/gta` 就直接改代码提 PR，或者手工修改测试。所以 P1 提供 alm-github 的 workflow 模板 `gta-gate.yml`（见 `docs/guides/ci-integration.md`），在 PR 上依次执行 `mvn verify` → `gtaw verify --new` → `gtaw gate --base` → 自动贴出 PR 评论。目前没有分支保护，所以它是一个状态检查加一条评论；以后设为 required check，就能真正阻断合入，设计本身不变。
-- mutation 默认是 advisory，在试点仓库校准阈值后，再逐个仓库切换为 enforced。
+- mutation 默认是 advisory，在试点仓库校准阈值后，再逐个仓库切换为 enforced。advisory 模式下 gate 不运行 PIT（太慢），测试强度由 `gtaw mutate --changed` 报告；enforced 模式下 gate 对改动的行运行 PIT，强度低于 `minStrength` 即 fail。
 
 ### 10.6 测试用例台账（`<flow>.cases.md`）与会话报告
 

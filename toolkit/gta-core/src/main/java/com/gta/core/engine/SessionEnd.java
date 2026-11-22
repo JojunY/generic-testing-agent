@@ -245,9 +245,20 @@ final class SessionEnd {
             }
         }
         lastCases = cases;
-        Gate.Result r = new Gate(paths, config).evaluate(base, cases, unstable);
+        Gate.Result r = new Gate(paths, config).evaluate(base, cases, unstable, mutationStrength(base));
         Json.writeAtomic(paths.gateLatest(), r);
         return r;
+    }
+
+    /** Only in enforced mode: PIT is slow, and advisory strength is reported by {@code gtaw mutate} (plan §10.5). */
+    private Double mutationStrength(String base) {
+        if (!"enforced".equals(config.qualityGates.mutation.mode)) {
+            return null;
+        }
+        Map<String, Object> m = new com.gta.core.run.MutationRunner(paths, config).changed(base);
+        long covered = m.get("covered") instanceof Number n ? n.longValue() : 0;
+        long killed = m.get("killed") instanceof Number n ? n.longValue() : 0;
+        return covered == 0 ? null : (double) killed / covered;
     }
 
     /** Read-only: never moves or rewrites working-state files. */

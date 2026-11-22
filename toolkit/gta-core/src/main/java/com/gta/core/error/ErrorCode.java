@@ -20,6 +20,7 @@ public enum ErrorCode {
     GATE_ORACLE_CHANGED_WITHOUT_SPEC(Category.GATE_FAILED),
     GATE_UNSTABLE_TEST(Category.GATE_FAILED),
     GATE_SHARD_UNREADABLE(Category.GATE_FAILED),
+    GATE_MUTATION_BELOW_THRESHOLD(Category.GATE_FAILED),
 
     // gate-concern (0): reported in the PR comment, never fail the build
     GATE_ASSUMED_CLAIM(Category.GATE_CONCERN),

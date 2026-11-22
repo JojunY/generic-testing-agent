@@ -134,15 +134,17 @@
     "budgets": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Lower values are allowed; values below the floors are raised to them.",
+      "description": "Lower values are allowed; gtaw lowers values above the organisation caps to them.",
       "properties": {
         "maxChecksPerItem": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "maximum": 20
         },
         "maxAttemptsPerItem": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "maximum": 3
         },
         "maxConsecutiveFailures": {
           "type": "integer",
@@ -150,7 +152,8 @@
         },
         "maxItemsPerSession": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "maximum": 10
         },
         "nodeTimeoutMinutes": {
           "type": "integer",
@@ -168,7 +171,8 @@
       "properties": {
         "stabilityRepeat": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 2,
+          "description": "pass^k: the organisation floor is 2"
         },
         "stabilityTimezone": {
           "type": "string",

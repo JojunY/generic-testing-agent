@@ -423,6 +423,11 @@ final class ItemWorkflow {
                             item.ownsFiles,
                             paths.recover().resolve(Ids.itemKey(item.id) + "-" + st.seq),
                             true);
+            for (String changed : scope.changed()) {
+                if (!scope.outOfScope().contains(changed) && !s.written.contains(changed)) {
+                    s.written.add(changed);
+                }
+            }
             st.move(s, ItemStatus.VERIFYING);
             if (!scope.ok()) {
                 if (!scope.foreignCommits().isEmpty()) {

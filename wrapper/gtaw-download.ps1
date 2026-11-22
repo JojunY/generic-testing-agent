@@ -14,6 +14,11 @@ Get-Content $propsFile | ForEach-Object {
 $version = $props['version']
 $url = $props['distributionUrl']
 $sha = $props['distributionSha256Sum']
+# the same contract as gtaw: no version line means the wrapper was never set up
+if (-not $version) {
+    Write-Output '{"error":{"code":"CONFIG_NOT_INITIALIZED","category":"config","message":"missing .gta/wrapper/gta-wrapper.properties","hint":"run gta-cli init --platform copilot or opencode","retryable":false}}'
+    exit 0
+}
 # fail closed: never download or run a jar whose checksum is not pinned
 if (-not $sha -or -not $url) {
     Write-Output '{"error":{"code":"CONFIG_NOT_INITIALIZED","category":"config","message":"distributionUrl and distributionSha256Sum must be set in .gta/wrapper/gta-wrapper.properties","hint":"set both to the Nexus gta-cli jar and its sha256 (or GTA_CLI_JAR to a local jar for development)","retryable":false}}'

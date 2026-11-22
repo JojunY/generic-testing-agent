@@ -60,6 +60,45 @@ class ItemCommitterTest {
     }
 
     @Test
+    void shouldCommitItsOwnTestWhenItRanAgainUnchanged() throws Exception {
+        // written in an earlier attempt; the retry's baseline already holds the uncommitted test
+        String test = "src/test/java/com/acme/order/OrderControllerIT.java";
+        AtomicFiles.write(root.resolve(test), "class OrderControllerIT {}\n");
+        WorkState.ItemState s = new WorkState.ItemState();
+        s.id = OrderServiceTestData.ITEM;
+        s.status = ItemStatus.PASSED;
+        s.written.add(test);
+        s.baseline = new ChangeChecker(paths).capture();
+        s.lock = new Lock();
+        s.lock.tokens.add("201");
+
+        ctx.committer.commitItem(new WorkState(), OrderServiceTestData.item(), s, "r1", "valid order");
+
+        String committed = OrderServiceTestData.git(root, "show", "--name-only", "--format=", "HEAD")
+                .output();
+        assertTrue(committed.contains(test), committed);
+        assertTrue(s.written.isEmpty(), "committed: nothing of its own is left");
+    }
+
+    @Test
+    void shouldNotCommitAnUncommittedEditTheItemDidNotWrite() throws Exception {
+        String test = "src/test/java/com/acme/order/OrderControllerIT.java";
+        AtomicFiles.write(root.resolve(test), "class OrderControllerIT { /* someone else's edit */ }\n");
+        WorkState.ItemState s = new WorkState.ItemState();
+        s.id = OrderServiceTestData.ITEM;
+        s.status = ItemStatus.PASSED;
+        s.baseline = new ChangeChecker(paths).capture();
+        s.lock = new Lock();
+        s.lock.tokens.add("201");
+
+        ctx.committer.commitItem(new WorkState(), OrderServiceTestData.item(), s, "r1", "valid order");
+
+        String committed = OrderServiceTestData.git(root, "show", "--name-only", "--format=", "HEAD")
+                .output();
+        assertFalse(committed.contains(test), committed);
+    }
+
+    @Test
     void shouldNotCommitTheDevelopersOwnEditsInATestClassGtaShares() throws Exception {
         Path test = root.resolve("src/test/java/com/acme/order/OrderControllerIT.java");
         AtomicFiles.write(test, "class OrderControllerIT {}\n");
