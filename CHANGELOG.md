@@ -33,6 +33,18 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- A pinned defect that has been fixed now leaves `defect-found` (plan §5.4): once its `@KnownDefect` pin is removed and the test passes in the session-end run, the item is `passed`, its intent becomes `hardening`, and the shard and ledger are committed.
+- Fixes recovered from two review branches that were never merged:
+  - gate ②: a scenario counts as verified on the base only through its own lock, so a renamed scenario, or one that copies another's text, needs a test;
+  - the same reviewer change in two review rounds counts as a repeat failure and goes to a person;
+  - a "rest default" answer records the invariants it settles as `defaulted`, not `confirmed` (plan §3.5.3);
+  - a reply that answers part of a question round keeps its changes for the analyst;
+  - a failed pin attempt keeps the confirmed defect's fingerprint, which `@KnownDefect(failure)` names;
+  - deleting one of two identical locked assertions is a structural change of the oracle;
+  - `setRound` no longer rewrites an answer record that carries a round;
+  - a shortened flow id starts with a letter (`search.search-2` stays as it is);
+  - a Gradle root project with its own sources and an included module is profiled as a service;
+  - `gtaw mutate` clears PIT's library folder first, so jars of an earlier version never join the classpath.
 - The scope check treated any folder named `target` as build output, so an edit to a source package such as `com.acme.target` went unchecked; only a module's own `target/` is ignored now.
 - A Gradle `<failure>` of a JVM error (`ExceptionInInitializerError`, `NoClassDefFoundError`) was read as an assertion failure; it is an error now, as with Surefire.
 - A plain HTML comment that mentions `gta:` (`<!-- TODO: ask about gta: retries -->`) crashed the spec parser; it is text now. A gta comment that is never closed is reported as `POLICY_SPEC_INVALID` with a hint.

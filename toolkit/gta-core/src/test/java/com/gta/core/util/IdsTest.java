@@ -14,6 +14,8 @@ class IdsTest {
         assertEquals("borrow.book", Ids.withoutRepeatedDomain("borrow.book-borrow"));
         assertEquals("stock-loan.book", Ids.withoutRepeatedDomain("stock-loan.book-stock-loan"));
         assertEquals("inventory.on-update", Ids.withoutRepeatedDomain("inventory.on-inventory-update"));
+        assertEquals("search.search-2", Ids.withoutRepeatedDomain("search.search-2"), "search.2 is no valid flow id");
+        assertEquals("order.order-2fa", Ids.withoutRepeatedDomain("order.order-2fa"));
         assertEquals("borrow.book", Ids.withoutRepeatedDomain("borrow.book"), "nothing repeated");
         assertEquals("borrow.borrow", Ids.withoutRepeatedDomain("borrow.borrow"), "nothing would be left");
         assertEquals("payment.on-payment", Ids.withoutRepeatedDomain("payment.on-payment"), "a bare on says nothing");

@@ -189,9 +189,11 @@ final class SpecWorkflow {
                         ed.setElement(s.id(), "source", source).setElement(s.id(), "by", p.round);
                     }
                 }
-                spec.invariants.stream()
-                        .filter(i -> target.equals(i.id()))
-                        .forEach(i -> ed.setElement(i.id(), "source", "confirmed"));
+                for (Spec.Invariant i : spec.invariants) {
+                    if (target.equals(i.id())) {
+                        ed.setElement(i.id(), "source", source); // "rest default" settles it as defaulted
+                    }
+                }
             }
             if (option != null && !option.isCurrentCode()) {
                 toApply.add("Q" + q.number + " (" + q.id() + ") → " + letter + ") " + option.text);
@@ -203,6 +205,11 @@ final class SpecWorkflow {
         st.newConfirmations.add(p.flowId + " " + p.round + ": \"" + text + "\"");
         st.event(false, "ev.answers", p.flowId, p.round);
         Spec after = SpecParser.parse(specPath);
+        // a reply may answer part of the round: its changes wait for the analyst with the rest of the round's
+        WorkState.SpecWork sw = st.specWork.computeIfAbsent(p.flowId, k -> new WorkState.SpecWork());
+        List<String> pendingChanges = new ArrayList<>(sw.answersToApply);
+        pendingChanges.addAll(toApply);
+        sw.answersToApply = pendingChanges;
         if (!after.openQuestions().isEmpty()) {
             p.prompt = ctx.prompts.renderQuestions(after, p.round);
             return result(
@@ -211,10 +218,8 @@ final class SpecWorkflow {
                             + (unansweredHigh.isEmpty() ? "" : " (high impact needs an explicit answer)"),
                     Map.of("prompt", p.prompt));
         }
-        WorkState.SpecWork sw = st.specWork.computeIfAbsent(p.flowId, k -> new WorkState.SpecWork());
-        if (!toApply.isEmpty()) {
+        if (!pendingChanges.isEmpty()) {
             sw.needsRevision = true;
-            sw.answersToApply = toApply;
             st.pending = null;
             return result(
                     "answers recorded; the analyst will now rewrite the affected THEN clauses (run ./gtaw next)", null);

@@ -68,6 +68,7 @@ final class SessionEnd {
         }
         String baseRef = base != null ? base : defaultBase();
         Gate.Result gate = gateInternal(baseRef, List.of());
+        releaseFixedDefects(st, lastCases);
         Map<String, Object> ledgers = ctx.cases.afterSession(lastCases, unstable);
         String runId = Ids.newRunId(git.head());
         Path dir = paths.runs().resolve(runId);
@@ -96,6 +97,31 @@ final class SessionEnd {
         more.put("report", paths.rel(reportFile));
         more.put("prComment", paths.rel(dir.resolve("pr-comment.md")));
         return done(why, more);
+    }
+
+    /**
+     * plan §5.4 {@code defect-found → passed}: the pin was removed (its test reports {@code passed}, not
+     * {@code known-defect}) and the test passes, so the defect is fixed and the test now guards the fix.
+     */
+    void releaseFixedDefects(WorkState st, List<TestOutcome> cases) {
+        List<PlanItem> plan = store.loadPlan();
+        for (PlanItem item : plan) {
+            WorkState.ItemState s = st.items.get(item.id);
+            if (s == null || s.status != ItemStatus.DEFECT_FOUND || item.isFoundation()) {
+                continue;
+            }
+            List<TestOutcome> mine =
+                    cases.stream().filter(c -> item.ref.equals(c.scenarioId())).toList();
+            if (mine.isEmpty() || !mine.stream().allMatch(c -> "passed".equals(c.outcome))) {
+                continue;
+            }
+            item.intent = "hardening";
+            s.intentOverride = null;
+            store.savePlan(plan);
+            st.move(s, ItemStatus.PASSED);
+            ctx.committer.commitItem(st, item, s, Ids.newRunId(git.head()), "defect fixed " + item.ref);
+            st.event(false, "ev.defect.fixed", item.ref);
+        }
     }
 
     public Map<String, Object> verify(boolean newOnly) {

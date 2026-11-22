@@ -753,8 +753,9 @@ final class ItemWorkflow {
         if (scope.ok()) {
             return null;
         }
-        s.lastError = lastError(s, ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE, "the reviewer changed " + scope.outOfScope());
         if (!scope.foreignCommits().isEmpty()) {
+            s.lastError =
+                    lastError(s, ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE, "the reviewer changed " + scope.outOfScope());
             return needsHuman(
                     st,
                     item,
@@ -795,6 +796,8 @@ final class ItemWorkflow {
         e.message = message;
         e.fingerprint = FailureClassifier.fingerprint(code.name(), message);
         e.repeats = s.lastError != null && e.fingerprint.equals(s.lastError.fingerprint) ? s.lastError.repeats + 1 : 1;
+        // the confirmed defect's failure: a failed pin attempt must not lose what @KnownDefect(failure) names
+        e.defectFingerprint = s.lastError == null ? null : s.lastError.defectFingerprint;
         return e;
     }
 

@@ -207,7 +207,10 @@ public final class Gate {
                     continue;
                 }
                 String rev = s.revision();
-                boolean inBase = base.values().stream().anyMatch(e -> rev.equals(e.scenarioRevision));
+                // only through its own lock: a renamed scenario, or one copying another's text, still needs a test
+                boolean inBase = base.entrySet().stream()
+                        .anyMatch(
+                                e -> e.getKey().startsWith(s.id() + "#") && rev.equals(e.getValue().scenarioRevision));
                 boolean verifiedNow = shard.entrySet().stream()
                         .anyMatch(
                                 e -> e.getKey().startsWith(s.id() + "#") && rev.equals(e.getValue().scenarioRevision));
