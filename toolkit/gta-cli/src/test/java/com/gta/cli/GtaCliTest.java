@@ -124,6 +124,34 @@ class GtaCliTest {
     }
 
     @Test
+    void shouldTakeAReplyOrNoteThatStartsWithADashAsWords() {
+        List<String> reply = GtaCli.commandLine()
+                .parseArgs("answer", "- 1: B\n- 2: keep three retries")
+                .subcommand()
+                .matchedPositionalValue(0, List.of());
+        List<String> note = GtaCli.commandLine()
+                .parseArgs("note", "-", "always", "use", "UTC")
+                .subcommand()
+                .matchedPositionalValue(0, List.of());
+
+        assertEquals(List.of("- 1: B\n- 2: keep three retries"), reply, "a reply written as a list");
+        assertEquals(List.of("-", "always", "use", "UTC"), note);
+    }
+
+    @Test
+    void shouldReportAReplyFileThatIsNotUtf8AsTheUsersToFix() throws Exception {
+        Path reply = root.resolve("reply.txt");
+        Files.write(
+                reply, new byte[] {(byte) 0xFF, (byte) 0xFE, 0x79, 0x62, (byte) 0xC6, 0x51}); // UTF-16LE (PowerShell)
+
+        assertEquals(
+                ErrorCode.USAGE_INVALID_ARGUMENT,
+                org.junit.jupiter.api.Assertions.assertThrows(
+                                com.gta.core.error.GtaException.class, () -> GtaCli.Answer.replyFile(reply))
+                        .code());
+    }
+
+    @Test
     void shouldReportAMissingReplyFileOrAnUnreadableWaiversFileAsTheUsersToFix() throws Exception {
         gitRepo();
         Files.createDirectories(root.resolve(".gta"));

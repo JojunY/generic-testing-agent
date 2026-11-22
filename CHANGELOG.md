@@ -46,6 +46,19 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - `gtaw.cmd` stops with `CONFIG_NOT_INITIALIZED` when the wrapper properties have no `version`, as `gtaw` does.
 - `config.v1.schema.json` states the caps gtaw applies (`maxAttemptsPerItem` 3, `maxChecksPerItem` 20, `maxItemsPerSession` 10, `stabilityRepeat` at least 2), so an editor flags a value gtaw would change.
 - `mvnw.cmd` is stored with LF in git, as `.gitattributes` says (checked out with CRLF).
+- Review round 8:
+  - the scope check took the spec and oracle files of a domain named `target` (`.gta/specs/target/…`) for build output and left them unchecked;
+  - on Gradle, two methods whose display names agree up to a `(` (`refund (s01)`, `refund (s02)`) gave both results to the first scenario; such a case is left untagged now;
+  - service mode parked the decision about a domain's seed item once per flow: the copy left after the person answered no longer cancels the passed seed or blocks every answer, it is dropped;
+  - a test author's question dropped by a switch of flow or mode is asked again when the item comes back, not lost;
+  - the same reviewer change twice in a row needs a person, as any repeated failure does (plan §5.4);
+  - `gtaw answer` and `gtaw note` take a reply that starts with `-` (a list) as words, not as an unknown option; a reply file that is not UTF-8 is the person's to fix (exit 20), not an internal error;
+  - git's warnings and hints on stderr no longer end up in the output gtaw parses (a `hint:` before `git status` hid a changed file from the scope check);
+  - `order.order-2` (the second flow of that name) is no longer shortened to `order.2`, which is not a flow name;
+  - an `application.properties` with a Latin-1 byte, which Spring Boot reads as ISO-8859-1, is no longer skipped as a whole;
+  - a spec that is not UTF-8 is reported as `POLICY_SPEC_INVALID`, not as an unknown flow;
+  - `produces = {MediaType.TEXT_EVENT_STREAM_VALUE}` is a server-sent event stream, as without the braces;
+  - briefs show free text in single quotes (`--question '…'`, `--reason '…'`), as the agents' rules say.
 - Review round 7:
   - submit re-checks the locks of the pinned (`defect-found`) items that share the test class, not only the passed ones: changing a pinned scenario's expected value to the actual one is `POLICY_ORACLE_MODIFIED` (plan §5.3);
   - a confirmed defect starts its pinning with a new attempt and check budget, as a retry does;

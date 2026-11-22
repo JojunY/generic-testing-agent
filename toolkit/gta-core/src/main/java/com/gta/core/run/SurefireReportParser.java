@@ -63,6 +63,9 @@ public final class SurefireReportParser {
             if (n == null) {
                 // Gradle reports a test by its display name, not its method name
                 n = tagged.get(c.className + "|" + c.method);
+                if (n == AMBIGUOUS) {
+                    n = null;
+                }
                 if (n != null) {
                     c.method = n.path("method").asText(c.method);
                 }
@@ -226,10 +229,14 @@ public final class SurefireReportParser {
                                             : AMBIGUOUS);
                         }
                         if (n.hasNonNull("displayName")) {
-                            out.putIfAbsent(
+                            // two methods may share a display name (or its part before "("): never guessed either
+                            out.merge(
                                     n.path("className").asText() + "|"
                                             + methodName(n.path("displayName").asText()),
-                                    n);
+                                    n,
+                                    (a, b) -> a != AMBIGUOUS && a.path("method").equals(b.path("method"))
+                                            ? a
+                                            : AMBIGUOUS);
                         }
                     } catch (IOException truncated) {
                         // one bad line (e.g. the last one of a killed JVM) must not drop the others

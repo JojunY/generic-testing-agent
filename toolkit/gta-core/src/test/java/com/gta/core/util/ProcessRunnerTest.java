@@ -45,6 +45,27 @@ class ProcessRunnerTest {
     }
 
     @Test
+    void shouldKeepStderrOutOfTheOutputOfASuccessOnlyWhenAsked() {
+        assumeFalse(ProcessRunner.isWindows());
+        List<String> warns = ProcessRunner.cmd("sh", "-c", "echo hint: deprecated >&2; echo data");
+        List<String> fails = ProcessRunner.cmd("sh", "-c", "echo fatal: bad >&2; exit 1");
+
+        assertEquals(
+                "data",
+                ProcessRunner.run(dir, Duration.ofSeconds(30), null, warns, true)
+                        .output()
+                        .strip());
+        assertTrue(ProcessRunner.run(dir, Duration.ofSeconds(30), null, warns, false)
+                .output()
+                .contains("hint:"));
+        assertTrue(
+                ProcessRunner.run(dir, Duration.ofSeconds(30), null, fails, true)
+                        .output()
+                        .contains("fatal: bad"),
+                "a failure keeps its reason");
+    }
+
+    @Test
     void shouldKeepTheOutputOfAProcessThatTimesOut() {
         assumeFalse(ProcessRunner.isWindows());
 

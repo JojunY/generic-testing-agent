@@ -183,6 +183,18 @@ class EngineTest {
         assertEquals(ItemStatus.REPAIRING, item().status, "a review may change nothing: the author submits again");
         assertEquals(ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE.name(), item().lastError.code);
         assertNull(item().commit, "nothing was committed");
+
+        // the next review round changes the test the same way: the same failure twice in a row (plan §5.4)
+        WorkState again = store.load();
+        again.items.get(ITEM).status = ItemStatus.REVIEWING;
+        again.items.get(ITEM).token = TOKEN;
+        again.items.get(ITEM).reviewBaseline = new ChangeChecker(paths).capture();
+        store.save(again);
+        Files.writeString(test, "class OrderCreateIT { void t() { assertThat(status).isPositive(); } }\n");
+
+        engine().submitReview(ITEM, TOKEN, "accept", "looks right");
+
+        assertEquals(ItemStatus.NEEDS_HUMAN, item().status, item().reason);
     }
 
     @Test

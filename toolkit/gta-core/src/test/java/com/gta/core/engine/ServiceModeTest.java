@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.gta.core.profile.ServiceProfile;
+import com.gta.core.state.ItemStatus;
 import com.gta.core.state.WorkState;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -81,5 +82,28 @@ class ServiceModeTest {
         assertEquals(List.of("order.cancel"), ServiceMode.waitingFlows(st));
         st.mode = "pr";
         assertFalse(ServiceMode.unpark(st));
+    }
+
+    @Test
+    void shouldDropAParkedDecisionAboutAnItemThePersonSettledAlready() {
+        // a domain's seed item belongs to every flow of the domain: its decision is parked once per flow
+        WorkState st = new WorkState();
+        st.mode = ServiceMode.MODE;
+        WorkState.ItemState seed = new WorkState.ItemState();
+        seed.id = "order#foundation-01";
+        seed.status = ItemStatus.PASSED;
+        st.items.put(seed.id, seed);
+        WorkState.Pending stale = pending("order.create");
+        stale.type = "escalation";
+        stale.itemId = seed.id;
+        st.parked.add(stale);
+
+        assertFalse(ServiceMode.unpark(st), "the person answered the other copy and the seed passed");
+        assertTrue(st.parked.isEmpty());
+
+        seed.status = ItemStatus.NEEDS_HUMAN;
+        st.parked.add(stale);
+        assertTrue(ServiceMode.unpark(st), "still waiting for the person");
+        assertEquals(stale, st.pending);
     }
 }

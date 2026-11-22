@@ -476,7 +476,7 @@ public final class BriefWriter {
                     .append(item.id)
                     .append(" --token ")
                     .append(state.token)
-                    .append(" --question \"<question>\" --recommend \"<your best answer>\"` — when the spec, the code")
+                    .append(" --question '<question>' --recommend '<your best answer>'` — when the spec, the code")
                     .append(" and the answers above do not settle how to write the test, ask instead of guessing; ")
                     .append("gtaw shows it to the person and briefs you again with the answer (")
                     .append(left)
@@ -541,7 +541,7 @@ public final class BriefWriter {
                 .append(item.id)
                 .append(" --token ")
                 .append(state.token)
-                .append(" --verdict <verdict> --reason \"…\"`.\n");
+                .append(" --verdict <verdict> --reason '…'`.\n");
         return write(seq, b.toString());
     }
 

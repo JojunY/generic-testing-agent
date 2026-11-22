@@ -1,6 +1,7 @@
 package com.gta.core.engine;
 
 import com.gta.core.profile.ServiceProfile;
+import com.gta.core.state.ItemStatus;
 import com.gta.core.state.WorkState;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -46,14 +47,26 @@ final class ServiceMode {
         return true;
     }
 
-    /** The oldest parked decision becomes the pending one, its flow active; false when none is parked. */
+    /**
+     * The oldest parked decision that still applies becomes the pending one, its flow active; false when none is
+     * parked. A domain's seed item belongs to every flow of the domain, so its decision can be parked once per flow:
+     * the copies left after the person settled one no longer apply and are dropped.
+     */
     static boolean unpark(WorkState st) {
-        if (!MODE.equals(st.mode) || st.parked.isEmpty()) {
+        if (!MODE.equals(st.mode)) {
             return false;
         }
-        st.pending = st.parked.remove(0);
-        st.activeFlow = st.pending.flowId;
-        return true;
+        while (!st.parked.isEmpty()) {
+            WorkState.Pending p = st.parked.remove(0);
+            if (("defect".equals(p.type) || "escalation".equals(p.type))
+                    && st.item(p.itemId).status != ItemStatus.NEEDS_HUMAN) {
+                continue;
+            }
+            st.pending = p;
+            st.activeFlow = p.flowId;
+            return true;
+        }
+        return false;
     }
 
     /** The flows of the parked decisions, for the status block. */

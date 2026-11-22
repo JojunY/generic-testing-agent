@@ -18,6 +18,7 @@ class IdsTest {
         assertEquals("borrow.borrow", Ids.withoutRepeatedDomain("borrow.borrow"), "nothing would be left");
         assertEquals("payment.on-payment", Ids.withoutRepeatedDomain("payment.on-payment"), "a bare on says nothing");
         assertEquals("stock-loan.book-stock", Ids.withoutRepeatedDomain("stock-loan.book-stock"), "only all words");
+        assertEquals("order.order-2", Ids.withoutRepeatedDomain("order.order-2"), "order.2 is not a flow name");
     }
 
     @Test

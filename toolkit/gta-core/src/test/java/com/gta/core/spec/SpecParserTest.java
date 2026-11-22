@@ -61,4 +61,20 @@ class SpecParserTest {
 
         assertEquals(ErrorCode.POLICY_SPEC_INVALID, e.code());
     }
+
+    @Test
+    void shouldReportASpecThatIsNotUtf8AsInvalidNotAsAnUnknownFlow(
+            @org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        java.nio.file.Path spec = dir.resolve("book.spec.md");
+        java.nio.file.Files.write(
+                spec, new byte[] {'#', ' ', (byte) 0x93, 'x', (byte) 0x94, '\n'}); // Windows-1252 quotes
+
+        assertEquals(
+                ErrorCode.POLICY_SPEC_INVALID,
+                assertThrows(GtaException.class, () -> SpecParser.parse(spec)).code());
+        assertEquals(
+                ErrorCode.USAGE_UNKNOWN_FLOW,
+                assertThrows(GtaException.class, () -> SpecParser.parse(dir.resolve("none.spec.md")))
+                        .code());
+    }
 }

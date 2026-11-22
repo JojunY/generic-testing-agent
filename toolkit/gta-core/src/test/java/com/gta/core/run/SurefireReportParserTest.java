@@ -100,6 +100,29 @@ class SurefireReportParserTest {
     }
 
     @Test
+    void shouldNeverGiveOneMethodsScenarioToAnotherThatSharesItsGradleDisplayName() throws Exception {
+        // Gradle names a test by its display name; both are cut to "refund" before the "("
+        report("com.acme.OrderIT", """
+                <testcase classname="com.acme.OrderIT" name="refund (s01)"/>
+                <testcase classname="com.acme.OrderIT" name="refund (s02)"><failure type="java.lang.AssertionError" message="x">stack</failure></testcase>
+                <testcase classname="com.acme.OrderIT" name="[order.create/s03] retries"/>
+                """);
+        tags("""
+                {"className":"com.acme.OrderIT","method":"refundOne","displayName":"refund (s01)","tags":["gta","scenario:order.create/s01"]}
+                {"className":"com.acme.OrderIT","method":"refundTwo","displayName":"refund (s02)","tags":["gta","scenario:order.create/s02"]}
+                {"className":"com.acme.OrderIT","method":"retries","displayName":"[order.create/s03] retries","tags":["gta","scenario:order.create/s03"]}
+                {"className":"com.acme.OrderIT","method":"retries","displayName":"[order.create/s03] retries","tags":["gta","scenario:order.create/s03"]}
+                """);
+
+        List<TestOutcome> cases = SurefireReportParser.parse(List.of(reports), gtaResults);
+
+        assertEquals(null, cases.get(0).scenarioId(), "left untagged rather than guessed");
+        assertEquals(null, cases.get(1).scenarioId());
+        assertEquals("order.create/s03", cases.get(2).scenarioId(), "the same method recorded twice is one");
+        assertEquals("retries", cases.get(2).method);
+    }
+
+    @Test
     void shouldTakeTheKnownDefectOutcomeFromGtaJunit() throws Exception {
         report("com.acme.OrderIT", "<testcase classname=\"com.acme.OrderIT\" name=\"pinned()\"/>\n");
         tags(

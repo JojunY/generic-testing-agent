@@ -336,7 +336,7 @@ public final class Profiler {
                                         // produces only an event stream; one of several media types is not a stream
                                         || ((mapping.contains("TEXT_EVENT_STREAM")
                                                         || mapping.contains("text/event-stream"))
-                                                && !mapping.matches("(?s).*produces\\s*=\\s*\\{.*"));
+                                                && !mapping.matches("(?s).*produces\\s*=\\s*\\{[^}]*,.*"));
                                 boolean reactive = returns.startsWith("Mono") || returns.startsWith("Flux");
                                 e = base(c, fqcn, m, stream ? "websocket" : reactive ? "webflux" : "rest-api", "http");
                                 e.httpMethod = verb;

@@ -338,8 +338,10 @@ public final class Engine {
             if ("escalate".equals(next.node().get("node")) && !st.parked.isEmpty()) {
                 // the run is paused for the decisions parked in service mode: ask them now, this flow goes on after
                 st.queue.add(0, flowId);
-                ServiceMode.unpark(st);
-                return answerNode(st.pending);
+                if (ServiceMode.unpark(st)) {
+                    return answerNode(st.pending);
+                }
+                st.queue.remove(0); // every parked decision was settled already
             }
             return next.node();
         }

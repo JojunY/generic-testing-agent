@@ -226,11 +226,14 @@ public final class ChangeChecker {
         return isBuildOutput(rel) || matchesAny(rel, IGNORED);
     }
 
-    /** A module's {@code target/} folder; a {@code target} package under {@code src/} is source, not build output. */
+    /**
+     * A module's {@code target/} folder; a {@code target} package under {@code src/} is source, and a {@code target}
+     * domain under {@code .gta/} (its spec and oracle files) is gta's, not build output.
+     */
     static boolean isBuildOutput(String rel) {
         String[] segments = rel.split("/");
         for (int i = 0; i < segments.length - 1; i++) { // the last segment is the file itself
-            if (segments[i].equals("src")) {
+            if (segments[i].equals("src") || segments[i].equals(".gta")) {
                 return false;
             }
             if (segments[i].equals("target")) {

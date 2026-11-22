@@ -138,4 +138,18 @@ class RefResolverTest {
         assertEquals("10", config.get("order.discount.rate"), "application.properties, not the dev profile");
         assertTrue(config.containsKey("order.discount.threshold"));
     }
+
+    @Test
+    void shouldReadAPropertiesFileWithALatin1ByteAsSpringBootDoes(@org.junit.jupiter.api.io.TempDir Path res)
+            throws Exception {
+        // Spring Boot reads .properties as ISO-8859-1: the é is legal there and must not hide the file
+        Files.write(
+                res.resolve("application.properties"),
+                "app.name=Caf\u00e9\nserver.port=8080\n".getBytes(java.nio.charset.StandardCharsets.ISO_8859_1));
+
+        Map<String, String> config = RefResolver.loadConfig(res);
+
+        assertEquals("8080", config.get("server.port"));
+        assertEquals("Caf\u00e9", config.get("app.name"));
+    }
 }
