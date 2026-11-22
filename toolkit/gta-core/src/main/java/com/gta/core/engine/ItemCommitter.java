@@ -34,45 +34,38 @@ final class ItemCommitter {
         this.git = ctx.git;
     }
 
-    private boolean testCode(String path) {
-        return path.startsWith(paths.inModule(GtaPaths.TEST_JAVA + "/"))
-                || path.startsWith(paths.inModule(GtaPaths.TEST_RESOURCES + "/"));
-    }
-
-    /**
-     * A new scope baseline for an item that goes on (sent back for more work, a new session): the test files it
-     * wrote and has not committed yet stay counted as its changes, so its commit still holds them (plan §5.2: no lock
-     * without its committed test). Only files that were unchanged at its previous baseline count; a developer's own
-     * uncommitted edits stay theirs.
-     */
-    Baseline freshBaseline(PlanItem item, WorkState.ItemState s) {
-        ChangeChecker cc = new ChangeChecker(paths);
-        Baseline fresh = cc.capture();
-        if (s.baseline != null) {
-            for (String p : cc.changedSince(s.baseline)) {
-                if (!s.baseline.dirty.containsKey(p) && testCode(p) && ChangeChecker.matchesAny(p, item.ownsFiles)) {
-                    fresh.dirty.remove(p);
-                }
-            }
-        }
-        return fresh;
+    private boolean isTestCode(String rel) {
+        return rel.startsWith(paths.inModule(GtaPaths.TEST_JAVA + "/"))
+                || rel.startsWith(paths.inModule(GtaPaths.TEST_RESOURCES + "/"));
     }
 
     void commitItem(WorkState st, PlanItem item, WorkState.ItemState s, String runId, String summary) {
         Baseline baseline = s.baseline == null ? new ChangeChecker(paths).capture() : s.baseline;
         List<String> files = new ArrayList<>();
         List<String> mixed = new ArrayList<>();
-        for (String changed : new ChangeChecker(paths).changedSince(baseline)) {
+        List<String> changedSince = new ChangeChecker(paths).changedSince(baseline);
+        for (String changed : changedSince) {
             if (!ChangeChecker.matchesAny(changed, item.ownsFiles)) {
                 continue;
             }
-            if (baseline.dirty.containsKey(changed) && (!testCode(changed) || s.sharesDeveloperFile)) {
+            boolean testCode = isTestCode(changed);
+            if (baseline.dirty.containsKey(changed) && (!testCode || s.sharesDeveloperFile)) {
                 // e.g. pom.xml with the developer's own uncommitted edits: never commit those on their behalf.
                 // Test classes are shared by the items of a flow, so earlier items' uncommitted work is gta's own,
                 // unless the class is the developer's (a naming conflict answered "add gta's tests to it").
                 mixed.add(changed);
             } else {
                 files.add(changed);
+            }
+        }
+        // the item's own test, written in an earlier attempt and unchanged since the latest baseline (a retry)
+        for (String own : s.written) {
+            if (!changedSince.contains(own)
+                    && baseline.dirty.containsKey(own)
+                    && !s.sharesDeveloperFile
+                    && isTestCode(own)
+                    && ChangeChecker.matchesAny(own, item.ownsFiles)) {
+                files.add(own);
             }
         }
         if (!mixed.isEmpty()) {
@@ -108,6 +101,7 @@ final class ItemCommitter {
         String msg = "test(" + item.domain() + "): " + summary + "\n\nGta-Item: " + item.id + "\nGta-Run: " + runId;
         try {
             ctx.commit(files, msg).ifPresent(sha -> s.commit = sha);
+            s.written.clear();
         } catch (GtaException e) {
             // keep the shard and the commit together: the next submit must not see gtaw's own write as an agent change
             before.forEach(ItemCommitter::restore);

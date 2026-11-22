@@ -38,8 +38,9 @@ public final class Planner {
                     continue; // assumptions must be answered first (plan §3.2)
                 }
                 String layer = s.meta.get("hint.layer").orElse(capability.defaultLayer());
+                // there is no system layer: deployed environments are out of scope (plan §7.7)
                 if (!capability.layers.contains(layer) || "system".equals(layer)) {
-                    layer = capability.defaultLayer(); // system layer arrives in P4
+                    layer = capability.defaultLayer();
                 }
                 boolean integration = layer.equals("component") || layer.equals("contract");
                 needsFoundation |= integration;

@@ -15,6 +15,7 @@ import com.gta.core.state.WorkState;
 import com.gta.core.util.AtomicFiles;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -61,26 +62,66 @@ class ItemCommitterTest {
     }
 
     @Test
-    void shouldStillCommitTheTestAnItemWroteBeforeItWasSentBack() throws Exception {
-        PlanItem item = OrderServiceTestData.item();
-        item.ownsFiles.add("src/test/resources/fixtures/order/**");
+    void shouldCommitItsOwnTestWhenItRanAgainUnchanged() throws Exception {
+        // written in an earlier attempt; the retry's baseline already holds the uncommitted test
+        String test = "src/test/java/com/acme/order/OrderControllerIT.java";
+        AtomicFiles.write(root.resolve(test), "class OrderControllerIT {}\n");
         WorkState.ItemState s = new WorkState.ItemState();
         s.id = OrderServiceTestData.ITEM;
         s.status = ItemStatus.PASSED;
+        s.written.add(test);
         s.baseline = new ChangeChecker(paths).capture();
-        Path test = root.resolve("src/test/java/com/acme/order/OrderControllerIT.java");
-        AtomicFiles.write(test, "class OrderControllerIT {}\n");
-        AtomicFiles.write(root.resolve("src/test/resources/fixtures/order/s01.json"), "{}\n");
+        s.lock = new Lock();
+        s.lock.tokens.add("201");
+
+        ctx.committer.commitItem(new WorkState(), OrderServiceTestData.item(), s, "r1", "valid order");
+
+        String committed = OrderServiceTestData.git(root, "show", "--name-only", "--format=", "HEAD")
+                .output();
+        assertTrue(committed.contains(test), committed);
+        assertTrue(s.written.isEmpty(), "committed: nothing of its own is left");
+    }
+
+    @Test
+    void shouldStillCommitTheTestAnItemWroteBeforeItWasSentBack() throws Exception {
+        PlanItem item = OrderServiceTestData.item();
+        item.ownsFiles.add("src/test/resources/fixtures/order/**");
+        String test = "src/test/java/com/acme/order/OrderControllerIT.java";
+        String fixture = "src/test/resources/fixtures/order/s01.json";
+        AtomicFiles.write(root.resolve(test), "class OrderControllerIT {}\n");
+        AtomicFiles.write(root.resolve(fixture), "{}\n");
+        WorkState.ItemState s = new WorkState.ItemState();
+        s.id = OrderServiceTestData.ITEM;
+        s.status = ItemStatus.PASSED;
+        s.written.addAll(List.of(test, fixture)); // its earlier submit
         // a person confirmed a defect: the item goes back to its author with a new baseline, the author pins the test
-        s.baseline = ctx.committer.freshBaseline(item, s);
-        AtomicFiles.write(test, "@KnownDefect class OrderControllerIT {}\n");
+        s.baseline = new ChangeChecker(paths).capture();
+        AtomicFiles.write(root.resolve(test), "@KnownDefect class OrderControllerIT {}\n");
 
         ctx.committer.commitItem(new WorkState(), item, s, "r2", "pin known defect");
 
         String committed = OrderServiceTestData.git(root, "show", "--name-only", "--format=", "HEAD")
                 .output();
-        assertTrue(committed.contains("src/test/resources/fixtures/order/s01.json"), committed);
+        assertTrue(committed.contains(fixture), committed);
         assertTrue(committed.contains("OrderControllerIT.java"), committed);
+    }
+
+    @Test
+    void shouldNotCommitAnUncommittedEditTheItemDidNotWrite() throws Exception {
+        String test = "src/test/java/com/acme/order/OrderControllerIT.java";
+        AtomicFiles.write(root.resolve(test), "class OrderControllerIT { /* someone else's edit */ }\n");
+        WorkState.ItemState s = new WorkState.ItemState();
+        s.id = OrderServiceTestData.ITEM;
+        s.status = ItemStatus.PASSED;
+        s.baseline = new ChangeChecker(paths).capture();
+        s.lock = new Lock();
+        s.lock.tokens.add("201");
+
+        ctx.committer.commitItem(new WorkState(), OrderServiceTestData.item(), s, "r1", "valid order");
+
+        String committed = OrderServiceTestData.git(root, "show", "--name-only", "--format=", "HEAD")
+                .output();
+        assertFalse(committed.contains(test), committed);
     }
 
     @Test

@@ -150,7 +150,7 @@ final class ItemWorkflow {
             }
             st.seq++;
             s.token = BriefWriter.token(st.session.id, st.seq);
-            s.baseline = ctx.committer.freshBaseline(item, s);
+            s.baseline = new ChangeChecker(paths).capture();
             st.move(s, ItemStatus.AUTHORING);
             Path brief = briefs.author(st.seq, s, item, spec, profile);
             return Dispatch.of(authorNode(item, s, brief));
@@ -423,6 +423,11 @@ final class ItemWorkflow {
                             item.ownsFiles,
                             paths.recover().resolve(Ids.itemKey(item.id) + "-" + st.seq),
                             true);
+            for (String changed : scope.changed()) {
+                if (!scope.outOfScope().contains(changed) && !s.written.contains(changed)) {
+                    s.written.add(changed);
+                }
+            }
             st.move(s, ItemStatus.VERIFYING);
             if (!scope.ok()) {
                 if (!scope.foreignCommits().isEmpty()) {

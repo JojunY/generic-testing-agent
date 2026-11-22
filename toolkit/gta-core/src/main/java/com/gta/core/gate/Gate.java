@@ -77,6 +77,15 @@ public final class Gate {
     }
 
     public Result evaluate(String baseRef, List<TestOutcome> results, List<String> unstableItems) {
+        return evaluate(baseRef, results, unstableItems, null);
+    }
+
+    /**
+     * @param mutationStrength killed / covered mutants on the changed lines; null when not measured (advisory mode,
+     *                         or no covered mutant)
+     */
+    public Result evaluate(
+            String baseRef, List<TestOutcome> results, List<String> unstableItems, Double mutationStrength) {
         if (!git.refExists(baseRef)) {
             // comparing against nothing would make every locked scenario look new and pass the gate
             throw new GtaException(
@@ -215,6 +224,18 @@ public final class Gate {
         for (String item : unstableItems) {
             r.failures.add(new Condition(
                     ErrorCode.GATE_UNSTABLE_TEST.name(), item, "failed under pass^k / timezone / locale variation"));
+        }
+
+        // ⑥ enforced mutation: the changed lines' tests must kill enough of the covered mutants
+        double minStrength = config.qualityGates.mutation.minStrength;
+        if (mutationStrength != null
+                && "enforced".equals(config.qualityGates.mutation.mode)
+                && mutationStrength < minStrength) {
+            r.failures.add(new Condition(
+                    ErrorCode.GATE_MUTATION_BELOW_THRESHOLD.name(),
+                    "*",
+                    "test strength on the changed lines is " + Math.round(100 * mutationStrength) + "%, below "
+                            + Math.round(100 * minStrength) + "% (run ./gtaw mutate --changed for the survivors)"));
         }
 
         // concerns: only about flows whose spec changed in this PR (a repo-wide ratio would show on every PR)

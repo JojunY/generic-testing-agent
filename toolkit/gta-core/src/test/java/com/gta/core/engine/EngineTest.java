@@ -223,6 +223,19 @@ class EngineTest {
     }
 
     @Test
+    void shouldRememberTheFilesTheAuthorWroteUntilTheItemIsCommitted() throws Exception {
+        store.save(state(ItemStatus.AUTHORING));
+        runner.then(timedOut());
+        String test = paths.testSourceRel("com.acme.OrderCreateIT");
+        Files.createDirectories(root.resolve(test).getParent());
+        Files.writeString(root.resolve(test), "class OrderCreateIT {}\n");
+
+        engine().submitItem(ITEM, TOKEN);
+
+        assertEquals(List.of(test), item().written, "a retry commits it even when it runs again unchanged");
+    }
+
+    @Test
     void shouldRefuseAKnownDefectPinNoHumanConfirmed() {
         store.save(state(ItemStatus.AUTHORING));
         runner.then(outcome("known-defect"));

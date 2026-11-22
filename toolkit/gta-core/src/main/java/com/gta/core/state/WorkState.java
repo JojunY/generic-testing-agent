@@ -106,6 +106,11 @@ public class WorkState {
         public int checks;
         public String token;
         public Baseline baseline;
+        /**
+         * The in-scope files the item's author changed, kept until the item is committed: a test run again unchanged
+         * (a retry after a person's decision) is still this item's work although its new baseline already holds it.
+         */
+        public List<String> written = new ArrayList<>();
         /** The workspace of the run under triage or oracle review: nothing may change until the verdict (plan §5.8). */
         public Baseline reviewBaseline;
 

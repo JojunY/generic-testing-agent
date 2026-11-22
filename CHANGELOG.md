@@ -33,10 +33,23 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- The scope check treated any folder named `target` as build output, so an edit to a source package such as `com.acme.target` went unchecked; only a module's own `target/` is ignored now.
+- A Gradle `<failure>` of a JVM error (`ExceptionInInitializerError`, `NoClassDefFoundError`) was read as an assertion failure; it is an error now, as with Surefire.
+- A plain HTML comment that mentions `gta:` (`<!-- TODO: ask about gta: retries -->`) crashed the spec parser; it is text now. A gta comment that is never closed is reported as `POLICY_SPEC_INVALID` with a hint.
+- Item statuses, spec section names and reply letters no longer depend on the JVM's default locale (a Turkish locale broke `state.json`).
+- `gtaw run` exits 40 (`BUILD_COMPILE_ERROR`) when the tests do not compile, not 10. `answer --file` with a missing file and `gate waive` with an unreadable `.gta/waivers.json` are the person's to fix (exit 20 and 21), not internal errors.
+- `gtaw` reads the wrapper properties as `gtaw.cmd` and `gtaw doctor` do: blanks around `=` and CRLF line ends are allowed.
+- The oracle shard schema accepts the `catching` intent gtaw writes; the status block names the `oracle-defect` and `environment` verdicts in `output.language`.
+- Skill references no longer tell agents to mark scenarios `hint.layer=system` or to deploy workflows: deployed environments are out of scope (plan §7.7).
+- `qualityGates.mutation.mode=enforced` had no effect: the gate now runs PIT on the changed lines in enforced mode and fails below `minStrength` (`GATE_MUTATION_BELOW_THRESHOLD`, plan §10.5 ⑥). Advisory mode stays with `gtaw mutate --changed`.
+- An item run again unchanged after a person's decision (for example "run it again" after an environment fix) committed its lock and ledger rows without its test: gtaw now remembers the files the author wrote until the item is committed.
+- `gtaw.cmd` stops with `CONFIG_NOT_INITIALIZED` when the wrapper properties have no `version`, as `gtaw` does.
+- `config.v1.schema.json` states the caps gtaw applies (`maxAttemptsPerItem` 3, `maxChecksPerItem` 20, `maxItemsPerSession` 10, `stabilityRepeat` at least 2), so an editor flags a value gtaw would change.
+- `mvnw.cmd` is stored with LF in git, as `.gitattributes` says (checked out with CRLF).
 - Review round 7:
   - submit re-checks the locks of the pinned (`defect-found`) items that share the test class, not only the passed ones: changing a pinned scenario's expected value to the actual one is `POLICY_ORACLE_MODIFIED` (plan §5.3);
   - a confirmed defect starts its pinning with a new attempt and check budget, as a retry does;
-  - on Gradle, an exception without a message is fingerprinted with no message, like gta-junit does, so its `@KnownDefect` pin matches; a `<failure>` of a JDK error (`ExceptionInInitializerError`, `NoClassDefFoundError`) is an error, not an assertion;
+  - on Gradle, an exception without a message is fingerprinted with no message, like gta-junit does, so its `@KnownDefect` pin matches;
   - the failure fingerprint spells out its word edges instead of `\b`, whose meaning changed in JDK 19, so gtaw and a service on another JDK mask a number next to a non-ASCII letter (`Auftragé20240001234ö`) the same way;
   - PR mode reads the config keys a branch changed from the commit it left the base at, not the base's tip: a key changed on the base since then no longer flags scenarios;
   - `gtaw doctor` accepts a `build.module` starting with `./`.
@@ -47,21 +60,18 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
     - a value locks a statement only as a whole number: a THEN of `1` no longer locks `hasSize(10)` or `isEqualTo(-100)`;
     - `gtaw gate` reports an unreadable shard of a spec changed in the PR as `GATE_SHARD_UNREADABLE` instead of aborting;
   - engine:
-    - an item sent back for more work (a confirmed defect, a retry, a new session) still commits the test files it wrote before, so no lock is committed without its test and fixtures;
     - an item that was dispatched before (it has a baseline) is dispatched to its author again instead of being adopted as an existing test;
   - runs:
     - an inherited `JAVA_TOOL_OPTIONS` holding only Spring options (`-Dspring.profiles.active=uat`) is removed from every run, PIT's included, instead of reaching the tests unchanged;
     - Maven runs pass `-Dsurefire.rerunFailingTestsCount=0`: a service's rerun setting no longer turns a flaky failure into a pass;
     - `gtaw mutate --changed` mutates changed lines in nested and anonymous classes (PIT is given `Outer$*` too);
-    - `gtaw run` exits non-zero when the run timed out or the build failed without test reports, and with the build category's code (40) on a compile error;
+    - `gtaw run` exits non-zero when the run timed out or the build failed without test reports;
   - specs and configuration:
     - `OK 2: retry twice` records the own answer for question 2 instead of its recommended option;
     - a question whose `gta:` comment runs over two lines can be ticked;
-    - status ids, answer letters and section names are read the same in every default locale (Turkish `i`);
     - `build.module` may start with `./`;
     - a rename git reports in the work-tree column (after `git add -N`) counts its source as a change;
   - CLI and wrapper:
-    - `gtaw` reads `gta-wrapper.properties` like `gtaw.cmd` and Java do: `key = value`, trailing blanks and CRLF line ends;
     - `gtaw env` says deployed environments are out of scope instead of "arrive in P4"; the Beam skill no longer points to `gtaw env` for Dataflow runs.
 - Review round 6, follow-up:
   - oracle lock and gate:

@@ -51,10 +51,10 @@ public final class ChangeChecker {
             ".vscode/settings.json",
             ".opencode/**",
             "opencode.json");
-    /** Never considered agent changes: build output and gtaw's own working area. */
+    /** Never considered agent changes: gtaw's own working area (build output: {@link #isBuildOutput}). */
     // .gta/lessons.md is written by gtaw between nodes (the learning loop) and committed at session end
-    private static final List<String> IGNORED = List.of(
-            "target/**", "**/target/**", ".gta/work/**", "**/.gta/work/**", ".gta/lessons.md", "**/.gta/lessons.md");
+    private static final List<String> IGNORED =
+            List.of(".gta/work/**", "**/.gta/work/**", ".gta/lessons.md", "**/.gta/lessons.md");
 
     /**
      * @param foreignCommits commits made since the baseline that gtaw did not make (see {@link CommitLedger});
@@ -85,7 +85,7 @@ public final class ChangeChecker {
         Baseline b = new Baseline();
         b.head = git.head();
         for (String p : git.dirtyPaths()) {
-            if (!matchesAny(p, IGNORED)) {
+            if (!ignored(p)) {
                 b.dirty.put(p, contentHash(p));
             }
         }
@@ -97,7 +97,7 @@ public final class ChangeChecker {
         Set<String> changed = new LinkedHashSet<>();
         Set<String> dirtyNow = git.dirtyPaths();
         for (String p : dirtyNow) {
-            if (matchesAny(p, IGNORED)) {
+            if (ignored(p)) {
                 continue;
             }
             String before = baseline.dirty.get(p);
@@ -133,7 +133,7 @@ public final class ChangeChecker {
             }
             foreign.add(c.sha().substring(0, Math.min(12, c.sha().length())));
             for (String f : c.files()) {
-                if (matchesAny(f, IGNORED)) {
+                if (ignored(f)) {
                     continue;
                 }
                 // also when the file is dirty: restoring it to HEAD would keep the foreign commit's version
@@ -220,6 +220,24 @@ public final class ChangeChecker {
     private String contentHash(String rel) {
         Path f = paths.root().resolve(rel);
         return Files.isRegularFile(f) ? Hashes.sha256(f) : "<deleted>";
+    }
+
+    private static boolean ignored(String rel) {
+        return isBuildOutput(rel) || matchesAny(rel, IGNORED);
+    }
+
+    /** A module's {@code target/} folder; a {@code target} package under {@code src/} is source, not build output. */
+    static boolean isBuildOutput(String rel) {
+        String[] segments = rel.split("/");
+        for (int i = 0; i < segments.length - 1; i++) { // the last segment is the file itself
+            if (segments[i].equals("src")) {
+                return false;
+            }
+            if (segments[i].equals("target")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static boolean matchesAny(String rel, List<String> globs) {

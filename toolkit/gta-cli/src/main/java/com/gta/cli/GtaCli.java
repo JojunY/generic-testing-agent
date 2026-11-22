@@ -364,6 +364,12 @@ public final class GtaCli implements Callable<Integer> {
 
         /** Notepad and PowerShell 5.1 start a UTF-8 file with a BOM, which no reply pattern expects. */
         static String replyFile(Path file) throws IOException {
+            if (!Files.isRegularFile(file)) {
+                throw new GtaException(
+                        ErrorCode.USAGE_INVALID_ARGUMENT,
+                        "No reply file " + file,
+                        "Save the reply to a file first, or pass it as words");
+            }
             return Files.readString(file, StandardCharsets.UTF_8)
                     .replaceFirst("^\uFEFF", "")
                     .strip();
@@ -584,7 +590,15 @@ public final class GtaCli implements Callable<Integer> {
             Path file = new GtaPaths(gate.parent.root).waivers();
             List<Map<String, Object>> list = new ArrayList<>();
             if (Files.exists(file)) {
-                list.addAll(Json.MAPPER.readValue(file.toFile(), new TypeReference<List<Map<String, Object>>>() {}));
+                try {
+                    list.addAll(
+                            Json.MAPPER.readValue(file.toFile(), new TypeReference<List<Map<String, Object>>>() {}));
+                } catch (IOException e) {
+                    throw new GtaException(
+                            ErrorCode.CONFIG_INVALID,
+                            "Cannot read .gta/waivers.json: " + e.getMessage(),
+                            "Fix it (a JSON array of waivers) or restore it from git");
+                }
             }
             Map<String, Object> w = new LinkedHashMap<>();
             w.put("code", code);

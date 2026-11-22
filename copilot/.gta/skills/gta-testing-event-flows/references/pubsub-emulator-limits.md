@@ -4,4 +4,4 @@ Supported locally: publish, pull/streaming pull, ack deadlines, dead-letter topi
 
 Not supported: IAM, schema validation, single message transforms, BigQuery and Cloud Storage subscriptions, exactly-once delivery guarantees.
 
-Scenarios that depend on unsupported features are P4 system tests; note them in the spec with `hint.layer=system`.
+gta does not test deployed environments, so behaviour that depends on unsupported features is not a scenario: record it under `## Findings` as untested locally, for the team's SIT/UAT testing.

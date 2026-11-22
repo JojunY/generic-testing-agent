@@ -17,4 +17,11 @@ class MessagesTest {
         assertEquals("  ← recommended: the doc says so", Messages.of("en").t("recommended.why", "the doc says so"));
         assertThrows(IllegalArgumentException.class, () -> Messages.of("en").t("no.such.message"));
     }
+
+    @Test
+    void shouldNameEveryTriageVerdictInPlainWords() {
+        for (String verdict : Triage.VERDICTS) {
+            assertTrue(Messages.of("en").has("verdict." + verdict), verdict);
+        }
+    }
 }

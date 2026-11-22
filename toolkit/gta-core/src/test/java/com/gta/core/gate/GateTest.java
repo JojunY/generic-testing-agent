@@ -205,6 +205,21 @@ class GateTest {
     }
 
     @Test
+    void shouldFailOnWeakMutationStrengthOnlyWhenEnforced() {
+        GtaConfig enforced = new GtaConfig();
+        enforced.qualityGates.mutation.mode = "enforced";
+        enforced.qualityGates.mutation.minStrength = 0.7;
+
+        Gate.Result weak = new Gate(paths, enforced).evaluate("main", List.of(), List.of(), 0.5);
+        Gate.Result strong = new Gate(paths, enforced).evaluate("main", List.of(), List.of(), 0.8);
+        Gate.Result advisory = new Gate(paths, new GtaConfig()).evaluate("main", List.of(), List.of(), 0.5);
+
+        assertTrue(failedWith(weak, ErrorCode.GATE_MUTATION_BELOW_THRESHOLD), weak.failures.toString());
+        assertFalse(failedWith(strong, ErrorCode.GATE_MUTATION_BELOW_THRESHOLD), strong.failures.toString());
+        assertFalse(failedWith(advisory, ErrorCode.GATE_MUTATION_BELOW_THRESHOLD), "advisory never fails the gate");
+    }
+
+    @Test
     void shouldRefuseABaseThatDoesNotExist() {
         GtaException e = assertThrows(
                 GtaException.class,
