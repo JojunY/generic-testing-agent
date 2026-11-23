@@ -280,7 +280,7 @@
     board = {
       ok: ok,
       waiting: function () { return rows.some(function (row) { return row.state === 'waiting'; }); },
-      stage: function (on) { art.setMarkScale(on ? 1.4 : 1); }
+      stage: function (on) { art.setMarkScale(on ? 1.15 : 1); }
     };
     run();
   }
@@ -345,7 +345,11 @@
       'review-s01': function () { move(0, 'review'); },
       's01-passed': function () { move(0, 'passed'); printTicket(rows[0], 'passed'); },
       'author-s02': function () { move(1, 'writing'); },
-      's02-failed': function () { move(1, 'running'); timers.push(later(450, function () { move(1, 'failed'); })); },
+      's02-failed': function () {
+        if (reduced) return move(1, 'failed'); // every line of a beat lands at once: keep the order
+        move(1, 'running');
+        timers.push(later(450, function () { move(1, 'failed'); }));
+      },
       triage: function () { move(1, 'triage'); },
       defect: function () { move(1, 'waiting'); },
       'defect-confirmed': function () { move(1, 'confirmed'); },
@@ -437,7 +441,7 @@
       input.placeholder = beats[next].reply;
       key.disabled = false;
       key.firstChild.nodeValue = beats[next].reply + ' ';
-      if (typing) input.focus({ preventScroll: true });
+      if (typing && !document.body.classList.contains('stage')) input.focus({ preventScroll: true });
     }
 
     var typing = false; // the reply was typed in the input, so the next one probably will be too
@@ -628,9 +632,9 @@
         var step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
         if (event.key === 'Home') step = -index;
         if (event.key === 'End') step = tabs.length - 1 - index;
-        if (step === undefined) return;
+        if (step === undefined || document.body.classList.contains('stage')) return; // in stage mode the arrows present
         event.preventDefault();
-        event.stopPropagation(); // not a stage key here
+        event.stopPropagation();
         var to = (index + step + tabs.length) % tabs.length;
         showTab(to);
         $('tab-' + to).focus();
@@ -724,9 +728,10 @@
       ticking = false;
       var id = currentScene().id;
       links.forEach(function (link) { link.classList.toggle('here', link.getAttribute('href') === '#' + id); });
+      var line = top.offsetHeight + 1; // just below the header
       var dark = nights.some(function (night) {
         var box = night.getBoundingClientRect();
-        return box.top <= 28 && box.bottom > 28;
+        return box.top <= line && box.bottom > line;
       });
       top.classList.toggle('on-night', dark);
     }
@@ -797,9 +802,9 @@
     function staged() {
       return document.body.classList.contains('stage');
     }
-    function stage() {
+    function stage(target) {
       var on = !staged();
-      var scene = currentScene();
+      var scene = target || currentScene();
       document.body.classList.toggle('stage', on);
       stageKey.setAttribute('aria-pressed', on ? 'true' : 'false');
       stageKey.textContent = t(on ? 'stageOn' : 'stage');
@@ -841,7 +846,7 @@
         }
       }
       var box = scene.getBoundingClientRect();
-      if (box.bottom > window.innerHeight + 24) {
+      if (box.bottom > window.innerHeight + 40) { // what is hidden below that is only the scene's bottom padding
         return window.scrollBy({ top: Math.min(box.bottom - window.innerHeight, window.innerHeight * 0.8), behavior: smooth });
       }
       return go(1);
@@ -895,12 +900,12 @@
         if (typing) target.blur();
         return;
       }
-      // in stage mode an empty reply box does not swallow the presenter's keys
-      if (typing && staged() && target.id === 'reply' && !target.value && (event.key === 'ArrowRight' || event.key === 'PageDown')) {
-        event.preventDefault();
+      // in stage mode an empty reply box does not take the presenter's keys
+      var presenting = { ArrowRight: 1, ArrowLeft: 1, PageDown: 1, PageUp: 1, ' ': 1 }[event.key];
+      if (typing && staged() && presenting && target.id === 'reply' && !target.value.trim()) {
+        target.value = '';
         target.blur();
-        advance();
-        return;
+        typing = false;
       }
       if (typing) return;
       var onControl = target && (target.tagName === 'BUTTON' || target.tagName === 'A');
@@ -914,8 +919,8 @@
         case 'ArrowRight': case 'PageDown':
           if (staged()) { event.preventDefault(); advance(); }
           break;
-        case ' ':
-          if (staged() && !onControl) { event.preventDefault(); advance(); }
+        case ' ': // in stage mode Space presents, even on a focused button (Enter still presses it)
+          if (staged()) { event.preventDefault(); advance(); }
           break;
         case 'ArrowLeft': case 'PageUp':
           if (staged()) { event.preventDefault(); back(); }
@@ -933,5 +938,8 @@
   var page = setUpPage();
   setUpBoard();
   setUpReplay();
-  if (/[?&]stage\b/.test(window.location.search)) page.stage(); // opened from the other language in stage mode
+  if (/[?&]stage\b/.test(window.location.search)) { // opened from the other language in stage mode, at its scene
+    var at = window.location.hash ? document.getElementById(window.location.hash.slice(1)) : null;
+    page.stage(at && at.hasAttribute('data-scene') ? at : null);
+  }
 })();

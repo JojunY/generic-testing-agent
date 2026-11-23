@@ -16,7 +16,7 @@
   <symbol id="s-square" viewBox="0 0 24 24"><rect x="3.500" y="3.500" width="17" height="17"/></symbol>
   <symbol id="s-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.200"/></symbol>
 </svg>
-<a class="skip" href="#problem">Skip to the content</a>
+<a class="skip" href="#title">Skip to the content</a>
 
 <header class="top" id="top">
   <a class="brand" href="#title" aria-label="gta, top of the page">
@@ -245,7 +245,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
     </div>
     <div class="evidence needs-js" id="evidence" hidden>
       <p class="evidence-title">What the run left in the repository</p>
-      <div class="tabs" role="tablist" id="tabs"></div>
+      <div class="tabs" role="tablist" id="tabs" aria-label="Files the run left"></div>
       <div class="tab-body" id="tab-body" role="tabpanel" tabindex="0"></div>
     </div>
     <p class="caption" id="run-meta"></p>
@@ -260,6 +260,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
     <p class="lede">“Generic” means every kind of entry point of a Java service built with Spring, not every stack. Each row is a flow of a sample service in this repository, with the values gtaw locked on the scenario that exposed its seeded defect.</p>
     <div class="timetable-wrap reveal">
       <table class="timetable">
+        <caption class="sr">Kinds of flow, with a flow of a sample service and the values gtaw locked</caption>
         <thead><tr><th>Kind of flow</th><th>Flow</th><th>Sample</th><th>Locked</th></tr></thead>
         <tbody>
           <tr><td>REST endpoint</td><td>borrow.book</td><td>lending</td><td>503 · PENDING_LOCATE</td></tr>
@@ -358,8 +359,9 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
     <p class="help-title" id="help-title">Keys</p>
     <dl>
       <dt><kbd>P</kbd></dt><dd>Stage mode: larger type, one step per key press</dd>
-      <dt><kbd>→</kbd> <kbd>Space</kbd></dt><dd>Next step: reply OK where the page waits, otherwise the next section</dd>
-      <dt><kbd>←</kbd></dt><dd>Previous section</dd>
+      <dt><kbd>→</kbd> <kbd>Space</kbd> <kbd>PgDn</kbd></dt><dd>Next step: OK where the page waits for you, the next reply in the replay, the rest of a scene taller than the screen, or the next scene</dd>
+      <dt><kbd>←</kbd> <kbd>PgUp</kbd></dt><dd>Back: to the top of this scene, then the scene before</dd>
+      <dt><kbd>Enter</kbd></dt><dd>OK on the title and the ledger</dd>
       <dt><kbd>F</kbd></dt><dd>Full screen</dd>
       <dt><kbd>Esc</kbd></dt><dd>Close</dd>
     </dl>

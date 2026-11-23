@@ -117,7 +117,7 @@
       case 'waiting':
         if (mark.wait < 0) mark.wait = this.waited++;
         var w = mark.wait % 6; // a block of three by two in the circle, below the green
-        return { x: CIRCLE.x - 0.05 + (w % 3) * 0.05, y: CIRCLE.y + 0.07 + Math.floor(w / 3) * 0.05 };
+        return { x: CIRCLE.x - 0.064 + (w % 3) * 0.064, y: CIRCLE.y + 0.062 + Math.floor(w / 3) * 0.06 };
       case 'passed': case 'pinned':
         if (mark.rest < 0) mark.rest = this.rested++;
         return this.places[mark.rest % this.places.length];
@@ -443,7 +443,7 @@
           g.lineWidth = u * 0.0032;
           g.globalAlpha *= 0.35 + 0.5 * Math.abs(Math.sin(t * 2.2 + m.seed));
           g.beginPath();
-          g.arc(0, 0, u * (0.024 + 0.004 * Math.sin(t * 2.2 + m.seed)), 0, TAU);
+          g.arc(0, 0, u * (0.021 + 0.003 * Math.sin(t * 2.2 + m.seed)), 0, TAU);
           g.stroke();
         }
         break;
