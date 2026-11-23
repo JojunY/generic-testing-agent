@@ -227,4 +227,21 @@ class GateTest {
 
         assertEquals(ErrorCode.ENV_GIT_FAILED, e.code(), "a missing base must not pass the gate");
     }
+
+    @Test
+    void shouldRequireATestForARenamedScenarioEvenWhenItsContentIsLocked() throws Exception {
+        Files.writeString(
+                paths.spec("order.create"),
+                SpecTestData.CREATE_ORDER
+                        .replace("status=draft", "status=approved rev=R3")
+                        .replace("id=order.create/s01 ", "id=order.create/s05 "));
+
+        Gate.Result r = gate();
+
+        assertTrue(
+                r.failures.stream()
+                        .anyMatch(c -> c.code.equals(ErrorCode.GATE_SCENARIO_UNVERIFIED.name())
+                                && c.target.equals("order.create/s05")),
+                "another scenario's lock does not verify s05: " + r.failures);
+    }
 }

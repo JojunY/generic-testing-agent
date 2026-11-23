@@ -356,4 +356,56 @@ class SpecWorkflowTest {
         assertTrue(Files.readString(root.resolve(String.valueOf(revision.get("brief"))))
                 .contains("the person's own answer: only for loyalty customers"));
     }
+
+    @Test
+    void shouldKeepTheAnswersOfAPartialReplyForTheAnalyst() throws Exception {
+        Files.writeString(paths.spec(FLOW), scripted().replace("\n## Findings", """
+                                <!-- gta: id=order.create/q02 impact=normal affects=order.create/s04 -->
+                                2. Is a blank customer id refused?
+                                   - [ ] A) Yes, with 400 (= current code) (recommended: keep it)
+                                   - [ ] B) No, it is stored as anonymous → s04 THEN status `201`
+
+                                ## Findings"""));
+        engine().submitSpec(FLOW, token);
+        engine().next(null, null, null, false);
+
+        Map<String, Object> partial = engine().answer("R1: 2B rest default");
+        assertTrue(String.valueOf(partial.get("result")).contains("still open"), partial.toString());
+        Map<String, Object> out = engine().answer("R1: 1A");
+
+        assertTrue(String.valueOf(out.get("result")).contains("the analyst will now rewrite"), out.toString());
+        Map<String, Object> revision = engine().next(null, null, null, false);
+        assertEquals("analyze", revision.get("node"));
+        assertTrue(
+                Files.readString(root.resolve(String.valueOf(revision.get("brief"))))
+                        .contains("No, it is stored as anonymous"),
+                "the earlier reply's choice reaches the analyst");
+    }
+
+    @Test
+    void shouldRecordAnInvariantSettledByRestDefaultAsDefaulted() throws Exception {
+        String question = """
+                <!-- gta: id=order.create/q02 impact=normal affects=order.create/i01 -->
+                2. Can a total ever be negative?
+                   - [ ] A) No (= current code) (recommended: totals are sums of non-negative amounts)
+                   - [ ] B) Yes → i01 is dropped
+
+                ## Findings""";
+        Files.writeString(
+                paths.spec(FLOW),
+                scripted()
+                        .replace(
+                                "## Invariants\n",
+                                "## Invariants\n- totals are never negative <!-- gta: id=order.create/i01 source=assumed -->\n")
+                        .replace("## Findings", question));
+        engine().submitSpec(FLOW, token);
+        engine().next(null, null, null, false);
+
+        Map<String, Object> out = engine().answer("R1: 1A rest default");
+
+        assertTrue(String.valueOf(out.get("result")).contains("spec is now"), out.toString());
+        assertTrue(
+                Files.readString(paths.spec(FLOW)).contains("id=order.create/i01 source=defaulted"),
+                "nobody confirmed i01: " + Files.readString(paths.spec(FLOW)));
+    }
 }
