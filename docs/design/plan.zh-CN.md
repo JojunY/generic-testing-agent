@@ -1387,7 +1387,7 @@ Cucumber suite，从不在 `ownsFiles` 里。
 {
   "$schema": "./schemas/config.v1.schema.json", "schemaVersion": "1.0",
   "phase": null,
-  "build": { "tool": "maven", "basePackage": "auto", "maven": "auto", "javaHomeEnv": null, "module": "", "cucumber": "auto" },
+  "build": { "tool": "auto", "basePackage": "auto", "maven": "auto", "gradle": "auto", "javaHomeEnv": null, "module": "", "cucumber": "auto" },
   "dispatch": "subagent",
   "output": { "language": "en" },
   "spec": { "maxQuestionsPerRound": 5, "maxClarifyRounds": 2, "maxSubmitAttempts": 3, "source": "gta" },
