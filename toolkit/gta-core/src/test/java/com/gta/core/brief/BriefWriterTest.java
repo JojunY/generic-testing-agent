@@ -52,6 +52,13 @@ class BriefWriterTest {
     @Test
     void shouldNumberBriefsAndBindThemToAToken() {
         assertEquals("s1:0007", BriefWriter.token("s1", 7));
+        java.util.Locale before = java.util.Locale.getDefault();
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("fa-IR")); // formats 7 as ۰۰۰۷ by default
+            assertEquals("s1:0007", BriefWriter.token("s1", 7), "the token and the brief's name are ASCII everywhere");
+        } finally {
+            java.util.Locale.setDefault(before);
+        }
     }
 
     @Test

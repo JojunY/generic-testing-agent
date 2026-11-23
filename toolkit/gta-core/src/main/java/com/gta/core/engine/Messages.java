@@ -1,5 +1,6 @@
 package com.gta.core.engine;
 
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -217,7 +218,8 @@ final class Messages {
         if (pattern == null) {
             throw new IllegalArgumentException("no message " + key);
         }
-        return args.length == 0 ? pattern : String.format(pattern, args);
+        // digits as ASCII whatever the JVM's locale (an Arabic or Persian default writes ٠١٢)
+        return args.length == 0 ? pattern : String.format(Locale.ROOT, pattern, args);
     }
 
     /** Both catalogues name the same keys: a missing translation would fail at run time, so tests check this. */

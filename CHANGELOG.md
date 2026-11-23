@@ -58,6 +58,10 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - `gtaw.cmd` stops with `CONFIG_NOT_INITIALIZED` when the wrapper properties have no `version`, as `gtaw` does.
 - `config.v1.schema.json` states the caps gtaw applies (`maxAttemptsPerItem` 3, `maxChecksPerItem` 20, `maxItemsPerSession` 10, `stabilityRepeat` at least 2), so an editor flags a value gtaw would change.
 - `mvnw.cmd` is stored with LF in git, as `.gitattributes` says (checked out with CRLF).
+- Fixes left on review branches that were never merged:
+  - brief names, author tokens and the numbers in gtaw's messages are written with ASCII digits whatever the JVM's locale (an Arabic or Persian default wrote `۰۰۰۷`);
+  - `gtaw doctor` accepts a root project with sources of its own that includes modules, as profiling already does;
+  - plan §10.4 shows the `build.tool` default (`auto`) and `build.gradle`.
 - Review round 8:
   - the scope check took the spec and oracle files of a domain named `target` (`.gta/specs/target/…`) for build output and left them unchecked;
   - on Gradle, two methods whose display names agree up to a `(` (`refund (s01)`, `refund (s02)`) gave both results to the first scenario; such a case is left untagged now;

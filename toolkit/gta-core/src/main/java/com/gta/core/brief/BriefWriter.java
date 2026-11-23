@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -57,7 +58,7 @@ public final class BriefWriter {
     }
 
     private Path file(int seq) {
-        return paths.briefs().resolve(String.format("%04d.md", seq));
+        return paths.briefs().resolve(String.format(Locale.ROOT, "%04d.md", seq));
     }
 
     public Path analyze(
@@ -72,7 +73,7 @@ public final class BriefWriter {
             boolean exists) {
         StringBuilder b = new StringBuilder();
         b.append("# gta brief ")
-                .append(String.format("%04d", seq))
+                .append(String.format(Locale.ROOT, "%04d", seq))
                 .append(" — analyze `")
                 .append(flowId)
                 .append("`\n\n");
@@ -242,7 +243,7 @@ public final class BriefWriter {
     public Path author(int seq, WorkState.ItemState state, PlanItem item, Spec spec, ServiceProfile profile) {
         StringBuilder b = new StringBuilder();
         b.append("# gta brief ")
-                .append(String.format("%04d", seq))
+                .append(String.format(Locale.ROOT, "%04d", seq))
                 .append(" — author `")
                 .append(item.id)
                 .append("`\n\n");
@@ -491,7 +492,7 @@ public final class BriefWriter {
     public Path review(int seq, WorkState.ItemState state, PlanItem item, Spec spec, String kind, String details) {
         StringBuilder b = new StringBuilder();
         b.append("# gta brief ")
-                .append(String.format("%04d", seq))
+                .append(String.format(Locale.ROOT, "%04d", seq))
                 .append(" — review `")
                 .append(item.id)
                 .append("` (")
@@ -646,7 +647,7 @@ public final class BriefWriter {
     }
 
     public static String token(String sessionId, int seq) {
-        return sessionId + ":" + String.format("%04d", seq);
+        return sessionId + ":" + String.format(Locale.ROOT, "%04d", seq);
     }
 
     /** The language level the test must compile at: the service's, or the floor gta supports when the pom says nothing. */

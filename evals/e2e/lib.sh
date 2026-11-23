@@ -4,7 +4,9 @@ step() { printf '\n== %s\n' "$*"; }
 fail() { echo "E2E FAILED: $*" >&2; exit 1; }
 gtaw() { ./gtaw "$@" 2>/dev/null; }
 # jget <json> <python expression on d>; the expressions are literals of this script, never input
-jget() { python3 -c 'import json,sys; d=json.loads(sys.argv[1]); print(eval(sys.argv[2]))' "$1" "$2"; }
+# one write: with PYTHONUNBUFFERED, print() writes the text and its newline apart, and "jget … | grep -q" fails
+# with a broken pipe when grep has already found its match (pipefail)
+jget() { python3 -c 'import json,sys; d=json.loads(sys.argv[1]); sys.stdout.write(str(eval(sys.argv[2])) + "\n")' "$1" "$2"; }
 expect() { # expect <actual> <expected> <what>
   [ "$1" = "$2" ] || fail "$3: expected '$2', got '$1'"
   echo "ok   $3 = $2"
