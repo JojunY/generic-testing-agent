@@ -159,6 +159,23 @@ class ItemWorkflowTest {
     }
 
     @Test
+    void shouldAskAQuestionAgainWhenASwitchOfFlowDroppedIt() throws Exception {
+        s.status = ItemStatus.AUTHORING;
+        s.token = "t";
+        new StateStore(paths).save(st);
+        items().submitQuestion(s.id, "t", "Is the total rounded per line or per order?", "per order");
+        st = new StateStore(paths).load();
+        st.pending = null; // ./gtaw next --target another.flow, then back
+
+        Map<String, Object> node = dispatch().node();
+
+        assertEquals("answer", node.get("node"), "the author still waits for the answer");
+        assertEquals("question", st.pending.type);
+        org.junit.jupiter.api.Assertions.assertTrue(
+                String.valueOf(node.get("prompt")).contains("rounded per line or per order"));
+    }
+
+    @Test
     void shouldTakeAnOwnAnswerVerbatimAndRefuseAnOkWithoutARecommendation() {
         s.status = ItemStatus.REPAIRING;
         s.token = "t";

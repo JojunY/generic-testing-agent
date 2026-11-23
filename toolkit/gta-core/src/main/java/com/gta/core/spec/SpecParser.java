@@ -3,6 +3,7 @@ package com.gta.core.spec;
 import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
 import java.io.IOException;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,6 +27,8 @@ public final class SpecParser {
             Spec spec = parseText(Files.readString(path, StandardCharsets.UTF_8));
             spec.path = path;
             return spec;
+        } catch (CharacterCodingException e) {
+            throw new GtaException(ErrorCode.POLICY_SPEC_INVALID, "Spec " + path + " is not UTF-8", "Save it as UTF-8");
         } catch (IOException e) {
             throw new GtaException(
                     ErrorCode.USAGE_UNKNOWN_FLOW, "Cannot read spec " + path, "Run ./gtaw next to create it");

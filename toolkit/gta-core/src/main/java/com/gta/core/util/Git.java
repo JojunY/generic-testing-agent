@@ -280,10 +280,11 @@ public final class Git {
 
     private ProcessRunner.Result git(String... args) {
         // paths as they are: without it git prints a non-ASCII path quoted and octal-escaped ("\346\226\207.java")
-        // and without the "LF will be replaced by CRLF" warning, which core.autocrlf prints into the output it parses
+        // and without the "LF will be replaced by CRLF" warning (core.autocrlf); stderr is kept apart from the output
+        // gtaw parses, so no other warning or hint ends up in it
         List<String> cmd = ProcessRunner.cmd("git", "-c", "core.quotePath=false", "-c", "core.safecrlf=false");
         cmd.addAll(List.of(args));
-        return ProcessRunner.run(root, TIMEOUT, ENV, cmd);
+        return ProcessRunner.run(root, TIMEOUT, ENV, cmd, true);
     }
 
     private GtaException failed(String what, ProcessRunner.Result r) {

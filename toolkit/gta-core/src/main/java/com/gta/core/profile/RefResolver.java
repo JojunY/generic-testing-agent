@@ -7,6 +7,8 @@ import com.gta.core.util.Yaml;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -100,12 +102,25 @@ public final class RefResolver {
                 continue;
             }
             try {
-                parseConfig(name, Files.readString(f, StandardCharsets.UTF_8)).forEach(out::putIfAbsent);
+                parseConfig(name, readConfig(f)).forEach(out::putIfAbsent);
             } catch (IOException | RuntimeException e) {
                 // one unreadable file must not hide the others; lint reports refs that do not resolve
             }
         }
         return out;
+    }
+
+    /** UTF-8, else (a {@code .properties} file with a Latin-1 byte, which Spring Boot reads as ISO-8859-1) Latin-1. */
+    private static String readConfig(Path f) throws IOException {
+        byte[] bytes = Files.readAllBytes(f);
+        try {
+            return StandardCharsets.UTF_8
+                    .newDecoder()
+                    .decode(ByteBuffer.wrap(bytes))
+                    .toString();
+        } catch (CharacterCodingException latin1) {
+            return new String(bytes, StandardCharsets.ISO_8859_1);
+        }
     }
 
     /** Whether a file name is a Spring Boot config file gta reads ({@code application*.properties|yml|yaml}). */

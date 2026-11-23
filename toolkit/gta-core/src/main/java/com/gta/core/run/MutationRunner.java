@@ -238,6 +238,7 @@ public final class MutationRunner {
         Path report = work.resolve("report");
         // jars of an earlier PIT or JUnit version would stay on the classpath next to the new ones
         MavenRunner.deleteDir(lib);
+        MavenRunner.deleteDir(report); // a run without mutants writes no mutations.xml: never read the last run's
         try {
             Files.createDirectories(lib);
         } catch (IOException e) {

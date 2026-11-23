@@ -38,13 +38,27 @@ public final class ProcessRunner {
     }
 
     public static Result run(Path dir, Duration timeout, Map<String, String> env, List<String> command) {
+        return run(dir, timeout, env, command, false);
+    }
+
+    /**
+     * @param stderrApart keep stderr out of the output of a process that succeeds, for output that is parsed (git
+     *     prints warnings and hints on stderr and still exits 0); a failed process's output still ends with it
+     */
+    public static Result run(
+            Path dir, Duration timeout, Map<String, String> env, List<String> command, boolean stderrApart) {
         Path log = null;
+        Path err = null;
         try {
             log = Files.createTempFile("gta-proc", ".log");
-            ProcessBuilder pb = new ProcessBuilder(command)
-                    .directory(dir.toFile())
-                    .redirectErrorStream(true)
-                    .redirectOutput(log.toFile());
+            ProcessBuilder pb =
+                    new ProcessBuilder(command).directory(dir.toFile()).redirectOutput(log.toFile());
+            if (stderrApart) {
+                err = Files.createTempFile("gta-proc", ".err");
+                pb.redirectError(err.toFile());
+            } else {
+                pb.redirectErrorStream(true);
+            }
             if (env != null) {
                 env.forEach((k, v) -> {
                     if (v == null) {
@@ -56,13 +70,14 @@ public final class ProcessRunner {
             }
             Process p = pb.start();
             if (p.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
-                return new Result(p.exitValue(), readLog(log));
+                int exit = p.exitValue();
+                return new Result(exit, exit == 0 || err == null ? readLog(log) : readLog(log) + readLog(err));
             }
             p.descendants().forEach(ProcessHandle::destroyForcibly);
             p.destroyForcibly();
             p.waitFor(10, TimeUnit.SECONDS); // let the OS release the log file (Windows keeps it locked until exit)
-            String output = readLog(log) + "\n[gtaw] timed out after " + timeout.toMinutes() + " min: "
-                    + String.join(" ", command) + "\n";
+            String output = readLog(log) + (err == null ? "" : readLog(err)) + "\n[gtaw] timed out after "
+                    + timeout.toMinutes() + " min: " + String.join(" ", command) + "\n";
             return new Result(TIMED_OUT, output, true);
         } catch (IOException e) {
             throw new GtaException(
@@ -74,6 +89,7 @@ public final class ProcessRunner {
             throw new GtaException(ErrorCode.INTERNAL_ERROR, "Interrupted", "Re-run the command");
         } finally {
             deleteQuietly(log);
+            deleteQuietly(err);
         }
     }
 

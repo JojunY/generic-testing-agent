@@ -396,6 +396,8 @@ class ProfilerTest {
                     public Flux<Price> all() { return null; }
                     @GetMapping("/wrapped")
                     public ResponseEntity<SseEmitter> wrapped() { return null; }
+                    @GetMapping(path = "/braced", produces = {MediaType.TEXT_EVENT_STREAM_VALUE})
+                    public Flux<Price> braced() { return null; }
                     @GetMapping(path = "/either", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_EVENT_STREAM_VALUE})
                     public List<Price> either() { return null; }
                 }
@@ -422,6 +424,7 @@ class ProfilerTest {
         assertEquals("websocket", flows.get("price-stream.ticks").capability, "SseEmitter is a stream");
         assertEquals("websocket", flows.get("price-stream.live").capability, "Flux<ServerSentEvent> too");
         assertEquals("websocket", flows.get("price-stream.feed").capability, "and produces text/event-stream");
+        assertEquals("websocket", flows.get("price-stream.braced").capability, "one media type in braces too");
         assertEquals("webflux", flows.get("price-stream.all").capability, "a plain Flux stays webflux");
         assertEquals("websocket", flows.get("price-stream.wrapped").capability, "ResponseEntity<SseEmitter> too");
         assertEquals("rest-api", flows.get("price-stream.either").capability, "JSON or a stream: not only a stream");

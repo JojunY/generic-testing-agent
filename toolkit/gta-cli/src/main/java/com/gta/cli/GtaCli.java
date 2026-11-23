@@ -14,6 +14,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -83,6 +84,9 @@ public final class GtaCli implements Callable<Integer> {
         CommandLine cli = new CommandLine(new GtaCli());
         // a person's words are verbatim: "@team" is not the contents of a file named team
         cli.setExpandAtFiles(false);
+        // nor is "- 1: B" (a reply written as a list) an unknown option
+        cli.getSubcommands().get("answer").setUnmatchedOptionsArePositionalParams(true);
+        cli.getSubcommands().get("note").setUnmatchedOptionsArePositionalParams(true);
         cli.setExecutionExceptionHandler((ex, cmd, parsed) -> {
             GtaException ge = ex instanceof GtaException g
                     ? g
@@ -370,9 +374,16 @@ public final class GtaCli implements Callable<Integer> {
                         "No reply file " + file,
                         "Save the reply to a file first, or pass it as words");
             }
-            return Files.readString(file, StandardCharsets.UTF_8)
-                    .replaceFirst("^\uFEFF", "")
-                    .strip();
+            try {
+                return Files.readString(file, StandardCharsets.UTF_8)
+                        .replaceFirst("^\uFEFF", "")
+                        .strip();
+            } catch (CharacterCodingException e) {
+                throw new GtaException(
+                        ErrorCode.USAGE_INVALID_ARGUMENT,
+                        "Reply file " + file + " is not UTF-8",
+                        "Save it as UTF-8 (PowerShell: Set-Content -Encoding utf8)");
+            }
         }
 
         @Override

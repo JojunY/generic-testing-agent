@@ -145,6 +145,14 @@ class ChangeCheckerTest {
     }
 
     @Test
+    void shouldNotTakeTheSpecsOfADomainNamedTargetForBuildOutput() {
+        assertTrue(ChangeChecker.isBuildOutput("target/classes/App.class"));
+        assertTrue(ChangeChecker.isBuildOutput("module-a/target/App.class"));
+        assertFalse(ChangeChecker.isBuildOutput(".gta/specs/target/create.oracles.json"));
+        assertFalse(ChangeChecker.isBuildOutput("module-a/.gta/specs/target/create.cases.md"));
+    }
+
+    @Test
     void shouldMatchGlobs() {
         assertTrue(
                 ChangeChecker.matchesAny("src/test/resources/fixtures/order/a.json", List.of("src/test/resources/**")));

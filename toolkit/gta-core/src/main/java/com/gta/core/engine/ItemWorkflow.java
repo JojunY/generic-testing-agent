@@ -99,6 +99,13 @@ final class ItemWorkflow {
             WorkState.ItemState s = st.items.get(item.id);
             switch (s.status) {
                 case AUTHORING, REPAIRING -> {
+                    WorkState.AuthorQuestion asked =
+                            s.questions.isEmpty() ? null : s.questions.get(s.questions.size() - 1);
+                    if (asked != null && asked.answer == null) {
+                        // the author's question was dropped by a switch of flow or mode: ask it again
+                        st.pending = ctx.prompts.authorQuestion(item, asked.question, asked.recommended);
+                        return Dispatch.of(answerNode(st.pending));
+                    }
                     // every brief gets its own token: items adopted after a rebuild have none, and a re-issued
                     // brief must invalidate the previous one
                     st.seq++;
@@ -364,7 +371,7 @@ final class ItemWorkflow {
                     ErrorCode.USAGE_INVALID_ARGUMENT,
                     "--question is empty",
                     "Ask one concrete question: ./gtaw submit --item " + itemId
-                            + " --token <t> --question \"<q>\" --recommend \"<your best guess>\"");
+                            + " --token <t> --question '<q>' --recommend '<your best guess>'");
         }
         try (WorkLock ignored = WorkLock.acquire(paths.lock())) {
             WorkState st = store.load();
