@@ -472,9 +472,18 @@ body.stage:lang(zh-CN) h2 { font-size: clamp(48px, 4.6vw, 92px); }
 body.stage .role-shape { height: 84px; }
 body.stage .role li { padding-top: 3px; padding-bottom: 3px; }
 body.stage .never-label { margin-top: 16px; }
-body.stage .shape-blob { width: 88px; height: 88px; }
-body.stage .shape-square { width: 80px; height: 80px; }
-body.stage .shape-ring { width: 94px; height: 94px; }
+body.stage .shape-blob { width: 74px; height: 74px; }
+body.stage .shape-square { width: 68px; height: 68px; }
+body.stage .shape-ring { width: 80px; height: 80px; }
+body.stage .shape-blob::after, body.stage .shape-square::after { transform: translate(7px, 6px); }
+body.stage .cmd { padding-right: calc(76px * var(--scale) + 16px); white-space: pre-wrap; overflow-wrap: anywhere; }
+body.stage .timetable-wrap { margin-top: 44px; }
+@media (min-height: 821px) {
+  body.stage .ns-word { font-size: clamp(72px, 8.4vw, 150px); }
+  body.stage .noservice { margin-top: 20px; }
+  body.stage .safety-list { margin-top: 28px; padding-top: 20px; }
+  body.stage .standing { margin-top: 24px; }
+}
 body.stage .role-who { margin-top: 10px; }
 body.stage .ledger td { height: 38px; padding-top: 6px; padding-bottom: 6px; }
 body.stage .ledger-scene .sheet { margin-top: 28px; }
@@ -507,15 +516,27 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   body.stage .eyebrow { margin-bottom: 12px; }
   body.stage .hero .lede { margin-top: 16px; }
   body.stage .hero .desk { margin-top: 18px; gap: 10px; }
-  body.stage .ledger td { height: 30px; padding-top: 3px; padding-bottom: 3px; }
+  body.stage .ledger td { height: 28px; padding-top: 2px; padding-bottom: 2px; }
   body.stage .ledger-scene .sheet, body.stage #ledger .sheet { margin-top: 16px; }
   body.stage .roles { margin-top: 24px; }
   body.stage .role { padding-top: 18px; padding-bottom: 20px; }
   body.stage .role-shape { height: 72px; }
   body.stage .role-sub { margin-bottom: 10px; padding-bottom: 10px; }
+  body.stage .shape-blob { width: 58px; height: 58px; }
+  body.stage .shape-square { width: 54px; height: 54px; }
+  body.stage .shape-ring { width: 64px; height: 64px; }
+  body.stage .shape-blob::after, body.stage .shape-square::after { transform: translate(5px, 5px); }
+  body.stage #ledger > .wrap > .eyebrow { display: none; }
+  body.stage #ledger { padding-top: 16px; padding-bottom: 12px; }
+  body.stage .ledger th { padding-top: 7px; padding-bottom: 5px; }
+  body.stage .sheet-top { padding-top: 9px; padding-bottom: 9px; }
+  body.stage .sheet-desk { padding-top: 10px; padding-bottom: 10px; }
 }
 @media (max-height: 760px) {
-  body.stage .ledger td { height: 26px; padding-top: 2px; padding-bottom: 2px; }
+  body.stage .ledger td { height: 25px; padding-top: 2px; padding-bottom: 2px; }
+  body.stage .shape-blob { width: 48px; height: 48px; }
+  body.stage .shape-square { width: 44px; height: 44px; }
+  body.stage .shape-ring { width: 52px; height: 52px; }
   body.stage .ledger th { padding-top: 6px; padding-bottom: 4px; }
   body.stage .sheet-desk { padding-top: 10px; padding-bottom: 10px; }
   body.stage .role-shape { height: 60px; }

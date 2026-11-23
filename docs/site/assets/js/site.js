@@ -117,7 +117,7 @@
       line.who.classList.toggle('is-locked', !!state.locked);
       if (state.locked) { // the values are gtaw's now
         line.who.appendChild(token('gtaw'));
-        line.who.appendChild(document.createTextNode(t('whoLocked')));
+        line.who.appendChild(el('span', 'sr', t('whoLocked')));
       }
       if (state.who) {
         line.who.appendChild(token(state.who));
@@ -743,11 +743,17 @@
     var nights = all('.night');
     var ticking = false;
     var shown = null; // the scene the reader stopped on
+    var into = 0; // and how far into it
+    var padded = []; // scenes given room below for their last stop
+    var HEAD = 56; // the header's height
     var resizing = false;
     /** The header names the scene in view, and turns dark over the dark scenes. */
     function follow() {
       ticking = false;
-      if (!resizing) shown = currentScene();
+      if (!resizing) {
+        shown = currentScene();
+        into = Math.max(0, HEAD - shown.getBoundingClientRect().top);
+      }
       var id = currentScene().id;
       links.forEach(function (link) { link.classList.toggle('here', link.getAttribute('href') === '#' + id); });
       var line = top.offsetHeight + 1; // just below the header
@@ -837,7 +843,11 @@
       resizing = true;
       window.clearTimeout(settle);
       settle = window.setTimeout(function () {
-        if (staged() && shown) shown.scrollIntoView({ behavior: 'auto', block: 'start' });
+        if (staged() && shown) { // the same scene, and the same place in it as far as it still goes
+          shown.scrollIntoView({ behavior: 'instant', block: 'start' }); // not smooth: the next line measures from here
+          var further = Math.min(into, Math.max(0, shown.getBoundingClientRect().bottom - window.innerHeight));
+          if (further) window.scrollBy({ top: further, behavior: 'instant' });
+        }
         resizing = false;
       }, 180);
     });
@@ -845,6 +855,7 @@
       var on = !staged();
       var scene = target || currentScene();
       shown = scene;
+      into = 0;
       document.body.classList.toggle('stage', on);
       stageKey.setAttribute('aria-pressed', on ? 'true' : 'false');
       stageKey.textContent = t(on ? 'stageOn' : 'stage');
@@ -853,6 +864,7 @@
       window.clearTimeout(hudTimer);
       if (on) hudTimer = window.setTimeout(function () { hud.classList.add('quiet'); }, 5000);
       if (board) board.stage(on);
+      if (!on) padded.splice(0).forEach(function (each) { each.style.paddingBottom = ''; });
       window.dispatchEvent(new Event('resize'));
       window.setTimeout(function () { scene.scrollIntoView({ behavior: 'auto', block: 'start' }); }, 160);
     }
@@ -885,20 +897,36 @@
           return replay.reply();
         }
       }
+      if (Math.abs(scene.getBoundingClientRect().top - HEAD) < 4) scene.style.paddingBottom = ''; // first press in it
+      var height = window.innerHeight;
       var box = scene.getBoundingClientRect();
-      if (box.bottom > window.innerHeight + 64) { // up to that much below is only the scene's bottom padding
-        var stops = all('[data-stop]', scene);
-        for (var s = 0; s < stops.length; s++) {
-          var r = stops[s].getBoundingClientRect();
-          if (stops[s].offsetParent && r.top > 56 + 28 + 8 && r.bottom > window.innerHeight + 8) {
-            return window.scrollBy({ top: Math.min(r.top - 56 - 28, box.bottom - window.innerHeight), behavior: smooth });
+      var end = box.bottom - parseFloat(window.getComputedStyle(scene).paddingBottom); // the end of its content
+      if (end <= height + 8) return go(1);
+      var lead = HEAD + 28; // a stop puts a block this far down, just under the header
+      var reach = height - lead; // the longest step that skips nothing: the bottom of the screen comes up to the lead
+      var rest = end - height;
+      // the blocks on screen that are worth a step to bring up
+      var stops = all('[data-stop]', scene).map(function (stop) { return stop.offsetParent ? stop.getBoundingClientRect() : null; })
+        .filter(function (r) { return r && r.top >= lead + 120 && r.top <= height; });
+      // the first of them from which the rest of the scene fits on one screen goes to the top, and the scene gets the
+      // room it lacks below, so the last stop reads as a slide instead of slicing a heading at the top of the screen
+      for (var f = 0; f < stops.length; f++) {
+        var lift = stops[f].top - lead;
+        var room = lift - rest;
+        if (end - lift <= height && room <= height * 0.6) {
+          if (room > 0) {
+            scene.style.paddingBottom = parseFloat(window.getComputedStyle(scene).paddingBottom) + room + 'px';
+            padded.push(scene);
           }
+          return window.scrollBy({ top: lift, behavior: smooth });
         }
-        var rest = box.bottom - window.innerHeight;
-        var step = rest <= window.innerHeight * 0.8 + 120 ? rest : window.innerHeight * 0.8; // no short last step
-        return window.scrollBy({ top: step, behavior: smooth });
       }
-      return go(1);
+      for (var n = 0; n < stops.length; n++) { // otherwise the first block not seen whole
+        if (stops[n].bottom > height + 8) return window.scrollBy({ top: stops[n].top - lead, behavior: smooth });
+      }
+      // otherwise a plain step: never past what was not on screen, and never a short last one
+      var step = rest <= reach ? rest : Math.max(Math.min(reach, rest - 120), 1);
+      return window.scrollBy({ top: step, behavior: smooth });
     }
     /** Back: to the top of the scene when part of it was stepped through, otherwise the scene before. */
     function back() {
