@@ -847,7 +847,9 @@
       }
       var box = scene.getBoundingClientRect();
       if (box.bottom > window.innerHeight + 40) { // what is hidden below that is only the scene's bottom padding
-        return window.scrollBy({ top: Math.min(box.bottom - window.innerHeight, window.innerHeight * 0.8), behavior: smooth });
+        var rest = box.bottom - window.innerHeight;
+        var step = rest <= window.innerHeight * 0.8 + 120 ? rest : window.innerHeight * 0.8; // no short last step
+        return window.scrollBy({ top: step, behavior: smooth });
       }
       return go(1);
     }

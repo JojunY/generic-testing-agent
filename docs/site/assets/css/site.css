@@ -61,6 +61,7 @@ kbd { font-size: 0.8em; border: 1.5px solid currentColor; border-radius: 4px; pa
 :focus-visible { outline: 2.5px solid var(--blue); outline-offset: 3px; border-radius: 3px; }
 .night :focus-visible, .console :focus-visible, .cmd :focus-visible, .foot :focus-visible, .top.on-night :focus-visible { outline-color: #8f9bff; }
 .role-gtaw :focus-visible, .standing :focus-visible { outline-color: var(--paper); }
+.start-scene :focus-visible { outline-color: var(--ink); }
 #log:focus-visible { outline-offset: -3px; }
 ::selection { background: var(--yellow); color: var(--ink); }
 [hidden] { display: none !important; }
@@ -442,6 +443,8 @@ h3 { font-size: calc(27px * var(--scale)); line-height: 1.15; letter-spacing: -0
 body.stage { --scale: 1.25; --wrap: min(1600px, 92vw); }
 @media (max-height: 820px) { body.stage { --scale: 1.1; } }
 body.stage .nav, body.stage .foot .needs-js { display: none; }
+body.stage .top { background: var(--paper); backdrop-filter: none; }
+body.stage .top.on-night { background: var(--night); }
 body.stage .tools { margin-left: auto; }
 body.stage section { min-height: calc(100vh - 56px); display: flex; flex-direction: column; justify-content: center; padding: 40px 0 36px; }
 body.stage .hero { padding: 24px 0; }
@@ -462,7 +465,9 @@ body.stage h1 { font-size: clamp(56px, 5.9vw, 116px); }
 body.stage h2 { font-size: clamp(52px, 5.6vw, 120px); }
 body.stage:lang(zh-CN) h1 { font-size: clamp(48px, 5vw, 96px); }
 body.stage:lang(zh-CN) h2 { font-size: clamp(48px, 4.6vw, 92px); }
-body.stage .role-shape { height: 94px; }
+body.stage .role-shape { height: 84px; }
+body.stage .role li { padding-top: 3px; padding-bottom: 3px; }
+body.stage .never-label { margin-top: 16px; }
 body.stage .shape-blob { width: 88px; height: 88px; }
 body.stage .shape-square { width: 80px; height: 80px; }
 body.stage .shape-ring { width: 94px; height: 94px; }
