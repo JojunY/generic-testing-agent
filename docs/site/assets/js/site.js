@@ -114,6 +114,11 @@
       line.verdict.textContent = '';
       if (state.text) line.verdict.appendChild(el('span', state.look, t(state.text)));
       line.who.textContent = '';
+      line.who.classList.toggle('is-locked', !!state.locked);
+      if (state.locked) { // the values are gtaw's now
+        line.who.appendChild(token('gtaw'));
+        line.who.appendChild(document.createTextNode(t('whoLocked')));
+      }
       if (state.who) {
         line.who.appendChild(token(state.who));
         line.who.appendChild(document.createTextNode(t({ ai: 'whoAi', gtaw: 'whoGtaw', you: 'whoYou' }[state.who])));
@@ -185,7 +190,14 @@
       var passed = rows.filter(function (row) { return row.state === 'passed'; }).length;
       var text = waiting > 0 ? (waiting === 1 ? t('okOne') : t('okMany', { n: waiting }))
         : open === 0 ? t('okDone', { p: passed, d: rows.length - passed }) : t('okNone');
-      all('[data-key="ok"]').forEach(function (key) { key.disabled = waiting === 0; });
+      all('[data-key="ok"]').forEach(function (key) {
+        var focused = document.activeElement === key;
+        key.disabled = waiting === 0;
+        if (focused && key.disabled) { // keep the keyboard user's place
+          var force = key.closest('.desk').querySelector('[data-key="force"]');
+          if (force) force.focus({ preventScroll: true });
+        }
+      });
       if (text === said) return; // a live region announces each message once
       said = text;
       all('[data-note="ok"]').forEach(function (note) {
@@ -441,12 +453,17 @@
       input.placeholder = beats[next].reply;
       key.disabled = false;
       key.firstChild.nodeValue = beats[next].reply + ' ';
-      if (typing && !document.body.classList.contains('stage')) input.focus({ preventScroll: true });
+      if (document.body.classList.contains('stage')) return;
+      var box = form.getBoundingClientRect();
+      var seen = box.top >= 0 && box.bottom <= window.innerHeight;
+      var free = document.activeElement === document.body || $('console').contains(document.activeElement);
+      if (seen && free) (typing ? input : key).focus({ preventScroll: true });
     }
 
     var typing = false; // the reply was typed in the input, so the next one probably will be too
     function play(beat) {
       typing = document.activeElement === input;
+      if (!typing && document.activeElement === key) key.blur(); // ready() gives it back
       playing = true;
       input.disabled = true;
       key.disabled = true;
@@ -512,6 +529,7 @@
       ticket.appendChild(el('p', 'ticket-label', t('ticketThen')));
       var values = el('div', 'ticket-values');
       var note = el('p', 'ticket-try', t('ticketEdit'));
+      note.setAttribute('role', 'status');
       tokens.forEach(function (value) {
         var punch = el('input', 'punch');
         punch.value = value;
@@ -632,7 +650,8 @@
         var step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
         if (event.key === 'Home') step = -index;
         if (event.key === 'End') step = tabs.length - 1 - index;
-        if (step === undefined || document.body.classList.contains('stage')) return; // in stage mode the arrows present
+        if (step === undefined) return;
+        if (document.body.classList.contains('stage') && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) return; // they present
         event.preventDefault();
         event.stopPropagation();
         var to = (index + step + tabs.length) % tabs.length;
@@ -723,9 +742,12 @@
     var top = $('top');
     var nights = all('.night');
     var ticking = false;
+    var shown = null; // the scene the reader stopped on
+    var resizing = false;
     /** The header names the scene in view, and turns dark over the dark scenes. */
     function follow() {
       ticking = false;
+      if (!resizing) shown = currentScene();
       var id = currentScene().id;
       links.forEach(function (link) { link.classList.toggle('here', link.getAttribute('href') === '#' + id); });
       var line = top.offsetHeight + 1; // just below the header
@@ -752,8 +774,12 @@
     }
 
     /** Copies text; where the browser refuses, the old way, and where that fails too, the text is selected. */
+    var said = el('p', 'sr');
+    said.setAttribute('role', 'status');
+    document.body.appendChild(said);
     function copy(text, button, pre) {
       function done() {
+        said.textContent = t('copied');
         button.textContent = t('copied');
         window.setTimeout(function () { button.textContent = t('copy'); }, 1400);
       }
@@ -772,12 +798,14 @@
           copied = false;
         }
         document.body.removeChild(area);
+        button.focus({ preventScroll: true });
         if (copied) return done();
         var range = document.createRange();
         range.selectNodeContents(pre.firstChild);
         window.getSelection().removeAllRanges();
         window.getSelection().addRange(range);
         button.textContent = t('copyFailed');
+        said.textContent = t('copyFailed');
         window.setTimeout(function () { button.textContent = t('copy'); }, 2600);
       }
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
@@ -802,9 +830,21 @@
     function staged() {
       return document.body.classList.contains('stage');
     }
+    // stage mode keeps its scene when the window changes size (full screen, another projector): the scene is the one
+    // the presenter last stopped on, read before the layout changed
+    var settle = 0;
+    window.addEventListener('resize', function () {
+      resizing = true;
+      window.clearTimeout(settle);
+      settle = window.setTimeout(function () {
+        if (staged() && shown) shown.scrollIntoView({ behavior: 'auto', block: 'start' });
+        resizing = false;
+      }, 180);
+    });
     function stage(target) {
       var on = !staged();
       var scene = target || currentScene();
+      shown = scene;
       document.body.classList.toggle('stage', on);
       stageKey.setAttribute('aria-pressed', on ? 'true' : 'false');
       stageKey.textContent = t(on ? 'stageOn' : 'stage');
@@ -846,7 +886,14 @@
         }
       }
       var box = scene.getBoundingClientRect();
-      if (box.bottom > window.innerHeight + 40) { // what is hidden below that is only the scene's bottom padding
+      if (box.bottom > window.innerHeight + 64) { // up to that much below is only the scene's bottom padding
+        var stops = all('[data-stop]', scene);
+        for (var s = 0; s < stops.length; s++) {
+          var r = stops[s].getBoundingClientRect();
+          if (stops[s].offsetParent && r.top > 56 + 28 + 8 && r.bottom > window.innerHeight + 8) {
+            return window.scrollBy({ top: Math.min(r.top - 56 - 28, box.bottom - window.innerHeight), behavior: smooth });
+          }
+        }
         var rest = box.bottom - window.innerHeight;
         var step = rest <= window.innerHeight * 0.8 + 120 ? rest : window.innerHeight * 0.8; // no short last step
         return window.scrollBy({ top: step, behavior: smooth });
@@ -871,17 +918,21 @@
       }
     }
 
-    stageKey.addEventListener('click', stage);
+    stageKey.addEventListener('click', function () { stage(); });
     $('help-close').addEventListener('click', function () { toggleHelp(false); });
     help.addEventListener('click', function (event) {
       if (event.target === help) toggleHelp(false);
     });
 
     // the other language opens at the same scene, in stage mode if this one is in it
-    all('.tool[hreflang]').forEach(function (link) {
-      link.addEventListener('click', function () {
+    var languages = all('.tool[hreflang]');
+    function point() {
+      languages.forEach(function (link) {
         link.href = link.getAttribute('href').split(/[?#]/)[0] + (staged() ? '?stage' : '') + '#' + currentScene().id;
       });
+    }
+    languages.forEach(function (link) {
+      ['click', 'auxclick', 'pointerdown', 'focus', 'contextmenu'].forEach(function (type) { link.addEventListener(type, point); });
     });
 
     document.addEventListener('keydown', function (event) {
@@ -940,7 +991,7 @@
   var page = setUpPage();
   setUpBoard();
   setUpReplay();
-  if (/[?&]stage\b/.test(window.location.search)) { // opened from the other language in stage mode, at its scene
+  if (/[?&]stage\b/.test(window.location.search) && window.innerWidth > 700) { // opened from the other language in stage mode, at its scene
     var at = window.location.hash ? document.getElementById(window.location.hash.slice(1)) : null;
     page.stage(at && at.hasAttribute('data-scene') ? at : null);
   }

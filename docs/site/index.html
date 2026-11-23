@@ -73,7 +73,7 @@
   <div class="wrap">
     <p class="eyebrow">The same twelve, on paper</p>
     <h2 data-kinetic>Every verdict is <em>earned.</em></h2>
-    <div class="sheet reveal">
+    <div data-stop class="sheet reveal">
       <div class="sheet-top"><span>Verdicts</span><span>Referee: gtaw — no model inside</span></div>
       <div class="ledger-wrap">
         <table class="ledger" id="ledger-table">
@@ -119,7 +119,7 @@
 Reservation inventoryDown(String security, long quantity, Throwable cause) {
     return new Reservation(<mark>true</mark>);
 }</pre>
-    <div class="versus">
+    <div data-stop class="versus">
       <article class="lane lane-self reveal">
         <p class="lane-label"><svg class="tok tok-ai" aria-hidden="true"><use href="#s-blob"/></svg>The model grades itself</p>
         <h3>It asserts what the code does.</h3>
@@ -156,7 +156,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
     <h2 data-kinetic>Three hands. <em>One job each.</em></h2>
     <p class="lede">Banks call it maker and checker: whoever makes an entry is never the one who approves it. gta applies it to tests.</p>
   </div>
-  <div class="roles">
+  <div data-stop class="roles">
     <article class="role role-ai reveal">
       <div class="role-shape" aria-hidden="true"><i class="shape-blob"></i></div>
       <p class="role-who">The agents</p>
@@ -198,7 +198,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
       <p class="role-verb">Sign</p>
       <p class="role-sub">developer · product owner</p>
       <ul class="does">
-        <li>answer the questions, usually with <code>OK</code></li>
+        <li>answer the questions, usually with&nbsp;<code>OK</code></li>
         <li>approve the spec</li>
         <li>confirm a defect</li>
       </ul>
@@ -243,7 +243,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
         </div>
       </aside>
     </div>
-    <div class="evidence needs-js" id="evidence" hidden>
+    <div data-stop class="evidence needs-js" id="evidence" hidden>
       <p class="evidence-title">What the run left in the repository</p>
       <div class="tabs" role="tablist" id="tabs" aria-label="Files the run left"></div>
       <div class="tab-body" id="tab-body" role="tabpanel" tabindex="0"></div>
@@ -258,7 +258,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
     <p class="eyebrow">04 — What it covers</p>
     <h2 data-kinetic>Every kind of flow <em>a Spring service has.</em></h2>
     <p class="lede">“Generic” means every kind of entry point of a Java service built with Spring, not every stack. Each row is a flow of a sample service in this repository, with the values gtaw locked on the scenario that exposed its seeded defect.</p>
-    <div class="timetable-wrap reveal">
+    <div data-stop class="timetable-wrap reveal">
       <table class="timetable">
         <caption class="sr">Kinds of flow, with a flow of a sample service and the values gtaw locked</caption>
         <thead><tr><th>Kind of flow</th><th>Flow</th><th>Sample</th><th>Locked</th></tr></thead>
@@ -300,17 +300,17 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
       <li><span class="ns-word">UAT</span><span class="ns-tag">no service</span></li>
       <li><span class="ns-word">PROD</span><span class="ns-tag">no service</span></li>
     </ul>
-    <ul class="safety-list reveal">
+    <ul data-stop class="safety-list reveal">
       <li><b>No deployed environment.</b> Tests run on a developer machine or in CI, against embedded or faked dependencies. There is no mode that targets SIT, UAT or production.</li>
       <li><b>No borrowed identity.</b> gtaw starts every test run with cloud credentials cut off and with your Spring profile removed: a shell set to UAT cannot make a test load UAT’s configuration.</li>
       <li><b>No production code.</b> An edit outside the files of an item is restored. A defect is pinned and reported, never patched.</li>
     </ul>
-    <div class="standing reveal">
+    <div data-stop class="standing reveal">
       <p class="standing-title">Where this stands</p>
       <div class="standing-grid">
         <div>
           <p class="standing-label st-green">Proven</p>
-          <p>The referee. gtaw has unit tests with a 90&nbsp;% line coverage gate and six scripted end-to-end runs, in which a script plays the agents. The 21 seeded defects of the four sample services are found and pinned.</p>
+          <p>The referee. gtaw has unit tests with a 90&nbsp;% line coverage gate and six scripted end-to-end runs, in which a script plays the agents. The 19 seeded defects their scripted flows reach in the four sample services are found and pinned; two more are kept for runs with a real model.</p>
         </div>
         <div>
           <p class="standing-label st-amber">Not proven yet</p>
@@ -431,7 +431,8 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   "copy": "Copy",
   "copied": "Copied",
   "stConfirmed": "defect confirmed by you",
-  "copyFailed": "Selected: press Ctrl+C"
+  "copyFailed": "Selected: press Ctrl+C",
+  "whoLocked": "locked"
 }</script>
 <script defer src="assets/js/run-data.js"></script>
 <script defer src="assets/js/art.js"></script>

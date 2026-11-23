@@ -352,7 +352,7 @@
     var busy = this.marks.some(function (m) { return IN_SQUARE[m.state]; });
     var scan = (SQUARE.y + SQUARE.s * ((t * 0.32) % 1)) * u;
     g.strokeStyle = c.paper;
-    g.globalAlpha = fade * (busy ? 0.55 : 0.16);
+    g.globalAlpha = fade * (busy ? 0.55 : 0); // the scan shows only while gtaw runs something
     g.lineWidth = Math.max(1, u * 0.002);
     g.beginPath();
     g.moveTo(SQUARE.x * u, scan);

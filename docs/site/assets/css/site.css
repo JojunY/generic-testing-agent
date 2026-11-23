@@ -61,7 +61,7 @@ kbd { font-size: 0.8em; border: 1.5px solid currentColor; border-radius: 4px; pa
 :focus-visible { outline: 2.5px solid var(--blue); outline-offset: 3px; border-radius: 3px; }
 .night :focus-visible, .console :focus-visible, .cmd :focus-visible, .foot :focus-visible, .top.on-night :focus-visible { outline-color: #8f9bff; }
 .role-gtaw :focus-visible, .standing :focus-visible { outline-color: var(--paper); }
-.start-scene :focus-visible { outline-color: var(--ink); }
+.start-scene :focus-visible:not(.copy) { outline-color: var(--ink); }
 #log:focus-visible { outline-offset: -3px; }
 ::selection { background: var(--yellow); color: var(--ink); }
 [hidden] { display: none !important; }
@@ -134,6 +134,9 @@ h3 { font-size: calc(27px * var(--scale)); line-height: 1.15; letter-spacing: -0
 :lang(zh-CN) h1, :lang(zh-CN) h2, :lang(zh-CN) .role-verb { font-family: "Noto Serif SC Head", "Source Serif 4", "Songti SC", "STSong", serif; font-weight: 600; letter-spacing: 0.01em; font-feature-settings: "palt" 1; }
 :lang(zh-CN) h1 em, :lang(zh-CN) h2 em { text-decoration: underline 0.07em var(--yellow); text-underline-offset: 0.2em; text-decoration-skip-ink: none; }
 :lang(zh-CN) .start-scene h2 em { text-decoration-color: var(--ink); }
+:lang(zh-CN) h1 em .kw, :lang(zh-CN) h2 em .kw { padding-bottom: 0.36em; margin-bottom: -0.36em; }
+:lang(zh-CN) h1 em .kw > span, :lang(zh-CN) h2 em .kw > span { text-decoration: underline 0.07em var(--yellow); text-underline-offset: 0.2em; text-decoration-skip-ink: none; }
+:lang(zh-CN) .start-scene h2 em .kw > span { text-decoration-color: var(--ink); }
 :lang(zh-CN) .stamp-claimed { -webkit-text-stroke: 0; -webkit-text-fill-color: currentColor; opacity: 0.8; }
 :lang(zh-CN) .st { font-size: calc(16px * var(--scale)); }
 :lang(zh-CN) .art figcaption { font-style: normal; font-family: var(--sans); font-size: calc(17px * var(--scale)); line-height: 1.7; }
@@ -209,6 +212,7 @@ h3 { font-size: calc(27px * var(--scale)); line-height: 1.15; letter-spacing: -0
 .c-kind { font: 600 calc(11.5px * var(--scale)) / 1.3 var(--sans); letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
 .c-who { white-space: nowrap; font: 500 calc(11.5px * var(--scale)) / 1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); width: 1%; }
 .c-who .tok { margin-right: 7px; }
+.c-who.is-locked { color: var(--ink-3); }
 .c-verdict { min-width: 15.5em; }
 .chips { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 .chip { display: inline-block; padding: 3px 8px; font: 500 calc(13px * var(--scale)) / 1.3 var(--mono); border: 1.5px dashed currentColor; border-radius: 5px; opacity: 0; transform: translateY(4px); transition: opacity 0.35s, transform 0.35s; }
@@ -441,7 +445,7 @@ h3 { font-size: calc(27px * var(--scale)); line-height: 1.15; letter-spacing: -0
 
 /* stage mode: a presenter on a big screen */
 body.stage { --scale: 1.25; --wrap: min(1600px, 92vw); }
-@media (max-height: 820px) { body.stage { --scale: 1.1; } }
+
 body.stage .nav, body.stage .foot .needs-js { display: none; }
 body.stage .top { background: var(--paper); backdrop-filter: none; }
 body.stage .top.on-night { background: var(--night); }
@@ -479,7 +483,46 @@ body.stage #loop > .wrap > h2, body.stage #ledger > .wrap > h2 { grid-column: 1 
 body.stage #loop > .wrap > .lede, body.stage #run-meta, body.stage #ledger .caption { display: none; }
 body.stage #ledger .sheet { margin-top: 24px; }
 body.stage .loop { margin-top: 28px; }
-body.stage .timetable td { padding-top: 6px; padding-bottom: 6px; }
+body.stage .timetable td { padding-top: 4px; padding-bottom: 4px; }
+body.stage .timetable tbody tr:hover td { background: none; }
+body.stage .loop { align-items: stretch; }
+body.stage .rail { position: static; }
+body.stage .tickets { flex: 1 0 auto; }
+body.stage .slot { flex: 1 0 auto; display: flex; align-items: center; justify-content: center; text-align: center; padding: 32px 15%; color: var(--ink-3); background: rgba(22, 19, 15, 0.025); }
+body.stage .roles { flex: 1 0 auto; }
+body.stage .evidence { margin-top: 64px; }
+body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px); }
+@media (min-width: 1041px) {
+  body.stage .start-scene .steps { grid-column: 1; grid-row: 3; margin-top: 40px; }
+  body.stage .start-scene .reads { grid-column: 2; grid-row: 3; align-self: end; grid-template-columns: 1fr 1fr; margin-top: 40px; }
+}
+/* laptops and projectors at 768 or 720 lines */
+@media (max-height: 820px) {
+  body.stage { --scale: 1; }
+  body.stage h1 { font-size: clamp(48px, 5.3vw, 88px); }
+  body.stage h2 { font-size: clamp(44px, 4.5vw, 80px); }
+  body.stage:lang(zh-CN) h2 { font-size: clamp(40px, 3.9vw, 72px); }
+  body.stage section { padding: 28px 0 24px; }
+  body.stage .hero { padding: 12px 0; }
+  body.stage .eyebrow { margin-bottom: 12px; }
+  body.stage .hero .lede { margin-top: 16px; }
+  body.stage .hero .desk { margin-top: 18px; gap: 10px; }
+  body.stage .ledger td { height: 30px; padding-top: 3px; padding-bottom: 3px; }
+  body.stage .ledger-scene .sheet, body.stage #ledger .sheet { margin-top: 16px; }
+  body.stage .roles { margin-top: 24px; }
+  body.stage .role { padding-top: 18px; padding-bottom: 20px; }
+  body.stage .role-shape { height: 72px; }
+  body.stage .role-sub { margin-bottom: 10px; padding-bottom: 10px; }
+}
+@media (max-height: 760px) {
+  body.stage .ledger td { height: 26px; padding-top: 2px; padding-bottom: 2px; }
+  body.stage .ledger th { padding-top: 6px; padding-bottom: 4px; }
+  body.stage .sheet-desk { padding-top: 10px; padding-bottom: 10px; }
+  body.stage .role-shape { height: 60px; }
+  body.stage .role-verb { font-size: clamp(44px, 5vw, 72px); }
+  body.stage .role li { padding-top: 1px; padding-bottom: 1px; }
+  body.stage .never-label { margin-top: 10px; }
+}
 .stage-hud { position: fixed; left: 50%; top: 13px; transform: translateX(-50%); z-index: 40; padding: 7px 12px; white-space: nowrap; border: 1px solid var(--line); border-radius: 999px; background: var(--sheet); font: 500 calc(11px * var(--scale)) / 1.4 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); transition: opacity 0.6s; }
 .stage-hud.quiet { opacity: 0; }
 .stage-hud.quiet:hover { opacity: 1; }
@@ -563,9 +606,10 @@ body.stage .timetable td { padding-top: 6px; padding-bottom: 6px; }
 }
 
 @media print {
-  .top, .needs-js, .stage-hud, .copy { display: none !important; }
+  .top, .needs-js, .stage-hud, .copy, .skip { display: none !important; }
   body, .night, .start-scene, .covers-scene, .role, .standing, .lane, .code, .cmd, .console { background: #fff !important; color: #000 !important; }
   .night *, .role *, .standing *, .lane *, .code, .code *, .cmd, .ns-word, .safety-list b, .safety-list li, .lane-end, .entry-what { color: #000 !important; }
+  .chip.locked, h2 code, .foot, .foot * { color: #000 !important; background: none !important; border-color: #000 !important; }
   .code, .cmd, pre { white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid #999 !important; box-shadow: none !important; }
   .role { border: 1px solid #999; }
   .reveal, .kw > span { opacity: 1; transform: none; }

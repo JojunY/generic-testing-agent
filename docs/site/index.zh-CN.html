@@ -73,7 +73,7 @@
   <div class="wrap">
     <p class="eyebrow">同样的十二个，落在纸面上</p>
     <h2 data-kinetic>每一个判定，<em>都凭证据。</em></h2>
-    <div class="sheet reveal">
+    <div data-stop class="sheet reveal">
       <div class="sheet-top"><span>判定</span><span>裁判：gtaw — 内部没有模型</span></div>
       <div class="ledger-wrap">
         <table class="ledger" id="ledger-table">
@@ -119,7 +119,7 @@
 Reservation inventoryDown(String security, long quantity, Throwable cause) {
     return new Reservation(<mark>true</mark>);
 }</pre>
-    <div class="versus">
+    <div data-stop class="versus">
       <article class="lane lane-self reveal">
         <p class="lane-label"><svg class="tok tok-ai" aria-hidden="true"><use href="#s-blob"/></svg>模型给自己打分</p>
         <h3>它断言的是代码现在的行为。</h3>
@@ -156,7 +156,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
     <h2 data-kinetic>三方，<em class="nb">各司其职。</em></h2>
     <p class="lede">银行把这叫做经办与复核：录入的人，永远不是批准的人。gta 把这条规矩用在测试上。</p>
   </div>
-  <div class="roles">
+  <div data-stop class="roles">
     <article class="role role-ai reveal">
       <div class="role-shape" aria-hidden="true"><i class="shape-blob"></i></div>
       <p class="role-who">Agent</p>
@@ -198,7 +198,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
       <p class="role-verb">签</p>
       <p class="role-sub">开发者 · 产品负责人</p>
       <ul class="does">
-        <li>回答问题，通常一句 <code>OK</code></li>
+        <li>回答问题，通常一句&nbsp;<code>OK</code></li>
         <li>批准规格</li>
         <li>确认缺陷</li>
       </ul>
@@ -243,7 +243,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
         </div>
       </aside>
     </div>
-    <div class="evidence needs-js" id="evidence" hidden>
+    <div data-stop class="evidence needs-js" id="evidence" hidden>
       <p class="evidence-title">这次运行在仓库里留下了什么</p>
       <div class="tabs" role="tablist" id="tabs" aria-label="这次运行留下的文件"></div>
       <div class="tab-body" id="tab-body" role="tabpanel" tabindex="0"></div>
@@ -258,7 +258,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
     <p class="eyebrow">04 — 覆盖范围</p>
     <h2 data-kinetic>Spring 服务里的<em>每一种流程。</em></h2>
     <p class="lede">“通用”指的是用 Spring 构建的 Java 服务的每一种入口，而不是每一种技术栈。下表每一行都是本仓库示例服务中的一个流程，以及 gtaw 在暴露其预埋缺陷的场景上锁定的值。</p>
-    <div class="timetable-wrap reveal">
+    <div data-stop class="timetable-wrap reveal">
       <table class="timetable">
         <caption class="sr">流程类型，以及示例服务中的一个流程和 gtaw 锁定的值</caption>
         <thead><tr><th>流程类型</th><th>流程</th><th>示例服务</th><th>锁定值</th></tr></thead>
@@ -300,17 +300,17 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
       <li><span class="ns-word">UAT</span><span class="ns-tag">不提供服务</span></li>
       <li><span class="ns-word">PROD</span><span class="ns-tag">不提供服务</span></li>
     </ul>
-    <ul class="safety-list reveal">
+    <ul data-stop class="safety-list reveal">
       <li><b>不碰已部署的环境。</b>测试只在开发机或 CI 上运行，依赖用内嵌或假的实现。没有任何模式会指向 SIT、UAT 或生产环境。</li>
       <li><b>不借用你的身份。</b>gtaw 每次运行测试都会切断云凭据，并移除你的 Spring profile：即使终端指向 UAT，测试也不会加载 UAT 的配置。</li>
       <li><b>不改生产代码。</b>条目范围之外的改动会被还原。缺陷只会被标注并上报，绝不会被悄悄修掉。</li>
     </ul>
-    <div class="standing reveal">
+    <div data-stop class="standing reveal">
       <p class="standing-title">目前的状态</p>
       <div class="standing-grid">
         <div>
           <p class="standing-label st-green">已验证</p>
-          <p>裁判。gtaw 有单元测试（行覆盖率门槛 90&nbsp;%）和六套脚本化的端到端运行，其中由脚本扮演 agent。四个示例服务里预埋的 21 个缺陷全部被发现并标注。</p>
+          <p>裁判。gtaw 有单元测试（行覆盖率门槛 90&nbsp;%）和六套脚本化的端到端运行，其中由脚本扮演 agent。四个示例服务中，脚本化流程覆盖到的 19 个预埋缺陷全部被发现并标注；另外 2 个留给真实模型的运行。</p>
         </div>
         <div>
           <p class="standing-label st-amber">尚未验证</p>
@@ -431,7 +431,8 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   "copy": "复制",
   "copied": "已复制",
   "stConfirmed": "你已确认缺陷",
-  "copyFailed": "已选中，请按 Ctrl+C"
+  "copyFailed": "已选中，请按 Ctrl+C",
+  "whoLocked": "已锁定"
 }</script>
 <script defer src="assets/js/run-data.zh-CN.js"></script>
 <script defer src="assets/js/art.js"></script>
