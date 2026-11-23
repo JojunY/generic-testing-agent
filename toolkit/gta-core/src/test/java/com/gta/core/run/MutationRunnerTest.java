@@ -1,6 +1,7 @@
 package com.gta.core.run;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -181,10 +182,18 @@ class MutationRunnerTest {
                 </mutations>
                 XML
                 """);
+        Path stale = repo.resolve(".gta/work/pit/lib/junit-platform-launcher-1.10.2.jar");
+        Files.createDirectories(stale.getParent());
+        Files.writeString(stale, "an earlier run's jar");
+        Path staleReport = repo.resolve(".gta/work/pit/report/index.html");
+        Files.createDirectories(staleReport.getParent());
+        Files.writeString(staleReport, "an earlier run's report");
 
         Map<String, Object> out =
                 new MutationRunner(new com.gta.core.config.GtaPaths(repo), config, java.toString()).changed("base");
 
+        assertFalse(Files.exists(stale), "jars of an earlier version never join the classpath");
+        assertFalse(Files.exists(staleReport), "a run without mutants never reads the report of the run before");
         assertEquals(List.of("a.P"), out.get("classes"));
         assertEquals(
                 2,

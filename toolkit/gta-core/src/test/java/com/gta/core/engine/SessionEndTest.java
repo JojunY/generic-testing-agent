@@ -5,9 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.gta.core.change.ChangeChecker;
 import com.gta.core.config.GtaPaths;
+import com.gta.core.oracle.Lock;
+import com.gta.core.oracle.OracleShard;
+import com.gta.core.plan.PlanItem;
 import com.gta.core.run.RunResult;
+import com.gta.core.run.TestOutcome;
 import com.gta.core.run.TestRunnerFake;
 import com.gta.core.state.ItemStatus;
+import com.gta.core.state.StateStore;
 import com.gta.core.state.WorkState;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -82,5 +87,55 @@ class SessionEndTest {
         assertTrue(sessionEnd().report("md").startsWith("# gta report"));
         assertTrue(sessionEnd().report("pr-comment").startsWith("## gta — behaviour & test report"));
         assertTrue(!Files.exists(paths.state()), "reports never write working state");
+    }
+
+    private static TestOutcome outcome(String outcome) {
+        TestOutcome c = new TestOutcome();
+        c.outcome = outcome;
+        c.tags.add("scenario:order.create/s01");
+        return c;
+    }
+
+    private WorkState pinned() {
+        PlanItem item = OrderServiceTestData.item();
+        item.intent = "reproducing";
+        OrderServiceTestData.plan(paths, item);
+        WorkState st = new WorkState();
+        WorkState.ItemState s = new WorkState.ItemState();
+        s.id = OrderServiceTestData.ITEM;
+        s.status = ItemStatus.DEFECT_FOUND;
+        s.intentOverride = "known-defect";
+        s.baseline = new ChangeChecker(paths).capture();
+        s.lock = new Lock();
+        s.lock.tokens.add("201");
+        st.items.put(s.id, s);
+        return st;
+    }
+
+    @Test
+    void shouldPassAFixedDefectOnceItsPinIsRemoved() {
+        WorkState st = pinned();
+
+        sessionEnd().releaseFixedDefects(st, List.of(outcome("passed")));
+
+        WorkState.ItemState s = st.items.get(OrderServiceTestData.ITEM);
+        assertEquals(ItemStatus.PASSED, s.status, "plan §5.4: defect-found → passed");
+        assertEquals("hardening", new StateStore(paths).planItem(OrderServiceTestData.ITEM).intent);
+        assertEquals(
+                "hardening", OracleShard.read(paths.oracleShard("order.create")).get(OrderServiceTestData.ITEM).intent);
+    }
+
+    @Test
+    void shouldKeepADefectPinnedWhileItStillReproducesOrThePinFails() {
+        WorkState st = pinned();
+
+        sessionEnd().releaseFixedDefects(st, List.of(outcome("known-defect")));
+        assertEquals(ItemStatus.DEFECT_FOUND, st.items.get(OrderServiceTestData.ITEM).status, "still reproduces");
+
+        sessionEnd().releaseFixedDefects(st, List.of(outcome("failed")));
+        assertEquals(
+                ItemStatus.DEFECT_FOUND,
+                st.items.get(OrderServiceTestData.ITEM).status,
+                "fixed but still pinned: the person removes the pin first");
     }
 }

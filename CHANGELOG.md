@@ -33,6 +33,18 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- A pinned defect that has been fixed now leaves `defect-found` (plan §5.4): once its `@KnownDefect` pin is removed and the test passes in the session-end run, the item is `passed`, its intent becomes `hardening`, and the shard and ledger are committed.
+- Fixes recovered from two review branches that were never merged:
+  - gate ②: a scenario counts as verified on the base only through its own lock, so a renamed scenario, or one that copies another's text, needs a test;
+  - the same reviewer change in two review rounds counts as a repeat failure and goes to a person;
+  - a "rest default" answer records the invariants it settles as `defaulted`, not `confirmed` (plan §3.5.3);
+  - a reply that answers part of a question round keeps its changes for the analyst;
+  - a failed pin attempt keeps the confirmed defect's fingerprint, which `@KnownDefect(failure)` names;
+  - deleting one of two identical locked assertions is a structural change of the oracle;
+  - `setRound` no longer rewrites an answer record that carries a round;
+  - a shortened flow id starts with a letter (`search.search-2` stays as it is);
+  - a Gradle root project with its own sources and an included module is profiled as a service;
+  - `gtaw mutate` clears PIT's library folder first, so jars of an earlier version never join the classpath.
 - The scope check treated any folder named `target` as build output, so an edit to a source package such as `com.acme.target` went unchecked; only a module's own `target/` is ignored now.
 - A Gradle `<failure>` of a JVM error (`ExceptionInInitializerError`, `NoClassDefFoundError`) was read as an assertion failure; it is an error now, as with Surefire.
 - A plain HTML comment that mentions `gta:` (`<!-- TODO: ask about gta: retries -->`) crashed the spec parser; it is text now. A gta comment that is never closed is reported as `POLICY_SPEC_INVALID` with a hint.
@@ -51,13 +63,12 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
   - on Gradle, two methods whose display names agree up to a `(` (`refund (s01)`, `refund (s02)`) gave both results to the first scenario; such a case is left untagged now;
   - service mode parked the decision about a domain's seed item once per flow: the copy left after the person answered no longer cancels the passed seed or blocks every answer, it is dropped;
   - a test author's question dropped by a switch of flow or mode is asked again when the item comes back, not lost;
-  - the same reviewer change twice in a row needs a person, as any repeated failure does (plan §5.4);
   - `gtaw answer` and `gtaw note` take a reply that starts with `-` (a list) as words, not as an unknown option; a reply file that is not UTF-8 is the person's to fix (exit 20), not an internal error;
   - git's warnings and hints on stderr no longer end up in the output gtaw parses (a `hint:` before `git status` hid a changed file from the scope check);
-  - `order.order-2` (the second flow of that name) is no longer shortened to `order.2`, which is not a flow name;
   - an `application.properties` with a Latin-1 byte, which Spring Boot reads as ISO-8859-1, is no longer skipped as a whole;
   - a spec that is not UTF-8 is reported as `POLICY_SPEC_INVALID`, not as an unknown flow;
   - `produces = {MediaType.TEXT_EVENT_STREAM_VALUE}` is a server-sent event stream, as without the braces;
+  - `gtaw mutate` clears PIT's report folder first: a run without mutants no longer reads the survivors of the run before;
   - briefs show free text in single quotes (`--question '…'`, `--reason '…'`), as the agents' rules say.
 - Review round 7:
   - submit re-checks the locks of the pinned (`defect-found`) items that share the test class, not only the passed ones: changing a pinned scenario's expected value to the actual one is `POLICY_ORACLE_MODIFIED` (plan §5.3);

@@ -96,8 +96,9 @@ public final class Profiler {
         Path repository = paths.root();
         Path root = paths.moduleRoot();
         PomInfo pom = PomInfo.read(repository, paths.module());
-        if (paths.module().isEmpty() && !pom.modules.isEmpty()) {
-            // an aggregator pom has no sources of its own: profiling it would find no flows and say nothing
+        if (paths.module().isEmpty() && !pom.modules.isEmpty() && !Files.isDirectory(paths.mainJava())) {
+            // an aggregator has no sources of its own: profiling it would find no flows and say nothing (a Gradle root
+            // project with its own sources and an included build-logic or client module is a service)
             throw new GtaException(
                     ErrorCode.ENV_UNSUPPORTED_BUILD,
                     "This is a multi-module repository " + pom.modules + " and build.module is not set",

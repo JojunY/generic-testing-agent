@@ -51,6 +51,19 @@ class SpecEditorTest {
     }
 
     @Test
+    void shouldAddARoundCommentInsteadOfRewritingAnAnswerRecord() {
+        String answered = new SpecEditor(SpecTestData.CREATE_ORDER.replaceAll("<!-- gta: round=\\w+ -->\n?", ""))
+                .appendRecord(new CommentMeta(
+                        "answer", List.of(new CommentMeta.Entry("round", "R1"), new CommentMeta.Entry("text", "1A"))))
+                .text();
+
+        Spec s = SpecParser.parseText(new SpecEditor(answered).setRound("R3").text());
+
+        assertEquals("R3", s.questionRound);
+        assertEquals("R1", s.answers.get(0).get("round").orElseThrow(), "the answer record is gtaw's and stays");
+    }
+
+    @Test
     void shouldReplaceAThenValueOnlyInItsScenario() {
         String text = new SpecEditor(SpecTestData.CREATE_ORDER)
                 .replaceThenLiteral("order.create/s01", "50.00", "55.00")

@@ -183,18 +183,6 @@ class EngineTest {
         assertEquals(ItemStatus.REPAIRING, item().status, "a review may change nothing: the author submits again");
         assertEquals(ErrorCode.POLICY_OUT_OF_SCOPE_CHANGE.name(), item().lastError.code);
         assertNull(item().commit, "nothing was committed");
-
-        // the next review round changes the test the same way: the same failure twice in a row (plan §5.4)
-        WorkState again = store.load();
-        again.items.get(ITEM).status = ItemStatus.REVIEWING;
-        again.items.get(ITEM).token = TOKEN;
-        again.items.get(ITEM).reviewBaseline = new ChangeChecker(paths).capture();
-        store.save(again);
-        Files.writeString(test, "class OrderCreateIT { void t() { assertThat(status).isPositive(); } }\n");
-
-        engine().submitReview(ITEM, TOKEN, "accept", "looks right");
-
-        assertEquals(ItemStatus.NEEDS_HUMAN, item().status, item().reason);
     }
 
     @Test
@@ -1253,5 +1241,32 @@ class EngineTest {
             assertEquals(ErrorCode.USAGE_UNKNOWN_FLOW, e.code());
             assertTrue(e.hint().contains("borrow.book"), "the hint uses the running example: " + e.hint());
         }
+    }
+
+    @Test
+    void shouldAskAPersonWhenTheReviewerMakesTheSameChangeTwice() throws Exception {
+        Path test = root.resolve(new GtaPaths(root).testSourceRel("com.acme.OrderCreateIT"));
+        Files.createDirectories(test.getParent());
+        Files.writeString(test, "class OrderCreateIT { void t() { assertThat(status).isEqualTo(201); } }\n");
+        WorkState st = state(ItemStatus.REVIEWING);
+        st.items.get(ITEM).reviewBaseline = new ChangeChecker(paths).capture();
+        store.save(st);
+        for (int round = 1; round <= 2; round++) {
+            Files.writeString(test, "class OrderCreateIT { void t() { assertThat(status).isNotNull(); } }\n");
+            engine().submitReview(ITEM, TOKEN, "accept", "looks right");
+            if (round == 1) {
+                assertEquals(ItemStatus.REPAIRING, item().status);
+                WorkState again = store.load(); // the author submits again and a new review round is issued
+                WorkState.ItemState s = again.items.get(ITEM);
+                s.status = ItemStatus.REVIEWING;
+                s.token = TOKEN;
+                Files.writeString(test, "class OrderCreateIT { void t() { assertThat(status).isEqualTo(201); } }\n");
+                s.reviewBaseline = new ChangeChecker(paths).capture();
+                store.save(again);
+            }
+        }
+
+        assertEquals(ItemStatus.NEEDS_HUMAN, item().status);
+        assertTrue(item().reason.startsWith("the same failure happened twice"), item().reason);
     }
 }

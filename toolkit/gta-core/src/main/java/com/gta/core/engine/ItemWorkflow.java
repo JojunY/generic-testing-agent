@@ -803,6 +803,8 @@ final class ItemWorkflow {
         e.message = message;
         e.fingerprint = FailureClassifier.fingerprint(code.name(), message);
         e.repeats = s.lastError != null && e.fingerprint.equals(s.lastError.fingerprint) ? s.lastError.repeats + 1 : 1;
+        // the confirmed defect's failure: a failed pin attempt must not lose what @KnownDefect(failure) names
+        e.defectFingerprint = s.lastError == null ? null : s.lastError.defectFingerprint;
         return e;
     }
 

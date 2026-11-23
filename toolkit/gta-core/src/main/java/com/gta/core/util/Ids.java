@@ -81,8 +81,8 @@ public final class Ids {
     /**
      * The flow name without the words that repeat its domain (plan §9.4): {@code borrow.book-borrow} becomes
      * {@code borrow.book}, {@code stock-loan.book-stock-loan} becomes {@code stock-loan.book}. Unchanged when the domain
-     * words do not appear in the name, nothing else would be left, only a listener's {@code on} would, or what is
-     * left does not start with a letter.
+     * words do not appear in the name, nothing else would be left, only a listener's {@code on} would, or what is left
+     * does not start with a letter.
      */
     public static String withoutRepeatedDomain(String flowId) {
         int dot = flowId.indexOf('.');
@@ -99,8 +99,8 @@ public final class Ids {
                     // payment.on
                 }
                 name.subList(i, i + domain.size()).clear();
-                if (!Character.isLetter(name.get(0).charAt(0))) {
-                    return flowId; // order.order-2 (a second flow of that name): order.2 is not a flow name
+                if (!name.get(0).matches("[a-z].*")) {
+                    return flowId; // search.search-2 must not become search.2: a flow name starts with a letter
                 }
                 return flowId.substring(0, dot + 1) + String.join("-", name);
             }

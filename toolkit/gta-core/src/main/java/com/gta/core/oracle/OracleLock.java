@@ -3,8 +3,10 @@ package com.gta.core.oracle;
 import com.gta.core.util.Hashes;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Monotonic oracle lock (plan §5.3 item 3): once the THEN-derived expected values are locked, the assertions carrying
@@ -65,8 +67,10 @@ public final class OracleLock {
         if (!missing.isEmpty()) {
             return new Check(Verdict.MODIFIED, missing);
         }
-        Set<String> now = Set.copyOf(current.assertionStatements());
-        boolean allStatementsKept = now.containsAll(lock.statements);
+        // counted, not as a set: deleting one of two identical locked assertions is a change too
+        Map<String, Long> now = counts(current.assertionStatements());
+        boolean allStatementsKept = counts(lock.statements).entrySet().stream()
+                .allMatch(e -> now.getOrDefault(e.getKey(), 0L) >= e.getValue());
         return new Check(allStatementsKept ? Verdict.OK : Verdict.STRUCTURAL_CHANGE, List.of());
     }
 
@@ -91,6 +95,10 @@ public final class OracleLock {
                 .filter(stmt -> values.stream().anyMatch(v -> AssertionScanner.holds(stmt, v))
                         || names.stream().anyMatch(n -> n.matcher(stmt).find()))
                 .toList();
+    }
+
+    private static Map<String, Long> counts(List<String> statements) {
+        return statements.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
     }
 
     public static String fingerprint(List<String> statements) {
