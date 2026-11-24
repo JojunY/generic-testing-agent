@@ -51,6 +51,21 @@ final class NodeResults {
         return node("answer", extra);
     }
 
+    /**
+     * A failure message on one line for the status block: its first three non-blank lines, joined, so that an
+     * assertion's "expected: … but was: …" stays with its description.
+     */
+    static String oneLine(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.lines()
+                .map(String::strip)
+                .filter(l -> !l.isEmpty())
+                .limit(3)
+                .collect(java.util.stream.Collectors.joining(" "));
+    }
+
     static String firstLines(String text, int n) {
         if (text == null) {
             return "";

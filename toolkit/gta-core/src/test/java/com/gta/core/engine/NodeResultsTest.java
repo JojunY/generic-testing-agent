@@ -31,4 +31,13 @@ class NodeResultsTest {
         assertEquals("a\nb", NodeResults.firstLines("a\nb\nc", 2));
         assertEquals("", NodeResults.firstLines(null, 2));
     }
+
+    @Test
+    void shouldKeepAnAssertionsExpectedAndActualValuesOnOneLine() {
+        assertEquals(
+                "AssertionFailedError: [HTTP status code] expected: 503 but was: 201",
+                NodeResults.oneLine(
+                        "AssertionFailedError: [HTTP status code] \nexpected: 503\n but was: 201\n\tat x.y(Z.java:1)"));
+        assertEquals("", NodeResults.oneLine(null));
+    }
 }

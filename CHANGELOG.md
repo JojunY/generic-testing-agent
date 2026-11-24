@@ -33,6 +33,8 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- Status block wording (plan §5.10): the approval prompt says the spec waits for your approval, not for answers; a failed test keeps its expected and actual values on its line; a suspected defect asks "is it a product defect?" instead of repeating the reviewer's reason; at the end of a session "Needs you" says "nothing", not "nothing, continuing"; the flow prompt says a flow's number works as well as its id.
+- `scripts/site/record-demo.sh --lang zh-CN` has the scripted agents write the spec and their reasons in Chinese (`scripts/site/demo/book.spec.zh-CN.md`), and the recorded commit is marked `+local` when gta has uncommitted changes.
 - The status block says "1 defect found", not "1 defects found", and its gate line says how many locked scenarios the gate checked (none yet on a first session) instead of claiming every locked scenario; the report says "1 locked scenario checked" (plan §5.10, §8).
 - A pinned defect that has been fixed now leaves `defect-found` (plan §5.4): once its `@KnownDefect` pin is removed and the test passes in the session-end run, the item is `passed`, its intent becomes `hardening`, and the shard and ledger are committed.
 - Fixes recovered from two review branches that were never merged:

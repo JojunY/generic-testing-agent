@@ -900,7 +900,7 @@ Next: after your reply, s03 (2 scenarios left)
 - **State** (first line): flow, stage and whom it waits for; **Progress**: spec → tests passed/total → defects.
 - **What happened**: at most 5 numbered lines.
 - **Checked**: who verified what (gtaw, the reviewer, a person), only facts gtaw recorded.
-- **Needs you**: the decisions, or "nothing, continuing".
+- **Needs you**: the decisions, or "nothing, continuing" ("nothing" once the session has ended).
 - **Next**: the next step and, when it waits, the exact reply.
 - No internal words: `observed`, `defaulted`, `documented` and `characterization` read as "read from the code",
   "taken as is", "from <document>" and "locks today's behaviour".

@@ -1,6 +1,7 @@
 package com.gta.core.engine;
 
 import com.gta.core.plan.PlanItem;
+import com.gta.core.spec.Spec;
 import com.gta.core.spec.SpecParser;
 import com.gta.core.state.ItemStatus;
 import com.gta.core.state.WorkState;
@@ -42,7 +43,10 @@ final class StatusBlock {
         section(b, "section.checked", fresh.stream().filter(e -> e.check).toList(), "✓ ");
         b.append('\n').append(m.t("section.needs")).append('\n');
         if (needsYou == null || needsYou.isBlank()) {
-            b.append("  ").append(m.t("needs.nothing")).append('\n');
+            // at the end of a session nothing continues: "continuing" would contradict the next step
+            b.append("  ")
+                    .append(m.t("state.done".equals(state) ? "needs.nothing.done" : "needs.nothing"))
+                    .append('\n');
         } else {
             needsYou.lines().forEach(l -> b.append("  ").append(l).append('\n'));
         }
@@ -75,8 +79,13 @@ final class StatusBlock {
 
     /** Spec state ▸ tests passed/total ▸ defects found, for the active flow. */
     String progress(WorkState st) {
-        Path spec = ctx.paths.spec(st.activeFlow);
-        String status = Files.exists(spec) ? SpecParser.parse(spec).status() : null;
+        Path path = ctx.paths.spec(st.activeFlow);
+        Spec spec = Files.exists(path) ? SpecParser.parse(path) : null;
+        String status = spec == null ? null : spec.status();
+        // in review with every question answered, the spec waits for the person's approval, not for answers
+        if ("in-review".equals(status) && spec.openQuestions().isEmpty()) {
+            status = "in-review.approve";
+        }
         String specText = status == null ? m.t("spec.none") : m.has("spec." + status) ? m.t("spec." + status) : status;
         List<PlanItem> items = ctx.store.peekPlan().stream()
                 .filter(i -> st.activeFlow.equals(i.flowId) && !i.isFoundation())
