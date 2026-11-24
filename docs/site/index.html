@@ -48,7 +48,7 @@
       <div class="desk needs-js">
         <div class="desk-item">
           <button class="key key-ok" data-key="ok" type="button" disabled>OK <kbd>⏎</kbd></button>
-          <p class="desk-note" data-note="ok" aria-live="polite">Nothing waits for you yet.</p>
+          <p class="desk-note" data-note="ok">Nothing waits for you yet.</p>
         </div>
         <div class="desk-item">
           <button class="key key-force" data-key="force" type="button">Force green</button>
@@ -124,7 +124,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
         <p class="lane-label"><svg class="tok tok-ai" aria-hidden="true"><use href="#s-blob"/></svg>The model grades itself</p>
         <h3>It asserts what the code does.</h3>
         <p>It reads the method, writes a test that expects a booked borrow, runs it and reports success.</p>
-        <pre class="code small">assertThat(response).hasStatus(201);</pre>
+        <pre class="code small">assertThat(response).<wbr>hasStatus(201);</pre>
         <div class="strip">
           <span class="strip-label">Expected</span>
           <span class="chips"><span class="chip on">201</span><span class="chip on">BOOKED</span></span>
@@ -137,7 +137,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
         <p class="lane-label"><svg class="tok tok-gtaw" aria-hidden="true"><use href="#s-square"/></svg>gta</p>
         <h3>It asserts what a person signed.</h3>
         <p>The analyst sees that <code>docs/business-rules.md</code> disagrees with the code and asks. A person replies <code>OK</code> to the recommended answer. gtaw runs the test, gets <code>expected: 503 but was: 201</code>, re-runs it, has it triaged and asks the person once more.</p>
-        <pre class="code small">assertThat(response).hasStatus(503);</pre>
+        <pre class="code small">assertThat(response).<wbr>hasStatus(503);</pre>
         <div class="strip">
           <span class="strip-label">Locked</span>
           <span class="chips"><span class="chip on locked">503</span><span class="chip on locked">PENDING_LOCATE</span></span>
@@ -246,7 +246,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
     <div data-stop class="evidence needs-js" id="evidence" hidden>
       <p class="evidence-title">What the run left in the repository</p>
       <div class="tabs" role="tablist" id="tabs" aria-label="Files the run left"></div>
-      <div class="tab-body" id="tab-body" role="tabpanel" tabindex="0"></div>
+      <div class="tab-body" id="tab-body" role="tabpanel"></div>
     </div>
     <p class="caption" id="run-meta"></p>
     <noscript><p class="caption">The replay needs JavaScript. The recording itself is in <code>assets/js/run-data.js</code>.</p></noscript>
@@ -329,9 +329,9 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   <div class="wrap">
     <p class="eyebrow">06 — Start</p>
     <h2 data-kinetic>One script, <em>then</em> <span class="nb"><code>/gta</code>.</span></h2>
-    <p class="lede">The script builds gta once, installs it into your service with the wrapper pinned to that jar, and runs <code>./gtaw doctor</code>. Then open the service in VS Code, IntelliJ or OpenCode.</p>
+    <p class="lede">The script builds gta once, installs it into your service with the wrapper pinned to that jar, and runs <code>./gtaw doctor</code>. Then open the service in VS&nbsp;Code, IntelliJ or OpenCode.</p>
     <ol class="steps reveal">
-      <li><span class="step-n">1</span><div><p class="step-label">In a checkout of this repository</p><pre class="code cmd" data-copy>scripts/install-local.sh path/to/your-service</pre></div></li>
+      <li><span class="step-n">1</span><div><p class="step-label">In a checkout of this repository</p><pre class="code cmd" data-copy>scripts/install-local.sh <span class="nb">path/to/your-service</span></pre></div></li>
       <li><span class="step-n">2</span><div><p class="step-label">In GitHub Copilot or OpenCode, inside your service</p><pre class="code cmd" data-copy>/gta</pre></div></li>
       <li><span class="step-n">3</span><div><p class="step-label">When gta asks</p><pre class="code cmd">OK</pre></div></li>
     </ol>
@@ -353,15 +353,16 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   </div>
 </footer>
 
-<div class="stage-hud needs-js" id="stage-hud" hidden>Stage · <kbd>→</kbd> next · <kbd>←</kbd> back · <kbd>F</kbd> full screen · <kbd>P</kbd> leave</div>
+<div class="stage-hud needs-js" id="stage-hud" hidden>Stage · <kbd>→</kbd> next · <kbd>←</kbd> back · <kbd>F</kbd> full screen · <kbd>P</kbd> leave · <kbd>?</kbd> keys</div>
 <div class="help needs-js" id="help" hidden role="dialog" aria-modal="true" aria-labelledby="help-title">
   <div class="help-card">
     <p class="help-title" id="help-title">Keys</p>
     <dl>
       <dt><kbd>P</kbd></dt><dd>Stage mode: larger type, one step per key press</dd>
-      <dt><kbd>→</kbd> <kbd>Space</kbd> <kbd>PgDn</kbd></dt><dd>Next step: OK where the page waits for you, the next reply in the replay, the rest of a scene taller than the screen, or the next scene</dd>
+      <dt><kbd>→</kbd> <kbd>Space</kbd> <kbd>PgDn</kbd></dt><dd>Next step: OK where the page waits for you, the next reply in the replay (once a ticket prints, first an attempt to change it), the rest of a scene taller than the screen, or the next scene</dd>
       <dt><kbd>←</kbd> <kbd>PgUp</kbd></dt><dd>Back: to the top of this scene, then the scene before</dd>
       <dt><kbd>Enter</kbd></dt><dd>OK on the title and the ledger</dd>
+      <dt><kbd>G</kbd></dt><dd>Force green on the title and the ledger</dd>
       <dt><kbd>F</kbd></dt><dd>Full screen</dd>
       <dt><kbd>Esc</kbd></dt><dd>Close</dd>
     </dl>
@@ -398,7 +399,8 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   "penGtaw": "gtaw is deciding",
   "penDone": "done for now",
   "replyHintWrong": "This is a recording: the reply that was given here is {reply}.",
-  "replyDone": "The run is over: one scenario passed, one defect found and pinned. Your part was a flow number and three times OK.",
+  "replyDone": "The run is over: one scenario passed, one defect found and pinned. Your part was five replies: /gta, a flow number and three OKs. The gate’s “concerns” is not a failure: it asks the pull request’s reviewer to check the replies you gave in chat.",
+  "logEmpty": "Nothing yet. Your first reply, /gta, starts the run.",
   "replayAgain": "Replay",
   "actorYou": "you",
   "actorAnalyst": "analyst",

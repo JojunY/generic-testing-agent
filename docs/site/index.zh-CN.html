@@ -48,7 +48,7 @@
       <div class="desk needs-js">
         <div class="desk-item">
           <button class="key key-ok" data-key="ok" type="button" disabled>OK <kbd>⏎</kbd></button>
-          <p class="desk-note" data-note="ok" aria-live="polite">暂时没有需要你处理的。</p>
+          <p class="desk-note" data-note="ok">暂时没有需要你处理的。</p>
         </div>
         <div class="desk-item">
           <button class="key key-force" data-key="force" type="button">强制变绿</button>
@@ -124,7 +124,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
         <p class="lane-label"><svg class="tok tok-ai" aria-hidden="true"><use href="#s-blob"/></svg>模型给自己打分</p>
         <h3>它断言的是代码现在的行为。</h3>
         <p>它读了这个方法，写出一个期望“借券成功”的测试，运行，然后报告成功。</p>
-        <pre class="code small">assertThat(response).hasStatus(201);</pre>
+        <pre class="code small">assertThat(response).<wbr>hasStatus(201);</pre>
         <div class="strip">
           <span class="strip-label">期望值</span>
           <span class="chips"><span class="chip on">201</span><span class="chip on">BOOKED</span></span>
@@ -137,7 +137,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
         <p class="lane-label"><svg class="tok tok-gtaw" aria-hidden="true"><use href="#s-square"/></svg>gta</p>
         <h3>它断言的是人签过字的期望。</h3>
         <p>analyst 发现 <code>docs/business-rules.md</code> 与代码不一致，于是提问。人对推荐答案回复 <code>OK</code>。gtaw 运行测试，得到 <code>expected: 503 but was: 201</code>，重跑确认，交给 reviewer 分流，然后再问一次人。</p>
-        <pre class="code small">assertThat(response).hasStatus(503);</pre>
+        <pre class="code small">assertThat(response).<wbr>hasStatus(503);</pre>
         <div class="strip">
           <span class="strip-label">锁定值</span>
           <span class="chips"><span class="chip on locked">503</span><span class="chip on locked">PENDING_LOCATE</span></span>
@@ -161,7 +161,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
       <div class="role-shape" aria-hidden="true"><i class="shape-blob"></i></div>
       <p class="role-who">Agent</p>
       <p class="role-verb">写</p>
-      <p class="role-sub">analyst · test author · reviewer</p>
+      <p class="role-sub">分析员 · 测试作者 · 评审员</p>
       <ul class="does">
         <li>阅读代码</li>
         <li>编写规格，附带问题和推荐答案</li>
@@ -246,7 +246,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
     <div data-stop class="evidence needs-js" id="evidence" hidden>
       <p class="evidence-title">这次运行在仓库里留下了什么</p>
       <div class="tabs" role="tablist" id="tabs" aria-label="这次运行留下的文件"></div>
-      <div class="tab-body" id="tab-body" role="tabpanel" tabindex="0"></div>
+      <div class="tab-body" id="tab-body" role="tabpanel"></div>
     </div>
     <p class="caption" id="run-meta"></p>
     <noscript><p class="caption">重放需要 JavaScript。录制数据在 <code>assets/js/run-data.zh-CN.js</code>。</p></noscript>
@@ -256,7 +256,7 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
 <section class="covers-scene" id="covers" data-scene>
   <div class="wrap">
     <p class="eyebrow">04 — 覆盖范围</p>
-    <h2 data-kinetic>Spring 服务里的<em>每一种流程。</em></h2>
+    <h2 data-kinetic>Spring <span class="nb">服务里的</span><em>每一种流程。</em></h2>
     <p class="lede">“通用”指的是用 Spring 构建的 Java 服务的每一种入口，而不是每一种技术栈。下表每一行都是本仓库示例服务中的一个流程，以及 gtaw 在暴露其预埋缺陷的场景上锁定的值。</p>
     <div data-stop class="timetable-wrap reveal">
       <table class="timetable">
@@ -329,9 +329,9 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   <div class="wrap">
     <p class="eyebrow">06 — 开始</p>
     <h2 data-kinetic>一个脚本，<em>然后</em><span class="nb"><code>/gta</code>。</span></h2>
-    <p class="lede">脚本会构建一次 gta，把它安装到你的服务里（wrapper 固定指向这个 jar），并运行 <code>./gtaw doctor</code>。之后用 VS Code、IntelliJ 或 OpenCode 打开你的服务。</p>
+    <p class="lede">脚本会构建一次 gta，把它安装到你的服务里（wrapper 固定指向这个 jar），并运行 <code>./gtaw doctor</code>。之后用 VS&nbsp;Code、IntelliJ 或 OpenCode 打开你的服务。</p>
     <ol class="steps reveal">
-      <li><span class="step-n">1</span><div><p class="step-label">在本仓库的检出目录中</p><pre class="code cmd" data-copy>scripts/install-local.sh path/to/your-service</pre></div></li>
+      <li><span class="step-n">1</span><div><p class="step-label">在本仓库的检出目录中</p><pre class="code cmd" data-copy>scripts/install-local.sh <span class="nb">path/to/your-service</span></pre></div></li>
       <li><span class="step-n">2</span><div><p class="step-label">在你的服务里，打开 GitHub Copilot 或 OpenCode</p><pre class="code cmd" data-copy>/gta</pre></div></li>
       <li><span class="step-n">3</span><div><p class="step-label">当 gta 提问时</p><pre class="code cmd">OK</pre></div></li>
     </ol>
@@ -353,15 +353,16 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   </div>
 </footer>
 
-<div class="stage-hud needs-js" id="stage-hud" hidden>演示 · <kbd>→</kbd> 下一步 · <kbd>←</kbd> 返回 · <kbd>F</kbd> 全屏 · <kbd>P</kbd> 退出</div>
+<div class="stage-hud needs-js" id="stage-hud" hidden>演示 · <kbd>→</kbd> 下一步 · <kbd>←</kbd> 返回 · <kbd>F</kbd> 全屏 · <kbd>P</kbd> 退出 · <kbd>?</kbd> 按键</div>
 <div class="help needs-js" id="help" hidden role="dialog" aria-modal="true" aria-labelledby="help-title">
   <div class="help-card">
     <p class="help-title" id="help-title">按键</p>
     <dl>
       <dt><kbd>P</kbd></dt><dd>演示模式：字更大，每按一次走一步</dd>
-      <dt><kbd>→</kbd> <kbd>空格</kbd> <kbd>PgDn</kbd></dt><dd>下一步：页面在等你时按 OK，重放中给出下一个回复，场景超出一屏时显示其余部分，否则进入下一节</dd>
+      <dt><kbd>→</kbd> <kbd>空格</kbd> <kbd>PgDn</kbd></dt><dd>下一步：页面在等你时按 OK，重放中给出下一个回复（票打出后，先试着改一次票上的值），场景超出一屏时显示其余部分，否则进入下一节</dd>
       <dt><kbd>←</kbd> <kbd>PgUp</kbd></dt><dd>返回：先回到本节顶部，再到上一节</dd>
       <dt><kbd>Enter</kbd></dt><dd>在首屏和账页上按 OK</dd>
+      <dt><kbd>G</kbd></dt><dd>在首屏和账页上“强制变绿”</dd>
       <dt><kbd>F</kbd></dt><dd>全屏</dd>
       <dt><kbd>Esc</kbd></dt><dd>关闭</dd>
     </dl>
@@ -398,12 +399,13 @@ Reservation inventoryDown(String security, long quantity, Throwable cause) {
   "penGtaw": "gtaw 在判定",
   "penDone": "本轮结束",
   "replyHintWrong": "这是一段录制：当时在这里的回复是 {reply}。",
-  "replyDone": "运行结束：一个场景通过，一个缺陷被发现并标注。你做的只是选了一个流程，回复了三次 OK。",
+  "replyDone": "运行结束：一个场景通过，一个缺陷被发现并标注。你一共回复了五次：/gta、一个流程编号和三次 OK。门禁的“concerns”不是失败：它请拉取请求的评审者核对你在聊天里给出的回复。",
+  "logEmpty": "还没有内容。你的第一条回复 /gta 会开始这次运行。",
   "replayAgain": "重放",
   "actorYou": "你",
-  "actorAnalyst": "analyst",
+  "actorAnalyst": "分析员",
   "actorAuthor": "测试作者",
-  "actorReviewer": "reviewer",
+  "actorReviewer": "评审员",
   "actorGtaw": "gtaw",
   "didWriteSpec": "编写规格 {file}",
   "didApplyAnswer": "根据你的回答改写 s02 的 THEN",
