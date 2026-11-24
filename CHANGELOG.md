@@ -33,6 +33,7 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- The status block says "1 defect found", not "1 defects found", and its gate line says how many locked scenarios the gate checked (none yet on a first session) instead of claiming every locked scenario; the report says "1 locked scenario checked" (plan §5.10, §8).
 - A pinned defect that has been fixed now leaves `defect-found` (plan §5.4): once its `@KnownDefect` pin is removed and the test passes in the session-end run, the item is `passed`, its intent becomes `hardening`, and the shard and ledger are committed.
 - Fixes recovered from two review branches that were never merged:
   - gate ②: a scenario counts as verified on the base only through its own lock, so a renamed scenario, or one that copies another's text, needs a test;

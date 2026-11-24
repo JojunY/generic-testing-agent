@@ -91,12 +91,24 @@ final class SessionEnd {
         }
         ctx.commit(files.stream().distinct().toList(), "docs(gta): session report " + st.session.id);
         st.sessionEnded = true;
-        st.event(true, "chk.gate", gate.decision);
+        recordGateCheck(st, gate);
         st.event(false, "ev.session.ended", gate.decision);
         more.put("gate", gate.decision);
         more.put("report", paths.rel(reportFile));
         more.put("prComment", paths.rel(dir.resolve("pr-comment.md")));
         return done(why, more);
+    }
+
+    /**
+     * The status block's line for the gate (plan §8) says how many locked scenarios it checked: on a first session the
+     * base branch has none yet, and the line must not claim more than the gate did.
+     */
+    static void recordGateCheck(WorkState st, Gate.Result gate) {
+        switch (gate.checkedScenarios) {
+            case 0 -> st.event(true, "chk.gate.none", gate.decision);
+            case 1 -> st.event(true, "chk.gate.one", gate.decision);
+            default -> st.event(true, "chk.gate", String.valueOf(gate.checkedScenarios), gate.decision);
+        }
     }
 
     /**

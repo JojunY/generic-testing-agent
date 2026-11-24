@@ -42,7 +42,10 @@ public final class Reporter {
                     .append(gate.base)
                     .append("`, ")
                     .append(gate.checkedScenarios)
-                    .append(" locked scenarios checked)\n\n");
+                    .append(
+                            gate.checkedScenarios == 1
+                                    ? " locked scenario checked)\n\n"
+                                    : " locked scenarios checked)\n\n");
             if (!gate.failures.isEmpty()) {
                 b.append("### Failures\n\n");
                 gate.failures.forEach(c -> b.append("- ")

@@ -586,6 +586,8 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   .ledger:not(.ledger-mini) .c-lock { grid-column: 1 / -1; }
   .ledger:not(.ledger-mini) .c-lock:not(.has) { display: none; }
   .ledger-mini .c-lock { display: none; }
+  /* stacked, the console fills the stage and the ticket area sits below it: the empty hint would point off screen */
+  body.stage .slot { display: none; }
 }
 @media (max-width: 700px) {
   body { font-size: 16.5px; }

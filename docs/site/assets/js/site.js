@@ -924,13 +924,15 @@
       for (var n = 0; n < stops.length; n++) { // otherwise the first block not seen whole
         if (stops[n].bottom > height + 8) return window.scrollBy({ top: stops[n].top - lead, behavior: smooth });
       }
-      // otherwise a plain step: never past what was not on screen, never cutting a line that crosses the bottom edge (it
-      // starts the next screen), and never a short last one
+      // otherwise a plain step: never past what was not on screen, never cutting a block that crosses the bottom edge
+      // (it starts the next screen, from its own top rather than from a line inside it), and never a short last one
       [0.25, 0.5, 0.75].forEach(function (x) {
         var under = document.elementsFromPoint(window.innerWidth * x, height - 2)[0];
         if (!under || !scene.contains(under)) return;
-        var top = under.getBoundingClientRect().top;
-        if (top > lead + 120 && top < height) reach = Math.min(reach, top - lead);
+        for (var node = under; node && node !== scene; node = node.parentElement) {
+          var top = node.getBoundingClientRect().top;
+          if (top > lead + 120 && top < height) reach = Math.min(reach, top - lead);
+        }
       });
       var step = rest <= reach ? rest : Math.max(Math.min(reach, rest - 120), 1);
       return window.scrollBy({ top: step, behavior: smooth });

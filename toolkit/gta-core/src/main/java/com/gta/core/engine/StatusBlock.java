@@ -83,7 +83,8 @@ final class StatusBlock {
                 .toList();
         long passed = count(st, items, ItemStatus.PASSED);
         long defects = count(st, items, ItemStatus.DEFECT_FOUND);
-        return m.t("progress", specText, passed, items.size(), defects);
+        String found = defects == 1 ? m.t("defects.one") : m.t("defects.many", defects);
+        return m.t("progress", specText, passed, items.size(), found);
     }
 
     private static long count(WorkState st, List<PlanItem> items, ItemStatus status) {

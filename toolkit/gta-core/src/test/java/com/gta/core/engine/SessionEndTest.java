@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.gta.core.change.ChangeChecker;
 import com.gta.core.config.GtaPaths;
+import com.gta.core.gate.Gate;
 import com.gta.core.oracle.Lock;
 import com.gta.core.oracle.OracleShard;
 import com.gta.core.plan.PlanItem;
@@ -80,6 +81,40 @@ class SessionEndTest {
                 new ChangeChecker(paths).capture().head,
                 s.baseline.head,
                 "its repair is checked from now: the developer's later commit is not out of scope");
+    }
+
+    @Test
+    void shouldSayHowManyLockedScenariosTheGateChecked() {
+        Messages en = Messages.of("en");
+        Messages zh = Messages.of("zh-CN");
+        for (int checked : new int[] {0, 1, 3}) {
+            WorkState st = new WorkState();
+            Gate.Result gate = new Gate.Result();
+            gate.decision = "pass";
+            gate.checkedScenarios = checked;
+
+            SessionEnd.recordGateCheck(st, gate);
+
+            WorkState.Event e = st.events.get(0);
+            assertTrue(e.check, "the gate is a check, not something that happened");
+            String line = en.t(e.key, e.args.toArray());
+            String chinese = zh.t(e.key, e.args.toArray());
+            assertTrue(line.endsWith(": pass"), line);
+            switch (checked) {
+                case 0 -> {
+                    assertTrue(line.contains("no locked scenario yet"), "it claims no check it did not make: " + line);
+                    assertTrue(chinese.contains("还没有锁定的场景"), chinese);
+                }
+                case 1 -> {
+                    assertTrue(line.contains("checked 1 locked scenario against"), line);
+                    assertTrue(chinese.contains("检查 1 个锁定的场景"), chinese);
+                }
+                default -> {
+                    assertTrue(line.contains("checked 3 locked scenarios against"), line);
+                    assertTrue(chinese.contains("检查 3 个锁定的场景"), chinese);
+                }
+            }
+        }
     }
 
     @Test
