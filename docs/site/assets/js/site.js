@@ -114,6 +114,11 @@
       line.verdict.textContent = '';
       if (state.text) line.verdict.appendChild(el('span', state.look, t(state.text)));
       line.who.textContent = '';
+      line.who.classList.toggle('is-locked', !!state.locked);
+      if (state.locked) { // the values are gtaw's now
+        line.who.appendChild(token('gtaw'));
+        line.who.appendChild(el('span', 'sr', t('whoLocked')));
+      }
       if (state.who) {
         line.who.appendChild(token(state.who));
         line.who.appendChild(document.createTextNode(t({ ai: 'whoAi', gtaw: 'whoGtaw', you: 'whoYou' }[state.who])));
@@ -185,7 +190,14 @@
       var passed = rows.filter(function (row) { return row.state === 'passed'; }).length;
       var text = waiting > 0 ? (waiting === 1 ? t('okOne') : t('okMany', { n: waiting }))
         : open === 0 ? t('okDone', { p: passed, d: rows.length - passed }) : t('okNone');
-      all('[data-key="ok"]').forEach(function (key) { key.disabled = waiting === 0; });
+      all('[data-key="ok"]').forEach(function (key) {
+        var focused = document.activeElement === key;
+        key.disabled = waiting === 0;
+        if (focused && key.disabled) { // keep the keyboard user's place
+          var force = key.closest('.desk').querySelector('[data-key="force"]');
+          if (force) force.focus({ preventScroll: true });
+        }
+      });
       if (text === said) return; // a live region announces each message once
       said = text;
       all('[data-note="ok"]').forEach(function (note) {
@@ -280,7 +292,7 @@
     board = {
       ok: ok,
       waiting: function () { return rows.some(function (row) { return row.state === 'waiting'; }); },
-      stage: function (on) { art.setMarkScale(on ? 1.4 : 1); }
+      stage: function (on) { art.setMarkScale(on ? 1.15 : 1); }
     };
     run();
   }
@@ -345,7 +357,11 @@
       'review-s01': function () { move(0, 'review'); },
       's01-passed': function () { move(0, 'passed'); printTicket(rows[0], 'passed'); },
       'author-s02': function () { move(1, 'writing'); },
-      's02-failed': function () { move(1, 'running'); timers.push(later(450, function () { move(1, 'failed'); })); },
+      's02-failed': function () {
+        if (reduced) return move(1, 'failed'); // every line of a beat lands at once: keep the order
+        move(1, 'running');
+        timers.push(later(450, function () { move(1, 'failed'); }));
+      },
       triage: function () { move(1, 'triage'); },
       defect: function () { move(1, 'waiting'); },
       'defect-confirmed': function () { move(1, 'confirmed'); },
@@ -437,12 +453,17 @@
       input.placeholder = beats[next].reply;
       key.disabled = false;
       key.firstChild.nodeValue = beats[next].reply + ' ';
-      if (typing) input.focus({ preventScroll: true });
+      if (document.body.classList.contains('stage')) return;
+      var box = form.getBoundingClientRect();
+      var seen = box.top >= 0 && box.bottom <= window.innerHeight;
+      var free = document.activeElement === document.body || $('console').contains(document.activeElement);
+      if (seen && free) (typing ? input : key).focus({ preventScroll: true });
     }
 
     var typing = false; // the reply was typed in the input, so the next one probably will be too
     function play(beat) {
       typing = document.activeElement === input;
+      if (!typing && document.activeElement === key) key.blur(); // ready() gives it back
       playing = true;
       input.disabled = true;
       key.disabled = true;
@@ -508,6 +529,7 @@
       ticket.appendChild(el('p', 'ticket-label', t('ticketThen')));
       var values = el('div', 'ticket-values');
       var note = el('p', 'ticket-try', t('ticketEdit'));
+      note.setAttribute('role', 'status');
       tokens.forEach(function (value) {
         var punch = el('input', 'punch');
         punch.value = value;
@@ -629,8 +651,9 @@
         if (event.key === 'Home') step = -index;
         if (event.key === 'End') step = tabs.length - 1 - index;
         if (step === undefined) return;
+        if (document.body.classList.contains('stage') && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) return; // they present
         event.preventDefault();
-        event.stopPropagation(); // not a stage key here
+        event.stopPropagation();
         var to = (index + step + tabs.length) % tabs.length;
         showTab(to);
         $('tab-' + to).focus();
@@ -719,14 +742,24 @@
     var top = $('top');
     var nights = all('.night');
     var ticking = false;
+    var shown = null; // the scene the reader stopped on
+    var into = 0; // and how far into it
+    var padded = []; // scenes given room below for their last stop
+    var HEAD = 56; // the header's height
+    var resizing = false;
     /** The header names the scene in view, and turns dark over the dark scenes. */
     function follow() {
       ticking = false;
+      if (!resizing) {
+        shown = currentScene();
+        into = Math.max(0, HEAD - shown.getBoundingClientRect().top);
+      }
       var id = currentScene().id;
       links.forEach(function (link) { link.classList.toggle('here', link.getAttribute('href') === '#' + id); });
+      var line = top.offsetHeight + 1; // just below the header
       var dark = nights.some(function (night) {
         var box = night.getBoundingClientRect();
-        return box.top <= 28 && box.bottom > 28;
+        return box.top <= line && box.bottom > line;
       });
       top.classList.toggle('on-night', dark);
     }
@@ -747,8 +780,12 @@
     }
 
     /** Copies text; where the browser refuses, the old way, and where that fails too, the text is selected. */
+    var said = el('p', 'sr');
+    said.setAttribute('role', 'status');
+    document.body.appendChild(said);
     function copy(text, button, pre) {
       function done() {
+        said.textContent = t('copied');
         button.textContent = t('copied');
         window.setTimeout(function () { button.textContent = t('copy'); }, 1400);
       }
@@ -767,12 +804,14 @@
           copied = false;
         }
         document.body.removeChild(area);
+        button.focus({ preventScroll: true });
         if (copied) return done();
         var range = document.createRange();
         range.selectNodeContents(pre.firstChild);
         window.getSelection().removeAllRanges();
         window.getSelection().addRange(range);
         button.textContent = t('copyFailed');
+        said.textContent = t('copyFailed');
         window.setTimeout(function () { button.textContent = t('copy'); }, 2600);
       }
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
@@ -797,9 +836,26 @@
     function staged() {
       return document.body.classList.contains('stage');
     }
-    function stage() {
+    // stage mode keeps its scene when the window changes size (full screen, another projector): the scene is the one
+    // the presenter last stopped on, read before the layout changed
+    var settle = 0;
+    window.addEventListener('resize', function () {
+      resizing = true;
+      window.clearTimeout(settle);
+      settle = window.setTimeout(function () {
+        if (staged() && shown) { // the same scene, and the same place in it as far as it still goes
+          shown.scrollIntoView({ behavior: 'instant', block: 'start' }); // not smooth: the next line measures from here
+          var further = Math.min(into, Math.max(0, shown.getBoundingClientRect().bottom - window.innerHeight));
+          if (further) window.scrollBy({ top: further, behavior: 'instant' });
+        }
+        resizing = false;
+      }, 180);
+    });
+    function stage(target) {
       var on = !staged();
-      var scene = currentScene();
+      var scene = target || currentScene();
+      shown = scene;
+      into = 0;
       document.body.classList.toggle('stage', on);
       stageKey.setAttribute('aria-pressed', on ? 'true' : 'false');
       stageKey.textContent = t(on ? 'stageOn' : 'stage');
@@ -808,6 +864,7 @@
       window.clearTimeout(hudTimer);
       if (on) hudTimer = window.setTimeout(function () { hud.classList.add('quiet'); }, 5000);
       if (board) board.stage(on);
+      if (!on) padded.splice(0).forEach(function (each) { each.style.paddingBottom = ''; });
       window.dispatchEvent(new Event('resize'));
       window.setTimeout(function () { scene.scrollIntoView({ behavior: 'auto', block: 'start' }); }, 160);
     }
@@ -840,11 +897,45 @@
           return replay.reply();
         }
       }
+      if (Math.abs(scene.getBoundingClientRect().top - HEAD) < 4) scene.style.paddingBottom = ''; // first press in it
+      var height = window.innerHeight;
       var box = scene.getBoundingClientRect();
-      if (box.bottom > window.innerHeight + 24) {
-        return window.scrollBy({ top: Math.min(box.bottom - window.innerHeight, window.innerHeight * 0.8), behavior: smooth });
+      var end = box.bottom - parseFloat(window.getComputedStyle(scene).paddingBottom); // the end of its content
+      if (end <= height + 8) return go(1);
+      var lead = HEAD + 28; // a stop puts a block this far down, just under the header
+      var reach = height - lead; // the longest step that skips nothing: the bottom of the screen comes up to the lead
+      var rest = end - height;
+      // the blocks on screen that are worth a step to bring up
+      var stops = all('[data-stop]', scene).map(function (stop) { return stop.offsetParent ? stop.getBoundingClientRect() : null; })
+        .filter(function (r) { return r && r.top >= lead + 120 && r.top <= height; });
+      // the first of them from which the rest of the scene fits on one screen goes to the top, and the scene gets the
+      // room it lacks below, so the last stop reads as a slide instead of slicing a heading at the top of the screen
+      for (var f = 0; f < stops.length; f++) {
+        var lift = stops[f].top - lead;
+        var room = lift - rest;
+        if (end - lift <= height && room <= height * 0.6) {
+          if (room > 0) {
+            scene.style.paddingBottom = parseFloat(window.getComputedStyle(scene).paddingBottom) + room + 'px';
+            padded.push(scene);
+          }
+          return window.scrollBy({ top: lift, behavior: smooth });
+        }
       }
-      return go(1);
+      for (var n = 0; n < stops.length; n++) { // otherwise the first block not seen whole
+        if (stops[n].bottom > height + 8) return window.scrollBy({ top: stops[n].top - lead, behavior: smooth });
+      }
+      // otherwise a plain step: never past what was not on screen, never cutting a block that crosses the bottom edge
+      // (it starts the next screen, from its own top rather than from a line inside it), and never a short last one
+      [0.25, 0.5, 0.75].forEach(function (x) {
+        var under = document.elementsFromPoint(window.innerWidth * x, height - 2)[0];
+        if (!under || !scene.contains(under)) return;
+        for (var node = under; node && node !== scene; node = node.parentElement) {
+          var top = node.getBoundingClientRect().top;
+          if (top > lead + 120 && top < height) reach = Math.min(reach, top - lead);
+        }
+      });
+      var step = rest <= reach ? rest : Math.max(Math.min(reach, rest - 120), 1);
+      return window.scrollBy({ top: step, behavior: smooth });
     }
     /** Back: to the top of the scene when part of it was stepped through, otherwise the scene before. */
     function back() {
@@ -864,17 +955,21 @@
       }
     }
 
-    stageKey.addEventListener('click', stage);
+    stageKey.addEventListener('click', function () { stage(); });
     $('help-close').addEventListener('click', function () { toggleHelp(false); });
     help.addEventListener('click', function (event) {
       if (event.target === help) toggleHelp(false);
     });
 
     // the other language opens at the same scene, in stage mode if this one is in it
-    all('.tool[hreflang]').forEach(function (link) {
-      link.addEventListener('click', function () {
+    var languages = all('.tool[hreflang]');
+    function point() {
+      languages.forEach(function (link) {
         link.href = link.getAttribute('href').split(/[?#]/)[0] + (staged() ? '?stage' : '') + '#' + currentScene().id;
       });
+    }
+    languages.forEach(function (link) {
+      ['click', 'auxclick', 'pointerdown', 'focus', 'contextmenu'].forEach(function (type) { link.addEventListener(type, point); });
     });
 
     document.addEventListener('keydown', function (event) {
@@ -895,12 +990,12 @@
         if (typing) target.blur();
         return;
       }
-      // in stage mode an empty reply box does not swallow the presenter's keys
-      if (typing && staged() && target.id === 'reply' && !target.value && (event.key === 'ArrowRight' || event.key === 'PageDown')) {
-        event.preventDefault();
+      // in stage mode an empty reply box does not take the presenter's keys
+      var presenting = { ArrowRight: 1, ArrowLeft: 1, PageDown: 1, PageUp: 1, ' ': 1 }[event.key];
+      if (typing && staged() && presenting && target.id === 'reply' && !target.value.trim()) {
+        target.value = '';
         target.blur();
-        advance();
-        return;
+        typing = false;
       }
       if (typing) return;
       var onControl = target && (target.tagName === 'BUTTON' || target.tagName === 'A');
@@ -914,8 +1009,8 @@
         case 'ArrowRight': case 'PageDown':
           if (staged()) { event.preventDefault(); advance(); }
           break;
-        case ' ':
-          if (staged() && !onControl) { event.preventDefault(); advance(); }
+        case ' ': // in stage mode Space presents, even on a focused button (Enter still presses it)
+          if (staged()) { event.preventDefault(); advance(); }
           break;
         case 'ArrowLeft': case 'PageUp':
           if (staged()) { event.preventDefault(); back(); }
@@ -933,5 +1028,8 @@
   var page = setUpPage();
   setUpBoard();
   setUpReplay();
-  if (/[?&]stage\b/.test(window.location.search)) page.stage(); // opened from the other language in stage mode
+  if (/[?&]stage\b/.test(window.location.search) && window.innerWidth > 700) { // opened from the other language in stage mode, at its scene
+    var at = window.location.hash ? document.getElementById(window.location.hash.slice(1)) : null;
+    page.stage(at && at.hasAttribute('data-scene') ? at : null);
+  }
 })();

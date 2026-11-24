@@ -82,6 +82,21 @@ class ReporterTest {
     }
 
     @Test
+    void shouldCountTheCheckedScenariosInTheirPlural() throws Exception {
+        Gate.Result one = gate();
+        one.checkedScenarios = 1;
+        Gate.Result none = gate();
+        none.checkedScenarios = 0;
+
+        assertTrue(new Reporter(paths)
+                .markdown(state(), List.of(), one, false)
+                .contains("(base `origin/main`, 1 locked scenario checked)"));
+        assertTrue(new Reporter(paths)
+                .markdown(state(), List.of(), none, false)
+                .contains("(base `origin/main`, 0 locked scenarios checked)"));
+    }
+
+    @Test
     void shouldRenderThePrCommentWithoutAGate() {
         String md = new Reporter(paths).markdown(new WorkState(), List.of(), null, true);
 

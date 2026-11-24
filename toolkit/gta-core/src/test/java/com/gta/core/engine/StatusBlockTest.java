@@ -67,7 +67,7 @@ class StatusBlockTest {
 
         assertTrue(text.startsWith("── gta · order.create ── waiting for you"), text);
         assertTrue(
-                text.contains("Progress: spec not written yet ▸ tests 1/3 passed ▸ 1 defects found"),
+                text.contains("Progress: spec not written yet ▸ tests 1/3 passed ▸ 1 defect found"),
                 "the foundation is not a test: " + text);
         assertTrue(
                 text.contains("What happened\n  1. order.create/s02: test failed: expected: <409> but was: <201>"),
@@ -86,6 +86,29 @@ class StatusBlockTest {
         String again = block.render(st, "state.continuing", null, "gta continues");
         assertFalse(again.contains("What happened"), "what was shown is not repeated: " + again);
         assertTrue(again.contains("Needs you\n  nothing, continuing"), again);
+    }
+
+    @Test
+    void shouldCountDefectsInTheirPluralAndInChinese() throws Exception {
+        plan();
+        WorkState st = state();
+        WorkState.ItemState third = new WorkState.ItemState();
+        third.id = "order.create/s03#component-01";
+        third.status = ItemStatus.DEFECT_FOUND;
+        st.items.put(third.id, third);
+
+        String text = new StatusBlock(new EngineContext(root)).render(st, "state.continuing", null, "gta continues");
+        assertTrue(text.contains("tests 1/3 passed ▸ 2 defects found"), text);
+
+        st.items.values().forEach(i -> i.status = ItemStatus.PASSED);
+        String none = new StatusBlock(new EngineContext(root)).render(st, "state.continuing", null, "gta continues");
+        assertTrue(none.contains("tests 3/3 passed ▸ 0 defects found"), none);
+
+        Files.createDirectories(root.resolve(".gta"));
+        Files.writeString(root.resolve(".gta/config.json"), "{ \"output\": { \"language\": \"zh-CN\" } }");
+        third.status = ItemStatus.DEFECT_FOUND;
+        String chinese = new StatusBlock(new EngineContext(root)).render(st, "state.continuing", null, "继续");
+        assertTrue(chinese.contains("测试 2/3 通过 ▸ 发现 1 个缺陷"), chinese);
     }
 
     @Test
