@@ -33,6 +33,7 @@ public final class FailureClassifier {
             "org.apache.",
             "org.awaitility.",
             "io.restassured.",
+            "io.cucumber.",
             "com.github.tomakehurst.",
             "org.wiremock.",
             "com.fasterxml.",

@@ -497,6 +497,14 @@ class EngineTest {
         old.tokens = List.of("201", "49.00");
         old.fingerprint = "000000000000";
         OracleShard.write(paths.oracleShard("order.create"), Map.of(ITEM, old));
+        WorkState st = new WorkState();
+        WorkState.ItemState passed = new WorkState.ItemState();
+        passed.id = ITEM;
+        passed.status = ItemStatus.PASSED;
+        passed.lock = new com.gta.core.oracle.Lock();
+        passed.lock.tokens = new ArrayList<>(List.of("201", "49.00"));
+        st.items.put(ITEM, passed);
+        new StateStore(paths).save(st);
 
         engine().relock(ITEM, "assertion style changed", "alice@corp");
 
@@ -510,6 +518,9 @@ class EngineTest {
                         .revision(),
                 now.scenarioRevision);
         assertTrue(now.relockedAt != null);
+        com.gta.core.oracle.Lock lock = new StateStore(paths).load().items.get(ITEM).lock;
+        assertEquals(now.tokens, lock.tokens, "a later repair is checked against the relocked values");
+        assertEquals(now.fingerprint, lock.fingerprint);
     }
 
     @Test

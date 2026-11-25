@@ -272,6 +272,31 @@ class TriageTest {
     }
 
     @Test
+    void shouldShareTheDeveloperFileForEveryItemThatWritesIntoIt() {
+        PlanItem second = item("observed");
+        second.id = "order.create/s02#component-01";
+        second.ref = "order.create/s02";
+        PlanItem elsewhere = item("observed");
+        elsewhere.id = "order.create/s03#unit-01";
+        elsewhere.testClass = "com.acme.order.OrderServiceTest";
+        store.savePlan(List.of(item("observed"), second, elsewhere));
+        for (PlanItem i : List.of(second, elsewhere)) {
+            WorkState.ItemState other = new WorkState.ItemState();
+            other.id = i.id;
+            other.status = ItemStatus.PENDING;
+            st.items.put(i.id, other);
+        }
+
+        decide("naming-conflict", "A");
+
+        assertTrue(s.sharesDeveloperFile);
+        assertTrue(
+                st.items.get(second.id).sharesDeveloperFile,
+                "the next item sees gta's tag in the file and is not asked, yet the developer's edits are still there");
+        assertEquals(false, st.items.get(elsewhere.id).sharesDeveloperFile);
+    }
+
+    @Test
     void shouldCheckANamingConflictAgainWhenTheDeveloperMovedTheirFile() {
         Map<String, Object> out = decide("naming-conflict", "C");
 

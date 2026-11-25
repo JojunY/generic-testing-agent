@@ -63,6 +63,11 @@ final class SpecWorkflow {
             String capability,
             List<String> extraIssues) {
         if (sw.attempts >= config.spec.maxSubmitAttempts) {
+            if (sw.token == null) { // a new session made the last token stale: the person's submit needs a valid one
+                st.seq++;
+                sw.token = BriefWriter.token(st.session.id, st.seq);
+                sw.baseline = new ChangeChecker(paths).capture();
+            }
             return node(
                     "escalate",
                     Map.of(

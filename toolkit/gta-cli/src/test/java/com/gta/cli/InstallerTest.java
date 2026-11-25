@@ -49,6 +49,19 @@ class InstallerTest {
     }
 
     @Test
+    void shouldMergeASettingsFileThatStartsWithAByteOrderMark() throws Exception {
+        // PowerShell 5.1 and Notepad write UTF-8 with a BOM; VS Code reads such a file
+        Files.writeString(root.resolve(".vscode/settings.json"), "﻿{ \"editor.tabSize\": 4 }\n");
+
+        new Installer(root).install("copilot", null, null, false);
+
+        JsonNode settings =
+                Json.MAPPER.readTree(root.resolve(".vscode/settings.json").toFile());
+        assertEquals(4, settings.get("editor.tabSize").asInt());
+        assertTrue(settings.get("chat.tools.terminal.autoApprove").size() > 0);
+    }
+
+    @Test
     void shouldNotRewriteJsoncButReportTheKeysToAdd() throws Exception {
         String jsonc = """
                 {

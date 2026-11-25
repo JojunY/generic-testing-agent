@@ -52,6 +52,13 @@ final class Triage {
         this.store = ctx.store;
     }
 
+    /** Both items write their tests into the same file: the test class, or a Cucumber feature or steps class. */
+    static boolean sameTestFile(PlanItem a, PlanItem b) {
+        return a.feature == null
+                ? b.feature == null && java.util.Objects.equals(a.testClass, b.testClass)
+                : java.util.Objects.equals(a.feature, b.feature) || java.util.Objects.equals(a.steps, b.steps);
+    }
+
     Map<String, Object> applyDecision(WorkState st, WorkState.Pending p, AnswerParser.Parsed parsed, String text) {
         String letter;
         if (parsed instanceof AnswerParser.Choice c) {
@@ -70,6 +77,14 @@ final class Triage {
         if ("naming-conflict".equals(p.type)) {
             msg = switch (letter) {
                 case "A" -> {
+                    // every item that writes into this file: once the first has added gta's tests, the file looks
+                    // like gta's to the others, which must not commit the developer's edits either
+                    for (PlanItem other : store.loadPlan()) {
+                        WorkState.ItemState os = st.items.get(other.id);
+                        if (os != null && sameTestFile(item, other)) {
+                            os.sharesDeveloperFile = true;
+                        }
+                    }
                     s.sharesDeveloperFile = true;
                     yield "gta will add its tests to "
                             + (item.feature != null ? item.feature : paths.testSourceRel(item.testClass));

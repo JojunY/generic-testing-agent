@@ -351,7 +351,9 @@ public final class AssertionScanner {
      * calls that follow it without being assertions themselves, which state what is verified
      * ({@code verify(producer).send("orders", payload)}, {@code statusCode(201).body("status", equalTo("X"))}). A
      * constant of the test class is replaced by its value: {@code isEqualTo(MSG)} is {@code isEqualTo("Order not
-     * found")}, so changing the constant changes the assertion.
+     * found")}, so changing the constant changes the assertion. AssertJ's BDD {@code then(o.status()).isEqualTo(…)}
+     * keeps its subject like {@code assertThat}; a Reactor script {@code StepVerifier.create(flux).expectNext("X")
+     * .verifyComplete()} is locked whole, since its steps before the final {@code verify…} are the expectations.
      */
     static String lockedText(MethodCallExpr fragment, Map<String, Expression> literals) {
         Expression whole = fragment;
@@ -365,15 +367,22 @@ public final class AssertionScanner {
                 e instanceof MethodCallExpr call;
                 e = call.getScope().orElse(null)) {
             String n = call.getNameAsString();
-            if (n.startsWith("assert") || n.startsWith("verify") || n.startsWith("expect")) {
+            if (n.startsWith("assert")
+                    || n.startsWith("verify")
+                    || n.startsWith("expect")
+                    || (n.equals("then") && call.getArguments().isNonEmpty())) {
                 subject = call;
                 break;
             }
         }
         String text = normalize(withConstantValues(whole, literals));
-        String before = subject.getScope()
-                .map(scope -> normalize(withConstantValues(scope, literals)) + ".")
-                .orElse("");
+        boolean script = subject.getNameAsString().startsWith("verify")
+                && subject.getScope().orElse(null) instanceof MethodCallExpr;
+        String before = script
+                ? ""
+                : subject.getScope()
+                        .map(scope -> normalize(withConstantValues(scope, literals)) + ".")
+                        .orElse("");
         return text.startsWith(before) ? text.substring(before.length()) : text;
     }
 

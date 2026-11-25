@@ -119,8 +119,9 @@ public final class Git {
                     "The baseline commit " + since + " no longer exists or is no longer in the history of HEAD",
                     "History was rewritten since the brief. Run ./gtaw next --takeover to restart the item from the current HEAD");
         }
-        ProcessRunner.Result log =
-                git("log", "--reverse", "-m", "--first-parent", "--name-only", "--format=%x1e%H", range);
+        // --no-renames: a rename lists only its destination, which hides the deleted source
+        ProcessRunner.Result log = git(
+                "log", "--reverse", "-m", "--first-parent", "--no-renames", "--name-only", "--format=%x1e%H", range);
         if (!log.ok()) {
             throw failed("log", log);
         }
@@ -176,7 +177,7 @@ public final class Git {
     }
 
     public List<String> changedFiles(String baseRef) {
-        ProcessRunner.Result r = git("diff", "--name-only", baseRef + "...HEAD");
+        ProcessRunner.Result r = git("diff", "--name-only", "--no-renames", baseRef + "...HEAD");
         if (!r.ok()) {
             throw failed("diff " + baseRef + "...HEAD", r);
         }

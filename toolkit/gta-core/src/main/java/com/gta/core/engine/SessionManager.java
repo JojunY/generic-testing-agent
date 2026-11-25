@@ -95,6 +95,7 @@ final class SessionManager {
             }
             // a brief or review round of an earlier session is stale (plan §5.2): the next dispatch issues new tokens
             st.items.values().forEach(s -> s.token = null);
+            st.specWork.values().forEach(w -> w.token = null);
             WorkState.Session session = new WorkState.Session();
             session.id = Ids.newSessionId();
             session.startedAt = now.toString();

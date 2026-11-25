@@ -120,7 +120,7 @@ public final class MutationRunner {
         // a changed line may sit in a nested or anonymous class (Order$Builder, Order$1): mutate those too
         Set<String> targets = new LinkedHashSet<>();
         lines.keySet().forEach(c -> targets.addAll(List.of(c, c + "$*")));
-        List<Mutant> all = run(work, targets, List.of("*Test"));
+        List<Mutant> all = run(work, targets, List.of("*Test"), null);
         List<Mutant> onChangedLines = all.stream()
                 .filter(m -> lines.getOrDefault(m.sourceClass(), Set.of()).contains(m.line()))
                 .toList();
@@ -193,19 +193,23 @@ public final class MutationRunner {
 
     /**
      * The can-fail check (plan §5.6 item 5): mutate the methods the scenario's spec cites and run only the item's own
-     * test. The test can fail when at least one mutant of those methods is killed; when every covered mutant survives,
+     * test, the methods of its class tagged {@code scenario:<ref>} (the class holds the flow's other scenarios too). The
+     * test can fail when at least one mutant of those methods is killed; when every covered mutant survives,
      * the test passes whatever the code does. {@code n/a} when PIT finds no covered mutant in those methods.
      */
-    public CanFail canFail(String itemId, Map<String, Set<String>> methodsByClass, String testClass) {
+    public CanFail canFail(
+            String itemId, String scenarioRef, Map<String, Set<String>> methodsByClass, String testClass) {
         if (methodsByClass.isEmpty()) {
             return new CanFail(CanFail.NOT_APPLICABLE, 0, 0, "the scenario cites no method");
         }
         Path work = paths.work().resolve("pit").resolve(itemId.replaceAll("[^A-Za-z0-9.-]", "_"));
-        List<Mutant> mutants = run(work, methodsByClass.keySet(), List.of(testClass)).stream()
-                .filter(m ->
-                        methodsByClass.getOrDefault(m.mutatedClass(), Set.of()).contains(m.sourceMethod()))
-                .filter(Mutant::covered)
-                .toList();
+        List<Mutant> mutants =
+                run(work, methodsByClass.keySet(), List.of(testClass), "scenario:" + scenarioRef).stream()
+                        .filter(m -> methodsByClass
+                                .getOrDefault(m.mutatedClass(), Set.of())
+                                .contains(m.sourceMethod()))
+                        .filter(Mutant::covered)
+                        .toList();
         return verdict(mutants, testClass);
     }
 
@@ -233,7 +237,8 @@ public final class MutationRunner {
                                 + " made " + testClass + " fail: it passes whatever the code does");
     }
 
-    private List<Mutant> run(Path work, Set<String> classes, List<String> targetTests) {
+    /** @param includedGroup a JUnit tag the tests must carry, or {@code null} for every test of {@code targetTests} */
+    private List<Mutant> run(Path work, Set<String> classes, List<String> targetTests, String includedGroup) {
         Path lib = work.resolve("lib");
         Path report = work.resolve("report");
         // jars of an earlier PIT or JUnit version would stay on the classpath next to the new ones
@@ -314,7 +319,7 @@ public final class MutationRunner {
             throw new GtaException(
                     ErrorCode.ENV_TOOL_UNAVAILABLE, "Cannot read the PIT classpath: " + e.getMessage(), "Run again", e);
         }
-        List<String> pit = List.of(
+        List<String> pit = new ArrayList<>(List.of(
                 javaExecutable,
                 "-cp",
                 classpath,
@@ -336,7 +341,10 @@ public final class MutationRunner {
                 // no mutant (an interface, constants) is a result, not a failed run: parse() reads a missing report
                 "--failWhenNoMutations=false",
                 "--threads",
-                "2");
+                "2"));
+        if (includedGroup != null) {
+            pit.addAll(List.of("--includedGroups", includedGroup));
+        }
         mustSucceed(pit, "run PIT");
         return parse(report.resolve("mutations.xml"));
     }

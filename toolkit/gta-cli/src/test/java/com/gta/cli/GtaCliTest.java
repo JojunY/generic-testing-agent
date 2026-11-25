@@ -83,6 +83,9 @@ class GtaCliTest {
         assertTrue(
                 badOption.out().contains("./gtaw status --help"),
                 "the failing command, not --root: " + badOption.out());
+        Run help = gtaw("--root", root.toString(), "status", "--help");
+        assertEquals(0, help.exit(), "the hint of a usage error must work: " + help.out());
+        assertTrue(help.out().contains("Usage: gtaw status"), help.out());
         assertEquals(20, unavailable.exit(), "deployed environments are out of scope");
         assertEquals(20, noIds.exit(), "deleting tests needs explicit ids or --all");
     }

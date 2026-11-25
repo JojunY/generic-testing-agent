@@ -83,6 +83,35 @@ class ChangeCheckerTest {
     }
 
     @Test
+    void shouldReportTheSourceOfAFileAnAgentCommitMovedIntoAnIgnoredPath() throws Exception {
+        Baseline baseline = checker.capture();
+        Files.createDirectories(root.resolve(".gta/work"));
+        git("mv", "src/main/java/App.java", ".gta/work/App.java");
+        git("commit", "-qm", "move it out of the way");
+
+        ChangeChecker.Result r = checker.check(baseline, List.of("src/test/java/**"), root.resolve("backup"), true);
+
+        assertFalse(r.ok(), "the production file was deleted: " + r);
+        assertTrue(
+                r.outOfScope().contains("src/main/java/App.java"),
+                r.outOfScope().toString());
+    }
+
+    @Test
+    void shouldReportAnAgentCommitThatTouchedOnlyIgnoredFiles() throws Exception {
+        Baseline baseline = checker.capture();
+        Files.createDirectories(root.resolve(".gta"));
+        Files.writeString(root.resolve(".gta/lessons.md"), "- [x] written by an agent\n");
+        git("add", "-A");
+        git("commit", "-qm", "lessons");
+
+        ChangeChecker.Result r = checker.check(baseline, List.of("src/test/java/**"), root.resolve("backup"), false);
+
+        assertFalse(r.ok(), "a commit gtaw did not make is never in scope");
+        assertEquals(1, r.foreignCommits().size());
+    }
+
+    @Test
     void shouldNotCallAFileRestoredWhenAnAgentCommitAlsoTouchedIt() throws Exception {
         Baseline baseline = checker.capture();
         Files.writeString(root.resolve("src/main/java/App.java"), "class App { int hacked; }\n");

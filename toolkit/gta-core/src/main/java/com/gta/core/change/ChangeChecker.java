@@ -132,10 +132,12 @@ public final class ChangeChecker {
                 continue;
             }
             foreign.add(c.sha().substring(0, Math.min(12, c.sha().length())));
+            boolean reported = false;
             for (String f : c.files()) {
                 if (ignored(f)) {
                     continue;
                 }
+                reported = true;
                 // also when the file is dirty: restoring it to HEAD would keep the foreign commit's version
                 if (!out.contains(f)) {
                     out.add(f);
@@ -144,7 +146,7 @@ public final class ChangeChecker {
                     unrestorable.add(f);
                 }
             }
-            if (c.files().isEmpty()) {
+            if (!reported) { // an empty commit, or one that touched only ignored files, is still not gtaw's
                 out.add("(commit " + c.sha() + ")");
             }
         }

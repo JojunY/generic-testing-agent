@@ -269,7 +269,7 @@ class MutationRunnerTest {
         assertEquals(
                 MutationRunner.CanFail.NOT_APPLICABLE,
                 new MutationRunner(new com.gta.core.config.GtaPaths(dir), new com.gta.core.config.GtaConfig())
-                        .canFail("i", Map.of(), "a.LTest")
+                        .canFail("i", "order.create/s01", Map.of(), "a.LTest")
                         .verdict());
     }
 
@@ -303,7 +303,7 @@ class MutationRunnerTest {
                 """.formatted(dir));
 
         MutationRunner.CanFail r = new MutationRunner(new com.gta.core.config.GtaPaths(repo), config, java.toString())
-                .canFail("i", Map.of("a.L", Set.of("m")), "a.LTest");
+                .canFail("i", "order.create/s01", Map.of("a.L", Set.of("m")), "a.LTest");
 
         assertEquals(MutationRunner.CanFail.KILLED, r.verdict(), r.detail());
         String gradleArgs = Files.readString(dir.resolve("gradle-args"));
@@ -318,5 +318,9 @@ class MutationRunnerTest {
         assertTrue(Files.exists(repo.resolve(".gta/work/pit/i/gta-pit.gradle")), "the build script is never changed");
         String javaArgs = Files.readString(dir.resolve("java-args"));
         assertTrue(javaArgs.contains("/g/build/classes/java/main") && !javaArgs.contains("target/classes"), javaArgs);
+        assertTrue(
+                javaArgs.contains("--targetTests a.LTest")
+                        && javaArgs.contains("--includedGroups scenario:order.create/s01"),
+                "only the scenario's own test, not the flow's other tests in the class: " + javaArgs);
     }
 }

@@ -340,7 +340,8 @@ public final class Installer {
     JsonMerge mergedJson(Path target, String incoming) {
         try {
             JsonNode add = Json.MAPPER.readTree(incoming);
-            Optional<String> text = read(target);
+            // a file saved by PowerShell 5.1 or Notepad starts with a BOM, which VS Code and OpenCode accept
+            Optional<String> text = read(target).map(t -> t.startsWith("\uFEFF") ? t.substring(1) : t);
             if (text.isEmpty() || text.get().isBlank()) {
                 return new JsonMerge(PRETTY.writeValueAsString(add) + "\n", null);
             }

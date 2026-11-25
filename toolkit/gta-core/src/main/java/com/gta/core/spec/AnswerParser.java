@@ -27,7 +27,7 @@ public final class AnswerParser {
      * must never count as approval.
      */
     private static final Pattern APPROVAL = Pattern.compile(
-            "^\\s*(?:批准|approve)\\s+([a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*)@(R\\d+)\\s*[.。!！]?\\s*$",
+            "^\\s*(?:批准\\s*|approve\\s+)([a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*)@(R\\d+)\\s*[.。!！]?\\s*$",
             Pattern.CASE_INSENSITIVE);
     /** Mentions an approval phrase without being one: refused explicitly instead of being read as answers. */
     private static final Pattern APPROVAL_MENTION = Pattern.compile("批准|approve", Pattern.CASE_INSENSITIVE);
@@ -46,15 +46,18 @@ public final class AnswerParser {
     private static final Pattern PLAIN_OK =
             Pattern.compile("^\\s*(?:ok|okay|好的|好|确认|確認|同意)[\\s,，;；。.!！]*$", Pattern.CASE_INSENSITIVE);
     /**
-     * "2: retry twice" at the start of a line, after a comma ("OK, 2: retry twice") or after a leading OK ("OK 2: retry
-     * twice"), running to the end of the line;
-     * "2: B" (a letter alone, or followed by another pick or "rest default", as in "1: A 2: B") is a pick, not an own
-     * answer.
+     * "2: retry twice" at the start of a line, after a comma ("OK, 2: retry twice"), after a leading OK ("OK 2: retry
+     * twice") or after a pick ("1A 2: retry twice"), running to the end of the line;
+     * "2: B" (a letter alone, or followed by another pick, another answer or "rest default", as in "1: A 2: B") is a
+     * pick, not an own answer.
      */
-    private static final Pattern OWN_ANSWER =
-            Pattern.compile("(?m)(?:^|[,，;；]|(?<=^\\s{0,8}(?i:ok|okay|好的|好|确认|確認|同意)))\\s*(\\d{1,2})\\s*[:：]\\s*"
-                    + "(?![A-Za-z](?:\\s*(?:$|[,，;；])|\\s+(?:\\d{1,2}\\s*[:：]?\\s*[A-Za-z](?![A-Za-z])|其余默认|其他默认|rest\\s+default)))"
-                    + "(\\S.*?)\\s*$");
+    private static final Pattern OWN_ANSWER = Pattern.compile("(?m)(?:^|[,，;；、]"
+            + "|(?<=^\\s{0,8}(?i:ok|okay|好的|好|确认|確認|同意))"
+            + "|(?<=(?<![A-Za-z0-9])\\d{1,2}\\s{0,4}[:：]?\\s{0,4}[A-Za-z]\\s{1,4}))"
+            + "\\s*(\\d{1,2})\\s*[:：]\\s*"
+            + "(?![A-Za-z](?:\\s*(?:$|[,，;；、])|\\s+(?:\\d{1,2}\\s*[:：]|\\d{1,2}\\s*[A-Za-z](?![A-Za-z])"
+            + "|其余默认|其他默认|rest\\s+default)))"
+            + "(\\S.*?)\\s*$");
 
     public sealed interface Parsed permits Answers, Approval, Choice {}
 

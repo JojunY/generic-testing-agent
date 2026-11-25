@@ -29,6 +29,8 @@ echo "== installing the $PLATFORM harness into $SERVICE (wrapper pinned to $JAR)
 URL="file://$(printf '%s' "$JAR" | sed 's/%/%25/g; s/ /%20/g; s/#/%23/g')"
 OUT=$(java -jar "$JAR" --root "$SERVICE" init --platform "$PLATFORM" --distribution-url "$URL" --distribution-sha256 "$SHA") \
   || { echo "$OUT" >&2; exit 1; }
+# init's report names the settings keys it could not merge into a file with comments (mergeManually) and conflicts
+echo "$OUT"
 
 echo "== ./gtaw doctor"
 (cd "$SERVICE" && ./gtaw --format human doctor) || true

@@ -49,11 +49,15 @@ class SessionManagerTest {
         review.status = com.gta.core.state.ItemStatus.REVIEWING;
         review.token = "s20261104090000-old:0007";
         st.items.put(review.id, review);
+        WorkState.SpecWork analyze = new WorkState.SpecWork();
+        analyze.token = "s20261104090000-old:0006";
+        st.specWork.put("order.create", analyze);
 
         new EngineContext(root).sessions.touchSession(st, true);
 
         assertEquals(com.gta.core.state.ItemStatus.REVIEWING, review.status, "the review waits for the new session");
         assertNull(review.token, "a verdict with the old session's token is refused");
+        assertNull(analyze.token, "so is a spec submitted with the old session's token");
     }
 
     @Test

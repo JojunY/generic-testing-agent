@@ -192,7 +192,8 @@ final class SessionEnd {
         }
         com.gta.core.run.MutationRunner.CanFail result;
         try {
-            result = new com.gta.core.run.MutationRunner(paths, config).canFail(item.id, methods, item.testClass);
+            result = new com.gta.core.run.MutationRunner(paths, config)
+                    .canFail(item.id, item.ref, methods, item.testClass);
         } catch (GtaException e) {
             return "n/a: " + e.getMessage(); // e.g. no network for PIT: the item keeps its result
         }

@@ -62,6 +62,31 @@ class ItemCommitterTest {
     }
 
     @Test
+    void shouldKeepAHumansRelockRecordWhenTheLockedAssertionsDidNotChange() throws Exception {
+        WorkState.ItemState s = new WorkState.ItemState();
+        s.id = OrderServiceTestData.ITEM;
+        s.status = ItemStatus.PASSED;
+        s.baseline = new ChangeChecker(paths).capture();
+        s.lock = new Lock();
+        s.lock.tokens.add("201");
+        AtomicFiles.write(
+                root.resolve("src/test/java/com/acme/order/OrderControllerIT.java"), "class OrderControllerIT {}\n");
+        OracleShard.Entry relocked = new OracleShard.Entry();
+        relocked.fingerprint = com.gta.core.oracle.OracleLock.fingerprint(List.of()); // what the test above locks
+        relocked.relockedBy = "alice@corp";
+        relocked.reason = "assertion style changed";
+        relocked.relockedAt = "2026-11-20T10:00:00Z";
+        OracleShard.write(paths.oracleShard("order.create"), java.util.Map.of(OrderServiceTestData.ITEM, relocked));
+
+        ctx.committer.commitItem(new WorkState(), OrderServiceTestData.item(), s, "r2", "repaired");
+
+        OracleShard.Entry now =
+                OracleShard.read(paths.oracleShard("order.create")).get(OrderServiceTestData.ITEM);
+        assertEquals("alice@corp", now.relockedBy, "the gate still sees who relocked");
+        assertEquals("2026-11-20T10:00:00Z", now.relockedAt);
+    }
+
+    @Test
     void shouldCommitItsOwnTestWhenItRanAgainUnchanged() throws Exception {
         // written in an earlier attempt; the retry's baseline already holds the uncommitted test
         String test = "src/test/java/com/acme/order/OrderControllerIT.java";

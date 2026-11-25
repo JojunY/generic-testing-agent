@@ -33,6 +33,16 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- Review round 9:
+  - the scope check lists the deleted source of a file a foreign commit renamed (`git log --no-renames`), and reports a foreign commit that touched only ignored files (`.gta/lessons.md`, `.gta/work/`); `changedFiles` lists both sides of a rename too;
+  - the oracle lock keeps the subject of an AssertJ BDD `then(x).isEqualTo(…)` and locks a `StepVerifier` script whole: before, a changed `expectNext` value or a swapped subject went unnoticed. Locked `then(…)` and `StepVerifier` assertions get a new fingerprint: relock them once (`gtaw relock`);
+  - an own answer after a pick on the same line (`1A 2: retry twice`, `OK 1A 2: never retry`, or after the Chinese enumeration comma) is read, not dropped or merged into the first answer; the Chinese approval word followed directly by `order.create@R4`, without a space, is an approval;
+  - a naming conflict answered A covers every item that writes into the same file, so a later item never commits the developer's uncommitted edits;
+  - a new session invalidates the analyst's token too (plan §5.2);
+  - `gtaw relock` updates the item's working lock, and an item commit keeps the relock record when the locked assertions did not change;
+  - the can-fail check runs only the scenario's own tests (`--includedGroups scenario:<id>`), not the other scenarios of its class;
+  - a failure with only Cucumber framework frames is a setup error, not a suspected product defect;
+  - every subcommand accepts `--help`, which every usage error tells you to run; `init` merges a `settings.json` or `opencode.json` that starts with a BOM; `scripts/install-local.sh` prints init's report (the keys to merge by hand).
 - Status block wording (plan §5.10): the approval prompt says the spec waits for your approval, not for answers; a failed test keeps its expected and actual values on its line; a suspected defect asks "is it a product defect?" instead of repeating the reviewer's reason; at the end of a session "Needs you" says "nothing", not "nothing, continuing"; the flow prompt says a flow's number works as well as its id.
 - `scripts/site/record-demo.sh --lang zh-CN` has the scripted agents write the spec and their reasons in Chinese (`scripts/site/demo/book.spec.zh-CN.md`), and the recorded commit is marked `+local` when gta has uncommitted changes.
 - The status block says "1 defect found", not "1 defects found", and its gate line says how many locked scenarios the gate checked (none yet on a first session) instead of claiming every locked scenario; the report says "1 locked scenario checked" (plan §5.10, §8).

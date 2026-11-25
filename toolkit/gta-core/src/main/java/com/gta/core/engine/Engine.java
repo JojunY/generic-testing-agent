@@ -577,6 +577,16 @@ public final class Engine {
             e.reason = reason;
             e.relockedAt = Instant.now().toString();
             OracleShard.write(shardPath, shard);
+            // the item's working lock follows: a later repair is checked, and committed, against the relocked values
+            WorkState st = store.load();
+            WorkState.ItemState s = st.items.get(itemId);
+            if (s != null && s.lock != null) {
+                s.lock.tokens = new ArrayList<>(e.tokens);
+                s.lock.statements = OracleLock.lockedStatements(oracle.assertionStatements(), e.tokens);
+                s.lock.fingerprint = e.fingerprint;
+                s.lock.watched = oracle.watchedHash();
+                store.save(st);
+            }
             return result(
                     "relocked " + itemId + " by " + by + " on " + e.tokens + "; commit " + paths.rel(shardPath)
                             + " so the PR shows it",

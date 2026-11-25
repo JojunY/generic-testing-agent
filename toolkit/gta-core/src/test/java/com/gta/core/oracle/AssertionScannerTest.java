@@ -428,6 +428,36 @@ class AssertionScannerTest {
     }
 
     @Test
+    void shouldLockABddThenWithItsSubject() throws Exception {
+        String body = """
+                    @Test @Tag("scenario:order.create/s01")
+                    void shouldRefuse() { then(order.status()).isEqualTo("PENDING"); }
+                """;
+        Lock lock = OracleLock.create(scanSource(body), List.of("PENDING"), "r1");
+
+        OracleLock.Check tautology =
+                OracleLock.check(lock, scanSource(body.replace("then(order.status())", "then(\"PENDING\")")));
+
+        assertEquals(OracleLock.Verdict.STRUCTURAL_CHANGE, tautology.verdict(), "then(x) is assertThat(x)");
+    }
+
+    @Test
+    void shouldLockAStepVerifierScriptWhole() throws Exception {
+        String body = """
+                    @Test @Tag("scenario:order.create/s01")
+                    void shouldStream() { StepVerifier.create(service.statuses()).expectNext("PENDING").verifyComplete(); }
+                """;
+        Lock lock = OracleLock.create(scanSource(body), List.of("PENDING"), "r1");
+
+        assertEquals(1, lock.statements.size(), "expectNext holds the expected value: " + lock.statements);
+        assertEquals(
+                OracleLock.Verdict.STRUCTURAL_CHANGE,
+                OracleLock.check(lock, scanSource(body.replace("service.statuses()", "Flux.just(\"PENDING\")")))
+                        .verdict(),
+                "a script over a constant no longer checks the service");
+    }
+
+    @Test
     void shouldReadRestAssuredExpectationsAfterThenAsExpectedValues() throws Exception {
         AssertionScanner.ScenarioOracle o = scanSource("""
                     @Test @Tag("scenario:order.create/s01")

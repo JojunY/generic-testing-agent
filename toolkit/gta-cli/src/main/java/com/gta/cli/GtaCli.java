@@ -37,6 +37,8 @@ import picocli.CommandLine.Parameters;
  */
 @Command(
         name = "gtaw",
+        // every subcommand takes --help too: it is what a usage error tells people to run
+        scope = CommandLine.ScopeType.INHERIT,
         mixinStandardHelpOptions = true,
         versionProvider = GtaCli.Version.class,
         description = "Generic Testing Agent toolkit: spec-first test harness for Java/Spring services.",

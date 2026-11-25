@@ -135,6 +135,18 @@ class FailureClassifierTest {
     }
 
     @Test
+    void shouldCallACucumberGlueFailureASetupError() {
+        TestOutcome c = failing(
+                "error",
+                "io.cucumber.core.backend.CucumberBackendException",
+                "\tat io.cucumber.spring.SpringFactory.start(SpringFactory.java:1)\n\tat org.junit.Runner.run(Runner.java:2)");
+
+        FailureClassifier.classify(c, PROD, TESTS);
+
+        assertEquals(ErrorCode.TEST_SETUP_ERROR.name(), c.code);
+    }
+
+    @Test
     void shouldBlameProductionCodeWhenTheTestFailsOnAProductionRootCause() {
         TestOutcome c = failing(
                 "error",

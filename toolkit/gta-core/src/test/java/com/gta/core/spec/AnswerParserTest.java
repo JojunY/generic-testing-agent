@@ -140,4 +140,24 @@ class AnswerParserTest {
                 "refunds over 1000 need a manager to approve",
                 approve.ownAnswers().get("2"));
     }
+
+    @Test
+    void shouldReadAnOwnAnswerThatFollowsAPickOnTheSameLine() {
+        for (String reply : List.of("1A 2: retry twice", "1: A 2: retry twice", "1A、2: retry twice")) {
+            AnswerParser.Answers a = (AnswerParser.Answers) AnswerParser.parse(reply);
+            assertEquals(Map.of("1", "A"), a.picks(), reply);
+            assertEquals(Map.of("2", "retry twice"), a.ownAnswers(), reply);
+        }
+
+        AnswerParser.Answers ok = (AnswerParser.Answers) AnswerParser.parse("OK 1A 2: never retry");
+        assertTrue(ok.acceptRecommended());
+        assertEquals(Map.of("1", "A"), ok.picks());
+        assertEquals(Map.of("2", "never retry"), ok.ownAnswers(), "not the recommended option for 2");
+    }
+
+    @Test
+    void shouldParseAChineseApprovalWithoutASpace() {
+        assertEquals(new AnswerParser.Approval("order.create", "R4"), AnswerParser.parse("批准order.create@R4"));
+        assertThrows(GtaException.class, () -> AnswerParser.parse("不批准order.create@R4"));
+    }
 }

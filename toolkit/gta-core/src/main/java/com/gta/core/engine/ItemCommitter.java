@@ -88,6 +88,13 @@ final class ItemCommitter {
             e.testClass = item.testClass;
             e.intent = item.intent;
             e.source = item.oracle.source;
+            OracleShard.Entry old = shard.get(item.id);
+            if (old != null && old.relockedBy != null && e.fingerprint.equals(old.fingerprint)) {
+                // the same locked assertions: the human's relock record stays, so the gate still sees who relocked
+                e.relockedBy = old.relockedBy;
+                e.reason = old.reason;
+                e.relockedAt = old.relockedAt;
+            }
             shard.put(item.id, e);
             OracleShard.write(shardPath, shard);
             files.add(paths.rel(shardPath));
