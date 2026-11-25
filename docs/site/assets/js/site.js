@@ -485,6 +485,7 @@
         input.value = '';
         input.placeholder = '';
         hint.textContent = t('replyDone');
+        log.scrollTop = log.scrollHeight; // the hint took room from the log: its last line stays in view
         key.disabled = false;
         key.firstChild.nodeValue = t('replayAgain') + ' ';
         showEvidence();
@@ -1020,8 +1021,9 @@
       // room it lacks below, so the last stop reads as a slide instead of slicing a heading at the top of the screen
       for (var f = 0; f < stops.length; f++) {
         var lift = stops[f].top - lead;
-        var room = lift - rest;
-        if (end - lift <= height && room <= height * 0.6) {
+        if (end - lift <= height && lift - rest <= height * 0.6) {
+          lift = clear(scene, lift); // and nothing of what is above shows as a sliver under the header
+          var room = lift - rest;
           if (room > 0) {
             scene.style.paddingBottom = parseFloat(window.getComputedStyle(scene).paddingBottom) + room + 'px';
             padded.push(scene);
@@ -1032,7 +1034,7 @@
       for (var n = 0; n < stops.length; n++) { // otherwise the first block not seen whole
         if (stops[n].bottom > height + 8) {
           var up = stops[n].top - lead;
-          return window.scrollBy({ top: rest > up && rest - up <= 28 ? last(scene, rest) : up, behavior: smooth }); // no 9 px tail
+          return window.scrollBy({ top: rest > up && rest - up <= 28 ? last(scene, rest) : clear(scene, up), behavior: smooth }); // no 9 px tail
         }
       }
       // otherwise a plain step: never past what was not on screen, never cutting a block that crosses the bottom edge
@@ -1057,11 +1059,13 @@
     function last(scene, step) {
       var bottom = 0;
       [0.25, 0.5, 0.75].forEach(function (x) {
-        var cut = document.elementsFromPoint(window.innerWidth * x, HEAD + 2 + step)[0];
-        var row = cut && scene.contains(cut) ? cut.closest('tr, li, p, h2, h3, pre, .ticket') : null;
-        if (!row || !scene.contains(row)) return;
-        var box = row.getBoundingClientRect();
-        if (box.top - step < HEAD && box.bottom - step > HEAD) bottom = Math.max(bottom, box.bottom - step - HEAD);
+        [-2, 2].forEach(function (dy) {
+          var cut = document.elementsFromPoint(window.innerWidth * x, HEAD + dy + step)[0];
+          var row = cut && scene.contains(cut) ? cut.closest('tr, li, p, h2, h3, pre, .ticket, .console') : null;
+          if (!row || !scene.contains(row)) return;
+          var box = row.getBoundingClientRect();
+          if (box.top - step < HEAD && box.bottom - step > HEAD) bottom = Math.max(bottom, Math.ceil(box.bottom - step - HEAD));
+        });
       });
       if (bottom <= 0 || bottom > 120) return step;
       scene.style.paddingBottom = parseFloat(window.getComputedStyle(scene).paddingBottom) + bottom + 'px';
@@ -1078,7 +1082,7 @@
       [0.25, 0.5, 0.75].forEach(function (x) {
         [-2, 2, 14, 26].forEach(function (dy) {
           var hit = document.elementsFromPoint(window.innerWidth * x, line + dy)[0];
-          var row = hit && scene.contains(hit) ? hit.closest('tr, li, p, h2, h3, pre, .ticket') : null;
+          var row = hit && scene.contains(hit) ? hit.closest('tr, li, p, h2, h3, pre, .ticket, .console') : null;
           if (!row || !scene.contains(row)) return;
           var box = row.getBoundingClientRect();
           // a headline's underline is drawn below its box (the Chinese em): count it in

@@ -367,7 +367,7 @@ h3 { font-size: calc(27px * var(--scale)); line-height: 1.15; letter-spacing: -0
 .ticket-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin: 0 0 4px; padding: 13px 20px 12px; border-bottom: 1px dashed rgba(22, 19, 15, 0.35); font: 500 calc(15px * var(--scale)) / 1.2 var(--mono); }
 .ticket-head .stamp { animation-delay: 0.5s; }
 .ticket-label { margin-top: 12px; margin-bottom: 4px; font: 500 calc(11px * var(--scale)) / 1.2 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
-.ticket-when { margin-top: 0; margin-bottom: 0; font-size: calc(15px * var(--scale)); line-height: 1.4; }
+.ticket-when { margin-top: 0; margin-bottom: 0; font-size: calc(15px * var(--scale)); line-height: 1.4; text-wrap: pretty; }
 .ticket-values { display: flex; flex-wrap: wrap; gap: 8px; }
 .punch { width: auto; min-width: 3ch; max-width: 100%; height: 36px; padding: 0 10px; text-align: center; color: var(--paper); font: 500 16px/36px var(--mono); letter-spacing: 0.04em; background: var(--ink); border: 0; border-radius: 5px; }
 .punch:focus-visible { outline-color: var(--red); }
@@ -501,11 +501,12 @@ body.stage .timetable-wrap { margin-top: 44px; }
 body.stage .role-who { margin-top: 10px; }
 body.stage .ledger td { height: 38px; padding-top: 6px; padding-bottom: 6px; }
 body.stage .ledger-scene .sheet { margin-top: 28px; }
-body.stage .console-log { height: calc(100vh - 56px - 40px - 36px - 230px - 120px); min-height: 260px; }
+body.stage .console { height: calc(100vh - 349px); min-height: 380px; }
+body.stage .console-log { flex: 1 1 0; height: auto; min-height: 0; }
 /* the console keeps its own height: the rail may grow taller with two tickets, the console does not follow it */
 body.stage .console { align-self: start; }
 /* the log scrolls under the bar: its top fades instead of cutting a line in half */
-body.stage .console-log { -webkit-mask-image: linear-gradient(transparent, #000 22px); mask-image: linear-gradient(transparent, #000 22px); }
+body.stage .console-log { -webkit-mask-image: linear-gradient(transparent, #000 22px, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(transparent, #000 22px, #000 calc(100% - 18px), transparent); }
 /* the presenter's chrome stays out of the picture until pointed at */
 body.stage .tools { opacity: 0.35; transition: opacity 0.3s; }
 body.stage .top:hover .tools, body.stage .tools:focus-within { opacity: 1; }
@@ -518,10 +519,18 @@ body.stage .timetable tbody tr:hover td { background: none; }
 body.stage .loop { align-items: stretch; }
 body.stage .rail { position: static; }
 body.stage .tickets { flex: 1 0 auto; }
+/* once the second ticket prints, the first folds to its head and values: the pinned defect lands on screen */
+body.stage .ticket:not(:last-child) :is(.ticket-label, .ticket-when, .ticket-refused) { display: none; }
+body.stage .ticket:not(:last-child) .ticket-values { margin-top: 10px; }
 body.stage .slot { flex: 1 0 auto; display: flex; align-items: center; justify-content: center; text-align: center; padding: 32px 15%; color: var(--ink-3); background: rgba(22, 19, 15, 0.025); }
 body.stage .roles { flex: 1 0 auto; }
 body.stage .evidence { margin-top: 64px; }
 body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px); }
+/* a native 1440p screen in a large room: the page fills it */
+@media (min-width: 2200px) and (min-height: 1200px) {
+  body.stage { --scale: 1.6; --wrap: min(2200px, 88vw); }
+  body.stage h2 { font-size: clamp(52px, 5.6vw, 150px); }
+}
 @media (min-width: 1041px) {
   body.stage .loop { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
   body.stage #covers > .wrap { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
@@ -563,15 +572,19 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   body.stage .role-sub { margin: 8px 0; padding-bottom: 8px; }
   body.stage .role ul { font-size: 16px; line-height: 1.3; }
   body.stage .never-label { margin-top: 8px; }
-  body.stage .console-log { font-size: 14.5px; height: calc(100vh - 345px); }
+  body.stage .console-log { font-size: 14.5px; }
+  body.stage .console { height: calc(100vh - 228px); }
+  /* the covers index in two stops: all fifteen rows, the chips and what is not covered */
+  body.stage .timetable td { padding-top: 2px; padding-bottom: 2px; }
+  body.stage .timetable td:first-child { font-size: 19px; }
+  body.stage .also { margin-top: 22px; }
+  body.stage .cmd { padding-right: 84px; }
   /* the replay starts at the top of its screen: the console gets the room an eyebrow and centring took */
   body.stage #loop > .wrap > .eyebrow { display: none; }
   body.stage #loop { justify-content: flex-start; }
   /* the tickets show the locked values; the board keeps one line per scenario */
   body.stage .ledger-mini .c-lock { display: none; }
   /* once the second ticket prints, the first folds to its head and values: the pinned defect lands on screen */
-  body.stage .ticket:not(:last-child) :is(.ticket-label, .ticket-when, .ticket-refused) { display: none; }
-  body.stage .ticket:not(:last-child) .ticket-values { margin-top: 10px; }
   body.stage .lane { padding: 20px 26px; }
   body.stage .lane .lane-end { margin-top: 14px; }
   /* two tickets and the board fit beside the console on one screen */
@@ -593,6 +606,10 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   body.stage #problem > .wrap > pre.code { grid-column: 2; grid-row: 2; align-self: end; margin-top: 0; font-size: 12.5px; white-space: pre-wrap; }
 }
 @media (max-height: 760px) {
+  body.stage .timetable-wrap { margin-top: 20px; }
+  body.stage .timetable td:first-child { font-size: 18px; }
+  body.stage .also-label { margin-bottom: 10px; }
+  body.stage .also-not { margin-top: 16px; }
   body.stage .ledger td { height: 25px; padding-top: 2px; padding-bottom: 2px; }
   body.stage .shape-blob { width: 42px; height: 42px; }
   body.stage .shape-square { width: 40px; height: 40px; }
