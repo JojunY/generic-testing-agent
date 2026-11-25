@@ -44,7 +44,9 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 56px; -webkit-text-size-adjust: 100%; }
+html { scroll-padding-top: 56px; -webkit-text-size-adjust: 100%; }
+/* smooth only once the page has settled: a link that opens it at a scene lands there at once (site.js adds the class) */
+html.smooth { scroll-behavior: smooth; }
 body {
   margin: 0;
   background: var(--grain), var(--paper);
@@ -336,6 +338,8 @@ h3 { font-size: calc(27px * var(--scale)); line-height: 1.15; letter-spacing: -0
 .entry.block pre { margin: 2px 0 6px; padding: 15px 17px; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; color: var(--paper); background: #0c0a08; border: 1px solid var(--night-rule); border-left: 3px solid var(--yellow); border-radius: 8px; }
 .entry.block.end pre { border-left-color: #4fd091; }
 .entry.block pre .rec { color: var(--yellow); }
+.entry.block pre .ln { display: block; padding-left: calc(var(--in) * 1ch); text-indent: calc(var(--hang) * -1ch); }
+.entry.block pre .ln:empty::before { content: "\200b"; }
 .entry.block pre .hd { color: var(--cream-2); }
 .console-in { display: flex; align-items: center; gap: 12px; padding: 13px 14px 13px 20px; border-top: 1px solid var(--night-rule); background: var(--night-2); }
 .prompt { color: var(--yellow); font: 500 calc(20px * var(--scale)) / 1 var(--mono); }
@@ -554,12 +558,20 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   body.stage .roles-scene { padding-top: 20px; }
   body.stage .roles { margin-top: 16px; }
   body.stage .role { padding-top: 12px; padding-bottom: 14px; }
-  body.stage .role-shape { height: 52px; }
+  body.stage .role-shape { height: 64px; align-items: flex-start; } /* the shape and its offset outline end above the label */
   body.stage .role-who { margin-top: 6px; }
   body.stage .role-sub { margin: 8px 0; padding-bottom: 8px; }
   body.stage .role ul { font-size: 16px; line-height: 1.3; }
   body.stage .never-label { margin-top: 8px; }
-  body.stage .console-log { font-size: 14.5px; }
+  body.stage .console-log { font-size: 14.5px; height: calc(100vh - 345px); }
+  /* the replay starts at the top of its screen: the console gets the room an eyebrow and centring took */
+  body.stage #loop > .wrap > .eyebrow { display: none; }
+  body.stage #loop { justify-content: flex-start; }
+  /* the tickets show the locked values; the board keeps one line per scenario */
+  body.stage .ledger-mini .c-lock { display: none; }
+  /* once the second ticket prints, the first folds to its head and values: the pinned defect lands on screen */
+  body.stage .ticket:not(:last-child) :is(.ticket-label, .ticket-when, .ticket-refused) { display: none; }
+  body.stage .ticket:not(:last-child) .ticket-values { margin-top: 10px; }
   body.stage .lane { padding: 20px 26px; }
   body.stage .lane .lane-end { margin-top: 14px; }
   /* two tickets and the board fit beside the console on one screen */
@@ -577,14 +589,15 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
 /* 768/720 on a wide screen: the problem's code sits beside its headline, and the presenter says the lede */
 @media (max-height: 820px) and (min-width: 1041px) {
   body.stage #problem .lede { display: none; }
-  body.stage #problem > .wrap { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); }
-  body.stage #problem pre.code { grid-column: 2; grid-row: 2; align-self: end; margin-top: 0; font-size: 13.5px; white-space: pre-wrap; }
+  body.stage #problem > .wrap { grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr); }
+  body.stage #problem > .wrap > pre.code { grid-column: 2; grid-row: 2; align-self: end; margin-top: 0; font-size: 12.5px; white-space: pre-wrap; }
 }
 @media (max-height: 760px) {
   body.stage .ledger td { height: 25px; padding-top: 2px; padding-bottom: 2px; }
-  body.stage .shape-blob { width: 48px; height: 48px; }
-  body.stage .shape-square { width: 44px; height: 44px; }
-  body.stage .shape-ring { width: 52px; height: 52px; }
+  body.stage .shape-blob { width: 42px; height: 42px; }
+  body.stage .shape-square { width: 40px; height: 40px; }
+  body.stage .shape-ring { width: 46px; height: 46px; }
+  body.stage .shape-blob::after, body.stage .shape-square::after { transform: translate(4px, 4px); }
   body.stage .ledger th { padding-top: 6px; padding-bottom: 4px; }
   body.stage .sheet-desk { padding-top: 10px; padding-bottom: 10px; }
   body.stage .role-shape { height: 48px; }
@@ -675,7 +688,7 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
+  html, html.smooth { scroll-behavior: auto; }
   .reveal, .kw > span { opacity: 1; transform: none; transition: none; }
   .entry, .ticket, .evidence, .shake, .punch.back, .st, .stamp, .art-label, .shape-blob, .shape-square { animation: none !important; }
   .strip .stamp, .art-label { opacity: 1; }
@@ -696,6 +709,8 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   .shape-ring path { stroke-dashoffset: 0; animation: none; }
   .ns-word::after { transform: none; }
   .art { display: none; }
+  .standing, .lane, .role, .ticket, .reads li, .steps li, pre { break-inside: avoid; }
+  .eyebrow, h2, h3, .standing-title { break-after: avoid; }
   .timetable-wrap, .ledger-wrap { overflow: visible; }
   .timetable td, .ledger td { white-space: normal; }
   section { padding: 24px 0; break-inside: auto; }

@@ -187,6 +187,7 @@
     var live = el('p', 'sr'); // what a screen reader hears: once the scenarios have settled, not each step on the way
     live.setAttribute('role', 'status');
     document.body.appendChild(live);
+    var liveTimer = 0;
     function desk() {
       var waiting = rows.filter(function (row) { return row.state === 'waiting'; }).length;
       var open = rows.filter(function (row) { return row.state !== 'passed' && row.state !== 'pinned'; }).length;
@@ -201,8 +202,12 @@
           if (force) force.focus({ preventScroll: true });
         }
       });
-      var moving = rows.some(function (row) { return row.state !== 'passed' && row.state !== 'pinned' && row.state !== 'waiting'; });
-      if (!moving && live.textContent !== text) live.textContent = text;
+      // a screen reader hears where things settle: OK pins one row after another, the run moves for seconds
+      window.clearTimeout(liveTimer);
+      liveTimer = window.setTimeout(function () {
+        var moving = rows.some(function (row) { return row.state !== 'passed' && row.state !== 'pinned' && row.state !== 'waiting'; });
+        if (!moving && live.textContent !== text) live.textContent = text;
+      }, 400);
       if (text === said) return;
       said = text;
       all('[data-note="ok"]').forEach(function (note) {
@@ -404,11 +409,18 @@
 
     function add(className, who, what) {
       var entry = el('div', 'entry ' + className);
+      var pre = null;
       if (className.indexOf('block') >= 0) {
-        var pre = el('pre');
-        pre.innerHTML = escapeHtml(what)
-          .replace(/^(\s*──.*)$/gm, '<span class="hd">$1</span>')
-          .replace(/(←[^\n]*)/g, '<span class="rec">$1</span>');
+        pre = el('pre');
+        // each line hangs from its marker ("1.", "A)", "-", "✓"): a wrapped line lines up under its text, not column 0
+        pre.innerHTML = what.split('\n').map(function (line) {
+          var lead = line.match(/^(\s*)((?:\d+\.|[A-Z]\)|-|✓|·)\s+)?/);
+          var hang = (lead[2] || '').length;
+          var text = escapeHtml(line.slice(lead[1].length))
+            .replace(/^(──.*)$/, '<span class="hd">$1</span>')
+            .replace(/(←.*)$/, '<span class="rec">$1</span>');
+          return '<span class="ln" style="--in:' + (lead[1].length + hang) + ';--hang:' + hang + '">' + text + '</span>';
+        }).join('');
         entry.appendChild(pre);
       } else {
         entry.appendChild(el('span', 'entry-who', who));
@@ -416,6 +428,11 @@
       }
       log.appendChild(entry);
       log.scrollTop = log.scrollHeight;
+      if (pre && entry.offsetHeight > log.clientHeight) { // a block taller than the log: keep what it asks in view
+        var heads = pre.querySelectorAll('.hd');
+        var mark = heads.length > 1 ? heads[heads.length - 1] : entry;
+        log.scrollTop += mark.getBoundingClientRect().top - log.getBoundingClientRect().top - 8;
+      }
     }
 
     function command(args) {
@@ -942,7 +959,7 @@
       if (board && on && scene.id === 'title' && board.done()) board.run();
       if (!on) padded.splice(0).forEach(function (each) { each.style.paddingBottom = ''; });
       window.dispatchEvent(new Event('resize'));
-      window.setTimeout(function () { scene.scrollIntoView({ behavior: 'auto', block: 'start' }); }, 160);
+      window.setTimeout(function () { scene.scrollIntoView({ behavior: 'instant', block: 'start' }); }, 160);
     }
     function go(step) {
       var index = scenes.indexOf(currentScene()) + step;
@@ -963,7 +980,9 @@
      * One step of a presentation: reply OK where the page waits for a person; otherwise the rest of a scene that is
      * taller than the screen; otherwise the next scene.
      */
+    var presses = 0; // steps taken: a delayed scroll stands down once the presenter has moved on
     function advance() {
+      presses++;
       var scene = currentScene();
       var id = scene.id;
       if ((id === 'title' || id === 'ledger') && board && board.running()) return board.hurry();
@@ -975,6 +994,10 @@
         if (replay.playing()) return undefined;
         if (replay.canReply() && replay.canRefuse()) { // once a ticket is printed, try to change it before going on
           show(replay.firstTicket());
+          var at = presses;
+          window.setTimeout(function () { // gtaw's refusal prints under the ticket: bring it up too, unless they went on
+            if (presses === at) show(replay.firstTicket());
+          }, 900);
           return replay.refuse();
         }
         if (replay.canReply()) {
@@ -1025,7 +1048,7 @@
       // a tail of up to 28 px goes with this step: the lead keeps that much room under the header, so nothing is lost
       var step = rest <= reach + 28 ? rest : Math.min(reach, rest - 120); // and leave the last step something to show
       if (step < 80) step = Math.min(reach, rest); // what is left is short: take it now, never creep
-      return window.scrollBy({ top: step === rest ? last(scene, step) : step, behavior: smooth });
+      return window.scrollBy({ top: step === rest ? last(scene, step) : clear(scene, step), behavior: smooth });
     }
     /**
      * The last step of a scene, to its end: a row that would end up half under the header goes all the way up, the
@@ -1044,6 +1067,26 @@
       scene.style.paddingBottom = parseFloat(window.getComputedStyle(scene).paddingBottom) + bottom + 'px';
       padded.push(scene);
       return step + bottom;
+    }
+    /**
+     * A step that brings a block up to the lead leaves 28 px under the header: whatever ends in that band would show
+     * as a sliver. The step goes on by up to those 28 px so that it does not (it skips nothing: that much stays room).
+     */
+    function clear(scene, step) {
+      var line = HEAD + step; // what is at this height now ends up just under the header
+      var extra = 0;
+      [0.25, 0.5, 0.75].forEach(function (x) {
+        [-2, 2, 14, 26].forEach(function (dy) {
+          var hit = document.elementsFromPoint(window.innerWidth * x, line + dy)[0];
+          var row = hit && scene.contains(hit) ? hit.closest('tr, li, p, h2, h3, pre, .ticket') : null;
+          if (!row || !scene.contains(row)) return;
+          var box = row.getBoundingClientRect();
+          // a headline's underline is drawn below its box (the Chinese em): count it in
+          var bottom = box.bottom + (row.tagName === 'H2' ? 0.3 * parseFloat(window.getComputedStyle(row).fontSize) : 0);
+          if (box.top < line && bottom > line && bottom - line <= 28) extra = Math.max(extra, Math.ceil(bottom - line));
+        });
+      });
+      return step + extra;
     }
     /** Back: to the top of the scene when part of it was stepped through, otherwise the scene before. */
     function back() {
@@ -1143,4 +1186,6 @@
     var at = window.location.hash ? document.getElementById(window.location.hash.slice(1)) : null;
     page.stage(at && at.hasAttribute('data-scene') ? at : null);
   }
+  // links scroll smoothly from now on; before, a link that opened the page at a scene could fight stage mode's own jump
+  if (!reduced) window.setTimeout(function () { document.documentElement.classList.add('smooth'); }, 1200);
 })();
