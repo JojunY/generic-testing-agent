@@ -1,5 +1,6 @@
 package com.gta.core.report;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.gta.core.config.GtaPaths;
@@ -54,6 +55,7 @@ class ReporterTest {
         st.items.put(defect.id, defect);
         st.pendingReview.add("order.create/s01: `50.00` → `55.00`");
         st.newConfirmations.add("order.create R1: \"1B\"");
+        st.newConfirmations.add("order.create/s02#component-01: \"OK\" (defect confirmed)");
         return st;
     }
 
@@ -75,10 +77,13 @@ class ReporterTest {
                 "### Spec findings",
                 "### Waiting for a human",
                 "### Product defects found",
+                "### Human confirmations, approvals and relocks in this change (review them)",
+                "- order.create/s02#component-01: \"OK\" (defect confirmed)",
                 "### Spec corrections to re-confirm",
                 "| order.create | Create an order | order.create/s01 valid order | observed | `order.create/s01#component-01` | needs-human |")) {
             assertTrue(md.contains(expected), "missing '" + expected + "' in:\n" + md);
         }
+        assertFalse(md.contains("- order.create R1:"), "spec answers come from the gate's records, not twice");
     }
 
     @Test

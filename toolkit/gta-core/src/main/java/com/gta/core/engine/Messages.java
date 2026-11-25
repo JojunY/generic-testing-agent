@@ -57,7 +57,7 @@ final class Messages {
             Map.entry("chk.gate.one", "the quality gate checked 1 locked scenario against the base branch: %s"),
             Map.entry(
                     "chk.gate.none",
-                    "the base branch has no locked scenario yet, so the quality gate had none to check: %s"),
+                    "the base branch has no locked scenario yet for the quality gate to check; its decision: %s"),
             Map.entry("verdict.product-defect", "a product defect"),
             Map.entry("verdict.test-defect", "a test defect"),
             Map.entry("verdict.oracle-defect", "a wrong expected value"),
@@ -163,7 +163,7 @@ final class Messages {
             Map.entry("chk.reviewer", "%s：评审员已确认断言与规格一致"),
             Map.entry("chk.gate", "质量门禁已按目标分支检查 %s 个锁定的场景：%s"),
             Map.entry("chk.gate.one", "质量门禁已按目标分支检查 1 个锁定的场景：%s"),
-            Map.entry("chk.gate.none", "目标分支上还没有锁定的场景，质量门禁没有可检查的：%s"),
+            Map.entry("chk.gate.none", "目标分支上还没有可供质量门禁检查的锁定场景；门禁结论：%s"),
             Map.entry("verdict.product-defect", "产品缺陷"),
             Map.entry("verdict.test-defect", "测试缺陷"),
             Map.entry("verdict.oracle-defect", "预期值有误"),

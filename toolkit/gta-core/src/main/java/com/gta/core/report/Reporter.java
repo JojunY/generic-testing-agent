@@ -64,13 +64,20 @@ public final class Reporter {
                     .filter(c -> c.code.equals(ErrorCode.GATE_NEW_CONFIRMATION.name())
                             || c.code.equals(ErrorCode.GATE_RELOCKED.name()))
                     .toList();
-            if (!confirmations.isEmpty()) {
+            // a person's decisions on items (a defect confirmed, a spec rejected) are not spec records, so the gate
+            // does
+            // not see them; this session's are listed with the answers and approvals (an item id always has a '#')
+            List<String> decisions = state.newConfirmations.stream()
+                    .filter(c -> c.substring(0, Math.max(0, c.indexOf(':'))).contains("#"))
+                    .toList();
+            if (!confirmations.isEmpty() || !decisions.isEmpty()) {
                 b.append("### Human confirmations, approvals and relocks in this change (review them)\n\n");
                 confirmations.forEach(c -> b.append("- ")
                         .append(c.target)
                         .append(": ")
                         .append(c.message)
                         .append('\n'));
+                decisions.forEach(d -> b.append("- ").append(d).append('\n'));
                 b.append('\n');
             }
             List<Gate.Condition> other = gate.concerns.stream()

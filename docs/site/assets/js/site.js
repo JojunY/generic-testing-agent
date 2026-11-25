@@ -107,6 +107,8 @@
       line.shown = row.state;
       line.tr.setAttribute('data-state', row.state);
       line.lock.classList.toggle('has', !!state.locked);
+      if (state.locked) line.chips.removeAttribute('aria-hidden');
+      else line.chips.setAttribute('aria-hidden', 'true'); // values not locked yet are not read out as locked
       all('.chip', line.chips).forEach(function (chip, n) {
         chip.style.transitionDelay = n * 90 + 'ms';
         chip.classList.toggle('on', !!state.locked);
@@ -187,6 +189,7 @@
     var live = el('p', 'sr'); // what a screen reader hears: once the scenarios have settled, not each step on the way
     live.setAttribute('role', 'status');
     document.body.appendChild(live);
+    var liveTimer = 0;
     function desk() {
       var waiting = rows.filter(function (row) { return row.state === 'waiting'; }).length;
       var open = rows.filter(function (row) { return row.state !== 'passed' && row.state !== 'pinned'; }).length;
@@ -201,8 +204,12 @@
           if (force) force.focus({ preventScroll: true });
         }
       });
-      var moving = rows.some(function (row) { return row.state !== 'passed' && row.state !== 'pinned' && row.state !== 'waiting'; });
-      if (!moving && live.textContent !== text) live.textContent = text;
+      // a screen reader hears where things settle: OK pins one row after another, the run moves for seconds
+      window.clearTimeout(liveTimer);
+      liveTimer = window.setTimeout(function () {
+        var moving = rows.some(function (row) { return row.state !== 'passed' && row.state !== 'pinned' && row.state !== 'waiting'; });
+        if (!moving && live.textContent !== text) live.textContent = text;
+      }, 400);
       if (text === said) return;
       said = text;
       all('[data-note="ok"]').forEach(function (note) {
@@ -274,11 +281,33 @@
     all('[data-key="ok"]').forEach(function (key) { key.addEventListener('click', ok); });
     all('[data-key="force"]').forEach(function (key) { key.addEventListener('click', force); });
 
+    /**
+     * In stage mode a desk keeps the height of its longest message: a note that grows from one line to three as the
+     * scenarios start waiting would push every scene below it down while the presenter is on one of them.
+     */
+    function reserve() {
+      all('[data-note="ok"]').forEach(function (note) {
+        var desk = note.closest('.desk');
+        desk.style.minHeight = '';
+        if (!document.body.classList.contains('stage')) return;
+        var kept = [].slice.call(note.childNodes);
+        var tallest = 0;
+        [t('okNone'), t('okOne'), t('okMany', { n: rows.length }), t('okDone', { p: rows.length, d: rows.length }) + ' ' + t('again')]
+          .forEach(function (text) {
+            note.textContent = text;
+            tallest = Math.max(tallest, desk.offsetHeight);
+          });
+        note.textContent = '';
+        kept.forEach(function (node) { note.appendChild(node); });
+        desk.style.minHeight = tallest + 'px';
+      });
+    }
+
     var stage = $('art-stage');
     var fit = 0;
     window.addEventListener('resize', function () {
       window.clearTimeout(fit);
-      fit = window.setTimeout(function () { art.resize(); }, 120);
+      fit = window.setTimeout(function () { art.resize(); reserve(); }, 120);
     });
     if ('IntersectionObserver' in window) {
       new IntersectionObserver(function (entries) {
@@ -404,18 +433,45 @@
 
     function add(className, who, what) {
       var entry = el('div', 'entry ' + className);
+      var pre = null;
       if (className.indexOf('block') >= 0) {
-        var pre = el('pre');
-        pre.innerHTML = escapeHtml(what)
-          .replace(/^(\s*──.*)$/gm, '<span class="hd">$1</span>')
-          .replace(/(←[^\n]*)/g, '<span class="rec">$1</span>');
+        pre = el('pre');
+        // each line hangs from its marker ("1.", "A)", "-", "✓"): a wrapped line lines up under its text, not column 0.
+        // The text keeps its spaces and line ends, so a copied block reads as gtaw printed it.
+        var source = what.split('\n');
+        pre.innerHTML = source.map(function (line, n) {
+          var lead = line.match(/^(\s*)((?:\d+\.|[A-Z]\)|-|✓|·)\s+)?/);
+          var rest = line.slice(lead[1].length);
+          var text = escapeHtml(lead[1]) + escapeHtml(rest)
+            .replace(/^(──.*)$/, '<span class="hd">$1</span>')
+            .replace(/(←.*)$/, '<span class="rec">$1</span>');
+          var end = n < source.length - 1 ? '\n' : '';
+          return '<span class="ln" style="--in:' + (lead[1].length + (lead[2] || '').length) + '">' + text + end + '</span>';
+        }).join('');
         entry.appendChild(pre);
       } else {
         entry.appendChild(el('span', 'entry-who', who));
         entry.appendChild(el('span', 'entry-what', what));
       }
       log.appendChild(entry);
+      aim();
+      // it rises into place: aim again once it stands still
+      if (pre && !reduced) entry.addEventListener('animationend', aim, { once: true });
+    }
+
+    /**
+     * The log shows its end, or, when its last entry is a block taller than the log, that block's question: its last
+     * "── … ──" header, just below the fade at the top of the log.
+     */
+    function aim() {
       log.scrollTop = log.scrollHeight;
+      var entry = log.lastElementChild;
+      var pre = entry && entry.querySelector('pre');
+      if (pre && entry.offsetHeight > log.clientHeight) {
+        var heads = pre.querySelectorAll('.hd');
+        var mark = heads.length > 1 ? heads[heads.length - 1] : entry;
+        log.scrollTop += mark.getBoundingClientRect().top - log.getBoundingClientRect().top - 26;
+      }
     }
 
     function command(args) {
@@ -468,6 +524,7 @@
         input.value = '';
         input.placeholder = '';
         hint.textContent = t('replyDone');
+        log.scrollTop = log.scrollHeight; // the hint took room from the log: its last line stays in view
         key.disabled = false;
         key.firstChild.nodeValue = t('replayAgain') + ' ';
         showEvidence();
@@ -713,6 +770,7 @@
     }
     log.setAttribute('data-empty', t('logEmpty'));
     replay = {
+      aim: aim,
       canRefuse: function () { return !refused && !!tickets.querySelector('.punch'); },
       refuse: refuse,
       firstTicket: function () { return tickets.querySelector('.ticket'); },
@@ -924,9 +982,11 @@
           holding = Date.now() + 400;
         }
         resizing = false;
+        if (replay) replay.aim(); // the log's type changed size: its question stays in view
       }, 180);
     });
     function stage(target) {
+      presses++;
       var on = !staged();
       var scene = target || currentScene();
       shown = scene;
@@ -942,7 +1002,7 @@
       if (board && on && scene.id === 'title' && board.done()) board.run();
       if (!on) padded.splice(0).forEach(function (each) { each.style.paddingBottom = ''; });
       window.dispatchEvent(new Event('resize'));
-      window.setTimeout(function () { scene.scrollIntoView({ behavior: 'auto', block: 'start' }); }, 160);
+      window.setTimeout(function () { scene.scrollIntoView({ behavior: 'instant', block: 'start' }); }, 160);
     }
     function go(step) {
       var index = scenes.indexOf(currentScene()) + step;
@@ -957,24 +1017,34 @@
       var dy = box.bottom > window.innerHeight
         ? Math.min(box.bottom - window.innerHeight + 16, box.top - HEAD - 8) // up just enough, the top kept in view
         : box.top - HEAD - 28;
-      window.scrollBy({ top: Math.max(dy, scene.top - HEAD), behavior: smooth });
+      dy = Math.min(dy, window.innerHeight - HEAD - 28); // never past what the screen has not shown yet
+      dy = Math.max(dy, scene.top - HEAD);
+      var reach = window.innerHeight - HEAD - 28;
+      if (dy > 0) dy = clear(node.closest('[data-scene]'), dy, Math.max(1, Math.min(box.top - dy - HEAD - 4, reach - dy))); // no sliver; its top stays, nothing unseen skipped
+      window.scrollBy({ top: dy, behavior: smooth });
     }
     /**
      * One step of a presentation: reply OK where the page waits for a person; otherwise the rest of a scene that is
      * taller than the screen; otherwise the next scene.
      */
+    var presses = 0; // steps taken: a delayed scroll stands down once the presenter has moved on
     function advance() {
+      presses++;
       var scene = currentScene();
       var id = scene.id;
       if ((id === 'title' || id === 'ledger') && board && board.running()) return board.hurry();
       if ((id === 'title' || id === 'ledger') && board && board.waiting()) {
-        if (id === 'ledger') show(scene.querySelector('.sheet-desk'));
+        if (id === 'ledger') show(scene.querySelector('.sheet-desk .desk-item')); // OK and its note: what the beat is about
         return board.ok();
       }
       if (id === 'loop' && replay) {
         if (replay.playing()) return undefined;
         if (replay.canReply() && replay.canRefuse()) { // once a ticket is printed, try to change it before going on
           show(replay.firstTicket());
+          var at = presses;
+          window.setTimeout(function () { // gtaw's refusal prints under the ticket: bring it up too, unless they went on
+            if (presses === at) show(replay.firstTicket());
+          }, 900);
           return replay.refuse();
         }
         if (replay.canReply()) {
@@ -997,8 +1067,9 @@
       // room it lacks below, so the last stop reads as a slide instead of slicing a heading at the top of the screen
       for (var f = 0; f < stops.length; f++) {
         var lift = stops[f].top - lead;
-        var room = lift - rest;
-        if (end - lift <= height && room <= height * 0.6) {
+        if (end - lift <= height && lift - rest <= height * 0.6) {
+          lift = clear(scene, lift); // and nothing of what is above shows as a sliver under the header
+          var room = lift - rest;
           if (room > 0) {
             scene.style.paddingBottom = parseFloat(window.getComputedStyle(scene).paddingBottom) + room + 'px';
             padded.push(scene);
@@ -1009,15 +1080,15 @@
       for (var n = 0; n < stops.length; n++) { // otherwise the first block not seen whole
         if (stops[n].bottom > height + 8) {
           var up = stops[n].top - lead;
-          return window.scrollBy({ top: rest > up && rest - up <= 28 ? last(scene, rest) : up, behavior: smooth }); // no 9 px tail
+          return window.scrollBy({ top: rest > up && rest - up <= 28 ? last(scene, rest) : clear(scene, up), behavior: smooth }); // no 9 px tail
         }
       }
       // otherwise a plain step: never past what was not on screen, never cutting a block that crosses the bottom edge
       // (it starts the next screen, from its own top rather than from a line inside it), and never a short last one
       [0.25, 0.5, 0.75].forEach(function (x) {
-        var under = document.elementsFromPoint(window.innerWidth * x, height - 2)[0];
-        if (!under || !scene.contains(under)) return;
-        for (var node = under; node && node !== scene; node = node.parentElement) {
+        var low = under(window.innerWidth * x, height - 2, scene);
+        if (!low) return;
+        for (var node = low; node && node !== scene; node = node.parentElement) {
           var top = node.getBoundingClientRect().top;
           if (top > lead + 80 && top < height) reach = Math.min(reach, top - lead);
         }
@@ -1025,7 +1096,11 @@
       // a tail of up to 28 px goes with this step: the lead keeps that much room under the header, so nothing is lost
       var step = rest <= reach + 28 ? rest : Math.min(reach, rest - 120); // and leave the last step something to show
       if (step < 80) step = Math.min(reach, rest); // what is left is short: take it now, never creep
-      return window.scrollBy({ top: step === rest ? last(scene, step) : step, behavior: smooth });
+      return window.scrollBy({ top: step === rest ? last(scene, step) : clear(scene, step), behavior: smooth });
+    }
+    /** What the scene shows at a point: overlays such as the stage HUD at the bottom are looked through. */
+    function under(x, y, scene) {
+      return document.elementsFromPoint(x, y).filter(function (node) { return scene.contains(node); })[0];
     }
     /**
      * The last step of a scene, to its end: a row that would end up half under the header goes all the way up, the
@@ -1034,19 +1109,61 @@
     function last(scene, step) {
       var bottom = 0;
       [0.25, 0.5, 0.75].forEach(function (x) {
-        var cut = document.elementsFromPoint(window.innerWidth * x, HEAD + 2 + step)[0];
-        var row = cut && scene.contains(cut) ? cut.closest('tr, li, p, h2, h3, pre, .ticket') : null;
-        if (!row || !scene.contains(row)) return;
-        var box = row.getBoundingClientRect();
-        if (box.top - step < HEAD && box.bottom - step > HEAD) bottom = Math.max(bottom, box.bottom - step - HEAD);
+        [-2, 2].forEach(function (dy) {
+          var cut = under(window.innerWidth * x, HEAD + dy + step, scene);
+          var row = cut && scene.contains(cut) ? cut.closest('td, tr, li, p, h1, h2, h3, pre, figcaption, .role-shape, .ticket, .console') : null;
+          if (!row || !scene.contains(row)) return;
+          var box = row.getBoundingClientRect();
+          if (box.top - step < HEAD && box.bottom - step > HEAD) bottom = Math.max(bottom, Math.ceil(box.bottom - step - HEAD));
+        });
       });
-      if (bottom <= 0 || bottom > 120) return step;
+      if (bottom <= 0 || bottom > 200) return step;
       scene.style.paddingBottom = parseFloat(window.getComputedStyle(scene).paddingBottom) + bottom + 'px';
       padded.push(scene);
       return step + bottom;
     }
+    /**
+     * A step that brings a block up to the lead leaves 28 px under the header: whatever ends in that band would show
+     * as a sliver. The step goes on by up to those 28 px so that it does not (it skips nothing: that much stays room).
+     */
+    // keep: the step must bring something up whole, so it only nudges: by up to 40 px, or growing by at most keep px
+    function clear(scene, step, keep) {
+      var line = HEAD + step; // what is at this height now ends up just under the header
+      var extra = 0;
+      var short = 0;
+      var cutBottom = 0; // the bottom of the block that would be cut mid-way
+      // how much further the step may go: the lead's 28 px, and whatever a step shorter than a screen left unused
+      var room = 28 + Math.max(0, window.innerHeight - HEAD - 28 - step);
+      [0.25, 0.5, 0.75].forEach(function (x) {
+        [-2, 2, 14, 26].forEach(function (dy) {
+          var hit = under(window.innerWidth * x, line + dy, scene);
+          var row = hit && scene.contains(hit) ? hit.closest('td, tr, li, p, h1, h2, h3, pre, figcaption, .role-shape, .ticket, .console') : null;
+          if (!row || !scene.contains(row)) return;
+          var box = row.getBoundingClientRect();
+          // a headline's underline is drawn below its box (the Chinese em): count it in
+          var bottom = box.bottom + (row.tagName === 'H2' ? 0.3 * parseFloat(window.getComputedStyle(row).fontSize) : 0);
+          if (box.top < line && bottom > line) {
+            if (bottom - line <= 28) extra = Math.max(extra, Math.ceil(bottom - line));
+            else cutBottom = Math.max(cutBottom, bottom);
+            if (bottom - line > 28 && line - box.top + 4 <= 200) short = Math.max(short, Math.ceil(line - box.top + 4)); // cut mid-way
+          }
+        });
+      });
+      // a block that the step would cut mid-way starts the screen instead: the step is shorter, nothing is skipped
+      if (keep) { // the step must bring its target up: only a small nudge, whichever way is smaller
+        var most = keep === true ? 40 : keep; // show() brings a target up: it may go on while the target's top stays
+        var up = short && short <= 40 ? -short : 0;
+        var on = cutBottom && cutBottom - line <= most ? Math.ceil(cutBottom - line) : extra; // a whole block over a tail
+        if (up && (!on || -up <= on)) return step + up;
+        return step + on;
+      }
+      if (short && step - short >= 60) return step - short;
+      if (cutBottom && cutBottom - line <= room) return step + Math.ceil(cutBottom - line); // or goes past it whole
+      return step + extra;
+    }
     /** Back: to the top of the scene when part of it was stepped through, otherwise the scene before. */
     function back() {
+      presses++; // a delayed scroll of the step before stands down
       var top = currentScene().getBoundingClientRect().top;
       if (top < -24) return currentScene().scrollIntoView({ behavior: smooth, block: 'start' });
       return go(-1);
@@ -1108,7 +1225,7 @@
       if (typing) return;
       var onControl = target && (target.tagName === 'BUTTON' || target.tagName === 'A');
       switch (event.key) {
-        case 'p': case 'P': stage(); break;
+        case 'p': case 'P': if (staged() || fits()) stage(); break;
         case 'f': case 'F':
           if (document.fullscreenElement) document.exitFullscreen();
           else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(function () {});
@@ -1136,11 +1253,18 @@
     return { stage: stage };
   }
 
+  /** Stage mode is for a projector or a laptop: not for a phone, held either way. */
+  function fits() {
+    return window.innerWidth > 700 && window.innerHeight >= 480;
+  }
+
   var page = setUpPage();
   setUpBoard();
   setUpReplay();
-  if (/[?&]stage\b/.test(window.location.search) && window.innerWidth > 700) { // opened from the other language in stage mode, at its scene
+  if (/[?&]stage\b/.test(window.location.search) && fits()) { // opened from the other language in stage mode, at its scene
     var at = window.location.hash ? document.getElementById(window.location.hash.slice(1)) : null;
     page.stage(at && at.hasAttribute('data-scene') ? at : null);
   }
+  // links scroll smoothly from now on; before, a link that opened the page at a scene could fight stage mode's own jump
+  if (!reduced) window.setTimeout(function () { document.documentElement.classList.add('smooth'); }, 1200);
 })();

@@ -103,7 +103,10 @@ class SessionEndTest {
             switch (checked) {
                 case 0 -> {
                     assertTrue(line.contains("no locked scenario yet"), "it claims no check it did not make: " + line);
-                    assertTrue(chinese.contains("还没有锁定的场景"), chinese);
+                    assertTrue(
+                            line.contains("; its decision: pass"),
+                            "the empty check is not the decision's cause: " + line);
+                    assertTrue(chinese.contains("还没有可供质量门禁检查的锁定场景；门禁结论：pass"), chinese);
                 }
                 case 1 -> {
                     assertTrue(line.contains("checked 1 locked scenario against"), line);

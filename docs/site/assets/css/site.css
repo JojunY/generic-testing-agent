@@ -44,7 +44,9 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 56px; -webkit-text-size-adjust: 100%; }
+html { scroll-padding-top: 56px; -webkit-text-size-adjust: 100%; }
+/* smooth only once the page has settled: a link that opens it at a scene lands there at once (site.js adds the class) */
+html.smooth { scroll-behavior: smooth; }
 body {
   margin: 0;
   background: var(--grain), var(--paper);
@@ -336,6 +338,7 @@ h3 { font-size: calc(27px * var(--scale)); line-height: 1.15; letter-spacing: -0
 .entry.block pre { margin: 2px 0 6px; padding: 15px 17px; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; color: var(--paper); background: #0c0a08; border: 1px solid var(--night-rule); border-left: 3px solid var(--yellow); border-radius: 8px; }
 .entry.block.end pre { border-left-color: #4fd091; }
 .entry.block pre .rec { color: var(--yellow); }
+.entry.block pre .ln { display: block; padding-left: calc(var(--in) * 1ch); text-indent: calc(var(--in) * -1ch); }
 .entry.block pre .hd { color: var(--cream-2); }
 .console-in { display: flex; align-items: center; gap: 12px; padding: 13px 14px 13px 20px; border-top: 1px solid var(--night-rule); background: var(--night-2); }
 .prompt { color: var(--yellow); font: 500 calc(20px * var(--scale)) / 1 var(--mono); }
@@ -351,7 +354,7 @@ h3 { font-size: calc(27px * var(--scale)); line-height: 1.15; letter-spacing: -0
 .ledger-mini td { padding: 9px 16px; height: 50px; }
 .ledger-mini tr:first-child td { border-top: 0; }
 .ledger-mini thead th { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.ledger-mini .c-kind, .ledger-mini .c-who { display: none; }
+.ledger-mini .c-kind, .ledger-mini .c-who, .ledger-mini thead th:nth-child(2), .ledger-mini thead th:nth-child(5) { display: none; }
 .ledger-mini .c-scn { text-transform: uppercase; width: 1%; }
 .ledger-mini .c-verdict { min-width: 0; text-align: right; }
 .ledger-mini .st { font-size: calc(17px * var(--scale)); }
@@ -363,7 +366,7 @@ h3 { font-size: calc(27px * var(--scale)); line-height: 1.15; letter-spacing: -0
 .ticket-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin: 0 0 4px; padding: 13px 20px 12px; border-bottom: 1px dashed rgba(22, 19, 15, 0.35); font: 500 calc(15px * var(--scale)) / 1.2 var(--mono); }
 .ticket-head .stamp { animation-delay: 0.5s; }
 .ticket-label { margin-top: 12px; margin-bottom: 4px; font: 500 calc(11px * var(--scale)) / 1.2 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
-.ticket-when { margin-top: 0; margin-bottom: 0; font-size: calc(15px * var(--scale)); line-height: 1.4; }
+.ticket-when { margin-top: 0; margin-bottom: 0; font-size: calc(15px * var(--scale)); line-height: 1.4; text-wrap: pretty; }
 .ticket-values { display: flex; flex-wrap: wrap; gap: 8px; }
 .punch { width: auto; min-width: 3ch; max-width: 100%; height: 36px; padding: 0 10px; text-align: center; color: var(--paper); font: 500 16px/36px var(--mono); letter-spacing: 0.04em; background: var(--ink); border: 0; border-radius: 5px; }
 .punch:focus-visible { outline-color: var(--red); }
@@ -497,11 +500,12 @@ body.stage .timetable-wrap { margin-top: 44px; }
 body.stage .role-who { margin-top: 10px; }
 body.stage .ledger td { height: 38px; padding-top: 6px; padding-bottom: 6px; }
 body.stage .ledger-scene .sheet { margin-top: 28px; }
-body.stage .console-log { height: calc(100vh - 56px - 40px - 36px - 230px - 120px); min-height: 260px; }
+body.stage .console { height: calc(100vh - 349px); min-height: 380px; }
+body.stage .console-log { flex: 1 1 0; height: auto; min-height: 0; }
 /* the console keeps its own height: the rail may grow taller with two tickets, the console does not follow it */
 body.stage .console { align-self: start; }
 /* the log scrolls under the bar: its top fades instead of cutting a line in half */
-body.stage .console-log { -webkit-mask-image: linear-gradient(transparent, #000 22px); mask-image: linear-gradient(transparent, #000 22px); }
+body.stage .console-log { -webkit-mask-image: linear-gradient(transparent, #000 22px, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(transparent, #000 22px, #000 calc(100% - 18px), transparent); }
 /* the presenter's chrome stays out of the picture until pointed at */
 body.stage .tools { opacity: 0.35; transition: opacity 0.3s; }
 body.stage .top:hover .tools, body.stage .tools:focus-within { opacity: 1; }
@@ -514,10 +518,18 @@ body.stage .timetable tbody tr:hover td { background: none; }
 body.stage .loop { align-items: stretch; }
 body.stage .rail { position: static; }
 body.stage .tickets { flex: 1 0 auto; }
+/* once the second ticket prints, the first folds to its head and values: the pinned defect lands on screen */
+body.stage .ticket:not(:last-child) :is(.ticket-label, .ticket-when, .ticket-refused) { display: none; }
+body.stage .ticket:not(:last-child) .ticket-values { margin-top: 10px; }
 body.stage .slot { flex: 1 0 auto; display: flex; align-items: center; justify-content: center; text-align: center; padding: 32px 15%; color: var(--ink-3); background: rgba(22, 19, 15, 0.025); }
 body.stage .roles { flex: 1 0 auto; }
 body.stage .evidence { margin-top: 64px; }
 body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px); }
+/* a native 1440p screen in a large room: the page fills it */
+@media (min-width: 2200px) and (min-height: 1200px) {
+  body.stage { --scale: 1.6; --wrap: min(2200px, 88vw); }
+  body.stage h2 { font-size: clamp(52px, 5.6vw, 150px); }
+}
 @media (min-width: 1041px) {
   body.stage .loop { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
   body.stage #covers > .wrap { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
@@ -554,12 +566,24 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   body.stage .roles-scene { padding-top: 20px; }
   body.stage .roles { margin-top: 16px; }
   body.stage .role { padding-top: 12px; padding-bottom: 14px; }
-  body.stage .role-shape { height: 52px; }
+  body.stage .role-shape { height: 64px; align-items: flex-start; } /* the shape and its offset outline end above the label */
   body.stage .role-who { margin-top: 6px; }
   body.stage .role-sub { margin: 8px 0; padding-bottom: 8px; }
   body.stage .role ul { font-size: 16px; line-height: 1.3; }
   body.stage .never-label { margin-top: 8px; }
   body.stage .console-log { font-size: 14.5px; }
+  body.stage .console { height: calc(100vh - 228px); }
+  /* the covers index in two stops: all fifteen rows, the chips and what is not covered */
+  body.stage .timetable td { padding-top: 2px; padding-bottom: 2px; }
+  body.stage .timetable td:first-child { font-size: 19px; }
+  body.stage .also { margin-top: 22px; }
+  body.stage .cmd { padding-right: 84px; }
+  /* the replay starts at the top of its screen: the console gets the room an eyebrow and centring took */
+  body.stage #loop > .wrap > .eyebrow { display: none; }
+  body.stage #loop { justify-content: flex-start; }
+  /* the tickets show the locked values; the board keeps one line per scenario */
+  body.stage .ledger-mini .c-lock, body.stage .ledger-mini thead th:nth-child(3) { display: none; }
+  /* once the second ticket prints, the first folds to its head and values: the pinned defect lands on screen */
   body.stage .lane { padding: 20px 26px; }
   body.stage .lane .lane-end { margin-top: 14px; }
   /* two tickets and the board fit beside the console on one screen */
@@ -577,14 +601,19 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
 /* 768/720 on a wide screen: the problem's code sits beside its headline, and the presenter says the lede */
 @media (max-height: 820px) and (min-width: 1041px) {
   body.stage #problem .lede { display: none; }
-  body.stage #problem > .wrap { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); }
-  body.stage #problem pre.code { grid-column: 2; grid-row: 2; align-self: end; margin-top: 0; font-size: 13.5px; white-space: pre-wrap; }
+  body.stage #problem > .wrap { grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr); }
+  body.stage #problem > .wrap > pre.code { grid-column: 2; grid-row: 2; align-self: end; margin-top: 0; font-size: 12.5px; white-space: pre-wrap; }
 }
 @media (max-height: 760px) {
+  body.stage .timetable-wrap { margin-top: 20px; }
+  body.stage .timetable td:first-child { font-size: 18px; }
+  body.stage .also-label { margin-bottom: 10px; }
+  body.stage .also-not { margin-top: 16px; }
   body.stage .ledger td { height: 25px; padding-top: 2px; padding-bottom: 2px; }
-  body.stage .shape-blob { width: 48px; height: 48px; }
-  body.stage .shape-square { width: 44px; height: 44px; }
-  body.stage .shape-ring { width: 52px; height: 52px; }
+  body.stage .shape-blob { width: 42px; height: 42px; }
+  body.stage .shape-square { width: 40px; height: 40px; }
+  body.stage .shape-ring { width: 46px; height: 46px; }
+  body.stage .shape-blob::after, body.stage .shape-square::after { transform: translate(4px, 4px); }
   body.stage .ledger th { padding-top: 6px; padding-bottom: 4px; }
   body.stage .sheet-desk { padding-top: 10px; padding-bottom: 10px; }
   body.stage .role-shape { height: 48px; }
@@ -603,6 +632,8 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
 .help dt { white-space: nowrap; }
 .help dd { margin: 0; }
 
+/* stage mode needs a screen at least 480 px tall (site.js fits()) */
+@media (max-height: 479px) { #stage-key { display: none; } }
 /* smaller screens */
 @media (max-width: 1040px) {
   .nav { display: none; }
@@ -632,7 +663,8 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   .ledger:not(.ledger-mini) .c-who { grid-column: 2; grid-row: 2; text-align: right; align-self: center; }
   .ledger:not(.ledger-mini) .c-lock { grid-column: 1 / -1; }
   .ledger:not(.ledger-mini) .c-lock:not(.has) { display: none; }
-  .ledger-mini .c-lock { display: none; }
+  body.stage .ledger:not(.ledger-mini) .c-lock:not(.has) { display: block; visibility: hidden; }
+  .ledger-mini .c-lock, .ledger-mini thead th:nth-child(3) { display: none; }
   /* stacked, the console fills the stage and the ticket area sits below it: the empty hint would point off screen */
   body.stage .slot { display: none; }
   /* the covers table wraps its cells instead of hiding its last column in a sideways scroller */
@@ -675,7 +707,7 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
+  html, html.smooth { scroll-behavior: auto; }
   .reveal, .kw > span { opacity: 1; transform: none; transition: none; }
   .entry, .ticket, .evidence, .shake, .punch.back, .st, .stamp, .art-label, .shape-blob, .shape-square { animation: none !important; }
   .strip .stamp, .art-label { opacity: 1; }
@@ -696,6 +728,8 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   .shape-ring path { stroke-dashoffset: 0; animation: none; }
   .ns-word::after { transform: none; }
   .art { display: none; }
+  .standing, .lane, .role, .ticket, .reads li, .steps li, pre, tr, .foot { break-inside: avoid; }
+  .eyebrow, h2, h3, .standing-title { break-after: avoid; }
   .timetable-wrap, .ledger-wrap { overflow: visible; }
   .timetable td, .ledger td { white-space: normal; }
   section { padding: 24px 0; break-inside: auto; }
