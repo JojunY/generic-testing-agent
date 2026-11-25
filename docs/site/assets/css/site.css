@@ -338,8 +338,7 @@ h3 { font-size: calc(27px * var(--scale)); line-height: 1.15; letter-spacing: -0
 .entry.block pre { margin: 2px 0 6px; padding: 15px 17px; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; color: var(--paper); background: #0c0a08; border: 1px solid var(--night-rule); border-left: 3px solid var(--yellow); border-radius: 8px; }
 .entry.block.end pre { border-left-color: #4fd091; }
 .entry.block pre .rec { color: var(--yellow); }
-.entry.block pre .ln { display: block; padding-left: calc(var(--in) * 1ch); text-indent: calc(var(--hang) * -1ch); }
-.entry.block pre .ln:empty::before { content: "\200b"; }
+.entry.block pre .ln { display: block; padding-left: calc(var(--in) * 1ch); text-indent: calc(var(--in) * -1ch); }
 .entry.block pre .hd { color: var(--cream-2); }
 .console-in { display: flex; align-items: center; gap: 12px; padding: 13px 14px 13px 20px; border-top: 1px solid var(--night-rule); background: var(--night-2); }
 .prompt { color: var(--yellow); font: 500 calc(20px * var(--scale)) / 1 var(--mono); }
@@ -355,7 +354,7 @@ h3 { font-size: calc(27px * var(--scale)); line-height: 1.15; letter-spacing: -0
 .ledger-mini td { padding: 9px 16px; height: 50px; }
 .ledger-mini tr:first-child td { border-top: 0; }
 .ledger-mini thead th { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.ledger-mini .c-kind, .ledger-mini .c-who { display: none; }
+.ledger-mini .c-kind, .ledger-mini .c-who, .ledger-mini thead th:nth-child(2), .ledger-mini thead th:nth-child(5) { display: none; }
 .ledger-mini .c-scn { text-transform: uppercase; width: 1%; }
 .ledger-mini .c-verdict { min-width: 0; text-align: right; }
 .ledger-mini .st { font-size: calc(17px * var(--scale)); }
@@ -583,7 +582,7 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   body.stage #loop > .wrap > .eyebrow { display: none; }
   body.stage #loop { justify-content: flex-start; }
   /* the tickets show the locked values; the board keeps one line per scenario */
-  body.stage .ledger-mini .c-lock { display: none; }
+  body.stage .ledger-mini .c-lock, body.stage .ledger-mini thead th:nth-child(3) { display: none; }
   /* once the second ticket prints, the first folds to its head and values: the pinned defect lands on screen */
   body.stage .lane { padding: 20px 26px; }
   body.stage .lane .lane-end { margin-top: 14px; }
@@ -633,6 +632,8 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
 .help dt { white-space: nowrap; }
 .help dd { margin: 0; }
 
+/* stage mode needs a screen at least 480 px tall (site.js fits()) */
+@media (max-height: 479px) { #stage-key { display: none; } }
 /* smaller screens */
 @media (max-width: 1040px) {
   .nav { display: none; }
@@ -662,7 +663,8 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   .ledger:not(.ledger-mini) .c-who { grid-column: 2; grid-row: 2; text-align: right; align-self: center; }
   .ledger:not(.ledger-mini) .c-lock { grid-column: 1 / -1; }
   .ledger:not(.ledger-mini) .c-lock:not(.has) { display: none; }
-  .ledger-mini .c-lock { display: none; }
+  body.stage .ledger:not(.ledger-mini) .c-lock:not(.has) { display: block; visibility: hidden; }
+  .ledger-mini .c-lock, .ledger-mini thead th:nth-child(3) { display: none; }
   /* stacked, the console fills the stage and the ticket area sits below it: the empty hint would point off screen */
   body.stage .slot { display: none; }
   /* the covers table wraps its cells instead of hiding its last column in a sideways scroller */
@@ -726,7 +728,7 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   .shape-ring path { stroke-dashoffset: 0; animation: none; }
   .ns-word::after { transform: none; }
   .art { display: none; }
-  .standing, .lane, .role, .ticket, .reads li, .steps li, pre { break-inside: avoid; }
+  .standing, .lane, .role, .ticket, .reads li, .steps li, pre, tr, .foot { break-inside: avoid; }
   .eyebrow, h2, h3, .standing-title { break-after: avoid; }
   .timetable-wrap, .ledger-wrap { overflow: visible; }
   .timetable td, .ledger td { white-space: normal; }
