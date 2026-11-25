@@ -40,5 +40,12 @@ class EscalationWriterTest {
         assertTrue(ProcessRunner.run(root, ProcessRunner.cmd("git", "log", "-1", "--format=%s"))
                 .output()
                 .startsWith("docs(gta): escalate"));
+
+        s.status = ItemStatus.PENDING; // the person confirmed the defect: the item waits for its pin
+        new EngineContext(root)
+                .escalations.writeEscalation(item, s, "Confirmed as a product defect by a human: \"OK\".");
+        assertTrue(ProcessRunner.run(root, ProcessRunner.cmd("git", "log", "-1", "--format=%s"))
+                .output()
+                .startsWith("docs(gta): record defect confirmation order.create/s01#component-01"));
     }
 }

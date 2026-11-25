@@ -63,7 +63,10 @@ final class EscalationWriter {
                     "Look at the last failure and the brief, fix the cause (environment, spec or test), then answer 'A' to retry in `/gta`.\n");
         }
         AtomicFiles.write(f, b.toString());
-        String verb = s.status == ItemStatus.DEFECT_FOUND ? "record known defect " : "escalate ";
+        // a person's decision is not an escalation: the commit says what it records
+        String verb = s.status == ItemStatus.DEFECT_FOUND
+                ? "record known defect "
+                : reason.startsWith("Confirmed") ? "record defect confirmation " : "escalate ";
         ctx.commit(List.of(paths.rel(f)), "docs(gta): " + verb + item.id + "\n\nGta-Item: " + item.id);
     }
 }
