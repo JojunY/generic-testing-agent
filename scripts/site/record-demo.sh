@@ -4,8 +4,8 @@
 # recording (every gtaw output, the spec, the briefs, the test, the commits, the report) is written to
 # docs/site/assets/js/run-data.js. Run it again after a change to what gtaw says, then review the diff.
 #
-# With --lang zh-CN gtaw speaks Chinese (output.language) and the recording goes to run-data.zh-CN.js, for the Chinese
-# page; what the scripted agents write stays English.
+# With --lang zh-CN gtaw speaks Chinese (output.language), the scripted agents write the spec and their reasons in
+# Chinese (scripts/site/demo/*.zh-CN.md), and the recording goes to run-data.zh-CN.js, for the Chinese page.
 #
 # Needs: the same as evals/e2e/run.sh (the toolkit built and installed).
 # Usage: scripts/site/record-demo.sh [--lang zh-CN] [work-dir]
@@ -23,6 +23,16 @@ SEED="$REPO/evals/e2e/scripted-output/lending"       # the seed test of the lend
 WORK="${1:-$(mktemp -d)}"
 DATA="$REPO/docs/site/assets/js/run-data.js"
 [ "$LANGUAGE" = en ] || DATA="$REPO/docs/site/assets/js/run-data.$LANGUAGE.js"
+# what the scripted agents write, in the language of the page (scripts/site/demo/words*.md)
+SUFFIX=""
+[ "$LANGUAGE" = en ] || SUFFIX=".$LANGUAGE"
+SPEC_DRAFT="$AGENT/book.spec$SUFFIX.md"
+word() { sed -n "s/^- $1: //p" "$AGENT/words$SUFFIX.md"; }
+THEN_DRAFT=$(word THEN_DRAFT)
+THEN_ANSWERED=$(word THEN_ANSWERED)
+ACCEPT=$(word ACCEPT)
+REASON=$(word REASON)
+[ -f "$SPEC_DRAFT" ] && [ -n "$REASON" ] || { echo "no scripted agent text for $LANGUAGE in $AGENT"; exit 2; }
 REC="$(mktemp)"
 P=""
 export GTA_CLI_JAR="$REPO/toolkit/gta-cli/target/gta-cli.jar"
@@ -84,7 +94,7 @@ OUT=$(K=analyze gtaw next --target 2)
 expect "$(jget "$OUT" 'd["node"]')" analyze "first node"
 expect "$(jget "$OUT" 'd["flowId"]')" borrow.book "flow of the list number"
 keep brief-analyze.md "$(jget "$OUT" 'd["brief"]')"
-mkdir -p .gta/specs/borrow && cp "$AGENT/book.spec.md" "$SPEC"
+mkdir -p .gta/specs/borrow && cp "$SPEC_DRAFT" "$SPEC"
 act write-spec analyst "$SPEC"
 keep spec-r1.md "$SPEC"
 OUT=$(K=spec-r1 gtaw submit --spec borrow.book --token "$(jget "$OUT" 'd["token"]')")
@@ -98,7 +108,8 @@ K=answered gtaw answer "OK" >/dev/null
 grep -q 'id=borrow.book/s02 source=confirmed' "$SPEC" || fail "s02 not confirmed by gtaw"
 OUT=$(K=analyze-answers gtaw next)
 expect "$(jget "$OUT" 'd["node"]')" analyze "revision node"
-sed -i 's/the response status is `201` and the borrow status is `BOOKED`/the response status is `503` and the borrow status is `PENDING_LOCATE`/' "$SPEC"
+sed -i "s/$THEN_DRAFT/$THEN_ANSWERED/" "$SPEC"
+grep -q "THEN\*\* $THEN_ANSWERED" "$SPEC" || fail "the analyst did not rewrite the THEN of s02"
 act apply-answer analyst "$SPEC"
 OUT=$(K=spec-r2 gtaw submit --spec borrow.book --token "$(jget "$OUT" 'd["token"]')")
 expect "$(jget "$OUT" 'd["rev"]')" R2 "revised spec"
@@ -130,8 +141,8 @@ act write-test test-author "$TEST"
 K=s01-submitted gtaw submit --item "$S01" --token "$(jget "$OUT" 'd["token"]')" >/dev/null
 OUT=$(K=review-s01 gtaw next)
 expect "$(jget "$OUT" 'd["kind"]')" oracle-review "review of s01"
-act accept reviewer "accept: the test asserts the status 400 on the response"
-OUT=$(K=s01-passed gtaw submit --review "$S01" --token "$(jget "$OUT" 'd["token"]')" --verdict accept --reason "the test asserts the status 400 on the response")
+act accept reviewer "accept: $ACCEPT"
+OUT=$(K=s01-passed gtaw submit --review "$S01" --token "$(jget "$OUT" 'd["token"]')" --verdict accept --reason "$ACCEPT")
 jget "$OUT" 'd["result"]' | grep -q '^passed' || fail "s01: $OUT"
 
 step "s02: the confirmed expectation fails on today's code"
@@ -142,7 +153,6 @@ expect "$(jget "$OUT" 'd["code"]')" TEST_ASSERTION_FAILED "s02 failure"
 OUT=$(K=triage gtaw next)
 expect "$(jget "$OUT" 'd["kind"]')" triage "triage node"
 keep brief-triage.md "$(jget "$OUT" 'd["brief"]')"
-REASON="InventoryClient#inventoryDown reports the shares as reserved when inventory-service did not answer"
 act verdict reviewer "product-defect: $REASON"
 K=triaged gtaw submit --review "$S02" --token "$(jget "$OUT" 'd["token"]')" --verdict product-defect --reason "$REASON" >/dev/null
 OUT=$(K=defect gtaw next)
@@ -172,7 +182,10 @@ git log --reverse --format='%h %s' main..HEAD > "$REC.files/commits.txt"
 git diff --quiet || fail "the work tree is dirty"
 
 step "write $DATA"
-python3 - "$REC" "$DATA" "$(cd "$REPO" && git rev-parse --short HEAD)" "$GTA_VERSION" "$LANGUAGE" <<'PY'
+# the commit the page names must be the code that spoke: uncommitted changes to gta are marked, not hidden
+COMMIT="$(cd "$REPO" && git rev-parse --short HEAD)"
+[ -z "$(cd "$REPO" && git status --porcelain -- toolkit core platforms wrapper scripts/site)" ] || COMMIT="$COMMIT+local"
+python3 - "$REC" "$DATA" "$COMMIT" "$GTA_VERSION" "$LANGUAGE" <<'PY'
 import datetime, json, pathlib, sys
 rec, data, commit, version, language = sys.argv[1:]
 events = [json.loads(line) for line in pathlib.Path(rec).read_text(encoding="utf-8").splitlines() if line.strip()]

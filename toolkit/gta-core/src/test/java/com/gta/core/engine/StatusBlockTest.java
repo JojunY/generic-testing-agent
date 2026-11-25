@@ -126,7 +126,25 @@ class StatusBlockTest {
         assertTrue(text.contains("刚才发生了什么"), text);
         assertFalse(text.contains("order.create/s02："), "only the last 5 lines: " + text);
         assertTrue(text.contains("5. order.create/s07：测试通过并已提交"), text);
-        assertTrue(text.contains("需要你\n  无，继续中"), text);
+        assertTrue(text.contains("需要你\n  无\n"), "the session ended: nothing continues: " + text);
+    }
+
+    @Test
+    void shouldSayTheSpecWaitsForApprovalOnceEveryQuestionIsAnswered() throws Exception {
+        plan();
+        WorkState st = state();
+        Path spec = new com.gta.core.config.GtaPaths(root).spec("order.create");
+        Files.createDirectories(spec.getParent());
+        String inReview = com.gta.core.spec.SpecTestData.CREATE_ORDER.replace("status=draft", "status=in-review");
+        Files.writeString(spec, inReview);
+        StatusBlock block = new StatusBlock(new EngineContext(root));
+        assertTrue(block.progress(st).startsWith("Progress: spec waiting for your answers"), block.progress(st));
+
+        Files.writeString(spec, inReview.replace("- [ ] B) Yes", "- [x] B) Yes"));
+        assertTrue(block.progress(st).startsWith("Progress: spec waiting for your approval"), block.progress(st));
+
+        String done = block.render(st, "state.done", null, "session ended");
+        assertTrue(done.contains("Needs you\n  nothing\n"), "nothing continues after the session: " + done);
     }
 
     @Test

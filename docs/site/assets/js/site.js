@@ -117,7 +117,7 @@
       line.who.classList.toggle('is-locked', !!state.locked);
       if (state.locked) { // the values are gtaw's now
         line.who.appendChild(token('gtaw'));
-        line.who.appendChild(el('span', 'sr', t('whoLocked')));
+        line.who.appendChild(document.createTextNode(t('whoLocked')));
       }
       if (state.who) {
         line.who.appendChild(token(state.who));
@@ -184,6 +184,9 @@
     }
 
     var said = '';
+    var live = el('p', 'sr'); // what a screen reader hears: once the scenarios have settled, not each step on the way
+    live.setAttribute('role', 'status');
+    document.body.appendChild(live);
     function desk() {
       var waiting = rows.filter(function (row) { return row.state === 'waiting'; }).length;
       var open = rows.filter(function (row) { return row.state !== 'passed' && row.state !== 'pinned'; }).length;
@@ -198,7 +201,9 @@
           if (force) force.focus({ preventScroll: true });
         }
       });
-      if (text === said) return; // a live region announces each message once
+      var moving = rows.some(function (row) { return row.state !== 'passed' && row.state !== 'pinned' && row.state !== 'waiting'; });
+      if (!moving && live.textContent !== text) live.textContent = text;
+      if (text === said) return;
       said = text;
       all('[data-note="ok"]').forEach(function (note) {
         note.textContent = text;
@@ -289,8 +294,28 @@
       art.point(((event.clientX - box.left) / box.width - 0.5) * 2, ((event.clientY - box.top) / box.height - 0.5) * 2);
     });
 
+    /** Brings every scenario still on its way to where it stops, in about a second and a half. */
+    function hurry() {
+      timers.forEach(window.clearTimeout);
+      timers = [];
+      var n = 0;
+      order.forEach(function (i) {
+        var row = rows[i];
+        if (row.state === 'passed' || row.state === 'pinned' || row.state === 'waiting') return;
+        at(n++ * 120, function () { move(i, row.end === 'passed' ? 'passed' : 'waiting'); });
+      });
+    }
+
     board = {
       ok: ok,
+      hurry: hurry,
+      run: run,
+      running: function () { return rows.some(function (row) { return row.state !== 'passed' && row.state !== 'pinned' && row.state !== 'waiting'; }); },
+      done: function () { return rows.every(function (row) { return row.state === 'passed' || row.state === 'pinned'; }); },
+      force: function (scene) {
+        var key = scene.querySelector('[data-key="force"]');
+        if (key) key.click();
+      },
       waiting: function () { return rows.some(function (row) { return row.state === 'waiting'; }); },
       stage: function (on) { art.setMarkScale(on ? 1.15 : 1); }
     };
@@ -320,6 +345,7 @@
     var timers = [];
     var lock = {};
     var scenarios = {};
+    var refused = false; // the presentation has tried to change a locked value in this run
 
     RUN.events.forEach(function (event) {
       if (event.actor === 'you') beats.push({ reply: event.did, events: [] });
@@ -454,8 +480,8 @@
       key.disabled = false;
       key.firstChild.nodeValue = beats[next].reply + ' ';
       if (document.body.classList.contains('stage')) return;
-      var box = form.getBoundingClientRect();
-      var seen = box.top >= 0 && box.bottom <= window.innerHeight;
+      var box = input.getBoundingClientRect();
+      var seen = box.bottom > 0 && box.top < window.innerHeight;
       var free = document.activeElement === document.body || $('console').contains(document.activeElement);
       if (seen && free) (typing ? input : key).focus({ preventScroll: true });
     }
@@ -493,7 +519,9 @@
         return true;
       }
       var expected = beats[next].reply;
-      if (text && text.toLowerCase() !== expected.toLowerCase()) {
+      // gtaw takes a flow's id where it took its number: so does the replay
+      var same = /^\d+$/.test(expected) && text === (RUN.meta && RUN.meta.flow);
+      if (text && !same && text.toLowerCase() !== expected.toLowerCase()) {
         hint.textContent = t('replyHintWrong', { reply: expected });
         shake(form);
         return false;
@@ -506,6 +534,7 @@
       timers.forEach(window.clearTimeout);
       timers = [];
       next = 0;
+      refused = false;
       log.textContent = '';
       all('.ticket', tickets).forEach(function (ticket) { tickets.removeChild(ticket); });
       $('ticket-slot').hidden = false;
@@ -630,6 +659,8 @@
       body.appendChild(el('p', 'tab-note', t(tabs[index][0] + 'Note')));
       var pre = el('pre');
       pre.innerHTML = tabs[index][1]();
+      pre.tabIndex = 0; // it scrolls: the keyboard can scroll it
+      pre.setAttribute('aria-label', t(tabs[index][0]));
       body.appendChild(pre);
       body.setAttribute('aria-labelledby', 'tab-' + index);
       all('.tab', $('tabs')).forEach(function (button, n) {
@@ -670,7 +701,21 @@
       reply(input.value.trim());
     });
     $('run-meta').textContent = t('runMeta', RUN.meta);
+    /** Types over the first locked value of the first ticket, the way a model would, and lets gtaw refuse it. */
+    function refuse() {
+      var punch = tickets.querySelector('.punch');
+      refused = true;
+      if (!punch) return false;
+      var value = punch.value;
+      punch.value = value.slice(0, -1) + (value.slice(-1) === '0' ? '1' : '0');
+      punch.dispatchEvent(new Event('input'));
+      return true;
+    }
+    log.setAttribute('data-empty', t('logEmpty'));
     replay = {
+      canRefuse: function () { return !refused && !!tickets.querySelector('.punch'); },
+      refuse: refuse,
+      firstTicket: function () { return tickets.querySelector('.ticket'); },
       canReply: function () { return !playing && next < beats.length; },
       playing: function () { return playing; },
       reply: function () { return reply(''); }
@@ -679,6 +724,28 @@
   }
 
   /* ---- the rest of the page ------------------------------------------------------------------------------------- */
+
+  var PUNCT = /^([^\u3001\u3002\uff0c\uff1a\uff1b\uff01\uff1f]+)([\u3001\u3002\uff0c\uff1a\uff1b\uff01\uff1f]+)$/;
+  /** Without the rising words: a Chinese character and the punctuation after it stay together, the mark not underlined. */
+  function punctuation(heading) {
+    all('em', heading).forEach(function (em) {
+      [].slice.call(em.childNodes).forEach(function (child) {
+        if (child.nodeType !== 3) return;
+        var fragment = document.createDocumentFragment();
+        child.nodeValue.split(/([^\s\u3001\u3002\uff0c\uff1a\uff1b\uff01\uff1f][\u3001\u3002\uff0c\uff1a\uff1b\uff01\uff1f]+)/).forEach(function (part) {
+          var tail = part.match(PUNCT);
+          if (!tail) {
+            if (part) fragment.appendChild(document.createTextNode(part));
+            return;
+          }
+          var pair = el('span', 'nb', tail[1]);
+          pair.appendChild(el('span', 'pn', tail[2]));
+          fragment.appendChild(pair);
+        });
+        em.replaceChild(fragment, child);
+      });
+    });
+  }
 
   /** Wraps the words of a heading (the characters, where a language has no spaces) so that they can rise in turn. */
   function kinetic(heading) {
@@ -696,6 +763,11 @@
         }
         var outer = el('span', 'kw');
         var inner = el('span', '', part);
+        var tail = perCharacter && part.match(PUNCT);
+        if (tail) {
+          inner.textContent = tail[1];
+          inner.appendChild(el('span', 'pn', tail[2]));
+        }
         inner.style.setProperty('--i', count++);
         outer.appendChild(inner);
         fragment.appendChild(outer);
@@ -729,6 +801,7 @@
       all('.reveal, .kin').forEach(function (node) { reveal.observe(node); });
     } else {
       all('.reveal').forEach(function (node) { node.classList.add('in'); });
+      if (/^zh/.test(document.documentElement.lang)) all('[data-kinetic]').forEach(punctuation);
     }
 
     function currentScene() {
@@ -747,10 +820,11 @@
     var padded = []; // scenes given room below for their last stop
     var HEAD = 56; // the header's height
     var resizing = false;
+    var holding = 0; // until then, the re-anchoring after a resize does not overwrite where the presenter was
     /** The header names the scene in view, and turns dark over the dark scenes. */
     function follow() {
       ticking = false;
-      if (!resizing) {
+      if (!resizing && Date.now() > holding) {
         shown = currentScene();
         into = Math.max(0, HEAD - shown.getBoundingClientRect().top);
       }
@@ -847,6 +921,7 @@
           shown.scrollIntoView({ behavior: 'instant', block: 'start' }); // not smooth: the next line measures from here
           var further = Math.min(into, Math.max(0, shown.getBoundingClientRect().bottom - window.innerHeight));
           if (further) window.scrollBy({ top: further, behavior: 'instant' });
+          holding = Date.now() + 400;
         }
         resizing = false;
       }, 180);
@@ -864,6 +939,7 @@
       window.clearTimeout(hudTimer);
       if (on) hudTimer = window.setTimeout(function () { hud.classList.add('quiet'); }, 5000);
       if (board) board.stage(on);
+      if (board && on && scene.id === 'title' && board.done()) board.run();
       if (!on) padded.splice(0).forEach(function (each) { each.style.paddingBottom = ''; });
       window.dispatchEvent(new Event('resize'));
       window.setTimeout(function () { scene.scrollIntoView({ behavior: 'auto', block: 'start' }); }, 160);
@@ -876,8 +952,12 @@
     /** Brings a part of a scene into view before something happens in it, so that the audience sees it happen. */
     function show(node) {
       var box = node.getBoundingClientRect();
-      if (box.top >= 64 && box.bottom <= window.innerHeight) return;
-      node.scrollIntoView({ behavior: smooth, block: box.height > window.innerHeight - 80 ? 'start' : 'center' });
+      if (box.top >= HEAD + 8 && box.bottom <= window.innerHeight) return;
+      var scene = node.closest('[data-scene]').getBoundingClientRect();
+      var dy = box.bottom > window.innerHeight
+        ? Math.min(box.bottom - window.innerHeight + 16, box.top - HEAD - 8) // up just enough, the top kept in view
+        : box.top - HEAD - 28;
+      window.scrollBy({ top: Math.max(dy, scene.top - HEAD), behavior: smooth });
     }
     /**
      * One step of a presentation: reply OK where the page waits for a person; otherwise the rest of a scene that is
@@ -886,12 +966,17 @@
     function advance() {
       var scene = currentScene();
       var id = scene.id;
+      if ((id === 'title' || id === 'ledger') && board && board.running()) return board.hurry();
       if ((id === 'title' || id === 'ledger') && board && board.waiting()) {
         if (id === 'ledger') show(scene.querySelector('.sheet-desk'));
         return board.ok();
       }
       if (id === 'loop' && replay) {
         if (replay.playing()) return undefined;
+        if (replay.canReply() && replay.canRefuse()) { // once a ticket is printed, try to change it before going on
+          show(replay.firstTicket());
+          return replay.refuse();
+        }
         if (replay.canReply()) {
           show($('console'));
           return replay.reply();
@@ -922,7 +1007,10 @@
         }
       }
       for (var n = 0; n < stops.length; n++) { // otherwise the first block not seen whole
-        if (stops[n].bottom > height + 8) return window.scrollBy({ top: stops[n].top - lead, behavior: smooth });
+        if (stops[n].bottom > height + 8) {
+          var up = stops[n].top - lead;
+          return window.scrollBy({ top: rest > up && rest - up <= 28 ? last(scene, rest) : up, behavior: smooth }); // no 9 px tail
+        }
       }
       // otherwise a plain step: never past what was not on screen, never cutting a block that crosses the bottom edge
       // (it starts the next screen, from its own top rather than from a line inside it), and never a short last one
@@ -931,11 +1019,31 @@
         if (!under || !scene.contains(under)) return;
         for (var node = under; node && node !== scene; node = node.parentElement) {
           var top = node.getBoundingClientRect().top;
-          if (top > lead + 120 && top < height) reach = Math.min(reach, top - lead);
+          if (top > lead + 80 && top < height) reach = Math.min(reach, top - lead);
         }
       });
-      var step = rest <= reach ? rest : Math.max(Math.min(reach, rest - 120), 1);
-      return window.scrollBy({ top: step, behavior: smooth });
+      // a tail of up to 28 px goes with this step: the lead keeps that much room under the header, so nothing is lost
+      var step = rest <= reach + 28 ? rest : Math.min(reach, rest - 120); // and leave the last step something to show
+      if (step < 80) step = Math.min(reach, rest); // what is left is short: take it now, never creep
+      return window.scrollBy({ top: step === rest ? last(scene, step) : step, behavior: smooth });
+    }
+    /**
+     * The last step of a scene, to its end: a row that would end up half under the header goes all the way up, the
+     * scene getting the few pixels of room that takes.
+     */
+    function last(scene, step) {
+      var bottom = 0;
+      [0.25, 0.5, 0.75].forEach(function (x) {
+        var cut = document.elementsFromPoint(window.innerWidth * x, HEAD + 2 + step)[0];
+        var row = cut && scene.contains(cut) ? cut.closest('tr, li, p, h2, h3, pre, .ticket') : null;
+        if (!row || !scene.contains(row)) return;
+        var box = row.getBoundingClientRect();
+        if (box.top - step < HEAD && box.bottom - step > HEAD) bottom = Math.max(bottom, box.bottom - step - HEAD);
+      });
+      if (bottom <= 0 || bottom > 120) return step;
+      scene.style.paddingBottom = parseFloat(window.getComputedStyle(scene).paddingBottom) + bottom + 'px';
+      padded.push(scene);
+      return step + bottom;
     }
     /** Back: to the top of the scene when part of it was stepped through, otherwise the scene before. */
     function back() {
@@ -950,7 +1058,7 @@
         opener = document.activeElement;
         $('help-close').focus();
       } else if (opener && opener.focus) {
-        opener.focus();
+        opener.focus({ preventScroll: true });
         opener = null;
       }
     }
@@ -1006,6 +1114,9 @@
           else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(function () {});
           break;
         case '?': toggleHelp(true); break;
+        case 'g': case 'G':
+          if (board && (currentScene().id === 'title' || currentScene().id === 'ledger')) board.force(currentScene());
+          break;
         case 'ArrowRight': case 'PageDown':
           if (staged()) { event.preventDefault(); advance(); }
           break;

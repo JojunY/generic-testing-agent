@@ -3,6 +3,7 @@ package com.gta.core.engine;
 import static com.gta.core.engine.NodeResults.answerNode;
 import static com.gta.core.engine.NodeResults.firstLines;
 import static com.gta.core.engine.NodeResults.node;
+import static com.gta.core.engine.NodeResults.oneLine;
 import static com.gta.core.engine.NodeResults.result;
 
 import com.gta.core.brief.BriefWriter;
@@ -679,7 +680,7 @@ final class ItemWorkflow {
             st.consecutiveFailures = 0; // the reported defect is confirmed: a finding, not an authoring failure
             return out;
         }
-        st.event(false, "ev.test.failed", item.ref, firstLines(message, 1));
+        st.event(false, "ev.test.failed", item.ref, oneLine(message));
         st.event(true, consistent == 2 ? "chk.reruns" : "chk.flaky", item.ref);
         s.reviewBaseline = new ChangeChecker(paths).capture(); // the tree that ran is the one triaged
         st.move(s, ItemStatus.TRIAGING);
@@ -809,13 +810,25 @@ final class ItemWorkflow {
     }
 
     Map<String, Object> needsHuman(WorkState st, PlanItem item, WorkState.ItemState s, String reason) {
+        return needsHuman(st, item, s, reason, false);
+    }
+
+    /**
+     * @param defect a suspected product defect: the reviewer's reason is already in the status block, so the event
+     *     asks the question instead of repeating it
+     */
+    Map<String, Object> needsHuman(WorkState st, PlanItem item, WorkState.ItemState s, String reason, boolean defect) {
         s.reason = reason;
         if (s.status != ItemStatus.NEEDS_HUMAN) {
             st.move(s, ItemStatus.NEEDS_HUMAN);
         }
         st.consecutiveFailures++;
         st.itemsThisSession++;
-        st.event(false, "ev.needs.human", item.label(), firstLines(reason, 1));
+        if (defect) {
+            st.event(false, "ev.needs.defect", item.label());
+        } else {
+            st.event(false, "ev.needs.human", item.label(), firstLines(reason, 1));
+        }
         ctx.escalations.writeEscalation(item, s, reason);
         return result("needs-human: " + item.id + " — " + reason, null);
     }

@@ -34,7 +34,7 @@ You run the gta loop. You never write specs or tests yourself and you never deci
    - `review` → dispatch **gta-reviewer** with the brief. It replies `verdict: <v> — <reason>`. Run `./gtaw submit --review <itemId> --token <token> --verdict <v> --reason '<reason>'` with the `token` of the review node.
    - `answer` → show `display` to the human **verbatim** (gtaw's status block; it contains the prompt). Wait for the human. Run `./gtaw answer '<their reply, verbatim>'`. Never answer, approve or confirm on the human's behalf. If gtaw rejects the reply because the terminal mangled non-ASCII text, show its hint to the human and let them reply in the ASCII form it suggests.
    - `escalate` → show `display` verbatim and stop.
-   - `done` → show `display` verbatim and stop. When it offers flows to pick, wait: a reply of `OK` means the node's `onOk` (`./gtaw next --mode service`: every flow, riskiest first), a flow id means `./gtaw next --mode flow --target <that flow>`.
+   - `done` → show `display` verbatim and stop. When it offers flows to pick, wait: a reply of `OK` means the node's `onOk` (`./gtaw next --mode service`: every flow, riskiest first), a flow's number or id means `./gtaw next --mode flow --target <that number or id>`.
 3. After every node, run `./gtaw next` again. Repeat until `done`, `escalate`, or an `answer` node that is waiting for the human.
 4. If your platform cannot dispatch subagents, read the brief yourself and do the node's work inline, following the brief's rules exactly (config `dispatch: inline`).
 

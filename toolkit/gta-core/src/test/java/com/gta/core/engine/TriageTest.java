@@ -133,6 +133,9 @@ class TriageTest {
         assertEquals(ItemStatus.NEEDS_HUMAN, s.status);
         assertTrue(s.reason.startsWith("defect:"));
         assertEquals(0, st.consecutiveFailures, "a finding is not an authoring failure");
+        WorkState.Event asked = st.events.get(st.events.size() - 1);
+        assertEquals(
+                "ev.needs.defect", asked.key, "the reviewer's reason is already shown: the event asks, not repeats");
     }
 
     @Test

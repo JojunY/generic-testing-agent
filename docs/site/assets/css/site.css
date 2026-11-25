@@ -55,7 +55,9 @@ body {
 }
 a { color: inherit; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
 code, kbd, pre { font-family: var(--mono); }
-code, pre, kbd, .code, .punch, .chip { font-variant-ligatures: none; font-feature-settings: "calt" 0, "liga" 0; }
+/* mono text shows what was typed: -> and <!-- never join into arrows (font shorthands reset this, hence !important) */
+:where(code, pre, kbd, .code, .punch, .chip, .console, .tab-body, .ledger, .timetable, .ticket, .eyebrow, .tag, .sheet-top, .stage-hud, .counter),
+:where(code, pre, kbd, .code, .punch, .chip, .console, .tab-body, .ledger, .timetable, .ticket, .eyebrow, .tag, .sheet-top, .stage-hud, .counter) * { font-variant-ligatures: none !important; font-feature-settings: "calt" 0, "liga" 0 !important; }
 code { font-size: 0.86em; background: rgba(22, 19, 15, 0.08); border-radius: 4px; padding: 0.08em 0.36em; }
 kbd { font-size: 0.8em; border: 1.5px solid currentColor; border-radius: 4px; padding: 0 0.4em; opacity: 0.75; }
 :focus-visible { outline: 2.5px solid var(--blue); outline-offset: 3px; border-radius: 3px; }
@@ -92,6 +94,8 @@ kbd { font-size: 0.8em; border: 1.5px solid currentColor; border-radius: 4px; pa
 .top.on-night .nav a:hover, .top.on-night .nav a.here, .top.on-night .tool:hover { color: var(--paper); }
 .top.on-night .nav a.here { box-shadow: 0 21px 0 -18.5px var(--paper); }
 .top.on-night .tool[aria-pressed="true"] { color: #8f9bff; }
+/* the header is always in view: focusing its controls must not scroll the page to reveal them (scroll padding) */
+.top a, .top button { scroll-margin-top: -56px; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font: 500 calc(25px * var(--scale)) / 1 var(--serif); letter-spacing: -0.02em; }
 .brand-mark { width: 40px; height: 26px; }
 .nav { display: flex; gap: 24px; margin-right: auto; }
@@ -110,7 +114,7 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 400; font-optical-sizing: a
 h1 em, h2 em { font-style: italic; }
 h1, h2 { text-wrap: balance; }
 h1 { text-wrap: pretty; }
-h1 em { display: block; }
+h1 em { display: block; text-wrap: balance; }
 h1 { font-size: clamp(42px, 5.2vw, 88px); line-height: 1.02; }
 h1, h2, .role-verb, .ns-word { font-variation-settings: "opsz" 40; font-weight: 420; }
 h2 { font-size: clamp(36px, 4.7vw, 74px); line-height: 1.04; max-width: 17ch; }
@@ -143,7 +147,10 @@ h3 { font-size: calc(27px * var(--scale)); line-height: 1.15; letter-spacing: -0
 :lang(zh-CN) h1 { font-size: clamp(36px, 4.4vw, 66px); line-height: 1.24; }
 :lang(zh-CN) h1 em { display: inline-block; }
 :lang(zh-CN) h2 { font-size: clamp(34px, 4.4vw, 72px); line-height: 1.18; max-width: 13em; }
-:lang(zh-CN) h3 { line-height: 1.2; font-weight: 600; }
+:lang(zh-CN) h3 { line-height: 1.2; font-weight: 500; }
+:lang(zh-CN) .desk-note .tool { text-decoration: underline; text-underline-offset: 3px; }
+/* punctuation after an underlined word keeps its place but not the underline (kinetic() wraps it) */
+.pn { display: inline-block; }
 :lang(zh-CN) .role-verb { line-height: 1.12; }
 :lang(zh-CN) .eyebrow, :lang(zh-CN) .nav a, :lang(zh-CN) .tool { font-family: var(--sans); font-size: calc(13px * var(--scale)); }
 :lang(zh-CN) .lede, :lang(zh-CN) .lane p, :lang(zh-CN) .safety-list li, :lang(zh-CN) .standing-grid p, :lang(zh-CN) .also-not { font-family: var(--sans); line-height: 1.75; }
@@ -296,7 +303,7 @@ h3 { font-size: calc(27px * var(--scale)); line-height: 1.15; letter-spacing: -0
 .role-verb { margin: 6px 0 0; font: 400 clamp(54px, 6.3vw, 98px) / 1 var(--serif); letter-spacing: -0.03em; }
 .role-sub { margin: 14px 0 24px; padding-bottom: 22px; border-bottom: 1.5px solid currentColor; font-size: calc(15px * var(--scale)); }
 .role ul { margin: 0; padding: 0; list-style: none; font-size: calc(17px * var(--scale)); line-height: 1.4; }
-.role li { position: relative; padding: 5px 0 5px 26px; }
+.role li { position: relative; padding: 5px 0 5px 1.55em; text-wrap: pretty; }
 .role .does li::before { content: "—"; position: absolute; left: 0; }
 .role .never li::before { content: "✕"; position: absolute; left: 1px; font-size: 0.82em; top: 0.5em; }
 .never-label { margin: 24px 0 4px; font: 500 calc(12px * var(--scale)) / 1.2 var(--mono); letter-spacing: 0.11em; text-transform: uppercase; }
@@ -311,6 +318,7 @@ h3 { font-size: calc(27px * var(--scale)); line-height: 1.15; letter-spacing: -0
 .pen .tok { stroke: var(--paper); }
 .pen[data-who="you"] { color: var(--yellow); }
 .pen[data-who="done"] { color: #4fd091; }
+.console-log:empty::before { content: attr(data-empty); color: var(--night-3); }
 .console-log { height: clamp(380px, 56vh, 620px); overflow-y: auto; padding: 18px 20px; font: 400 calc(13.5px * var(--scale)) / 1.58 var(--mono); scrollbar-width: thin; scrollbar-color: var(--night-rule) transparent; }
 .entry { margin: 0 0 10px; display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; animation: rise 0.3s ease both; }
 @keyframes rise { from { opacity: 0; transform: translateY(7px); } }
@@ -391,7 +399,7 @@ h3 { font-size: calc(27px * var(--scale)); line-height: 1.15; letter-spacing: -0
 .timetable td:nth-child(2) { font: 400 calc(14px * var(--scale)) / 1.2 var(--mono); color: var(--ink-2); }
 .timetable td:nth-child(3) { font: 600 calc(11.5px * var(--scale)) / 1.2 var(--sans); letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
 .timetable td:nth-child(4) { font: 500 calc(14px * var(--scale)) / 1.2 var(--mono); color: var(--blue); }
-.timetable tbody tr:hover td { background: rgba(246, 196, 69, 0.34); }
+@media (hover: hover) { .timetable tbody tr:hover td { background: rgba(246, 196, 69, 0.34); } }
 .also { margin-top: 36px; }
 .also-label { margin: 0 0 14px; font: 500 calc(11.5px * var(--scale)) / 1.2 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
 .chips-list { display: flex; flex-wrap: wrap; gap: 9px; margin: 0; padding: 0; list-style: none; }
@@ -444,7 +452,7 @@ h3 { font-size: calc(27px * var(--scale)); line-height: 1.15; letter-spacing: -0
 .foot p { margin: 0 0 8px; max-width: 92ch; }
 
 /* stage mode: a presenter on a big screen */
-body.stage { --scale: 1.25; --wrap: min(1600px, 92vw); }
+body.stage { --scale: 1.25; --wrap: min(1600px, 92vw); overflow-anchor: none; } /* stage mode places the page itself */
 
 body.stage .nav, body.stage .foot .needs-js { display: none; }
 body.stage .top { background: var(--paper); backdrop-filter: none; }
@@ -453,6 +461,7 @@ body.stage .tools { margin-left: auto; }
 body.stage section { min-height: calc(100vh - 56px); display: flex; flex-direction: column; justify-content: center; padding: 40px 0 36px; }
 body.stage .hero { padding: 24px 0; }
 body.stage .lede { margin-top: 18px; }
+body.stage .hero .lede { margin-top: 34px; }
 body.stage .code { margin-top: 20px; padding: 16px 20px; }
 body.stage .versus { margin-top: 18px; }
 body.stage .lane { padding: 24px 28px; }
@@ -482,12 +491,20 @@ body.stage .timetable-wrap { margin-top: 44px; }
   body.stage .ns-word { font-size: clamp(72px, 8.4vw, 150px); }
   body.stage .noservice { margin-top: 20px; }
   body.stage .safety-list { margin-top: 28px; padding-top: 20px; }
-  body.stage .standing { margin-top: 24px; }
+  body.stage .standing { margin-top: 24px; padding-bottom: 26px; }
+  body.stage .standing-grid p { font-size: calc(15.5px * var(--scale)); line-height: 1.5; }
 }
 body.stage .role-who { margin-top: 10px; }
 body.stage .ledger td { height: 38px; padding-top: 6px; padding-bottom: 6px; }
 body.stage .ledger-scene .sheet { margin-top: 28px; }
 body.stage .console-log { height: calc(100vh - 56px - 40px - 36px - 230px - 120px); min-height: 260px; }
+/* the console keeps its own height: the rail may grow taller with two tickets, the console does not follow it */
+body.stage .console { align-self: start; }
+/* the log scrolls under the bar: its top fades instead of cutting a line in half */
+body.stage .console-log { -webkit-mask-image: linear-gradient(transparent, #000 22px); mask-image: linear-gradient(transparent, #000 22px); }
+/* the presenter's chrome stays out of the picture until pointed at */
+body.stage .tools { opacity: 0.35; transition: opacity 0.3s; }
+body.stage .top:hover .tools, body.stage .tools:focus-within { opacity: 1; }
 body.stage #loop > .wrap > h2, body.stage #ledger > .wrap > h2 { grid-column: 1 / -1; }
 body.stage #loop > .wrap > .lede, body.stage #run-meta, body.stage #ledger .caption { display: none; }
 body.stage #ledger .sheet { margin-top: 24px; }
@@ -502,6 +519,8 @@ body.stage .roles { flex: 1 0 auto; }
 body.stage .evidence { margin-top: 64px; }
 body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px); }
 @media (min-width: 1041px) {
+  body.stage .loop { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+  body.stage #covers > .wrap { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
   body.stage .start-scene .steps { grid-column: 1; grid-row: 3; margin-top: 40px; }
   body.stage .start-scene .reads { grid-column: 2; grid-row: 3; align-self: end; grid-template-columns: 1fr 1fr; margin-top: 40px; }
 }
@@ -531,6 +550,35 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   body.stage .ledger th { padding-top: 7px; padding-bottom: 5px; }
   body.stage .sheet-top { padding-top: 9px; padding-bottom: 9px; }
   body.stage .sheet-desk { padding-top: 10px; padding-bottom: 10px; }
+  body.stage .hero .lede { margin-top: 24px; }
+  body.stage .roles-scene { padding-top: 20px; }
+  body.stage .roles { margin-top: 16px; }
+  body.stage .role { padding-top: 12px; padding-bottom: 14px; }
+  body.stage .role-shape { height: 52px; }
+  body.stage .role-who { margin-top: 6px; }
+  body.stage .role-sub { margin: 8px 0; padding-bottom: 8px; }
+  body.stage .role ul { font-size: 16px; line-height: 1.3; }
+  body.stage .never-label { margin-top: 8px; }
+  body.stage .console-log { font-size: 14.5px; }
+  body.stage .lane { padding: 20px 26px; }
+  body.stage .lane .lane-end { margin-top: 14px; }
+  /* two tickets and the board fit beside the console on one screen */
+  body.stage .rail, body.stage .tickets { gap: 12px; }
+  body.stage .ticket { padding-bottom: 12px; }
+  body.stage .ticket-head { padding-top: 8px; padding-bottom: 7px; }
+  body.stage .ticket-label { margin-top: 8px; margin-bottom: 3px; }
+  body.stage .ticket-when { line-height: 1.3; }
+  body.stage .punch { height: 32px; line-height: 32px; }
+  body.stage .ticket-try { display: none; }
+  body.stage .ticket-refused { margin-top: 8px; padding: 7px 10px; }
+  body.stage .ticket-pin { margin-top: 8px; }
+  body.stage :is(.eyebrow, .sheet-top, .ledger th, .c-kind, .timetable th, .timetable td:nth-child(3)) { font-size: 12.5px; }
+}
+/* 768/720 on a wide screen: the problem's code sits beside its headline, and the presenter says the lede */
+@media (max-height: 820px) and (min-width: 1041px) {
+  body.stage #problem .lede { display: none; }
+  body.stage #problem > .wrap { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); }
+  body.stage #problem pre.code { grid-column: 2; grid-row: 2; align-self: end; margin-top: 0; font-size: 13.5px; white-space: pre-wrap; }
 }
 @media (max-height: 760px) {
   body.stage .ledger td { height: 25px; padding-top: 2px; padding-bottom: 2px; }
@@ -539,7 +587,7 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   body.stage .shape-ring { width: 52px; height: 52px; }
   body.stage .ledger th { padding-top: 6px; padding-bottom: 4px; }
   body.stage .sheet-desk { padding-top: 10px; padding-bottom: 10px; }
-  body.stage .role-shape { height: 60px; }
+  body.stage .role-shape { height: 48px; }
   body.stage .role-verb { font-size: clamp(44px, 5vw, 72px); }
   body.stage .role li { padding-top: 1px; padding-bottom: 1px; }
   body.stage .never-label { margin-top: 10px; }
@@ -571,7 +619,6 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   .role, .role:first-child, .role:last-child { border-left: 0; border-top: 1.5px solid var(--ink); padding-left: var(--pad); padding-right: var(--pad); }
   .role:first-child { border-top: 0; }
   .rail { display: contents; }
-  .rail-board { order: -1; position: sticky; top: 66px; z-index: 5; }
   .reads { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .art figcaption { margin-left: 0; }
   .ledger thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -588,6 +635,14 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   .ledger-mini .c-lock { display: none; }
   /* stacked, the console fills the stage and the ticket area sits below it: the empty hint would point off screen */
   body.stage .slot { display: none; }
+  /* the covers table wraps its cells instead of hiding its last column in a sideways scroller */
+  .timetable td { white-space: normal; }
+  .timetable td:nth-child(2) { overflow-wrap: anywhere; }
+}
+/* the board follows the replay above the console where the screen is tall enough to spare it; on a phone held
+   sideways it comes after the console, where the next steps bring it up with the tickets */
+@media (max-width: 1040px) and (min-height: 600px) {
+  .rail-board { order: -1; position: sticky; top: 66px; z-index: 5; }
 }
 @media (max-width: 700px) {
   body { font-size: 16.5px; }
@@ -607,7 +662,8 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   .stage-hud { display: none; }
   h1 .nb { white-space: normal; }
   .copy { position: static; transform: none; margin-left: 10px; vertical-align: 1px; }
-  .cmd { padding-right: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .cmd { padding-right: 16px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13.5px; }
+  .code { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
   .timetable thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .timetable tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 0; border-top: 1px solid var(--rule); }
   .timetable td { padding: 0; border: 0; white-space: normal; }
@@ -625,7 +681,7 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   .strip .stamp, .art-label { opacity: 1; }
   .shape-ring path { stroke-dashoffset: 0; animation: none !important; }
   .ns-word::after { transform: scaleX(1); transition: none; }
-  .key, .reads a, .chip, .top { transition: none; }
+  .key, .reads a, .chip, .top, .ledger td { transition: none; }
 }
 
 @media print {
@@ -640,5 +696,7 @@ body.stage .tab-body pre { max-height: calc(100vh - 56px - 28px - 36px - 190px);
   .shape-ring path { stroke-dashoffset: 0; animation: none; }
   .ns-word::after { transform: none; }
   .art { display: none; }
+  .timetable-wrap, .ledger-wrap { overflow: visible; }
+  .timetable td, .ledger td { white-space: normal; }
   section { padding: 24px 0; break-inside: auto; }
 }

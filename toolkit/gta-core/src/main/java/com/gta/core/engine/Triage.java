@@ -174,7 +174,7 @@ final class Triage {
                 }
                 // a suspected defect is an eval candidate for the model evals (plan §12)
                 com.gta.core.state.Lessons.record(paths, "defect", item.ref, reason);
-                Map<String, Object> out = ctx.items.needsHuman(st, item, s, "defect: " + reason);
+                Map<String, Object> out = ctx.items.needsHuman(st, item, s, "defect: " + reason, true);
                 st.consecutiveFailures = 0; // a suspected product defect is a finding, not an authoring failure
                 return out;
             }
