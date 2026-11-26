@@ -2,6 +2,7 @@ package com.gta.core.report;
 
 import com.gta.core.config.GtaPaths;
 import com.gta.core.error.ErrorCode;
+import com.gta.core.error.GtaException;
 import com.gta.core.gate.Gate;
 import com.gta.core.oracle.OracleShard;
 import com.gta.core.plan.PlanItem;
@@ -14,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 /** Markdown report and PR comment (plan §6, §11.2). Traceability: requirement → scenario → item → status. */
@@ -91,14 +93,23 @@ public final class Reporter {
         b.append(
                 "### Traceability\n\n| Flow | Requirement | Scenario | Source | Item | Status |\n|---|---|---|---|---|---|\n");
         for (Spec spec : specs()) {
+            // no working state (e.g. in CI): the committed oracle shard says what is locked; an unreadable one
+            // (a merge conflict) is reported in the table, never read as "nothing locked" (plan §10.5)
+            Map<String, OracleShard.Entry> shard;
+            boolean unreadable = false;
+            try {
+                shard = OracleShard.read(paths.oracleShard(spec.flowId()));
+            } catch (GtaException e) {
+                shard = Map.of();
+                unreadable = true;
+            }
             for (Spec.Requirement r : spec.requirements) {
                 for (Spec.Scenario s : r.scenarios) {
                     List<PlanItem> items = plan.stream()
                             .filter(i -> s.id() != null && s.id().equals(i.ref))
                             .toList();
                     if (items.isEmpty()) {
-                        // no working state (e.g. in CI): fall back to the committed oracle shard
-                        String locked = OracleShard.read(paths.oracleShard(spec.flowId())).keySet().stream()
+                        String locked = shard.keySet().stream()
                                 .filter(k -> s.id() != null && k.startsWith(s.id() + "#"))
                                 .findFirst()
                                 .orElse(null);
@@ -115,7 +126,10 @@ public final class Reporter {
                                 .append(" | ")
                                 .append(locked == null ? "—" : "`" + locked + "`")
                                 .append(" | ")
-                                .append(locked == null ? spec.status() : "locked")
+                                .append(
+                                        locked != null
+                                                ? "locked"
+                                                : unreadable ? "oracle shard unreadable" : spec.status())
                                 .append(" |\n");
                     }
                     for (PlanItem i : items) {

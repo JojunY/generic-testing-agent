@@ -106,4 +106,29 @@ class ServiceModeTest {
         assertTrue(ServiceMode.unpark(st), "still waiting for the person");
         assertEquals(stale, st.pending);
     }
+
+    @Test
+    void shouldDropAParkedNamingConflictThePersonSettledForTheSeed() {
+        WorkState st = new WorkState();
+        st.mode = ServiceMode.MODE;
+        WorkState.ItemState seed = new WorkState.ItemState();
+        seed.id = "order#foundation-01";
+        seed.status = ItemStatus.PASSED;
+        st.items.put(seed.id, seed);
+        WorkState.Pending stale = pending("order.create");
+        stale.type = "naming-conflict";
+        stale.itemId = seed.id;
+        st.parked.add(stale);
+
+        assertFalse(ServiceMode.unpark(st), "answered for another flow: answering again could cancel a passed seed");
+
+        seed.status = ItemStatus.PENDING;
+        seed.sharesDeveloperFile = true;
+        st.parked.add(stale);
+        assertFalse(ServiceMode.unpark(st), "the person let gta share the developer's class");
+
+        seed.sharesDeveloperFile = false;
+        st.parked.add(stale);
+        assertTrue(ServiceMode.unpark(st), "still undecided");
+    }
 }

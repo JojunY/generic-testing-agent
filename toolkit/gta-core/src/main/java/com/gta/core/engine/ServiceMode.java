@@ -62,6 +62,10 @@ final class ServiceMode {
                     && st.item(p.itemId).status != ItemStatus.NEEDS_HUMAN) {
                 continue;
             }
+            if ("naming-conflict".equals(p.type)
+                    && (st.item(p.itemId).status != ItemStatus.PENDING || st.item(p.itemId).sharesDeveloperFile)) {
+                continue;
+            }
             st.pending = p;
             st.activeFlow = p.flowId;
             return true;

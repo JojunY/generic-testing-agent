@@ -33,6 +33,11 @@ All notable changes to gta. Versions follow SemVer; the version lives in the roo
 - The running example of the documentation, agents and skills is a securities-lending service (`borrow.book`) instead of an online shop (`order.create`).
 
 ### Fixed
+- Oracle lock (plan §5.3): a comment inside an assertion is no longer part of the locked text or the watched inputs, so rewording it no longer fails the lock check or the gate; a string with escapes (`"{\"status\":\"PENDING\"}"`) is read as the value it asserts, so it satisfies the spec's expected value and its assertion is locked. A lock taken by 0.1.0 on such an assertion fingerprints differently once: confirm with `gtaw relock --item <id> --reason`.
+- The profiler takes the verb of `@RequestMapping(method = RequestMethod.GET)` from its `method` attribute instead of profiling it as `ANY`: the read keeps a read's risk and `/gta GET <path>` names it.
+- `gtaw report` with no working state (CI) shows an unreadable oracle shard in its traceability table instead of failing, so the PR comment still says why the gate failed (plan §10.5).
+- Service mode: a parked naming conflict about a domain's seed is dropped once the person settled it for another flow; answering it again could cancel a seed that had passed.
+- A `pom.xml` the seed item edited in an earlier attempt, before a new baseline, is named in "not committed because…" instead of being left out silently.
 - Status block wording (plan §5.10): the approval prompt says the spec waits for your approval, not for answers; a failed test keeps its expected and actual values on its line; a suspected defect asks "is it a product defect?" instead of repeating the reviewer's reason; at the end of a session "Needs you" says "nothing", not "nothing, continuing"; the flow prompt says a flow's number works as well as its id.
 - `scripts/site/record-demo.sh --lang zh-CN` has the scripted agents write the spec and their reasons in Chinese (`scripts/site/demo/book.spec.zh-CN.md`), and the recorded commit is marked `+local` when gta has uncommitted changes.
 - The status block says "1 defect found", not "1 defects found", and its gate line says how many locked scenarios the gate checked (none yet on a first session) instead of claiming every locked scenario; the report says "1 locked scenario checked" (plan §5.10, §8).

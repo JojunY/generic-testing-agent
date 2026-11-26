@@ -97,6 +97,16 @@ class ReporterTest {
     }
 
     @Test
+    void shouldReportAnUnreadableShardInsteadOfFailing() {
+        // e.g. a merge conflict in CI: the gate fails on it, and the PR comment must still say why
+        AtomicFiles.write(paths.oracleShard("order.create"), "<<<<<<< HEAD\n{}\n=======\n{}\n>>>>>>> branch\n");
+
+        String md = new Reporter(paths).markdown(new WorkState(), List.of(), null, true);
+
+        assertTrue(md.contains("| order.create/s01 valid order | observed | — | oracle shard unreadable |"), md);
+    }
+
+    @Test
     void shouldRenderThePrCommentWithoutAGate() {
         String md = new Reporter(paths).markdown(new WorkState(), List.of(), null, true);
 

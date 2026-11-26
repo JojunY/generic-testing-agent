@@ -62,10 +62,9 @@ final class ItemCommitter {
         for (String own : s.written) {
             if (!changedSince.contains(own)
                     && baseline.dirty.containsKey(own)
-                    && !s.sharesDeveloperFile
-                    && isTestCode(own)
                     && ChangeChecker.matchesAny(own, item.ownsFiles)) {
-                files.add(own);
+                // the retry's baseline cannot tell gta's edit of a pom.xml from the developer's: they commit it
+                (isTestCode(own) && !s.sharesDeveloperFile ? files : mixed).add(own);
             }
         }
         if (!mixed.isEmpty()) {

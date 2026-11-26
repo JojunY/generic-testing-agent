@@ -83,6 +83,30 @@ class ItemCommitterTest {
     }
 
     @Test
+    void shouldNameAPomItEditedInAnEarlierAttemptInsteadOfDroppingIt() throws Exception {
+        // the seed added a test dependency, then was re-baselined: the pom is dirty in the new baseline, which cannot
+        // tell gta's edit from the developer's
+        AtomicFiles.write(root.resolve("pom.xml"), "<project><!-- gta-junit --></project>\n");
+        String test = "src/test/java/com/acme/order/OrderControllerIT.java";
+        AtomicFiles.write(root.resolve(test), "class OrderControllerIT {}\n");
+        WorkState.ItemState s = new WorkState.ItemState();
+        s.id = OrderServiceTestData.ITEM;
+        s.status = ItemStatus.PASSED;
+        s.written.addAll(List.of("pom.xml", test));
+        s.baseline = new ChangeChecker(paths).capture();
+        s.lock = new Lock();
+        s.lock.tokens.add("201");
+
+        ctx.committer.commitItem(new WorkState(), OrderServiceTestData.item(), s, "r1", "valid order");
+
+        String committed = OrderServiceTestData.git(root, "show", "--name-only", "--format=", "HEAD")
+                .output();
+        assertTrue(committed.contains(test), committed);
+        assertFalse(committed.contains("pom.xml"), "never commit what may hold the developer's edits");
+        assertTrue(s.reason != null && s.reason.contains("pom.xml"), "the person is told to commit it: " + s.reason);
+    }
+
+    @Test
     void shouldStillCommitTheTestAnItemWroteBeforeItWasSentBack() throws Exception {
         PlanItem item = OrderServiceTestData.item();
         item.ownsFiles.add("src/test/resources/fixtures/order/**");

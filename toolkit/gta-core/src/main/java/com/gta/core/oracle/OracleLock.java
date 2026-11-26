@@ -1,5 +1,6 @@
 package com.gta.core.oracle;
 
+import com.github.javaparser.utils.StringEscapeUtils;
 import com.gta.core.util.Hashes;
 import java.util.ArrayList;
 import java.util.List;
@@ -7,6 +8,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Monotonic oracle lock (plan §5.3 item 3): once the THEN-derived expected values are locked, the assertions carrying
@@ -81,7 +83,9 @@ public final class OracleLock {
      * {@code HttpStatus.NOT_FOUND} for {@code 404}), matched as a whole word, and a number only as a whole number.
      */
     public static List<String> lockedStatements(List<String> statements, List<String> tokens) {
+        // a statement is source text: the value {"a":1} appears in it as {\"a\":1}
         List<String> values = tokens.stream()
+                .flatMap(t -> Stream.of(t, StringEscapeUtils.escapeJava(t)).distinct())
                 .map(t -> t.replaceAll("\\s+", ""))
                 .filter(t -> !t.isEmpty())
                 .toList();

@@ -18,6 +18,9 @@ import com.github.javaparser.ast.expr.TextBlockLiteralExpr;
 import com.github.javaparser.ast.expr.UnaryExpr;
 import com.github.javaparser.ast.stmt.ExpressionStmt;
 import com.github.javaparser.ast.stmt.Statement;
+import com.github.javaparser.printer.configuration.DefaultConfigurationOption;
+import com.github.javaparser.printer.configuration.DefaultPrinterConfiguration;
+import com.github.javaparser.printer.configuration.PrinterConfiguration;
 import com.gta.core.profile.JavaIndex;
 import com.gta.core.util.Hashes;
 import java.io.IOException;
@@ -436,7 +439,7 @@ public final class AssertionScanner {
                 continue;
             }
             if (lit instanceof StringLiteralExpr s) {
-                tokens.add(s.getValue());
+                tokens.add(s.asString()); // the value, not its source: \" is a quote
             } else if (lit instanceof TextBlockLiteralExpr t) {
                 tokens.add(t.getValue());
             } else if (lit.isBooleanLiteralExpr()) {
@@ -527,7 +530,7 @@ public final class AssertionScanner {
                         .ifPresent(init -> out.put(
                                 v.getNameAsString(),
                                 init.isStringLiteralExpr()
-                                        ? init.asStringLiteralExpr().getValue()
+                                        ? init.asStringLiteralExpr().asString()
                                         : init.toString()));
             }
         }
@@ -545,8 +548,13 @@ public final class AssertionScanner {
         }
     }
 
+    /** A comment is no assertion: rewording one changes neither the locked text nor the watched inputs. */
+    private static final PrinterConfiguration NO_COMMENTS = new DefaultPrinterConfiguration()
+            .removeOption(new DefaultConfigurationOption(DefaultPrinterConfiguration.ConfigOption.PRINT_COMMENTS));
+
     static String normalize(Object node) {
-        return node.toString().replaceAll("\\s+", "");
+        String text = node instanceof Node n ? n.toString(NO_COMMENTS) : node.toString();
+        return text.replaceAll("\\s+", "");
     }
 
     /** THEN literal check: every expected value of the spec must appear in an assertion (plan §5.3 item 2). */

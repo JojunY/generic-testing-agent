@@ -44,6 +44,40 @@ class AssertionScannerTest {
     }
 
     @Test
+    void shouldNotLockTheCommentsOfAnAssertion() throws Exception {
+        String commented = TEST.replace(
+                "assertThat(total).isEqualTo(\"99.99\");",
+                "assertThat(total)\n            // the gateway answers\n            .isEqualTo(/* net */ \"99.99\");");
+        AssertionScanner.ScenarioOracle plain = AssertionScanner.scan(write(TEST), "order.create/s02", null);
+        AssertionScanner.ScenarioOracle withComments =
+                AssertionScanner.scan(write(commented), "order.create/s02", null);
+
+        assertEquals(plain.assertionStatements(), withComments.assertionStatements());
+        assertEquals(plain.watchedHash(), withComments.watchedHash(), "a comment is no input either");
+    }
+
+    @Test
+    void shouldReadAnEscapedStringAsTheValueItAsserts() throws Exception {
+        String json = TEST.replace(
+                "assertThat(total).isEqualTo(\"99.99\");",
+                "assertThat(body).isEqualTo(\"{\\\"status\\\":\\\"PENDING\\\"}\");");
+        AssertionScanner.ScenarioOracle o = AssertionScanner.scan(write(json), "order.create/s02", null);
+        List<String> then = List.of("{\"status\":\"PENDING\"}");
+
+        assertEquals(List.of(), AssertionScanner.missingThenLiterals(then, o.tokens()));
+        assertEquals(
+                List.of("assertThat(body).isEqualTo(\"{\\\"status\\\":\\\"PENDING\\\"}\")"),
+                OracleLock.lockedStatements(o.assertionStatements(), then),
+                "the assertion of the value is locked");
+    }
+
+    private Path write(String source) throws Exception {
+        Path file = dir.resolve("OrderIT.java");
+        Files.writeString(file, source);
+        return file;
+    }
+
+    @Test
     void shouldCollectExpectedValuesFromAssertionsOfTheScenarioOnly() throws Exception {
         AssertionScanner.ScenarioOracle o = scan(TEST);
 
