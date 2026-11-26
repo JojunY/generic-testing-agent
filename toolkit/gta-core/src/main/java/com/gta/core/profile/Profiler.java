@@ -325,7 +325,7 @@ public final class Profiler {
                     ServiceProfile.EntryPoint e = null;
                     if (controller) {
                         for (AnnotationExpr a : m.getAnnotations()) {
-                            String verb = HTTP.get(a.getNameAsString());
+                            String verb = verbOf(a);
                             if (verb != null) {
                                 // a server-sent event stream is tested with a streaming client; a handler returning
                                 // Mono/Flux is a reactive (WebFlux) endpoint: both are tested differently
@@ -687,6 +687,29 @@ public final class Profiler {
     }
 
     /** Every path of a mapping annotation ({@code @GetMapping({"/a", "/b"})} has two). */
+    /**
+     * The HTTP verb of a mapping annotation: {@code @RequestMapping} takes it from its {@code method} attribute when
+     * that names exactly one, as older Spring code writes {@code method = RequestMethod.GET}.
+     */
+    static String verbOf(AnnotationExpr a) {
+        String verb = HTTP.get(a.getNameAsString());
+        if ("ANY".equals(verb) && a instanceof NormalAnnotationExpr n) {
+            for (MemberValuePair pair : n.getPairs()) {
+                Expression v = pair.getValue();
+                if (pair.getNameAsString().equals("method")) {
+                    List<Expression> values = v.isArrayInitializerExpr()
+                            ? v.asArrayInitializerExpr().getValues()
+                            : List.of(v);
+                    if (values.size() == 1) {
+                        String name = values.get(0).toString();
+                        return name.substring(name.lastIndexOf('.') + 1);
+                    }
+                }
+            }
+        }
+        return verb;
+    }
+
     static List<String> pathsOf(AnnotationExpr a) {
         Expression value = null;
         if (a instanceof SingleMemberAnnotationExpr s) {

@@ -121,6 +121,30 @@ class ProfilerTest {
     }
 
     @Test
+    void shouldTakeTheVerbOfARequestMappingFromItsMethodAttribute() throws Exception {
+        source("com/acme/order/api/LegacyController.java", """
+                package com.acme.order.api;
+                @RestController
+                @RequestMapping("/api/legacy")
+                public class LegacyController {
+                    @RequestMapping(value = "/{id}", method = RequestMethod.GET)
+                    public Object get() { return null; }
+                    @RequestMapping(method = {RequestMethod.POST})
+                    public Object post() { return null; }
+                    @RequestMapping(value = "/any", method = {RequestMethod.GET, RequestMethod.PUT})
+                    public Object both() { return null; }
+                }
+                """);
+        Map<String, ServiceProfile.EntryPoint> flows =
+                byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"));
+
+        assertEquals("GET", flows.get("legacy.get").httpMethod);
+        assertEquals(2, flows.get("legacy.get").risk, "a read is lower risk than a write");
+        assertEquals("POST", flows.get("legacy.post").httpMethod);
+        assertEquals("ANY", flows.get("legacy.both").httpMethod, "several verbs are not one of them");
+    }
+
+    @Test
     void shouldKeepEveryPathOfAMapping() {
         ServiceProfile.EntryPoint find = byFlowId(Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto"))
                 .get("order.find");
