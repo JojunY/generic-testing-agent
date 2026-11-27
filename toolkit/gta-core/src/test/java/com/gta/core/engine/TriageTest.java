@@ -265,6 +265,21 @@ class TriageTest {
     }
 
     @Test
+    void shouldKeepTheConfirmedDefectsFingerprintWhenAnEscalatedPinIsRetried() {
+        s.intentOverride = "known-defect";
+        s.lastError = ItemWorkflow.lastError(s, ErrorCode.TEST_CODE_ERROR, "cannot find symbol KnownDefect");
+        s.lastError.defectFingerprint = "a1b2c3d4e5f6";
+        s.lastError.repeats = 2;
+
+        decide("escalation", "A");
+
+        assertEquals(ItemStatus.PENDING, s.status);
+        assertEquals(
+                "a1b2c3d4e5f6", s.lastError.defectFingerprint, "the retried pin still names the confirmed failure");
+        assertEquals(0, s.lastError.repeats, "a retry is a fresh start: the same failure once more is not a repeat");
+    }
+
+    @Test
     void shouldRefuseALetterThatIsNotOffered() {
         assertThrows(GtaException.class, () -> decide("escalation", "C"));
         assertThrows(GtaException.class, () -> decide("naming-conflict", "D"));

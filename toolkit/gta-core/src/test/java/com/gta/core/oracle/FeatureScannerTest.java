@@ -157,6 +157,27 @@ class FeatureScannerTest {
     }
 
     @Test
+    void shouldKeepTheCommentsOfTheNextScenarioWhenRemovingOne() {
+        String text = """
+                Feature: f
+
+                  @scenario:o.c/s01
+                  Scenario: A
+                    Then a
+
+                  # refunds: keep this note
+                  @scenario:o.c/s02
+                  Scenario: B
+                    Then b
+                """;
+
+        String rest = FeatureScanner.withoutScenario(text, "o.c/s01").orElseThrow();
+
+        assertTrue(rest.contains("# refunds: keep this note"), rest);
+        assertFalse(rest.contains("Scenario: A"), rest);
+    }
+
+    @Test
     void shouldKnowTheBlockKeywords() {
         assertEquals("scenario", FeatureScanner.keyword("Scenario Outline: x"));
         assertEquals("examples", FeatureScanner.keyword("Scenarios:"));

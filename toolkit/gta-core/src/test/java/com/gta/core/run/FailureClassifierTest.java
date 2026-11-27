@@ -59,6 +59,19 @@ class FailureClassifierTest {
     }
 
     @Test
+    void shouldSkipALambdaProxyFrameAndBlameTheTestBelowIt() {
+        TestOutcome c = failing(
+                "error",
+                "java.lang.NullPointerException",
+                "java.lang.NullPointerException\n\tat com.acme.order.OrderIT$$Lambda$5/791452441.apply(Unknown Source)\n"
+                        + "\tat com.acme.order.OrderIT.should(OrderIT.java:10)");
+
+        FailureClassifier.classify(c, PROD, TESTS);
+
+        assertEquals(ErrorCode.TEST_CODE_ERROR.name(), c.code, "791452441 is not a class: the test frame decides");
+    }
+
+    @Test
     void shouldIgnoreVolatileDetailsInTheFingerprint() {
         String a = FailureClassifier.fingerprint(
                 "TEST_ASSERTION_FAILED",

@@ -92,6 +92,29 @@ class ProfilerTest {
     }
 
     @Test
+    void shouldGiveAMethodNamedInChineseAValidFlowId() throws Exception {
+        source("com/acme/order/api/RefundController.java", """
+                package com.acme.order.api;
+                @RestController
+                public class RefundController {
+                    @PostMapping("/refunds")
+                    public Object 退款() { return null; }
+                    @GetMapping("/refunds/{id}")
+                    public Object 查询退款() { return null; }
+                }
+                """);
+
+        List<String> refunds = Profiler.profile(root, CapabilityRegistry.loadBundled(), "auto").entrypoints.stream()
+                .map(e -> e.flowId)
+                .filter(id -> id.startsWith("refund."))
+                .toList();
+
+        assertEquals(List.of("refund.http", "refund.http-2"), refunds);
+        refunds.forEach(
+                id -> assertTrue(com.gta.core.util.Ids.FLOW_ID.matcher(id).matches(), id));
+    }
+
+    @Test
     void shouldShortenAFlowNameThatRepeatsItsDomainUnlessItHasASpecOrTheNameIsTaken() {
         List<ServiceProfile.EntryPoint> entries = List.of(
                 entry("borrow.book-borrow"),

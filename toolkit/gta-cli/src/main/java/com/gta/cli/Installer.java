@@ -78,8 +78,7 @@ public final class Installer {
                     "--platform must be copilot or opencode",
                     "Pick the folder your team uses");
         }
-        if (!Files.exists(root.resolve("pom.xml"))
-                && com.gta.core.profile.PomInfo.gradleBuildFile(root).isEmpty()) {
+        if (!Files.exists(root.resolve("pom.xml")) && !com.gta.core.profile.PomInfo.isGradleRoot(root)) {
             throw new GtaException(
                     ErrorCode.ENV_UNSUPPORTED_BUILD,
                     "No pom.xml or build.gradle(.kts) in " + root,

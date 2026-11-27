@@ -124,6 +124,16 @@ class AssertionScannerTest {
     }
 
     @Test
+    void shouldKeepTheLastDigitOfAHexLiteral() throws Exception {
+        AssertionScanner.ScenarioOracle o = scanSource("""
+                    @Test @Tag("scenario:order.create/s01")
+                    void should() { assertThat(flags).isEqualTo(0xFF); assertThat(id).isEqualTo(7L); }
+                """);
+
+        assertTrue(o.tokens().containsAll(List.of("0xFF", "7")), o.tokens().toString());
+    }
+
+    @Test
     void shouldLockTheSubjectOfAnAssertionWithIt() throws Exception {
         String body = """
                     @Test @Tag("scenario:order.create/s01")

@@ -59,11 +59,7 @@ public final class PomInfo {
 
     public static PomInfo read(Path root) {
         Path pom = root.resolve("pom.xml");
-        // a Gradle root may hold settings.gradle(.kts) only (the layout of gradle init)
-        if (!Files.exists(pom)
-                && (gradleBuildFile(root).isPresent()
-                        || Files.exists(root.resolve("settings.gradle.kts"))
-                        || Files.exists(root.resolve("settings.gradle")))) {
+        if (!Files.exists(pom) && isGradleRoot(root)) {
             return readGradle(root);
         }
         if (!Files.exists(pom)) {
@@ -145,6 +141,13 @@ public final class PomInfo {
             throw new GtaException(
                     ErrorCode.ENV_UNSUPPORTED_BUILD, "Cannot parse pom.xml: " + e.getMessage(), "Fix pom.xml");
         }
+    }
+
+    /** A Gradle build root: a build file, or settings.gradle(.kts) only (the layout of gradle init). */
+    public static boolean isGradleRoot(Path root) {
+        return gradleBuildFile(root).isPresent()
+                || Files.exists(root.resolve("settings.gradle.kts"))
+                || Files.exists(root.resolve("settings.gradle"));
     }
 
     /** {@code build.gradle.kts} or {@code build.gradle} of a directory. */

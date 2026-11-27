@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.gta.core.error.ErrorCode;
 import com.gta.core.error.GtaException;
 import java.util.List;
 import java.util.Map;
@@ -105,6 +106,14 @@ class AnswerParserTest {
 
         assertEquals(java.util.Map.of("2", "retry twice"), a.ownAnswers(), "not the recommended option for 2");
         assertTrue(a.acceptRecommended(), "the other questions take their recommendation");
+    }
+
+    @Test
+    void shouldRefuseAnOwnAnswerThatDoesNotStartItsLine() {
+        for (String reply : List.of("1A 2: retry twice", "1A 2: retry twice, rest default", "R2: 1A 2: retry")) {
+            GtaException e = assertThrows(GtaException.class, () -> AnswerParser.parse(reply), reply);
+            assertEquals(ErrorCode.USAGE_UNPARSEABLE_ANSWER, e.code(), reply);
+        }
     }
 
     @Test

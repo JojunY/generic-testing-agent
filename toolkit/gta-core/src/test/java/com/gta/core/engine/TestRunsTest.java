@@ -80,8 +80,16 @@ class TestRunsTest {
         failing.cases.add(outcome("failed", true));
         RunResult passing = new RunResult();
         passing.cases.add(outcome("passed", true));
-        com.gta.core.run.TestRunnerFake runner =
-                new com.gta.core.run.TestRunnerFake().then(failing).then(passing);
+        RunResult skipped = new RunResult();
+        skipped.cases.add(outcome("skipped", false));
+        RunResult cutShort = new RunResult();
+        cutShort.cases.add(outcome("passed", true));
+        cutShort.timedOut = true;
+        com.gta.core.run.TestRunnerFake runner = new com.gta.core.run.TestRunnerFake()
+                .then(failing)
+                .then(passing)
+                .then(skipped)
+                .then(cutShort);
         EngineContext ctx = new EngineContext(root, runner);
 
         assertEquals("unknown", ctx.runs.onBase(null, item, refs), "no base, nothing to compare");
@@ -91,6 +99,8 @@ class TestRunsTest {
                 "the cited code does not exist on the base");
         assertEquals("fails", ctx.runs.onBase(base, item, refs), "the failure predates the change");
         assertEquals("passes", ctx.runs.onBase(base, item, refs), "the change made it fail");
+        assertEquals("unknown", ctx.runs.onBase(base, item, refs), "skipped on the base is not a pass");
+        assertEquals("unknown", ctx.runs.onBase(base, item, refs), "a run cut short by the timeout is not a pass");
         assertEquals("scenario:order.create/s01", runner.calls().get(0).scenarioTag());
         assertFalse(java.nio.file.Files.exists(ctx.paths.work().resolve("base-run")), "the base checkout is removed");
     }

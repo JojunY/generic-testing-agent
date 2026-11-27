@@ -115,7 +115,11 @@ final class Triage {
             st.move(s, ItemStatus.PENDING);
             s.attempts = 0;
             s.checks = 0; // a retry is a fresh start: the check budget too
-            s.lastError = null;
+            if ("known-defect".equals(s.intentOverride) && s.lastError != null) {
+                s.lastError.repeats = 0; // a retried pin still names the confirmed failure in @KnownDefect(failure)
+            } else {
+                s.lastError = null;
+            }
             st.consecutiveFailures = 0;
             msg = "item reset; it will be retried";
         } else if ("escalation".equals(p.type) && letter.equals("B")) {

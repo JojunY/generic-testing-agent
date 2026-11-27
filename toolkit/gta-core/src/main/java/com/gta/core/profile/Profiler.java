@@ -447,7 +447,7 @@ public final class Profiler {
                         // a function bean: Cloud Stream binds it to <name>-in-0 / <name>-out-0 destinations
                         String bean = m.getNameAsString();
                         e = base(c, fqcn, m, functions, "function");
-                        e.flowId = holderDomain(c, "Functions", e.flowId) + "." + Ids.kebab(bean);
+                        e.flowId = holderDomain(c, "Functions", e.flowId) + "." + flowName(Ids.kebab(bean), "function");
                         e.trigger = functions.equals("messaging")
                                 ? "Spring Cloud Stream "
                                         + switch (beanType) {
@@ -582,12 +582,20 @@ public final class Profiler {
      * letter; {@code V1__2fa.sql} or a description in Chinese would not) and unique among the files already seen.
      */
     static String fileFlowId(String domain, String name, String fallback, Set<String> seen) {
-        String n = name.isEmpty() ? fallback : name.matches("[a-z].*") ? name : fallback + "-" + name;
+        String n = flowName(name, fallback);
         String id = domain + "." + n;
         for (int i = 2; !seen.add(id); i++) {
             id = domain + "." + n + "-" + i;
         }
         return id;
+    }
+
+    /**
+     * A flow name {@link Ids#FLOW_ID} accepts: it starts with a letter. {@code fallback} stands in for a name kebab-case
+     * empties (a method or file named in Chinese) and prefixes one that starts with a digit.
+     */
+    static String flowName(String name, String fallback) {
+        return name.isEmpty() ? fallback : name.matches("[a-z].*") ? name : fallback + "-" + name;
     }
 
     /** Simple names of Temporal {@code @WorkflowInterface}s and their {@code @WorkflowMethod}s. */
@@ -679,7 +687,7 @@ public final class Profiler {
         if (domain.isEmpty() || domain.equals("foundation")) {
             domain = "app";
         }
-        e.flowId = domain + "." + Ids.kebab(m.getNameAsString());
+        e.flowId = domain + "." + flowName(Ids.kebab(m.getNameAsString()), kind);
         e.capability = capability;
         e.kind = kind;
         e.ref = "method:" + fqcn + "#" + m.getNameAsString();

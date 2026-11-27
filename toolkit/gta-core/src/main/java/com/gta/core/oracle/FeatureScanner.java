@@ -195,9 +195,10 @@ public final class FeatureScanner {
         return false;
     }
 
+    /** The last line of a block: blank lines and comments before the next block belong to that block. */
     private static int endOf(String[] lines, int last) {
         int end = last;
-        while (end > 0 && lines[end].isBlank()) {
+        while (end > 0 && (lines[end].isBlank() || lines[end].trim().startsWith("#"))) {
             end--;
         }
         return end;

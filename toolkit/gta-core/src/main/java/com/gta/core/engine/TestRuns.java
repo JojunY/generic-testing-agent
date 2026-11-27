@@ -52,7 +52,7 @@ final class TestRuns {
      * A failing catching test run on the PR's base (plan §6): the base's production code with this branch's test tree.
      * {@code passes} means the change made it fail (a catch candidate); {@code fails} means the failure predates the
      * change; {@code new} when the code the scenario cites does not exist on the base; {@code unknown} when there is no
-     * base or the test does not run there (new test support, a build problem).
+     * base or the test does not run there (new test support, a build problem, skipped, timed out).
      */
     String onBase(String base, PlanItem item, List<String> refs) {
         if (base == null) {
@@ -79,7 +79,11 @@ final class TestRuns {
             if (r.compileError || r.cases.isEmpty()) {
                 return "unknown";
             }
-            return r.failures().isEmpty() ? "passes" : "fails";
+            if (!r.failures().isEmpty()) {
+                return "fails";
+            }
+            // skipped or cut short by the timeout on the base: it did not pass there, so nothing to compare with
+            return r.allPassed() && !r.timedOut ? "passes" : "unknown";
         } catch (GtaException | java.io.UncheckedIOException e) {
             return "unknown";
         } finally {

@@ -42,7 +42,7 @@ public final class GradleRunner extends MavenRunner {
 
     /**
      * Whether the service builds with Gradle: build.tool=gradle, or build.tool=auto and the module (or repository root)
-     * has a Gradle build file but no pom.xml.
+     * is a Gradle build (a build file, or a root with settings.gradle(.kts) only) but has no pom.xml.
      */
     public static boolean selected(GtaPaths paths, GtaConfig config) {
         String tool = config.build.tool;
@@ -54,8 +54,7 @@ public final class GradleRunner extends MavenRunner {
         }
         Path module = paths.moduleRoot();
         return !Files.exists(module.resolve("pom.xml"))
-                && (PomInfo.gradleBuildFile(module).isPresent()
-                        || PomInfo.gradleBuildFile(paths.root()).isPresent());
+                && (PomInfo.gradleBuildFile(module).isPresent() || PomInfo.isGradleRoot(paths.root()));
     }
 
     public List<String> gradleCommand() {

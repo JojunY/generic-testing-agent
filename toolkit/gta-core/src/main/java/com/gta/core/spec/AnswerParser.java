@@ -56,6 +56,9 @@ public final class AnswerParser {
                     + "(?![A-Za-z](?:\\s*(?:$|[,，;；])|\\s+(?:\\d{1,2}\\s*[:：]?\\s*[A-Za-z](?![A-Za-z])|其余默认|其他默认|rest\\s+default)))"
                     + "(\\S.*?)\\s*$");
 
+    /** "2: retry twice" left over after the picks: an own answer that does not start a line ("1A 2: retry twice"). */
+    private static final Pattern STRAY_OWN_ANSWER = Pattern.compile("(?<![A-Za-z0-9])\\d{1,2}\\s*[:：]\\s*\\S");
+
     public sealed interface Parsed permits Answers, Approval, Choice {}
 
     /**
@@ -128,6 +131,13 @@ public final class AnswerParser {
         Matcher p = PICK.matcher(picksPart);
         while (p.find()) {
             picks.put(p.group(1), p.group(2).toUpperCase(Locale.ROOT));
+        }
+        if (STRAY_OWN_ANSWER.matcher(PICK.matcher(picksPart).replaceAll(" ")).find()) {
+            // never read it as no answer (or as "rest default") for that question
+            throw new GtaException(
+                    ErrorCode.USAGE_UNPARSEABLE_ANSWER,
+                    "An own answer must start its line: " + text,
+                    "Put each own answer on its own line, like '2: <your own answer>', or after a comma: '1A, 2: <your own answer>'");
         }
         boolean rest = REST_DEFAULT.matcher(picksPart).find();
         boolean ok = OK.matcher(picksPart).find();

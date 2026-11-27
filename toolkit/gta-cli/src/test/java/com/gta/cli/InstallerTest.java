@@ -215,6 +215,18 @@ class InstallerTest {
     }
 
     @Test
+    void shouldInstallIntoAGradleRootThatHasOnlySettingsGradle() throws Exception {
+        Files.delete(root.resolve("pom.xml"));
+        Files.writeString(root.resolve("settings.gradle.kts"), "include(\"app\")\n");
+
+        new Installer(root).install("copilot", null, null, false, true);
+
+        String gate = Files.readString(root.resolve(".github/workflows/gta-gate.yml"));
+        assertTrue(gate.contains("--console=plain"), gate);
+        assertFalse(gate.contains("surefire"), gate);
+    }
+
+    @Test
     void shouldRefuseADirectoryWithoutAMavenOrGradleBuild() throws Exception {
         Files.delete(root.resolve("pom.xml"));
 

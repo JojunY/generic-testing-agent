@@ -12,9 +12,12 @@ import java.util.regex.Pattern;
  * the failure came from production code (triage), from test code (repair) or happened before the SUT was reached.
  */
 public final class FailureClassifier {
-    /** A stack frame; Gradle's XML keeps the class loader or module in front of it ({@code at app//com.acme.X.m(}). */
+    /**
+     * A stack frame; Gradle's XML keeps the class loader or module in front of it ({@code at app//com.acme.X.m(}). A
+     * lambda proxy frame ({@code at com.acme.XTest$$Lambda$5/0x08.apply(}) does not match: its {@code /} is no prefix.
+     */
     private static final Pattern FRAME =
-            Pattern.compile("^\\s*at\\s+(?:[^\\s(/]*/+)?([\\w$.]+)\\.([\\w$<>]+)\\(", Pattern.MULTILINE);
+            Pattern.compile("^\\s*at\\s+(?:[^\\s($/]*/+)?([\\w$.]+)\\.([\\w$<>]+)\\(", Pattern.MULTILINE);
 
     private static final List<String> FRAMEWORK = List.of(
             "java.",

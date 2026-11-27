@@ -442,7 +442,10 @@ public final class AssertionScanner {
             } else if (lit.isBooleanLiteralExpr()) {
                 tokens.add(String.valueOf(lit.asBooleanLiteralExpr().getValue())); // e.g. isEqualTo(true)
             } else if (!lit.isNullLiteralExpr()) {
-                String number = lit.toString().replaceAll("[lLdDfF]$", "").replace("_", "");
+                String text = lit.toString();
+                // a type suffix goes (1L, 2.5d); in 0xFF the F is a digit
+                String number = text.replaceAll(text.matches("0[xX].*") ? "[lL]$" : "[lLdDfF]$", "")
+                        .replace("_", "");
                 // -1 is a unary minus on 1: the expected value is -1, and isEqualTo(-1) must not satisfy a THEN of 1
                 boolean negative = lit.getParentNode().orElse(null) instanceof UnaryExpr u
                         && u.getOperator() == UnaryExpr.Operator.MINUS;
